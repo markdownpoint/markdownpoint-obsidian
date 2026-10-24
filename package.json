@@ -32,5 +32,8 @@
     "obsidian": "1.13.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1"
+  },
+  "dependencies": {
+    "marked": "18.0.13"
   }
 }
