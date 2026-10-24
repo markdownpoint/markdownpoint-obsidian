@@ -20,7 +20,7 @@ import { Component, MarkdownView, TFile, getFrontMatterInfo, parseYaml } from "o
 import type { App, TAbstractFile } from "obsidian";
 import { indexPresentation } from "../format/document.ts";
 import { isRecord, presentationCompanionPath, presentationIdentity } from "../format/recognition.ts";
-import { outlineSlides } from "../outline/model.ts";
+import { outlineSections, outlineSlides } from "../outline/model.ts";
 import type { OutlinePresentation } from "../outline/model.ts";
 import { uiText } from "../ui-text.ts";
 
@@ -162,7 +162,21 @@ export class PresentationReader extends Component {
     const document = indexPresentation(markdown, header.contentStart);
     const slides = candidate.companion.slides;
     if (!document || document.slides.some(slide => !Object.hasOwn(slides, slide.id))) { this.forget(candidate.file); return; }
+    const skipped = new Set<string>();
+    for (const slide of document.slides) {
+      const metadata = slides[slide.id];
+      if (!isRecord(metadata) || (metadata.skipped !== undefined && typeof metadata.skipped !== "boolean")) {
+        this.forget(candidate.file);
+        return;
+      }
+      if (metadata.skipped === true) skipped.add(slide.id);
+    }
+    const sections = outlineSections(markdown, document);
+    if (!sections || (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from))) {
+      this.forget(candidate.file);
+      return;
+    }
     this.followed = candidate;
-    this.publish({ path: candidate.path, slides: outlineSlides(markdown, document, uiText.emptySlide) }, view);
+    this.publish({ path: candidate.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections }, view);
   }
 }

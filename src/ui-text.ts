@@ -20,3 +20,4 @@ import { getLanguage } from "obsidian";
 import { getTranslations } from "./i18n/index.ts";
 
 export const uiText = getTranslations(getLanguage());
+export const uiNumber = new Intl.NumberFormat(getLanguage(), { useGrouping: false });

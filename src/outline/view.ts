@@ -18,8 +18,9 @@
 
 import { ItemView, setTooltip } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
+import { outlineRows } from "./model.ts";
 import type { OutlineState } from "./model.ts";
-import { uiText } from "../ui-text.ts";
+import { uiNumber, uiText } from "../ui-text.ts";
 
 export const OUTLINE_VIEW_TYPE = "markdownpoint-outline";
 
@@ -62,31 +63,40 @@ export class MarkdownPointOutlineView extends ItemView {
     list.tabIndex = presentation?.slides.length ? -1 : 0;
     // Preserve unchanged rows while the author types; rebuilding the entire list
     // discards focused controls and makes large-deck edits pay for every DOM node.
-    const previous = new Map([...list.querySelectorAll<HTMLButtonElement>("button[data-slide-id]")]
-      .map(button => [button.getAttribute("data-slide-id"), button]));
-    for (const [index, slide] of (presentation?.slides ?? []).entries()) {
-      const active = slide.id === activeSlideId;
-      let button = previous.get(slide.id);
-      previous.delete(slide.id);
-      if (!button) {
-        button = list.createEl("li").createEl("button", {
-          cls: "markdownpoint-outline-row",
-          attr: { type: "button", "data-slide-id": slide.id },
-        });
-        button.createSpan({ cls: "markdownpoint-outline-title" });
-        button.addEventListener("click", () => this.delegate.selectSlide(slide.id));
+    const previous = new Map([...list.children].map(row => [row.getAttribute("data-outline-key"), row]));
+    const rows = presentation ? outlineRows(presentation, number => uiNumber.format(number)) : [];
+    for (const [index, item] of rows.entries()) {
+      const key = `${item.kind}:${item.id}`;
+      let row = previous.get(key);
+      previous.delete(key);
+      if (!row) {
+        row = list.createEl("li", { attr: { "data-outline-key": key } });
+        if (item.kind === "section") {
+          row.createEl("h3", { cls: "markdownpoint-outline-section" });
+        } else {
+          const button = row.createEl("button", {
+            cls: "markdownpoint-outline-row",
+            attr: { type: "button", "data-slide-id": item.id },
+          });
+          button.createSpan({ cls: "markdownpoint-outline-title" });
+          button.addEventListener("click", () => this.delegate.selectSlide(item.id));
+        }
       }
-      const row = button.parentElement;
-      if (row && list.children[index] !== row) list.insertBefore(row, list.children[index] ?? null);
-      const label = `${index + 1}. ${slide.title}`;
-      if (button.getAttribute("aria-label") !== label) {
-        button.firstElementChild?.setText(label);
-        setTooltip(button, label);
+      if (list.children[index] !== row) list.insertBefore(row, list.children[index] ?? null);
+      const control = item.kind === "section" ? row.querySelector("h3") : row.querySelector("button");
+      if (item.kind === "section") {
+        if (control?.textContent !== item.label) control?.setText(item.label);
+      } else if (control) {
+        if (control.getAttribute("aria-label") !== item.label) {
+          control.firstElementChild?.setText(item.label);
+          setTooltip(control, item.label);
+        }
+        const active = item.id === activeSlideId;
+        if (control.getAttribute("aria-current") !== String(active)) control.setAttribute("aria-current", String(active));
+        control.setAttribute("tabindex", active ? "0" : "-1");
       }
-      if (button.getAttribute("aria-current") !== String(active)) button.setAttribute("aria-current", String(active));
-      button.tabIndex = active ? 0 : -1;
     }
-    for (const button of previous.values()) button.parentElement?.remove();
+    for (const row of previous.values()) row.remove();
     if (ownsFocus && !this.contentEl.contains(this.contentEl.ownerDocument.activeElement)) this.focusActive();
   }
 

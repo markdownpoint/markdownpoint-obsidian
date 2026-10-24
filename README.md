@@ -6,7 +6,7 @@ The intended workflow is to choose a theme, write in a focused Markdown editor w
 
 ## Project status
 
-This early development version recognizes `slides.md` beside `presentation.mdpoint` when both declare format version 1 and the same presentation identity. It provides a document-derived outline, slide navigation, sidebar placement, declarative settings, and focus commands. The outline updates while typing and after external file changes. It keeps following the most recent presentation when an ordinary note becomes active.
+This early development version recognizes `slides.md` beside `presentation.mdpoint` when both declare format version 1 and the same presentation identity. It provides a document-derived outline, slide navigation, sidebar placement, declarative settings, and focus commands. The outline updates while typing and after external file changes. It keeps following the most recent presentation when an ordinary note becomes active. Section names appear as unnumbered headings. Skipped slides stay visible with a dash, and slide numbering continues across sections.
 
 The plugin reads presentation data without rewriting it. Writing remains in Obsidian's native Markdown editor. Slide-boundary decorations, layout thumbnails, multiselection, and structural slide operations are still in development. Other presentation data filenames are not currently supported.
 

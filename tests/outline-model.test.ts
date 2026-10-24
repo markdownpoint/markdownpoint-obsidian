@@ -19,12 +19,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { indexPresentation } from "../src/format/document.ts";
-import { outlineSlides } from "../src/outline/model.ts";
+import { outlineRows, outlineSections, outlineSlides } from "../src/outline/model.ts";
 
 void test("outline labels use the first authored text, omit formatting, and ignore speaker notes", () => {
   const markdown = '<!-- slide: first -->\n<!-- notes -->\nA private reminder.\n<!-- text: empty -->\n\n<!-- text: heading -->\n# **A clear [idea](https://example.com)** &amp; `&amp;`\n\n<!-- slide: empty -->\n<!-- text: heading -->\n';
   const document = indexPresentation(markdown, 0)!;
-  const slides = outlineSlides(markdown, document, "Title");
+  const slides = outlineSlides(markdown, document, "Title", new Set());
   assert.deepEqual(slides.map(slide => [slide.id, slide.title]), [
     ["first", "A clear idea & &amp;"], ["empty", "Title"],
   ]);
@@ -34,6 +34,28 @@ void test("outline labels use the first authored text, omit formatting, and igno
 void test("HTML tags and leading single-line or multiline comments are omitted from outline labels", () => {
   for (const text of ['<span>Heading</span>', '<!-- annotation -->\nHeading', '<!--\nAn annotation.\n-->\n# Heading']) {
     const markdown = `<!-- slide: first -->\n<!-- text: heading -->\n${text}\n`;
-    assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, "Title")[0]!.title, "Heading");
+    assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, "Title", new Set())[0]!.title, "Heading");
+  }
+});
+
+void test("sections keep authored names, empty sections, and continuous numbers around skipped slides", () => {
+  const markdown = '<!-- section: intro -->\r\n# *A beginning* &amp; a promise\r\n\r\n<!-- slide: first -->\r\n<!-- text: title -->\r\nFirst idea.\r\n<!-- slide: skipped -->\r\n<!-- text: title -->\r\nAn aside.\r\n<!-- section: empty -->\r\n# Room to think\r\n<!-- section: closing -->\r\n# Closing\r\n<!-- slide: last -->\r\n<!-- text: title -->\r\nA last thought.\r\n<!-- section: trailing -->\r\n# Later\r\n';
+  const document = indexPresentation(markdown, 0)!;
+  const sections = outlineSections(markdown, document)!;
+  const slides = outlineSlides(markdown, document, "Title", new Set(["skipped"]));
+  assert.deepEqual(outlineRows({ path: "slides.md", slides, sections }, String).map(row => [row.kind, row.label]), [
+    ["section", "A beginning & a promise"], ["slide", "1. First idea."], ["slide", "– An aside."],
+    ["section", "Room to think"], ["section", "Closing"], ["slide", "2. A last thought."], ["section", "Later"],
+  ]);
+  const allSkipped = slides.map(slide => ({ ...slide, skipped: true }));
+  assert.ok(outlineRows({ path: "slides.md", slides: allSkipped, sections }, String)
+    .filter(row => row.kind === "slide").every(row => row.label.startsWith("– ")));
+  assert.equal(outlineRows({ path: "slides.md", slides: [], sections }, String).length, 4);
+});
+
+void test("a section requires one nonempty level-one heading", () => {
+  for (const words of ["", "Plain words", "## Subheading", "# Heading\n\nExtra words.", "# Heading\n# Another", "# Invalid\u0007name"]) {
+    const markdown = `<!-- section: opening -->\n${words}\n<!-- slide: first -->\n`;
+    assert.equal(outlineSections(markdown, indexPresentation(markdown, 0)!), null, words);
   }
 });

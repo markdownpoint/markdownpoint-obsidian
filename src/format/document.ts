@@ -37,6 +37,15 @@ export interface DocumentSlide {
 
 export interface PresentationDocument {
   readonly slides: readonly DocumentSlide[];
+  readonly sections: readonly DocumentSection[];
+}
+
+export interface DocumentSection {
+  readonly id: string;
+  readonly from: number;
+  readonly markerTo: number;
+  readonly line: number;
+  to: number;
 }
 
 const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*([^\s]+))?\s*-->[ \t]*$/;
@@ -56,8 +65,11 @@ function inCode(markdown: string, line: string): boolean {
  */
 export function indexPresentation(markdown: string, bodyStart: number): PresentationDocument | null {
   const slides: DocumentSlide[] = [];
+  const sections: DocumentSection[] = [];
   const seen = new Set<string>();
+  const sectionIds = new Set<string>();
   let slide: DocumentSlide | null = null;
+  let section: DocumentSection | null = null;
   let block: DocumentBlock | null = null;
   let container: "slide" | "composition" | null = null;
   let payloadFrom = bodyStart;
@@ -89,10 +101,18 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
 
       if (block) block.to = offset;
       block = null;
+      if (section) section.to = offset;
+      section = null;
       if (kind === "slide" || kind === "composition" || kind === "section") {
         if (slide) slide.to = offset;
         slide = null;
         container = kind === "section" ? null : kind;
+        if (kind === "section" && id) {
+          if (sectionIds.has(id)) return null;
+          sectionIds.add(id);
+          section = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length };
+          sections.push(section);
+        }
         if (kind === "slide" && id) {
           if (seen.has(id)) return null;
           seen.add(id);
@@ -121,5 +141,5 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
       if (fence && !new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*$`).test(closing)) return null;
     }
   }
-  return { slides };
+  return { slides, sections };
 }

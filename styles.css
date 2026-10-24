@@ -68,3 +68,12 @@
   outline: 1px solid var(--markdownpoint-muted);
   outline-offset: -1px;
 }
+
+.markdownpoint-outline-section {
+  margin: 0;
+  padding: var(--size-4-2);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  color: var(--markdownpoint-muted);
+  overflow-wrap: anywhere;
+}

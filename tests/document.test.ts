@@ -100,3 +100,13 @@ void test("a large deck produces one ordered index without changing its source",
   assert.equal(document.slides[5999]!.id, 'page-5999');
   assert.equal(document.slides[5999]!.to, text.length);
 });
+
+void test("section heading ranges preserve source positions, including empty and trailing sections", () => {
+  const text = '<!-- section: opening -->\n# Opening\n<!-- slide: first -->\n<!-- text: body -->\n```md\n<!-- section: example -->\n# An example\n```\n<!-- section: empty -->\n# Empty\n<!-- section: end -->\n# End\n';
+  const document = indexPresentation(text, 0)!;
+  assert.deepEqual(document.sections.map(section => section.id), ["opening", "empty", "end"]);
+  for (const section of document.sections) assert.equal(section.line, text.slice(0, section.from).split("\n").length - 1);
+  assert.equal(text.slice(document.sections[0]!.markerTo, document.sections[0]!.to), "# Opening\n");
+  assert.equal(document.sections[2]!.to, text.length);
+  assert.equal(indexPresentation('<!-- section: repeated -->\n# One\n<!-- section: repeated -->\n# Two\n', 0), null);
+});
