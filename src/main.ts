@@ -19,6 +19,7 @@
 import { MarkdownView, Plugin, TFile } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import type { OutlinePresentation } from "./outline/model.ts";
+import { OutlineSession } from "./outline/session.ts";
 import { MarkdownPointOutlineView, OUTLINE_VIEW_TYPE } from "./outline/view.ts";
 import { loadLocalUi, saveLocalUi } from "./settings/local-ui.ts";
 import type { LocalUiState, OutlineSide } from "./settings/local-ui.ts";
@@ -30,20 +31,26 @@ import { NotesUi } from "./settings/notes-ui.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
-  private presentation: OutlinePresentation | null = null;
-  private activeSlideId: string | null = null;
+  private readonly outline = new OutlineSession();
   private editorLeaf: WorkspaceLeaf | null = null;
   private placingOutline: Promise<WorkspaceLeaf | null> | null = null;
   private running = false;
   private reader: PresentationReader | null = null;
   private presentationEditor: PresentationEditor | null = null;
 
+  private get presentation(): OutlinePresentation | null { return this.outline.state.presentation; }
+  private get activeSlideId(): string | null { return this.outline.state.activeSlideId; }
+
   onload(): void {
     this.running = true;
     this.localUi = loadLocalUi(this.app);
     this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
-      state: () => ({ presentation: this.presentation, activeSlideId: this.activeSlideId }),
-      selectSlide: id => this.run(() => this.selectSlide(id)),
+      state: () => this.outline.state,
+      select: action => {
+        if (!this.outline.select(action)) return;
+        if (action.kind === "select") this.run(() => this.selectSlide(action.id));
+        else this.refreshOutline();
+      },
     }));
     this.addSettingTab(new MarkdownPointSettingTab(this.app, this, this.localUi,
       side => this.setOutlineSide(side)));
@@ -75,8 +82,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.reader = new PresentationReader(this.app, (presentation, editor) => {
       if (presentation) this.followPresentation(presentation, editor);
       else {
-        this.presentation = null;
-        this.activeSlideId = null;
+        this.outline.follow(null);
         this.refreshOutline();
       }
     }, file => this.presentationEditor?.refresh(file));
@@ -89,7 +95,7 @@ export default class MarkdownPointPlugin extends Plugin {
 
   onunload(): void {
     this.running = false;
-    this.presentation = null;
+    this.outline.follow(null);
     this.editorLeaf = null;
     this.reader = null;
     this.presentationEditor = null;
@@ -99,12 +105,8 @@ export default class MarkdownPointPlugin extends Plugin {
   /** The format adapter must verify the presentation before publishing it through this handoff. */
   followPresentation(presentation: OutlinePresentation, editor: MarkdownView | null): void {
     if (!this.running || (editor && editor.file?.path !== presentation.path)) return;
-    const samePresentation = presentation.path === this.presentation?.path;
-    this.presentation = presentation;
+    this.outline.follow(presentation);
     this.editorLeaf = editor?.leaf ?? null;
-    if (!samePresentation || !presentation.slides.some(slide => slide.id === this.activeSlideId)) {
-      this.activeSlideId = presentation.slides[0]?.id ?? null;
-    }
     // Content updates do not reopen a tab the author closed. Placement belongs
     // to initialization, the side setting, and the explicit focus command.
     this.refreshOutline();
@@ -120,8 +122,7 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!this.running || editor.file?.path !== this.presentation?.path ||
       !this.presentation?.slides.some(slide => slide.id === slideId)) return;
     this.editorLeaf = editor.leaf;
-    if (this.activeSlideId === slideId) return;
-    this.activeSlideId = slideId;
+    if (!this.outline.activate(slideId)) return;
     this.refreshOutline();
   }
 
@@ -179,7 +180,7 @@ export default class MarkdownPointPlugin extends Plugin {
       await this.app.workspace.revealLeaf(leaf);
       if (!this.running) return;
       this.app.workspace.setActiveLeaf(leaf, { focus: true });
-      if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.focusActive();
+      if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.focusSelection();
     }
   }
 
@@ -202,7 +203,7 @@ export default class MarkdownPointPlugin extends Plugin {
   private async selectSlide(id: string): Promise<void> {
     const path = this.presentation?.path;
     if (!path || !this.presentation?.slides.some(slide => slide.id === id)) return;
-    this.activeSlideId = id;
+    this.outline.activate(id);
     this.refreshOutline();
     const existing = this.currentEditorLeaf();
     const leaf = existing ?? await this.ensureEditorLeaf();

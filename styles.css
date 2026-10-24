@@ -48,8 +48,12 @@
   overflow-wrap: anywhere;
 }
 
-.markdownpoint-outline .markdownpoint-outline-row[aria-current="true"] {
+.markdownpoint-outline .markdownpoint-outline-row[aria-pressed="true"] {
   background: color-mix(in srgb, var(--text-normal) 8%, var(--background-secondary));
+}
+
+.markdownpoint-outline .markdownpoint-outline-row[aria-current="true"] .markdownpoint-outline-title {
+  font-weight: var(--font-semibold);
 }
 
 .markdownpoint-outline-title {
@@ -60,7 +64,7 @@
   text-overflow: ellipsis;
 }
 
-.markdownpoint-outline .markdownpoint-outline-row:not([aria-current="true"]):hover {
+.markdownpoint-outline .markdownpoint-outline-row:not([aria-pressed="true"]):hover {
   background: var(--background-modifier-hover);
 }
 

@@ -16,28 +16,38 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ItemView, setTooltip } from "obsidian";
+import { ItemView, Platform, setTooltip } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import { outlineRows } from "./model.ts";
 import type { OutlineState } from "./model.ts";
+import type { ListSelectionAction } from "../selection/list-selection.ts";
 import { uiNumber, uiText } from "../ui-text.ts";
 
 export const OUTLINE_VIEW_TYPE = "markdownpoint-outline";
 
 export interface OutlineDelegate {
   state(): OutlineState;
-  selectSlide(id: string): void;
+  select(action: ListSelectionAction<string>): void;
 }
 
 export class MarkdownPointOutlineView extends ItemView {
   constructor(leaf: WorkspaceLeaf, private readonly delegate: OutlineDelegate) {
     super(leaf);
     this.registerDomEvent(this.contentEl, "keydown", event => {
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.altKey) return;
+      const modifier = Platform.isMacOS ? event.metaKey : event.ctrlKey;
+      if (modifier && !event.shiftKey && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        event.stopPropagation();
+        this.delegate.select({ kind: "all" });
+        this.focusSelection();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey) return;
       if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
       event.preventDefault();
       event.stopPropagation();
-      this.move(event.key);
+      this.move(event.key, event.shiftKey);
     });
   }
 
@@ -57,7 +67,7 @@ export class MarkdownPointOutlineView extends ItemView {
 
   render(): void {
     const ownsFocus = this.contentEl.contains(this.contentEl.ownerDocument.activeElement);
-    const { presentation, activeSlideId } = this.delegate.state();
+    const { presentation, activeSlideId, selection } = this.delegate.state();
     const list = this.contentEl.querySelector("ol") ?? this.contentEl.createEl("ol", { cls: "markdownpoint-outline-list" });
     list.setAttribute("aria-label", uiText.outline);
     list.tabIndex = presentation?.slides.length ? -1 : 0;
@@ -79,7 +89,11 @@ export class MarkdownPointOutlineView extends ItemView {
             attr: { type: "button", "data-slide-id": item.id },
           });
           button.createSpan({ cls: "markdownpoint-outline-title" });
-          button.addEventListener("click", () => this.delegate.selectSlide(item.id));
+          button.addEventListener("click", event => {
+            const modifier = Platform.isMacOS ? event.metaKey : event.ctrlKey;
+            this.delegate.select({ kind: event.shiftKey ? "range" : modifier ? "toggle" : "select", id: item.id });
+            this.focusSelection();
+          });
         }
       }
       if (list.children[index] !== row) list.insertBefore(row, list.children[index] ?? null);
@@ -93,29 +107,37 @@ export class MarkdownPointOutlineView extends ItemView {
         }
         const active = item.id === activeSlideId;
         if (control.getAttribute("aria-current") !== String(active)) control.setAttribute("aria-current", String(active));
-        control.setAttribute("tabindex", active ? "0" : "-1");
+        control.setAttribute("aria-pressed", String(selection.selected.has(item.id)));
+        control.setAttribute("tabindex", item.id === selection.cursor ? "0" : "-1");
       }
     }
     for (const row of previous.values()) row.remove();
-    if (ownsFocus && !this.contentEl.contains(this.contentEl.ownerDocument.activeElement)) this.focusActive();
+    if (ownsFocus && !this.contentEl.contains(this.contentEl.ownerDocument.activeElement)) this.focusSelection();
   }
 
-  focusActive(): void {
+  focusSelection(): void {
     const buttons = this.contentEl.querySelectorAll<HTMLButtonElement>("button[data-slide-id]");
-    const chosen = [...buttons].find(button => button.getAttribute("aria-current") === "true") ?? buttons[0];
-    if (chosen) chosen.focus({ preventScroll: true });
+    const cursor = this.delegate.state().selection.cursor;
+    const chosen = [...buttons].find(button => button.dataset.slideId === cursor) ?? buttons[0];
+    if (chosen) {
+      chosen.focus({ preventScroll: true });
+      chosen.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
     else this.contentEl.querySelector("ol")?.focus({ preventScroll: true });
   }
 
-  private move(key: string): void {
-    const { presentation, activeSlideId } = this.delegate.state();
+  private move(key: string, extend: boolean): void {
+    const { presentation, selection } = this.delegate.state();
     const slides = presentation?.slides ?? [];
     if (slides.length === 0) return;
-    const at = slides.findIndex(slide => slide.id === activeSlideId);
+    const at = slides.findIndex(slide => slide.id === selection.cursor);
     const next = key === "Home" ? 0 : key === "End" ? slides.length - 1
       : Math.max(0, Math.min(slides.length - 1, at + (key === "ArrowUp" ? -1 : 1)));
     const slide = slides[next];
-    if (slide) this.delegate.selectSlide(slide.id);
-    this.focusActive();
+    if (slide) {
+      if (extend && key.startsWith("Arrow")) this.delegate.select({ kind: "step", to: slide.id });
+      else this.delegate.select({ kind: extend ? "range" : "select", id: slide.id });
+    }
+    this.focusSelection();
   }
 }

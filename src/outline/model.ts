@@ -20,6 +20,7 @@ import { Lexer } from "marked";
 import { decodeHTMLStrict } from "entities";
 import { isRecord } from "../format/recognition.ts";
 import type { PresentationDocument } from "../format/document.ts";
+import type { ListSelection } from "../selection/list-selection.ts";
 
 export interface OutlineSlide {
   readonly id: string;
@@ -44,6 +45,7 @@ export interface OutlinePresentation {
 export interface OutlineState {
   readonly presentation: OutlinePresentation | null;
   readonly activeSlideId: string | null;
+  readonly selection: ListSelection<string>;
 }
 
 function inlineText(tokens: readonly unknown[]): string {
