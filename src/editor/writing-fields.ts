@@ -18,6 +18,8 @@
 
 import type { PresentationDocument } from "../format/document.ts";
 import { payloadContentEnd } from "../format/payload.ts";
+import { textBindingLabel, textBindingName } from "../format/text-binding.ts";
+import type { TextFieldLabels } from "../format/text-binding.ts";
 
 export interface WritingField {
   readonly key: string;
@@ -36,15 +38,15 @@ export function compactFieldAt(fields: readonly WritingField[], position: number
   return fields.find(field => field.contentFrom === position && field.contentFrom === field.to && position < length);
 }
 
-/** Known authoring roles use supplied product wording; other bindings stay native. */
-export function writingFields(markdown: string, document: PresentationDocument, labels: Record<WritingField["role"], string>): WritingField[] {
+/** Every authored text block keeps its identity and source order in the draft. */
+export function writingFields(markdown: string, document: PresentationDocument, labels: TextFieldLabels): WritingField[] {
   const fields: WritingField[] = [];
   for (const slide of document.slides) for (const block of slide.blocks) {
-    if (block.kind !== "text") continue;
-    const role = (["title", "body", "eyebrow"] as const).find(role => role === block.id);
-    if (!role) continue;
+    if (block.kind !== "text" || !block.id) continue;
+    const name = textBindingName(block.id);
+    const role = name.name === "title" || name.name === "eyebrow" ? name.name : "body";
     fields.push({
-      key: `${slide.id}:${role}`, opening: block === slide.blocks[0], role, label: labels[role], from: block.from, contentFrom: block.contentFrom, to: block.to,
+      key: `${slide.id}:text:${block.id}`, opening: block === slide.blocks[0], role, label: textBindingLabel(name, labels), from: block.from, contentFrom: block.contentFrom, to: block.to,
       contentTo: payloadContentEnd(markdown, block.contentFrom, block.to),
       markerText: markdown.slice(block.from, block.contentFrom), populated: markdown.slice(block.contentFrom, block.to).trim().length > 0,
     });

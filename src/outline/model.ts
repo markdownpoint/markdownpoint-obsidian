@@ -21,6 +21,7 @@ import { decodeHTMLStrict } from "entities";
 import { isRecord } from "../format/recognition.ts";
 import type { PresentationDocument } from "../format/document.ts";
 import type { ListSelection } from "../selection/list-selection.ts";
+import { textBindingName } from "../format/text-binding.ts";
 
 export interface OutlineSlide {
   readonly id: string;
@@ -64,10 +65,9 @@ function inlineText(tokens: readonly unknown[]): string {
 export function outlineSlides(markdown: string, document: PresentationDocument, emptyTitle: string, skipped: ReadonlySet<string>): OutlineSlide[] {
   return document.slides.map(slide => {
     let title = "";
-    const blocks = [
-      ...slide.blocks.filter(block => block.kind === "text" && block.id === "title"),
-      ...slide.blocks.filter(block => block.kind === "text" && block.id !== "title"),
-    ];
+    const text = slide.blocks.filter(block => block.kind === "text");
+    const titles = new Set(text.filter(block => block.id && textBindingName(block.id).name === "title"));
+    const blocks = [...titles, ...text.filter(block => !titles.has(block))];
     for (const block of blocks) {
       // Tokenize the payload together so a multiline HTML comment is omitted as
       // one token rather than exposing its middle lines as an outline label.

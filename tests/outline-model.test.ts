@@ -44,6 +44,13 @@ void test("populated Title takes precedence over earlier Eyebrow and Body fields
   assert.deepEqual(slides.map(slide => slide.title), ["A place to begin", "A useful lead", "A real fallback."]);
 });
 
+void test("a numbered or duplicated Title keeps priority over earlier body text", () => {
+  for (const id of ["title-2", "title-id-b7d9e1", "title-2-id-b7d9e1", "card.title"]) {
+    const markdown = `<!-- slide: first -->\n<!-- text: body -->\nEarlier body\n<!-- text: ${id} -->\nThe main idea\n`;
+    assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, "Title", new Set())[0]!.title, "The main idea", id);
+  }
+});
+
 void test("sections keep authored names, empty sections, and continuous numbers around skipped slides", () => {
   const markdown = '<!-- section: intro -->\r\n# *A beginning* &amp; a promise\r\n\r\n<!-- slide: first -->\r\n<!-- text: title -->\r\nFirst idea.\r\n<!-- slide: skipped -->\r\n<!-- text: title -->\r\nAn aside.\r\n<!-- section: empty -->\r\n# Room to think\r\n<!-- section: closing -->\r\n# Closing\r\n<!-- slide: last -->\r\n<!-- text: title -->\r\nA last thought.\r\n<!-- section: trailing -->\r\n# Later\r\n';
   const document = indexPresentation(markdown, 0)!;

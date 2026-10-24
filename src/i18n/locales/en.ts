@@ -23,7 +23,15 @@ export const en = {
   left: "Left",
   right: "Right",
   emptySlide: "Title",
-  fields: { title: "Title", body: "Body", eyebrow: "Eyebrow" },
+  fields: {
+    text: "Text",
+    numbered: ({ name, number }: { name: string; number: string }) => `${name} ${number}`,
+    names: {
+      title: "Title", body: "Body", eyebrow: "Eyebrow", heading: "Heading", subtitle: "Subtitle",
+      caption: "Caption", quote: "Quote", attribution: "Attribution", code: "Code", label: "Label",
+      footer: "Footer", number: "Number",
+    },
+  },
   notes: { label: "Speaker notes", placeholder: "Notes" },
   commands: {
     focusOutline: "Focus outline",
