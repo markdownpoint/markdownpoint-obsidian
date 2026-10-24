@@ -17,6 +17,7 @@
  */
 
 import type { PresentationDocument } from "../format/document.ts";
+import { payloadContentEnd } from "../format/payload.ts";
 
 export interface WritingField {
   readonly key: string;
@@ -25,6 +26,7 @@ export interface WritingField {
   readonly label: string;
   readonly from: number;
   readonly contentFrom: number;
+  readonly contentTo: number;
   readonly to: number;
   readonly markerText: string;
   readonly populated: boolean;
@@ -43,6 +45,7 @@ export function writingFields(markdown: string, document: PresentationDocument, 
     if (!role) continue;
     fields.push({
       key: `${slide.id}:${role}`, opening: block === slide.blocks[0], role, label: labels[role], from: block.from, contentFrom: block.contentFrom, to: block.to,
+      contentTo: payloadContentEnd(markdown, block.contentFrom, block.to),
       markerText: markdown.slice(block.from, block.contentFrom), populated: markdown.slice(block.contentFrom, block.to).trim().length > 0,
     });
   }

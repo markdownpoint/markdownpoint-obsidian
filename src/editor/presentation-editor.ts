@@ -34,6 +34,7 @@ import type { SlideNotes } from "./notes.ts";
 import { notesDecorations } from "./notes-widgets.ts";
 import type { NotesActions } from "./notes-widgets.ts";
 import type { NotesUi } from "../settings/notes-ui.ts";
+import { payloadContentEnd } from "../format/payload.ts";
 
 const refreshPresentation = StateEffect.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
@@ -207,10 +208,11 @@ export class PresentationEditor extends Component {
   }
 
   private build(state: EditorState, previous?: DraftState, transaction?: Transaction): DraftState {
+    const markdown = state.doc.toString();
     const file = state.field(editorInfoField, false)?.file;
     const preview = state.field(editorLivePreviewField, false) === true;
     const snapshot = file && preview
-      ? this.reader.snapshot(file, state.doc.toString()) : null;
+      ? this.reader.snapshot(file, markdown) : null;
     let focused = previous?.focused ?? false;
     for (const effect of transaction?.effects ?? []) if (effect.is(editorFocus) || effect.is(refreshPresentation)) focused = effect.value;
     const id = snapshot?.id ?? previous?.id;
@@ -223,7 +225,7 @@ export class PresentationEditor extends Component {
         ...snapshot.document.slides.map(slide => ({ from: slide.from, markerTo: slide.markerTo, text: state.doc.sliceString(slide.from, slide.markerTo), label: numbers.get(slide.id) ?? "" })),
         ...snapshot.document.sections.map(section => ({ from: section.from, markerTo: section.markerTo, text: state.doc.sliceString(section.from, section.markerTo), label: null })),
       ];
-    } else if (file && preview && previous?.markers.length && this.reader.matchesIdentity(file, state.doc.toString())) {
+    } else if (file && preview && previous?.markers.length && this.reader.matchesIdentity(file, markdown)) {
       // Incomplete Markdown (for example an unfinished code fence) must not
       // unlock known separators. Map them, then verify their actual source.
       const mapped = transaction?.docChanged ? previous.markers.map(marker => ({
@@ -237,13 +239,13 @@ export class PresentationEditor extends Component {
       const contentFrom = transaction?.docChanged ? transaction.changes.mapPos(field.contentFrom, -1) : field.contentFrom;
       const to = transaction?.docChanged ? transaction.changes.mapPos(field.to, 1) : field.to;
       return state.doc.lineAt(from).from === from && state.doc.sliceString(from, contentFrom) === field.markerText
-        ? { ...field, from, contentFrom, to, populated: state.doc.sliceString(contentFrom, to).trim().length > 0 } : null;
+        ? { ...field, from, contentFrom, contentTo: payloadContentEnd(markdown, contentFrom, to), to, populated: state.doc.sliceString(contentFrom, to).trim().length > 0 } : null;
     };
-    let fields = snapshot ? writingFields(state.doc.toString(), snapshot.document, uiText.fields) : [];
+    let fields = snapshot ? writingFields(markdown, snapshot.document, uiText.fields) : [];
     if (!snapshot && markers.length && previous?.fields.length) {
       fields = previous.fields.flatMap(field => { const mapped = mapField(field); return mapped ? [mapped] : []; });
     }
-    let notes = snapshot ? slideNotes(state.doc.toString(), snapshot.document, uiText.notes.placeholder) : [];
+    let notes = snapshot ? slideNotes(markdown, snapshot.document, uiText.notes.placeholder) : [];
     if (!snapshot && markers.length && previous) notes = previous.notes.flatMap(slot => {
       const field = slot.field && mapField(slot.field);
       return field ? [{ ...slot, at: field.from, field }] : [];

@@ -89,15 +89,22 @@ export function writingAreaDecorations(state: EditorState, field: WritingField, 
   const cursor = state.selection.main.head;
   const compact = field.contentFrom === field.to && field.to < state.doc.length;
   const active = focused && cursor >= field.contentFrom && (cursor < field.to || (field.to === state.doc.length && cursor === field.to));
+  const collapsedFrom = field.contentTo > field.contentFrom && field.contentTo < field.to && state.doc.lineAt(field.contentTo).from === field.contentTo
+    ? field.contentTo : field.to;
+  if (collapsedFrom < field.to) {
+    ranges.push(Decoration.replace({ block: true, inclusiveEnd: false }).range(collapsedFrom, field.to));
+  }
   if (!field.populated && !active) ranges.push(Decoration.widget({ widget: new FieldGhost(field, compact, compact ? extraClass : ""), block: compact, side: compact ? -2 : 1 }).range(field.contentFrom));
   if (!compact) {
-    let line = state.doc.lineAt(field.contentFrom);
-    while (line.from < field.to || (line.from === field.to && field.to === state.doc.length)) {
-      ranges.push(Decoration.line({ class: `markdownpoint-writing-field markdownpoint-field-${field.role} ${extraClass}`,
+    for (let number = state.doc.lineAt(field.contentFrom).number; number <= state.doc.lines; number++) {
+      const line = state.doc.line(number);
+      if (line.from > field.to || (line.from === field.to && field.to !== state.doc.length)) break;
+      if (line.from >= collapsedFrom && line.from < field.to) continue;
+      const terminal = line.from === field.to && line.from > field.contentFrom &&
+        !(focused && state.selection.ranges.some(range => range.from <= line.to && range.to >= line.from));
+      ranges.push(Decoration.line({ class: `markdownpoint-writing-field markdownpoint-field-${field.role} ${extraClass}${terminal ? " markdownpoint-terminal-line" : ""}`,
         ...(line.from === field.contentFrom ? { attributes: { "aria-label": accessibleName } } : {}),
       }).range(line.from));
-      if (line.number === state.doc.lines) break;
-      line = state.doc.line(line.number + 1);
     }
   }
   return ranges;

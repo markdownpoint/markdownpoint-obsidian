@@ -18,6 +18,7 @@
 
 import { indexPresentation } from "../format/document.ts";
 import type { PresentationDocument } from "../format/document.ts";
+import { payloadContentEnd } from "../format/payload.ts";
 import type { WritingField } from "./writing-fields.ts";
 
 export interface SlideNotes {
@@ -37,6 +38,7 @@ export function slideNotes(markdown: string, document: PresentationDocument, pla
     notes.push({ slideId: slide.id, at: block?.from ?? slide.to, field: block ? {
       key: `${slide.id}:notes`, opening: false, role: "body", label: placeholder,
       from: block.from, contentFrom: block.contentFrom, to: block.to,
+      contentTo: payloadContentEnd(markdown, block.contentFrom, block.to),
       markerText: markdown.slice(block.from, block.contentFrom),
       populated: markdown.slice(block.contentFrom, block.to).trim().length > 0,
     } : null });

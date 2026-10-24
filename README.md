@@ -12,6 +12,8 @@ Outline labels prefer a populated Title field, then fall back to the first other
 
 Writing remains in Obsidian's native Markdown editor. Live Preview shows numbered slide boundaries and protects their markers from ordinary typing, deletion, and movement. Title, Body, and Eyebrow fields show faint placeholders when empty and small headers when populated. Speaker notes open through a full-width disclosure beneath each slide, with a faint Notes placeholder when empty. Disclosure state is local to the device and vault. Placeholder words never become saved content. Source mode keeps raw Markdown editable. Names for other field roles, layout thumbnails, multiselection, and structural slide operations are still in development. Other presentation data filenames are not currently supported.
 
+Live Preview follows MDP's blank-line rule: one terminal blank line separates fields; additional blank lines remain authored space. Leading and interior empty paragraphs stay intact.
+
 Outside code contributions and pull requests are not accepted. See the [contribution policy](CONTRIBUTING.md).
 
 ## Development
