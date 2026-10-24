@@ -19,23 +19,32 @@
 import { Component, MarkdownView, TFile, getFrontMatterInfo, parseYaml } from "obsidian";
 import type { App, TAbstractFile } from "obsidian";
 import { indexPresentation } from "../format/document.ts";
+import type { PresentationDocument } from "../format/document.ts";
 import { isRecord, presentationCompanionPath, presentationIdentity } from "../format/recognition.ts";
 import { outlineSections, outlineSlides } from "../outline/model.ts";
 import type { OutlinePresentation } from "../outline/model.ts";
 import { uiText } from "../ui-text.ts";
 
-interface FollowedPresentation {
+interface PresentationSource {
   readonly file: TFile;
   readonly path: string;
   readonly companionPath: string;
   readonly companion: unknown;
+  markdown: string | null;
+  snapshot: PresentationSnapshot | null;
+}
+
+export interface PresentationSnapshot {
+  readonly document: PresentationDocument;
+  readonly outline: OutlinePresentation;
 }
 
 export class PresentationReader extends Component {
-  private followed: FollowedPresentation | null = null;
-  private generation = 0;
+  private sources = new WeakMap<TFile, PresentationSource>();
+  private reads = new WeakMap<TFile, { readonly view: MarkdownView | null }>();
+  private followed: TFile | null = null;
+  private requested: TFile | null = null;
   private running = false;
-  private loading: { readonly file: TFile; readonly view: MarkdownView | null } | null = null;
 
   constructor(
     private readonly app: App,
@@ -49,14 +58,16 @@ export class PresentationReader extends Component {
     }));
     this.registerEvent(this.app.workspace.on("file-open", () => this.refreshActive()));
     this.registerEvent(this.app.workspace.on("editor-change", (_editor, info) => {
-      if (!(info instanceof MarkdownView)) return;
-      if (this.followed?.file === info.file) this.update(this.followed, info.getViewData(), info);
-      else if (this.loading?.view !== info && this.app.workspace.getMostRecentLeaf() === info.leaf) this.refresh(info);
+      if (!(info instanceof MarkdownView) || !info.file) return;
+      const source = this.sources.get(info.file);
+      if (source) this.update(source, info.getViewData(), info);
+      else if (!this.reads.has(info.file) && this.app.workspace.getMostRecentLeaf() === info.leaf) this.refresh(info);
     }));
     this.registerEvent(this.app.metadataCache.on("changed", (file, markdown) => {
-      if (this.followed?.file !== file) return;
+      const source = this.sources.get(file);
+      if (!source) return;
       const view = this.findView(file);
-      if (!view || view.getMode() === "preview") this.update(this.followed, markdown, view);
+      if (!view || view.getMode() === "preview") this.update(source, markdown, view);
     }));
     this.registerEvent(this.app.vault.on("create", file => this.onFileChange(file)));
     this.registerEvent(this.app.vault.on("modify", file => this.onFileChange(file)));
@@ -67,9 +78,10 @@ export class PresentationReader extends Component {
 
   onunload(): void {
     this.running = false;
-    this.generation++;
+    this.sources = new WeakMap();
+    this.reads = new WeakMap();
     this.followed = null;
-    this.loading = null;
+    this.requested = null;
   }
 
   private refreshActive(): void {
@@ -78,18 +90,26 @@ export class PresentationReader extends Component {
   }
 
   private onFileChange(file: TAbstractFile, oldPath?: string): void {
-    const followed = this.followed;
-    const isCompanionChange = file instanceof TFile && file.extension.toLowerCase() === "mdpoint";
-    if (followed && (file === followed.file || (isCompanionChange && file.parent === followed.file.parent) ||
-      [file.path, oldPath].some(path => path !== undefined &&
-        [followed.path, followed.companionPath].some(owned => owned === path || owned.startsWith(path + "/"))))) {
-      if (this.app.vault.getAbstractFileByPath(followed.file.path) !== followed.file ||
-        !presentationCompanionPath(followed.file.path)) this.forget(followed.file);
-      else this.refreshFile(followed.file, this.findView(followed.file));
-    } else {
-      const leaf = this.app.workspace.getMostRecentLeaf();
-      if (leaf?.view instanceof MarkdownView && (leaf.view.file === file || presentationCompanionPath(leaf.view.file?.path ?? "") === file.path ||
-        isCompanionChange || oldPath?.toLowerCase().endsWith(".mdpoint"))) this.refresh(leaf.view);
+    // Open editors and the retained outline own the relevant sources. Each file's
+    // read is independent; background saves cannot supersede another deck's read.
+    const candidates = new Set([this.followed, this.requested]);
+    for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+      if (leaf.view instanceof MarkdownView && leaf.view.file && presentationCompanionPath(leaf.view.file.path)) candidates.add(leaf.view.file);
+    }
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      const source = this.sources.get(candidate);
+      const companionPath = presentationCompanionPath(candidate.path);
+      // Deleted entries no longer have a parent object; paths still identify
+      // conflicts removed from the source folder and files renamed out of it.
+      const companionChange = [file.path, oldPath].some(path => path !== undefined && path.toLowerCase().endsWith(".mdpoint") &&
+        path.slice(0, path.lastIndexOf("/") + 1) === candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1));
+      const affected = file === candidate || file.path === companionPath || companionChange ||
+        [file.path, oldPath].some(path => path !== undefined &&
+          [candidate.path, source?.path, source?.companionPath].some(owned => owned === path || owned?.startsWith(path + "/")));
+      if (!affected) continue;
+      if (this.app.vault.getAbstractFileByPath(candidate.path) !== candidate || !companionPath) this.forget(candidate);
+      else this.refreshFile(candidate, this.findView(candidate));
     }
   }
 
@@ -98,7 +118,9 @@ export class PresentationReader extends Component {
   }
 
   async refreshView(view: MarkdownView): Promise<void> {
-    if (view.file && presentationCompanionPath(view.file.path)) await this.read(view.file, view);
+    if (!view.file || !presentationCompanionPath(view.file.path)) return;
+    this.requested = view.file;
+    await this.read(view.file, view);
   }
 
   private findView(file: TFile): MarkdownView | null {
@@ -109,74 +131,76 @@ export class PresentationReader extends Component {
   }
 
   private refreshFile(file: TFile, view: MarkdownView | null): void {
-    // Background saves of the previous deck must not supersede the deck the user
-    // is opening. A reused pane no longer represents that pending request.
-    const loading = this.loading;
-    if (loading?.view && loading.view.file === loading.file && loading.file !== file) return;
     void this.read(file, view).catch((error: unknown) => console.error(error));
   }
 
   private async read(file: TFile, view: MarkdownView | null): Promise<void> {
-    const generation = ++this.generation;
-    this.loading = null;
+    const request = { view };
+    this.reads.set(file, request);
     const path = file.path;
     const companionPath = presentationCompanionPath(path);
-    if (!companionPath) return;
-    const companionFile = this.app.vault.getAbstractFileByPath(companionPath);
-    if (!(companionFile instanceof TFile)) { this.forget(file); return; }
-    const companions = companionFile.parent?.children.filter(file => file instanceof TFile &&
+    const companionFile = companionPath && this.app.vault.getAbstractFileByPath(companionPath);
+    const companions = file.parent?.children.filter(file => file instanceof TFile &&
       file.extension.toLowerCase() === "mdpoint" && !file.name.startsWith("._"));
-    if (companions?.length !== 1) { this.forget(file); return; }
-    this.loading = { file, view };
     try {
+      if (!companionPath || !(companionFile instanceof TFile) || companions?.length !== 1) { this.forget(file); return; }
       const companion: unknown = JSON.parse(await this.app.vault.read(companionFile));
       const markdown = view ? view.getViewData() : await this.app.vault.read(file);
-      // Only the current request may publish. Typing while I/O is pending is read
-      // from the view after the await; switching files or unloading invalidates it.
-      if (!this.running || generation !== this.generation || file.path !== path ||
+      // The file's newest request owns its metadata. A reused editor is never a
+      // source for that earlier file, and unloading invalidates every request.
+      if (!this.running || this.reads.get(file) !== request || file.path !== path ||
         this.app.vault.getAbstractFileByPath(path) !== file || (view && view.file !== file)) return;
-      this.update({ file, path, companionPath, companion }, markdown, view);
+      const source: PresentationSource = { file, path, companionPath, companion, markdown: null, snapshot: null };
+      this.sources.set(file, source);
+      this.update(source, markdown, view);
     } catch {
-      if (this.running && generation === this.generation) this.forget(file);
+      if (this.running && this.reads.get(file) === request) this.forget(file);
     } finally {
-      if (generation === this.generation) this.loading = null;
+      if (this.reads.get(file) === request) this.reads.delete(file);
     }
   }
 
   private forget(file: TFile): void {
-    if (this.followed?.file !== file) return;
+    this.sources.delete(file);
+    this.reads.delete(file);
+    if (this.followed !== file) return;
     this.followed = null;
     this.publish(null, null);
   }
 
-  private update(candidate: FollowedPresentation, markdown: string, view: MarkdownView | null): void {
-    if (!this.running || candidate.file.path !== candidate.path) return;
+  private update(source: PresentationSource, markdown: string, view: MarkdownView | null): void {
+    const snapshot = this.snapshot(source.file, markdown);
+    if (snapshot && this.requested === source.file) this.followed = source.file;
+    if (this.followed === source.file) this.publish(snapshot?.outline ?? null, view);
+  }
+
+  /** One current source index is shared by outline projection and editor consumers. */
+  snapshot(file: TFile, markdown: string): PresentationSnapshot | null {
+    const source = this.sources.get(file);
+    if (!this.running || !source || file.path !== source.path) return null;
+    if (source.markdown === markdown) return source.snapshot;
+    source.markdown = markdown;
+    source.snapshot = this.parse(source, markdown);
+    return source.snapshot;
+  }
+
+  private parse(source: PresentationSource, markdown: string): PresentationSnapshot | null {
     const header = getFrontMatterInfo(markdown);
     let frontmatter: unknown;
     try { frontmatter = header.exists ? parseYaml(header.frontmatter) : null; }
-    catch { this.forget(candidate.file); return; }
-    if (!presentationIdentity(frontmatter, candidate.companion) || !isRecord(candidate.companion) || !isRecord(candidate.companion.slides)) {
-      this.forget(candidate.file);
-      return;
-    }
+    catch { return null; }
+    if (!presentationIdentity(frontmatter, source.companion) || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
     const document = indexPresentation(markdown, header.contentStart);
-    const slides = candidate.companion.slides;
-    if (!document || document.slides.some(slide => !Object.hasOwn(slides, slide.id))) { this.forget(candidate.file); return; }
+    const slides = source.companion.slides;
+    if (!document || document.slides.some(slide => !Object.hasOwn(slides, slide.id))) return null;
     const skipped = new Set<string>();
     for (const slide of document.slides) {
       const metadata = slides[slide.id];
-      if (!isRecord(metadata) || (metadata.skipped !== undefined && typeof metadata.skipped !== "boolean")) {
-        this.forget(candidate.file);
-        return;
-      }
+      if (!isRecord(metadata) || (metadata.skipped !== undefined && typeof metadata.skipped !== "boolean")) return null;
       if (metadata.skipped === true) skipped.add(slide.id);
     }
     const sections = outlineSections(markdown, document);
-    if (!sections || (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from))) {
-      this.forget(candidate.file);
-      return;
-    }
-    this.followed = candidate;
-    this.publish({ path: candidate.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections }, view);
+    if (!sections || (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from))) return null;
+    return { document, outline: { path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections } };
   }
 }
