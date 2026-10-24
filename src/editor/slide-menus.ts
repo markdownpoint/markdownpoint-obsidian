@@ -16,13 +16,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Component, MarkdownView, Menu, editorInfoField } from "obsidian";
-import type { App, Editor, TFile } from "obsidian";
+import { Component, MarkdownRenderChild, MarkdownView, Menu, Notice, editorInfoField } from "obsidian";
+import type { App, Editor, MarkdownPostProcessorContext, TFile } from "obsidian";
+import { Text } from "@codemirror/state";
 import { ViewPlugin } from "@codemirror/view";
 import type { EditorView } from "@codemirror/view";
 import type { PresentationReader } from "../presentation/reader.ts";
 import { slideForMenu } from "./menu-target.ts";
 import { uiText } from "../ui-text.ts";
+import { presentationCompanionPath } from "../format/recognition.ts";
 
 export interface SlideMenuTarget {
   readonly owner: MarkdownView;
@@ -36,6 +38,8 @@ export interface SlideMenuTarget {
 export class SlideMenus extends Component {
   readonly extension;
   private readonly pending = new WeakMap<Editor, SlideMenuTarget | null>();
+  private readonly readingViews = new Map<MarkdownView, Component>();
+  private readonly readingSections = new Map<HTMLElement, MarkdownPostProcessorContext>();
   private running = false;
 
   constructor(
@@ -62,9 +66,109 @@ export class SlideMenus extends Component {
       this.pending.delete(editor);
       if (target) this.addItems(menu, target);
     }));
+    this.registerEvent(this.app.workspace.on("layout-change", () => this.syncReadingViews()));
+    this.app.workspace.onLayoutReady(() => this.syncReadingViews());
   }
 
-  onunload(): void { this.running = false; }
+  onunload(): void {
+    this.running = false;
+    this.readingViews.clear();
+    this.readingSections.clear();
+  }
+
+  /** Keep the renderer's live source mapping; never infer slide identity from words. */
+  readingSection(element: HTMLElement, context: MarkdownPostProcessorContext): void {
+    if (!this.running || !presentationCompanionPath(context.sourcePath)) return;
+    this.readingSections.set(element, context);
+    const child = new MarkdownRenderChild(element);
+    child.register(() => {
+      if (this.readingSections.get(element) === context) this.readingSections.delete(element);
+    });
+    context.addChild(child);
+  }
+
+  private syncReadingViews(): void {
+    if (!this.running) return;
+    const views = new Set(this.app.workspace.getLeavesOfType("markdown")
+      .flatMap(leaf => leaf.view instanceof MarkdownView ? [leaf.view] : []));
+    for (const [view, events] of this.readingViews) if (!views.has(view)) {
+      this.removeChild(events);
+      this.readingViews.delete(view);
+    }
+    for (const view of views) if (!this.readingViews.has(view)) {
+      const events = this.addChild(new Component());
+      this.readingViews.set(view, events);
+      // Bubble after the renderer's own link and viewport menu contributions.
+      events.registerDomEvent(view.previewMode.containerEl, "contextmenu", event => this.readingMenu(view, event));
+      events.registerDomEvent(view.previewMode.containerEl, "keydown", event => this.readingKeyboardMenu(view, event));
+    }
+  }
+
+  private readingMenu(owner: MarkdownView, event: MouseEvent): void {
+    if (!this.running || owner.getMode() !== "preview" || !owner.file) return;
+    const node = event.targetNode;
+    const element = node?.instanceOf(Element) ? node : node?.parentElement;
+    if (!element || element.closest(".internal-embed, .metadata-container, .inline-title")) return;
+    const container = owner.previewMode.containerEl;
+    let section: HTMLElement | null = null;
+    for (let parent: Element | null = element; parent && parent !== container; parent = parent.parentElement) {
+      if (parent.instanceOf(HTMLElement) && this.readingSections.has(parent)) { section = parent; break; }
+    }
+    if (!section) {
+      // Empty space belongs to the preceding rendered section; top padding uses
+      // the first one. Section/composition text is excluded by the source target.
+      let top = -Infinity, first: HTMLElement | null = null, firstTop = Infinity;
+      for (const [candidate, context] of this.readingSections) {
+        if (context.sourcePath !== owner.file.path || !candidate.isConnected || !container.contains(candidate)) continue;
+        const bounds = candidate.getBoundingClientRect();
+        if (!bounds.height) continue;
+        if (bounds.top < firstTop) { firstTop = bounds.top; first = candidate; }
+        if (bounds.top <= event.clientY && bounds.top >= top) { top = bounds.top; section = candidate; }
+      }
+      section ??= first;
+    }
+    const context = section && this.readingSections.get(section);
+    if (!section || context?.sourcePath !== owner.file.path) return;
+    const info = context.getSectionInfo(section);
+    if (!info || info.text !== owner.getViewData()) return;
+    const source = Text.of(info.text.split("\n"));
+    if (info.lineStart < 0 || info.lineStart >= source.lines) return;
+    const target = this.target(owner, source.line(info.lineStart + 1).from);
+    if (!target) return;
+    const selection = container.ownerDocument.getSelection();
+    const selected = selection?.anchorNode && selection.focusNode && container.contains(selection.anchorNode) && container.contains(selection.focusNode)
+      ? selection.toString() : "";
+    const menu = Menu.forEvent(event);
+    // Native link menus already provide Copy for their link text.
+    if (selected && !element.closest(".internal-link, .external-link")) menu.addItem(item => item.setSection("clipboard").setTitle(uiText.clipboard.copyText).setIcon("copy")
+      .onClick(() => {
+        void container.ownerDocument.defaultView!.navigator.clipboard.writeText(selected).catch((error: unknown) => {
+          console.error(error);
+          if (this.running) new Notice(uiText.clipboard.copyFailed);
+        });
+      }));
+    this.addItems(menu, target);
+  }
+
+  private readingKeyboardMenu(owner: MarkdownView, event: KeyboardEvent): void {
+    if (!this.running || owner.getMode() !== "preview" || event.altKey || event.ctrlKey || event.metaKey ||
+      !(event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) return;
+    const focused = event.targetNode?.instanceOf(Element) ? event.targetNode : event.targetNode?.parentElement;
+    if (!focused || focused.closest(".internal-embed, .metadata-container, .inline-title") ||
+      !owner.file || !this.reader.snapshot(owner.file, owner.getViewData())) return;
+    const container = owner.previewMode.containerEl;
+    const selection = container.ownerDocument.getSelection();
+    const node = selection?.focusNode;
+    if (!node || !container.contains(node) || !selection.rangeCount) return;
+    const target = node.instanceOf(Element) ? node : node.parentElement;
+    if (!target || target.closest(".internal-embed, .metadata-container, .inline-title")) return;
+    const bounds = selection.getRangeAt(0).getBoundingClientRect();
+    const context = new container.ownerDocument.defaultView!.MouseEvent("contextmenu", {
+      bubbles: true, cancelable: true, clientX: bounds.left, clientY: bounds.top, button: 2,
+    });
+    target.dispatchEvent(context);
+    if (context.defaultPrevented) { event.preventDefault(); event.stopPropagation(); }
+  }
 
   current(target: SlideMenuTarget): boolean {
     return this.running && target.owner.file === target.file && target.file.path === target.path &&

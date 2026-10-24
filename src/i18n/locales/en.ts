@@ -33,6 +33,7 @@ export const en = {
     },
   },
   notes: { label: "Speaker notes", placeholder: "Notes" },
+  clipboard: { copyText: "Copy", copyFailed: "Could not copy text to the clipboard." },
   slides: {
     delete: ({ count }: { count: number }) => count === 1 ? "Delete slide" : "Delete slides",
     deleteFailed: "The slide could not be deleted.",

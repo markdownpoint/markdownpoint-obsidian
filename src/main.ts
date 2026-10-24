@@ -122,6 +122,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.registerEditorExtension(this.presentationEditor.extension);
     this.slideMenus = this.addChild(new SlideMenus(this.app, this.reader, target => this.deleteDraftSlide(target)));
     this.registerEditorExtension(this.slideMenus.extension);
+    this.registerMarkdownPostProcessor((element, context) => this.slideMenus?.readingSection(element, context));
   }
 
   onunload(): void {
