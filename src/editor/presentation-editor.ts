@@ -360,13 +360,14 @@ export class PresentationEditor extends Component {
     const entryPoints = new Set([...fields, ...noteFields].filter(field => field.contentFrom === field.to && field.to < state.doc.length).map(field => field.contentFrom));
     for (const slot of notes) if (!slot.field) entryPoints.add(slot.at);
     const ranges = markers.map(marker => Decoration.replace({
-      block: true, inclusiveStart: !entryPoints.has(marker.from), ...(marker.label === null ? {} : { widget: new SlideBoundary(marker.label) }),
+      block: true, inclusiveStart: !entryPoints.has(marker.from), ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label) }),
     }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to));
     ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
     ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions));
     for (const section of snapshot?.document.sections ?? []) {
       const first = state.doc.sliceString(section.markerTo, section.to).search(/\S/);
-      if (first >= 0) ranges.push(Decoration.line({ class: "markdownpoint-section-heading" }).range(state.doc.lineAt(section.markerTo + first).from));
+      if (first >= 0) ranges.push(Decoration.line({ class: `markdownpoint-section-heading${section === snapshot?.document.sections[0] ? " markdownpoint-first-section" : ""}` })
+        .range(state.doc.lineAt(section.markerTo + first).from));
     }
     return { id: markers.length ? id ?? null : null, snapshot, empty: false, markers, fields, notes, openedNotes, focused, decorations: Decoration.set(ranges, true) };
   }
