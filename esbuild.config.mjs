@@ -17,6 +17,9 @@
  */
 
 import { build, context } from "esbuild";
+import { readFile } from "node:fs/promises";
+
+const notices = await readFile(new URL("./THIRD_PARTY_NOTICES.md", import.meta.url), "utf8");
 
 const options = {
   entryPoints: ["src/main.ts"],
@@ -29,6 +32,8 @@ const options = {
   logLevel: "info",
   sourcemap: process.argv.includes("--watch") ? "inline" : false,
   legalComments: "inline",
+  // Obsidian installs the bundle without npm's package license files.
+  banner: { js: `/*\n${notices}\n*/` },
 };
 
 if (process.argv.includes("--watch")) {

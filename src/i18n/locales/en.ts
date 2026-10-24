@@ -22,6 +22,7 @@ export const en = {
   sidebar: "Sidebar",
   left: "Left",
   right: "Right",
+  emptySlide: "Title",
   commands: {
     focusOutline: "Focus outline",
     focusEditor: "Focus editor",

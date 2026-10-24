@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ItemView } from "obsidian";
+import { ItemView, setTooltip } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import type { OutlineState } from "./model.ts";
 import { uiText } from "../ui-text.ts";
@@ -56,27 +56,38 @@ export class MarkdownPointOutlineView extends ItemView {
 
   render(): void {
     const ownsFocus = this.contentEl.contains(this.contentEl.ownerDocument.activeElement);
-    this.contentEl.empty();
     const { presentation, activeSlideId } = this.delegate.state();
-    const list = this.contentEl.createEl("ol", { cls: "markdownpoint-outline-list" });
+    const list = this.contentEl.querySelector("ol") ?? this.contentEl.createEl("ol", { cls: "markdownpoint-outline-list" });
     list.setAttribute("aria-label", uiText.outline);
     list.tabIndex = presentation?.slides.length ? -1 : 0;
+    // Preserve unchanged rows while the author types; rebuilding the entire list
+    // discards focused controls and makes large-deck edits pay for every DOM node.
+    const previous = new Map([...list.querySelectorAll<HTMLButtonElement>("button[data-slide-id]")]
+      .map(button => [button.getAttribute("data-slide-id"), button]));
     for (const [index, slide] of (presentation?.slides ?? []).entries()) {
-      const row = list.createEl("li");
       const active = slide.id === activeSlideId;
-      const button = row.createEl("button", {
-        cls: "markdownpoint-outline-row",
-        text: `${index + 1}. ${slide.title}`,
-        attr: {
-          type: "button",
-          "data-slide-id": slide.id,
-          "aria-current": String(active),
-        },
-      });
+      let button = previous.get(slide.id);
+      previous.delete(slide.id);
+      if (!button) {
+        button = list.createEl("li").createEl("button", {
+          cls: "markdownpoint-outline-row",
+          attr: { type: "button", "data-slide-id": slide.id },
+        });
+        button.createSpan({ cls: "markdownpoint-outline-title" });
+        button.addEventListener("click", () => this.delegate.selectSlide(slide.id));
+      }
+      const row = button.parentElement;
+      if (row && list.children[index] !== row) list.insertBefore(row, list.children[index] ?? null);
+      const label = `${index + 1}. ${slide.title}`;
+      if (button.getAttribute("aria-label") !== label) {
+        button.firstElementChild?.setText(label);
+        setTooltip(button, label);
+      }
+      if (button.getAttribute("aria-current") !== String(active)) button.setAttribute("aria-current", String(active));
       button.tabIndex = active ? 0 : -1;
-      button.addEventListener("click", () => this.delegate.selectSlide(slide.id));
     }
-    if (ownsFocus) this.focusActive();
+    for (const button of previous.values()) button.parentElement?.remove();
+    if (ownsFocus && !this.contentEl.contains(this.contentEl.ownerDocument.activeElement)) this.focusActive();
   }
 
   focusActive(): void {

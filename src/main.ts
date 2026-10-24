@@ -24,6 +24,7 @@ import { loadLocalUi, saveLocalUi } from "./settings/local-ui.ts";
 import type { LocalUiState, OutlineSide } from "./settings/local-ui.ts";
 import { MarkdownPointSettingTab } from "./settings/tab.ts";
 import { uiText } from "./ui-text.ts";
+import { PresentationReader } from "./presentation/reader.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -32,13 +33,14 @@ export default class MarkdownPointPlugin extends Plugin {
   private editorLeaf: WorkspaceLeaf | null = null;
   private placingOutline: Promise<WorkspaceLeaf | null> | null = null;
   private running = false;
+  private reader: PresentationReader | null = null;
 
   onload(): void {
     this.running = true;
     this.localUi = loadLocalUi(this.app);
     this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
       state: () => ({ presentation: this.presentation, activeSlideId: this.activeSlideId }),
-      selectSlide: id => this.selectSlide(id),
+      selectSlide: id => this.run(() => this.selectSlide(id)),
     }));
     this.addSettingTab(new MarkdownPointSettingTab(this.app, this, this.localUi,
       side => this.setOutlineSide(side)));
@@ -65,28 +67,39 @@ export default class MarkdownPointPlugin extends Plugin {
     }));
     this.app.workspace.onLayoutReady(() => {
       if (!this.running) return;
-      if (this.outlineLeaves().length > 0) this.run(() => this.showOutline(false));
+      this.run(() => this.showOutline(false));
     });
+    this.reader = new PresentationReader(this.app, (presentation, editor) => {
+      if (presentation) this.followPresentation(presentation, editor);
+      else {
+        this.presentation = null;
+        this.activeSlideId = null;
+        this.refreshOutline();
+      }
+    });
+    this.addChild(this.reader);
   }
 
   onunload(): void {
     this.running = false;
     this.presentation = null;
     this.editorLeaf = null;
+    this.reader = null;
     // Registered views and events are released by Obsidian; retain its saved workspace layout.
   }
 
   /** The format adapter must verify the presentation before publishing it through this handoff. */
-  followPresentation(presentation: OutlinePresentation, editor: MarkdownView): void {
-    if (!this.running || editor.file?.path !== presentation.path) return;
+  followPresentation(presentation: OutlinePresentation, editor: MarkdownView | null): void {
+    if (!this.running || (editor && editor.file?.path !== presentation.path)) return;
     const samePresentation = presentation.path === this.presentation?.path;
     this.presentation = presentation;
-    this.editorLeaf = editor.leaf;
+    this.editorLeaf = editor?.leaf ?? null;
     if (!samePresentation || !presentation.slides.some(slide => slide.id === this.activeSlideId)) {
       this.activeSlideId = presentation.slides[0]?.id ?? null;
     }
+    // Content updates do not reopen a tab the author closed. Placement belongs
+    // to initialization, the side setting, and the explicit focus command.
     this.refreshOutline();
-    this.run(() => this.showOutline(false));
   }
 
   async setOutlineSide(side: OutlineSide): Promise<void> {
@@ -123,6 +136,7 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!(file instanceof TFile)) return null;
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.openFile(file);
+    if (!this.running) return null;
     this.editorLeaf = leaf;
     return leaf;
   }
@@ -131,6 +145,7 @@ export default class MarkdownPointPlugin extends Plugin {
     const leaf = await this.ensureEditorLeaf();
     if (!leaf || !this.running) return;
     await leaf.loadIfDeferred();
+    if (!this.running || leaf !== this.currentEditorLeaf()) return;
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
     if (leaf.view instanceof MarkdownView) leaf.view.editor.focus();
   }
@@ -141,9 +156,11 @@ export default class MarkdownPointPlugin extends Plugin {
     const leaf = await this.placingOutline;
     if (!leaf || !this.running) return;
     await leaf.loadIfDeferred();
+    if (!this.running) return;
     if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.render();
     if (focus) {
       await this.app.workspace.revealLeaf(leaf);
+      if (!this.running) return;
       this.app.workspace.setActiveLeaf(leaf, { focus: true });
       if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.focusActive();
     }
@@ -165,15 +182,27 @@ export default class MarkdownPointPlugin extends Plugin {
     return leaf;
   }
 
-  private selectSlide(id: string): void {
-    const slide = this.presentation?.slides.find(item => item.id === id);
-    const leaf = this.currentEditorLeaf();
-    if (!slide || !(leaf?.view instanceof MarkdownView)) return;
+  private async selectSlide(id: string): Promise<void> {
+    const path = this.presentation?.path;
+    if (!path || !this.presentation?.slides.some(slide => slide.id === id)) return;
     this.activeSlideId = id;
-    const cursor = { line: slide.line, ch: 0 };
-    leaf.view.editor.setCursor(cursor);
-    leaf.view.editor.scrollIntoView({ from: cursor, to: cursor }, true);
     this.refreshOutline();
+    const existing = this.currentEditorLeaf();
+    const leaf = existing ?? await this.ensureEditorLeaf();
+    if (!this.running || !(leaf?.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
+    // A closed pane may have missed external edits. Resolve fresh positions before
+    // navigating the reopened document rather than applying the old line number.
+    if (!existing) await this.reader?.refreshView(leaf.view);
+    if (!this.running || this.presentation?.path !== path || this.activeSlideId !== id ||
+      !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
+    const slide = this.presentation.slides.find(item => item.id === id);
+    if (!slide) return;
+    const cursor = { line: slide.line, ch: 0 };
+    if (leaf.view.getMode() === "preview") leaf.view.setEphemeralState({ line: slide.line });
+    else {
+      leaf.view.editor.setCursor(cursor);
+      leaf.view.editor.scrollIntoView({ from: cursor, to: cursor }, true);
+    }
   }
 
   private run(action: () => Promise<void>): void {

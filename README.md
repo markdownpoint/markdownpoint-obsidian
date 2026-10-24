@@ -6,7 +6,9 @@ The intended workflow is to choose a theme, write in a focused Markdown editor w
 
 ## Project status
 
-This repository currently contains an early plugin scaffold with sidebar placement, declarative settings, focus commands, and focused tests. Presentation discovery and editing are not connected yet. The scaffold does not currently recognize or modify presentation files.
+This early development version recognizes `slides.md` beside `presentation.mdpoint` when both declare format version 1 and the same presentation identity. It provides a document-derived outline, slide navigation, sidebar placement, declarative settings, and focus commands. The outline updates while typing and after external file changes. It keeps following the most recent presentation when an ordinary note becomes active.
+
+The plugin reads presentation data without rewriting it. Writing remains in Obsidian's native Markdown editor. Slide-boundary decorations, layout thumbnails, multiselection, and structural slide operations are still in development. Other presentation data filenames are not currently supported.
 
 Outside code contributions and pull requests are not accepted. See the [contribution policy](CONTRIBUTING.md).
 
@@ -23,8 +25,12 @@ Individual commands are `npm run lint`, `npm run typecheck`, `npm test`, and `np
 
 The settings page offers Sidebar with Left and Right options, defaulting to Right. This choice is local to the current device and vault. Use Obsidian's sidebar commands to control visibility. Focus outline reveals the outline; Focus editor returns to the followed presentation's editor, or the most recent Markdown editor before a presentation is followed.
 
-Use a dedicated test vault and isolated profile for live development. Real presentation loading and editing are not available in the scaffold yet.
+Interface wording lives in `src/i18n/locales/en.ts`. Other locales use the same typed catalog; unsupported Obsidian languages fall back to English. English is the only bundled language currently.
+
+Use a dedicated test vault and isolated profile for live development.
 
 ## License
 
 GNU General Public License version 3; see [LICENSE](LICENSE). The license permits personal and commercial use, modification, and redistribution under its terms. The contribution policy does not restrict those rights.
+
+Dependency license notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and included in the built plugin.
