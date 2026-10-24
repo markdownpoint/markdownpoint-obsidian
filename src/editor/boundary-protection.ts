@@ -16,7 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { Annotation } from "@codemirror/state";
 import type { Transaction } from "@codemirror/state";
+
+/** Only explicit, validated slide operations use this annotation. */
+export const slideStructureChange = Annotation.define<boolean>();
 
 export interface BoundaryRange {
   readonly from: number;
@@ -25,6 +29,7 @@ export interface BoundaryRange {
 
 /** Reject the whole edit when any change crosses or enters a structural marker. */
 export function boundaryChangesAllowed(transaction: Transaction, markers: readonly BoundaryRange[]): boolean {
+  if (transaction.annotation(slideStructureChange) === true) return true;
   // Obsidian reloads files through unannotated editor transactions. Protect
   // user input, deletion and movement while allowing those native reloads.
   if (!["input", "delete", "move"].some(event => transaction.isUserEvent(event))) return true;

@@ -51,6 +51,15 @@ export default class MarkdownPointPlugin extends Plugin {
         if (action.kind === "select") this.run(() => this.selectSlide(action.id));
         else this.refreshOutline();
       },
+      step: direction => {
+        const selection = this.outline.state.selection;
+        this.run(() => this.editPresentation(editor => {
+          if (this.outline.state.selection === selection) this.presentationEditor?.step(editor.editor, selection.selected, direction);
+        }));
+      },
+      history: direction => this.run(() => this.editPresentation(editor => {
+        this.presentationEditor?.history(editor.editor, direction);
+      })),
     }));
     this.addSettingTab(new MarkdownPointSettingTab(this.app, this, this.localUi,
       side => this.setOutlineSide(side)));
@@ -166,6 +175,17 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!this.running || leaf !== this.currentEditorLeaf()) return;
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
     if (leaf.view instanceof MarkdownView && !this.presentationEditor?.focus(leaf.view.editor)) leaf.view.editor.focus();
+  }
+
+  private async editPresentation(edit: (editor: MarkdownView) => void): Promise<void> {
+    const path = this.presentation?.path;
+    if (!path) return;
+    const existing = this.currentEditorLeaf();
+    const leaf = existing ?? await this.ensureEditorLeaf();
+    if (!this.running || !(leaf?.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
+    if (!existing) await this.reader?.refreshView(leaf.view);
+    if (!this.running || this.presentation?.path !== path || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
+    edit(leaf.view);
   }
 
   private async showOutline(focus: boolean): Promise<void> {

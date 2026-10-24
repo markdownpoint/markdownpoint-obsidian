@@ -24,6 +24,7 @@ export interface SourceChange {
   readonly from: number;
   readonly to: number;
   readonly insert: string;
+  readonly document: PresentationDocument;
 }
 
 /**
@@ -65,5 +66,5 @@ export function stepSlideSource(markdown: string, document: PresentationDocument
   const indexed = indexPresentation(proposed, blocks[0]!.from);
   if (!indexed || indexed.slides.map(slide => slide.id).join("\n") !== next.filter(block => block.kind === "slide").map(block => block.id).join("\n") ||
     indexed.sections.map(section => section.id).join("\n") !== document.sections.map(section => section.id).join("\n")) return null;
-  return { from, to, insert };
+  return { from, to, insert, document: indexed };
 }

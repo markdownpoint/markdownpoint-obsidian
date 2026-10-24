@@ -19,11 +19,15 @@
   },
   "overrides": {
     "moment": "2.31.0",
+    "@codemirror/commands": {
+      "@codemirror/language": "6.10.8"
+    },
     "eslint-plugin-obsidianmd": {
       "obsidian": "$obsidian"
     }
   },
   "devDependencies": {
+    "@codemirror/commands": "6.8.1",
     "@codemirror/state": "6.5.0",
     "@codemirror/view": "6.38.6",
     "@types/node": "26.6.2",

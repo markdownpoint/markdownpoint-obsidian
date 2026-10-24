@@ -28,6 +28,8 @@ export const OUTLINE_VIEW_TYPE = "markdownpoint-outline";
 export interface OutlineDelegate {
   state(): OutlineState;
   select(action: ListSelectionAction<string>): void;
+  step(direction: "up" | "down"): void;
+  history(direction: "undo" | "redo"): void;
 }
 
 export class MarkdownPointOutlineView extends ItemView {
@@ -36,6 +38,20 @@ export class MarkdownPointOutlineView extends ItemView {
     this.registerDomEvent(this.contentEl, "keydown", event => {
       if (event.altKey) return;
       const modifier = Platform.isMacOS ? event.metaKey : event.ctrlKey;
+      const key = event.key.toLowerCase();
+      if (modifier && this.delegate.state().presentation &&
+        (key === "z" || (!Platform.isMacOS && !event.shiftKey && key === "y"))) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.delegate.history(key === "y" || event.shiftKey ? "redo" : "undo");
+        return;
+      }
+      if (modifier && !event.shiftKey && ["ArrowUp", "ArrowDown"].includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.delegate.step(event.key === "ArrowUp" ? "up" : "down");
+        return;
+      }
       if (modifier && !event.shiftKey && event.key.toLowerCase() === "a") {
         event.preventDefault();
         event.stopPropagation();
@@ -75,6 +91,8 @@ export class MarkdownPointOutlineView extends ItemView {
     // discards focused controls and makes large-deck edits pay for every DOM node.
     const previous = new Map([...list.children].map(row => [row.getAttribute("data-outline-key"), row]));
     const rows = presentation ? outlineRows(presentation, number => uiNumber.format(number)) : [];
+    const orderChanged = rows.length !== list.children.length || rows.some((item, index) =>
+      list.children[index]?.getAttribute("data-outline-key") !== `${item.kind}:${item.id}`);
     for (const [index, item] of rows.entries()) {
       const key = `${item.kind}:${item.id}`;
       let row = previous.get(key);
@@ -112,7 +130,9 @@ export class MarkdownPointOutlineView extends ItemView {
       }
     }
     for (const row of previous.values()) row.remove();
-    if (ownsFocus && !this.contentEl.contains(this.contentEl.ownerDocument.activeElement)) this.focusSelection();
+    // A sibling may move before the focused row without removing its DOM node.
+    // Keep that cursor visible after ordering changes, but not on title edits.
+    if (ownsFocus && (orderChanged || !this.contentEl.contains(this.contentEl.ownerDocument.activeElement))) this.focusSelection();
   }
 
   focusSelection(): void {
