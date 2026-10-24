@@ -35,6 +35,7 @@ import { notesDecorations } from "./notes-widgets.ts";
 import type { NotesActions } from "./notes-widgets.ts";
 import type { NotesUi } from "../settings/notes-ui.ts";
 import { payloadContentEnd } from "../format/payload.ts";
+import { slideAtPosition } from "../format/document.ts";
 
 const refreshPresentation = StateEffect.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
@@ -73,6 +74,7 @@ export class PresentationEditor extends Component {
   private readonly field: StateField<DraftState>;
   private readonly views = new Set<EditorView>();
   private readonly pending = new WeakSet<EditorView>();
+  private readonly pendingCaret = new WeakSet<EditorView>();
   private running = false;
   private readonly notesActions: NotesActions = {
     toggle: (view, slideId) => {
@@ -94,7 +96,11 @@ export class PresentationEditor extends Component {
     },
   };
 
-  constructor(private readonly reader: PresentationReader, private readonly notesUi: NotesUi) {
+  constructor(
+    private readonly reader: PresentationReader,
+    private readonly notesUi: NotesUi,
+    private readonly caretChanged: (editor: MarkdownView, slideId: string) => void,
+  ) {
     super();
     const field = this.field = StateField.define<DraftState>({
       create: state => this.build(state),
@@ -118,7 +124,17 @@ export class PresentationEditor extends Component {
           container?.toggleClass("markdownpoint-presentation", view.state.field(field).markers.length > 0);
         };
         sync();
-        return { update: sync, destroy: () => { views.delete(view); container?.removeClass("markdownpoint-presentation"); } };
+        this.reportCaret(view);
+        return {
+          update: update => {
+            sync();
+            if (update.selectionSet || update.docChanged || update.focusChanged ||
+              update.transactions.some(transaction => transaction.reconfigured || transaction.effects.some(effect => effect.is(refreshPresentation)))) {
+              this.reportCaret(view);
+            }
+          },
+          destroy: () => { views.delete(view); container?.removeClass("markdownpoint-presentation"); },
+        };
       }),
       EditorView.focusChangeEffect.of((_state, focused) => editorFocus.of(focused)),
       EditorView.domEventHandlers({
@@ -150,6 +166,24 @@ export class PresentationEditor extends Component {
 
   onload(): void { this.running = true; }
   onunload(): void { this.running = false; this.views.clear(); }
+
+  private reportCaret(view: EditorView): void {
+    if (this.pendingCaret.has(view)) return;
+    this.pendingCaret.add(view);
+    // Publish after CodeMirror's update and native pointer selection settle.
+    // Re-read the current state so a queued report cannot restore an old caret.
+    view.dom.ownerDocument.defaultView?.queueMicrotask(() => {
+      this.pendingCaret.delete(view);
+      if (!this.running || !this.views.has(view) || !view.hasFocus) return;
+      const editor = view.state.field(editorInfoField, false);
+      if (!(editor instanceof MarkdownView) || !editor.file) return;
+      const snapshot = this.reader.snapshot(editor.file, view.state.doc.toString());
+      if (!snapshot) return;
+      const position = Math.max(0, Math.min(view.state.selection.main.head, view.state.doc.length - 1));
+      const slide = slideAtPosition(snapshot.document, position);
+      if (slide) this.caretChanged(editor, slide.id);
+    });
+  }
 
   focus(editor: Editor): boolean {
     const view = [...this.views].find(view => view.state.field(editorInfoField, false)?.editor === editor);

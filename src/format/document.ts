@@ -48,6 +48,11 @@ export interface DocumentSection {
   to: number;
 }
 
+/** Section headings and reusable compositions are outside slide ranges. */
+export function slideAtPosition(document: PresentationDocument, position: number): DocumentSlide | null {
+  return document.slides.find(slide => position >= slide.from && position < slide.to) ?? null;
+}
+
 const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*([^\s]+))?\s*-->[ \t]*$/;
 const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[:\s]|-->|$)(?:\s*:?\s*[^\s<>]*)?\s*(?:-->|$)/i;
 const stableId = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;

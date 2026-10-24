@@ -8,7 +8,7 @@ The intended workflow is to choose a theme, write in a focused Markdown editor w
 
 This early development version recognizes `slides.md` beside `presentation.mdpoint` when both declare format version 1 and the same presentation identity. It provides a document-derived outline, slide navigation, sidebar placement, declarative settings, and focus commands. The outline updates while typing and after external file changes. It keeps following the most recent presentation when an ordinary note becomes active. Section names appear as unnumbered headings. Skipped slides stay visible with a dash, and slide numbering continues across sections.
 
-Outline labels prefer a populated Title field, then fall back to the first other authored text. Speaker notes and placeholder words do not supply slide titles.
+Outline labels prefer a populated Title field, then fall back to the first other authored text. Speaker notes and placeholder words do not supply slide titles. The active outline row follows the editor's writing position in Live Preview and Source mode.
 
 Writing remains in Obsidian's native Markdown editor. Live Preview shows numbered slide boundaries and protects their markers from ordinary typing, deletion, and movement. Title, Body, and Eyebrow fields show faint placeholders when empty and small headers when populated. Speaker notes open through a full-width disclosure beneath each slide, with a faint Notes placeholder when empty. Disclosure state is local to the device and vault. Placeholder words never become saved content. Source mode keeps raw Markdown editable. Names for other field roles, layout thumbnails, multiselection, and structural slide operations are still in development. Other presentation data filenames are not currently supported.
 

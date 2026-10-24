@@ -81,7 +81,8 @@ export default class MarkdownPointPlugin extends Plugin {
       }
     }, file => this.presentationEditor?.refresh(file));
     this.addChild(this.reader);
-    this.presentationEditor = new PresentationEditor(this.reader, new NotesUi(this.app));
+    this.presentationEditor = new PresentationEditor(this.reader, new NotesUi(this.app),
+      (editor, slideId) => this.followCaret(editor, slideId));
     this.addChild(this.presentationEditor);
     this.registerEditorExtension(this.presentationEditor.extension);
   }
@@ -113,6 +114,15 @@ export default class MarkdownPointPlugin extends Plugin {
     this.localUi.outlineSide = side;
     saveLocalUi(this.app, this.localUi);
     if (this.outlineLeaves().length > 0) await this.showOutline(false);
+  }
+
+  private followCaret(editor: MarkdownView, slideId: string): void {
+    if (!this.running || editor.file?.path !== this.presentation?.path ||
+      !this.presentation?.slides.some(slide => slide.id === slideId)) return;
+    this.editorLeaf = editor.leaf;
+    if (this.activeSlideId === slideId) return;
+    this.activeSlideId = slideId;
+    this.refreshOutline();
   }
 
   private outlineLeaves(): WorkspaceLeaf[] {

@@ -18,7 +18,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { indexPresentation } from "../src/format/document.ts";
+import { indexPresentation, slideAtPosition } from "../src/format/document.ts";
 
 void test("slides and their field ranges follow source order and preserve every source byte", () => {
   const text = '<!-- slide: opening -->\n\n<!-- text: heading -->\n\nStart here.\n\n<!-- notes -->\nA reminder.\n\n<!-- slide: closing -->\n\n<!-- text: summary -->\n';
@@ -109,4 +109,22 @@ void test("section heading ranges preserve source positions, including empty and
   assert.equal(text.slice(document.sections[0]!.markerTo, document.sections[0]!.to), "# Opening\n");
   assert.equal(document.sections[2]!.to, text.length);
   assert.equal(indexPresentation('<!-- section: repeated -->\n# One\n<!-- section: repeated -->\n# Two\n', 0), null);
+});
+
+void test("caret lookup follows slide ranges without claiming section headings or compositions", () => {
+  const markdown = 'Frontmatter gap.\n<!-- section: opening -->\n# Opening\n<!-- slide: first -->\n<!-- text: title -->\nFirst.\n\n<!-- notes -->\nRemember.\n\n<!-- section: ending -->\n# Ending\n<!-- slide: last -->\n<!-- text: body -->\nLast.\n\n<!-- composition: shared -->\n<!-- control: caption -->\nReusable.\n';
+  const document = indexPresentation(markdown, 0)!;
+  const [first, last] = document.slides;
+  assert.ok(first && last);
+  for (const slide of document.slides) {
+    assert.equal(slideAtPosition(document, slide.from), slide);
+    assert.equal(slideAtPosition(document, slide.markerTo), slide);
+    assert.equal(slideAtPosition(document, slide.to - 1), slide);
+  }
+  assert.equal(slideAtPosition(document, markdown.indexOf('Remember.')), first);
+  assert.equal(slideAtPosition(document, 0), null);
+  assert.equal(slideAtPosition(document, document.sections[1]!.markerTo), null);
+  assert.equal(slideAtPosition(document, last.to), null);
+  assert.equal(slideAtPosition(document, markdown.length - 1), null);
+  assert.equal(slideAtPosition({ slides: [], sections: [] }, 0), null);
 });
