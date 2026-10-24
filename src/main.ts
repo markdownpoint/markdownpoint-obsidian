@@ -24,6 +24,7 @@ import { loadLocalUi, saveLocalUi } from "./settings/local-ui.ts";
 import type { LocalUiState, OutlineSide } from "./settings/local-ui.ts";
 import { MarkdownPointSettingTab } from "./settings/tab.ts";
 import { uiText } from "./ui-text.ts";
+import { PresentationEditor } from "./editor/presentation-editor.ts";
 import { PresentationReader } from "./presentation/reader.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
@@ -34,6 +35,7 @@ export default class MarkdownPointPlugin extends Plugin {
   private placingOutline: Promise<WorkspaceLeaf | null> | null = null;
   private running = false;
   private reader: PresentationReader | null = null;
+  private presentationEditor: PresentationEditor | null = null;
 
   onload(): void {
     this.running = true;
@@ -76,8 +78,11 @@ export default class MarkdownPointPlugin extends Plugin {
         this.activeSlideId = null;
         this.refreshOutline();
       }
-    });
+    }, file => this.presentationEditor?.refresh(file));
     this.addChild(this.reader);
+    this.presentationEditor = new PresentationEditor(this.reader);
+    this.addChild(this.presentationEditor);
+    this.registerEditorExtension(this.presentationEditor.extension);
   }
 
   onunload(): void {
@@ -85,6 +90,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.presentation = null;
     this.editorLeaf = null;
     this.reader = null;
+    this.presentationEditor = null;
     // Registered views and events are released by Obsidian; retain its saved workspace layout.
   }
 

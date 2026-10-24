@@ -77,3 +77,13 @@
   color: var(--markdownpoint-muted);
   overflow-wrap: anywhere;
 }
+
+.markdownpoint-slide-boundary {
+  margin: var(--size-4-8) 0 var(--size-4-4);
+  padding-top: var(--size-4-2);
+  border-top: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+}

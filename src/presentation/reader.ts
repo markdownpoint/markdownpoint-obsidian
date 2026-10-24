@@ -49,6 +49,7 @@ export class PresentationReader extends Component {
   constructor(
     private readonly app: App,
     private readonly publish: (model: OutlinePresentation | null, view: MarkdownView | null) => void,
+    private readonly changed: (file: TFile) => void,
   ) { super(); }
 
   onload(): void {
@@ -163,15 +164,18 @@ export class PresentationReader extends Component {
   private forget(file: TFile): void {
     this.sources.delete(file);
     this.reads.delete(file);
-    if (this.followed !== file) return;
-    this.followed = null;
-    this.publish(null, null);
+    if (this.followed === file) {
+      this.followed = null;
+      this.publish(null, null);
+    }
+    this.changed(file);
   }
 
   private update(source: PresentationSource, markdown: string, view: MarkdownView | null): void {
     const snapshot = this.snapshot(source.file, markdown);
     if (snapshot && this.requested === source.file) this.followed = source.file;
     if (this.followed === source.file) this.publish(snapshot?.outline ?? null, view);
+    this.changed(source.file);
   }
 
   /** One current source index is shared by outline projection and editor consumers. */
@@ -184,13 +188,24 @@ export class PresentationReader extends Component {
     return source.snapshot;
   }
 
-  private parse(source: PresentationSource, markdown: string): PresentationSnapshot | null {
+  matchesIdentity(file: TFile, markdown: string): boolean {
+    const source = this.sources.get(file);
+    return this.running && source !== undefined && source.path === file.path && this.identityBodyStart(source, markdown) !== null;
+  }
+
+  private identityBodyStart(source: PresentationSource, markdown: string): number | null {
     const header = getFrontMatterInfo(markdown);
     let frontmatter: unknown;
     try { frontmatter = header.exists ? parseYaml(header.frontmatter) : null; }
     catch { return null; }
     if (!presentationIdentity(frontmatter, source.companion) || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
-    const document = indexPresentation(markdown, header.contentStart);
+    return header.contentStart;
+  }
+
+  private parse(source: PresentationSource, markdown: string): PresentationSnapshot | null {
+    const bodyStart = this.identityBodyStart(source, markdown);
+    if (bodyStart === null || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
+    const document = indexPresentation(markdown, bodyStart);
     const slides = source.companion.slides;
     if (!document || document.slides.some(slide => !Object.hasOwn(slides, slide.id))) return null;
     const skipped = new Set<string>();
@@ -200,7 +215,7 @@ export class PresentationReader extends Component {
       if (metadata.skipped === true) skipped.add(slide.id);
     }
     const sections = outlineSections(markdown, document);
-    if (!sections || (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from))) return null;
+    if (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from)) return null;
     return { document, outline: { path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections } };
   }
 }

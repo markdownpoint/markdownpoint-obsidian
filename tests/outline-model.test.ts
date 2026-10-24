@@ -41,7 +41,7 @@ void test("HTML tags and leading single-line or multiline comments are omitted f
 void test("sections keep authored names, empty sections, and continuous numbers around skipped slides", () => {
   const markdown = '<!-- section: intro -->\r\n# *A beginning* &amp; a promise\r\n\r\n<!-- slide: first -->\r\n<!-- text: title -->\r\nFirst idea.\r\n<!-- slide: skipped -->\r\n<!-- text: title -->\r\nAn aside.\r\n<!-- section: empty -->\r\n# Room to think\r\n<!-- section: closing -->\r\n# Closing\r\n<!-- slide: last -->\r\n<!-- text: title -->\r\nA last thought.\r\n<!-- section: trailing -->\r\n# Later\r\n';
   const document = indexPresentation(markdown, 0)!;
-  const sections = outlineSections(markdown, document)!;
+  const sections = outlineSections(markdown, document);
   const slides = outlineSlides(markdown, document, "Title", new Set(["skipped"]));
   assert.deepEqual(outlineRows({ path: "slides.md", slides, sections }, String).map(row => [row.kind, row.label]), [
     ["section", "A beginning & a promise"], ["slide", "1. First idea."], ["slide", "– An aside."],
@@ -53,9 +53,11 @@ void test("sections keep authored names, empty sections, and continuous numbers 
   assert.equal(outlineRows({ path: "slides.md", slides: [], sections }, String).length, 4);
 });
 
-void test("a section requires one nonempty level-one heading", () => {
-  for (const words of ["", "Plain words", "## Subheading", "# Heading\n\nExtra words.", "# Heading\n# Another", "# Invalid\u0007name"]) {
+void test("a temporary empty or incomplete section heading keeps the slide structure available", () => {
+  for (const words of ["", "# ", "Plain words", "## Subheading", "# Invalid\u0007name"]) {
     const markdown = `<!-- section: opening -->\n${words}\n<!-- slide: first -->\n`;
-    assert.equal(outlineSections(markdown, indexPresentation(markdown, 0)!), null, words);
+    const document = indexPresentation(markdown, 0)!;
+    assert.deepEqual(outlineSections(markdown, document).map(section => [section.id, section.title]), [["opening", ""]], words);
+    assert.equal(document.slides.length, 1);
   }
 });

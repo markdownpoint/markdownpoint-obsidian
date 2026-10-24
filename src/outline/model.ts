@@ -74,16 +74,15 @@ export function outlineSlides(markdown: string, document: PresentationDocument, 
   });
 }
 
-/** A section is named by its single level-one heading, including empty sections. */
-export function outlineSections(markdown: string, document: PresentationDocument): OutlineSection[] | null {
+/** Editable headings may be temporarily empty; that does not change slide structure. */
+export function outlineSections(markdown: string, document: PresentationDocument): OutlineSection[] {
   const sections: OutlineSection[] = [];
   for (const section of document.sections) {
     const tokens = Lexer.lex(markdown.slice(section.markerTo, section.to).replace(/\r\n?/g, "\n").trim())
       .filter(token => token.type !== "space");
     const heading = tokens[0];
-    if (tokens.length !== 1 || heading?.type !== "heading" || heading.depth !== 1) return null;
-    const title = inlineText(heading.tokens ?? []).trim();
-    if (!title || [...title].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return null;
+    let title = heading?.type === "heading" && heading.depth === 1 ? inlineText(heading.tokens ?? []).trim() : "";
+    if ([...title].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) title = "";
     sections.push({ id: section.id, title, line: section.line });
   }
   return sections;
@@ -97,13 +96,18 @@ export interface OutlineRow {
 
 /** Section headers and skipped slides never consume a slide number. */
 export function outlineRows(presentation: OutlinePresentation, formatNumber: (number: number) => string): OutlineRow[] {
-  let number = 0;
+  const numbers = outlineSlideNumbers(presentation.slides, formatNumber);
   const slides = presentation.slides.map(slide => ({
     kind: "slide" as const, id: slide.id, line: slide.line,
-    label: `${slide.skipped ? "–" : `${formatNumber(++number)}.`} ${slide.title}`,
+    label: `${numbers.get(slide.id)} ${slide.title}`,
   }));
   const sections = presentation.sections.map(section => ({
     kind: "section" as const, id: section.id, line: section.line, label: section.title,
   }));
   return [...slides, ...sections].sort((a, b) => a.line - b.line);
+}
+
+export function outlineSlideNumbers(slides: readonly OutlineSlide[], formatNumber: (number: number) => string): ReadonlyMap<string, string> {
+  let number = 0;
+  return new Map(slides.map(slide => [slide.id, slide.skipped ? "–" : `${formatNumber(++number)}.`]));
 }
