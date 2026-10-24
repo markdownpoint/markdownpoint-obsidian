@@ -12,7 +12,7 @@ Outline labels prefer a populated Title field, then fall back to the first other
 
 Click a row to select and navigate to that slide. Cmd-click on macOS or Ctrl-click on Windows toggles individual slides; Shift-click and Shift+Up/Down extend the selection using MDP's selection rules. Home and End navigate, with Shift extending the range. Cmd/Ctrl+A selects all slides while the outline has focus. Moving the editor caret or editing words preserves the selected group. The current writing slide has a stronger title; selected slides have a muted fill.
 
-With a presentation in Live Preview or Source mode, use Cmd+Up/Down on macOS or Ctrl+Up/Down on Windows while the outline has focus to rearrange selected slides. A move keeps each slide's text fields, notes, and identity together. Crossing a section heading takes one step; multiple selections keep their gaps. Each step is one native undo event. Cmd/Ctrl+Z works from the outline, with Cmd+Shift+Z on macOS or Ctrl+Y/Ctrl+Shift+Z on Windows for redo. The writing caret stays with its text. Structural operations from Reading view are still in development.
+Use Cmd+Up/Down on macOS or Ctrl+Up/Down on Windows while the outline has focus to rearrange selected slides. A move keeps each slide's text fields, notes, and identity together. Crossing a section heading takes one step; multiple selections keep their gaps. Each step is one native undo event. Cmd/Ctrl+Z works from the outline, with Cmd+Shift+Z on macOS or Ctrl+Y/Ctrl+Shift+Z on Windows for redo. The writing caret stays with its text. Actions from Reading view enter the native editor, retaining the choice of Live Preview or Source mode and its undo history.
 
 The **Move slides up** and **Move slides down** commands are available from the outline through the command palette. Assign your own shortcuts in Obsidian's Hotkeys settings; these commands have no default global hotkeys and are inactive while editing text or when the sidebar is collapsed.
 
@@ -35,7 +35,7 @@ npm run check
 
 Individual commands are `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`. `npm run dev` watches the source. The build writes `main.js` locally; it does not install or deploy the plugin.
 
-The settings page offers Sidebar with Left and Right options, defaulting to Right. This choice is local to the current device and vault. Use Obsidian's sidebar commands to control visibility. Focus outline reveals the outline; Focus editor returns to the followed presentation's editor, or the most recent Markdown editor before a presentation is followed.
+The settings page offers Sidebar with Left and Right options, defaulting to Right. This choice is local to the current device and vault. Use Obsidian's sidebar commands to control visibility. Focus outline reveals the outline; Focus editor returns to the followed presentation's editor, or the most recent Markdown editor before a presentation is followed. Focus editor switches from Reading view to the previous editing mode when needed.
 
 Interface wording lives in `src/i18n/locales/en.ts`. Other locales use the same typed catalog; unsupported Obsidian languages fall back to English. English is the only bundled language currently.
 

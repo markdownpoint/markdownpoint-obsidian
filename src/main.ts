@@ -180,8 +180,22 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!leaf || !this.running) return;
     await leaf.loadIfDeferred();
     if (!this.running || leaf !== this.currentEditorLeaf()) return;
+    const editor = await this.editingView(leaf);
+    if (!editor || leaf !== this.currentEditorLeaf()) return;
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
-    if (leaf.view instanceof MarkdownView && !this.presentationEditor?.focus(leaf.view.editor)) leaf.view.editor.focus();
+    if (!this.presentationEditor?.focus(editor.editor)) editor.editor.focus();
+  }
+
+  /** Enter Obsidian's editor without changing its Live Preview/Source preference. */
+  private async editingView(leaf: WorkspaceLeaf): Promise<MarkdownView | null> {
+    const view = leaf.view;
+    if (!this.running || !(view instanceof MarkdownView) || !view.file) return null;
+    const file = view.file;
+    if (view.getMode() === "preview") {
+      await leaf.setViewState({ ...leaf.getViewState(), state: { ...view.getState(), mode: "source" } });
+    }
+    return this.running && leaf.view === view && view.file === file && view.getMode() === "source" &&
+      this.app.workspace.getLeavesOfType("markdown").includes(leaf) ? view : null;
   }
 
   private async editPresentation(edit: (editor: MarkdownView) => void): Promise<void> {
@@ -192,7 +206,8 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!this.running || !(leaf?.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
     if (!existing) await this.reader?.refreshView(leaf.view);
     if (!this.running || this.presentation?.path !== path || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
-    edit(leaf.view);
+    const editor = await this.editingView(leaf);
+    if (editor && this.presentation?.path === path && editor.file?.path === path) edit(editor);
   }
 
   private reorderSlides(action: SlideReorder): void {
@@ -208,10 +223,9 @@ export default class MarkdownPointPlugin extends Plugin {
     const root = view.leaf.getRoot();
     if ((root === this.app.workspace.leftSplit && this.app.workspace.leftSplit.collapsed) ||
       (root === this.app.workspace.rightSplit && this.app.workspace.rightSplit.collapsed)) return false;
-    const editor = this.currentEditorLeaf()?.view;
     // A palette retains the active workspace view and restores its focus before
-    // invoking the command. Reading view has no live editor for these actions.
-    return !(editor instanceof MarkdownView && editor.getMode() === "preview");
+    // invoking the command. Structural actions enter native editing when needed.
+    return true;
   }
 
   private async showOutline(focus: boolean): Promise<void> {
