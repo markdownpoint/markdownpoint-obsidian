@@ -28,5 +28,7 @@ export const en = {
   commands: {
     focusOutline: "Focus outline",
     focusEditor: "Focus editor",
+    moveSlidesUp: "Move slides up",
+    moveSlidesDown: "Move slides down",
   },
 };

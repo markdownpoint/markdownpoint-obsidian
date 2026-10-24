@@ -28,6 +28,7 @@ import { uiText } from "./ui-text.ts";
 import { PresentationEditor } from "./editor/presentation-editor.ts";
 import { PresentationReader } from "./presentation/reader.ts";
 import { NotesUi } from "./settings/notes-ui.ts";
+import type { SlideReorder } from "./format/reorder.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -51,12 +52,7 @@ export default class MarkdownPointPlugin extends Plugin {
         if (action.kind === "select") this.run(() => this.selectSlide(action.id));
         else this.refreshOutline();
       },
-      reorder: action => {
-        const selection = this.outline.state.selection;
-        this.run(() => this.editPresentation(editor => {
-          if (this.outline.state.selection === selection) this.presentationEditor?.reorder(editor.editor, selection.selected, action);
-        }));
-      },
+      reorder: action => this.reorderSlides(action),
       history: direction => this.run(() => this.editPresentation(editor => {
         this.presentationEditor?.history(editor.editor, direction);
       })),
@@ -77,6 +73,17 @@ export default class MarkdownPointPlugin extends Plugin {
         return true;
       },
     });
+    for (const direction of ["up", "down"] as const) {
+      this.addCommand({
+        id: `move-slides-${direction}`,
+        name: direction === "up" ? uiText.commands.moveSlidesUp : uiText.commands.moveSlidesDown,
+        checkCallback: checking => {
+          if (!this.outlineCommandContext()) return false;
+          if (!checking) this.reorderSlides({ kind: "step", direction });
+          return true;
+        },
+      });
+    }
 
     this.registerEvent(this.app.workspace.on("active-leaf-change", leaf => {
       if (leaf?.view instanceof MarkdownView &&
@@ -186,6 +193,25 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!existing) await this.reader?.refreshView(leaf.view);
     if (!this.running || this.presentation?.path !== path || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
     edit(leaf.view);
+  }
+
+  private reorderSlides(action: SlideReorder): void {
+    const selection = this.outline.state.selection;
+    this.run(() => this.editPresentation(editor => {
+      if (this.outline.state.selection === selection) this.presentationEditor?.reorder(editor.editor, selection.selected, action);
+    }));
+  }
+
+  private outlineCommandContext(): boolean {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownPointOutlineView);
+    if (!view || !this.presentation || !this.outline.state.selection.selected.size) return false;
+    const root = view.leaf.getRoot();
+    if ((root === this.app.workspace.leftSplit && this.app.workspace.leftSplit.collapsed) ||
+      (root === this.app.workspace.rightSplit && this.app.workspace.rightSplit.collapsed)) return false;
+    const editor = this.currentEditorLeaf()?.view;
+    // A palette retains the active workspace view and restores its focus before
+    // invoking the command. Reading view has no live editor for these actions.
+    return !(editor instanceof MarkdownView && editor.getMode() === "preview");
   }
 
   private async showOutline(focus: boolean): Promise<void> {
