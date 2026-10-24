@@ -22,8 +22,12 @@ import { history, undo, redo, undoDepth } from "@codemirror/commands";
 import { EditorState, EditorSelection } from "@codemirror/state";
 import type { Transaction } from "@codemirror/state";
 import { boundaryChangesAllowed } from "../src/editor/boundary-protection.ts";
-import { slideStepTransaction } from "../src/editor/reorder.ts";
+import { slideReorderTransaction } from "../src/editor/reorder.ts";
 import { indexPresentation, slideAtPosition } from "../src/format/document.ts";
+import type { PresentationDocument } from "../src/format/document.ts";
+
+const slideStepTransaction = (state: EditorState, document: PresentationDocument, ids: Iterable<string>, direction: "up" | "down") =>
+  slideReorderTransaction(state, document, ids, { kind: "step", direction });
 
 const markdown = '<!-- slide: alpha -->\n<!-- text: body -->\nAlpha\n\n<!-- slide: bravo -->\n<!-- text: body -->\nBeta\n\n<!-- slide: charlie -->\n<!-- text: body -->\nGamma';
 const documentOf = (state: EditorState) => indexPresentation(state.doc.toString(), 0)!;
@@ -108,4 +112,22 @@ void test("ordinary native text moves remain protected while the validated slide
   assert.ok(planned);
   assert.equal(state.update(planned).docChanged, true);
   assert.equal(slideStepTransaction(state, documentOf(state), ["alpha"], "up"), null);
+});
+
+void test("a split-group drop is one native undo event and retains the independent writing caret", () => {
+  let state = editor();
+  const caret = state.selection.main.head;
+  const target = { get state() { return state; }, dispatch: (transaction: Transaction) => { state = transaction.state; } };
+  const drop = slideReorderTransaction(state, documentOf(state), ["charlie", "alpha"],
+    { kind: "drop", target: { kind: "slide", id: "bravo", edge: "after" } });
+  assert.ok(drop);
+  state = state.update(drop).state;
+  assert.deepEqual(idsOf(state), ["bravo", "alpha", "charlie"]);
+  assert.equal(state.selection.main.head, state.doc.toString().indexOf("Beta") + 2);
+  assert.equal(undoDepth(state), 1);
+  assert.equal(undo(target), true);
+  assert.equal(state.doc.toString(), markdown);
+  assert.equal(state.selection.main.head, caret);
+  assert.equal(redo(target), true);
+  assert.deepEqual(idsOf(state), ["bravo", "alpha", "charlie"]);
 });

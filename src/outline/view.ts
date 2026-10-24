@@ -21,6 +21,8 @@ import type { WorkspaceLeaf } from "obsidian";
 import { outlineRows } from "./model.ts";
 import type { OutlineState } from "./model.ts";
 import type { ListSelectionAction } from "../selection/list-selection.ts";
+import type { SlideReorder } from "../format/reorder.ts";
+import { OutlineDrag } from "./drag.ts";
 import { uiNumber, uiText } from "../ui-text.ts";
 
 export const OUTLINE_VIEW_TYPE = "markdownpoint-outline";
@@ -28,13 +30,16 @@ export const OUTLINE_VIEW_TYPE = "markdownpoint-outline";
 export interface OutlineDelegate {
   state(): OutlineState;
   select(action: ListSelectionAction<string>): void;
-  step(direction: "up" | "down"): void;
+  reorder(action: SlideReorder): void;
   history(direction: "undo" | "redo"): void;
 }
 
 export class MarkdownPointOutlineView extends ItemView {
+  private readonly drag: OutlineDrag;
+
   constructor(leaf: WorkspaceLeaf, private readonly delegate: OutlineDelegate) {
     super(leaf);
+    this.drag = this.addChild(new OutlineDrag(this.contentEl, delegate));
     this.registerDomEvent(this.contentEl, "keydown", event => {
       if (event.altKey) return;
       const modifier = Platform.isMacOS ? event.metaKey : event.ctrlKey;
@@ -49,7 +54,7 @@ export class MarkdownPointOutlineView extends ItemView {
       if (modifier && !event.shiftKey && ["ArrowUp", "ArrowDown"].includes(event.key)) {
         event.preventDefault();
         event.stopPropagation();
-        this.delegate.step(event.key === "ArrowUp" ? "up" : "down");
+        this.delegate.reorder({ kind: "step", direction: event.key === "ArrowUp" ? "up" : "down" });
         return;
       }
       if (modifier && !event.shiftKey && event.key.toLowerCase() === "a") {
@@ -104,7 +109,7 @@ export class MarkdownPointOutlineView extends ItemView {
         } else {
           const button = row.createEl("button", {
             cls: "markdownpoint-outline-row",
-            attr: { type: "button", "data-slide-id": item.id },
+            attr: { type: "button", "data-slide-id": item.id, draggable: "true" },
           });
           button.createSpan({ cls: "markdownpoint-outline-title" });
           button.addEventListener("click", event => {
@@ -130,6 +135,7 @@ export class MarkdownPointOutlineView extends ItemView {
       }
     }
     for (const row of previous.values()) row.remove();
+    this.drag.sync();
     // A sibling may move before the focused row without removing its DOM node.
     // Keep that cursor visible after ordering changes, but not on title edits.
     if (ownsFocus && (orderChanged || !this.contentEl.contains(this.contentEl.ownerDocument.activeElement))) this.focusSelection();

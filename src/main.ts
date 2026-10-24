@@ -51,10 +51,10 @@ export default class MarkdownPointPlugin extends Plugin {
         if (action.kind === "select") this.run(() => this.selectSlide(action.id));
         else this.refreshOutline();
       },
-      step: direction => {
+      reorder: action => {
         const selection = this.outline.state.selection;
         this.run(() => this.editPresentation(editor => {
-          if (this.outline.state.selection === selection) this.presentationEditor?.step(editor.editor, selection.selected, direction);
+          if (this.outline.state.selection === selection) this.presentationEditor?.reorder(editor.editor, selection.selected, action);
         }));
       },
       history: direction => this.run(() => this.editPresentation(editor => {

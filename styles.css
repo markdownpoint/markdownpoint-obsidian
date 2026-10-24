@@ -28,8 +28,32 @@
 }
 
 .markdownpoint-outline-list > li {
+  position: relative;
   margin: 0;
   padding: 0;
+}
+
+.markdownpoint-outline-list > .is-drop-before::before,
+.markdownpoint-outline-list > .is-drop-after::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 1px;
+  background: var(--markdownpoint-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.markdownpoint-outline-list > .is-drop-before::before {
+  top: 0;
+}
+
+.markdownpoint-outline-list > .is-drop-after::after {
+  bottom: 0;
+}
+
+.markdownpoint-outline .markdownpoint-outline-row.is-dragging {
+  opacity: 0.45;
 }
 
 .markdownpoint-outline .markdownpoint-outline-row {

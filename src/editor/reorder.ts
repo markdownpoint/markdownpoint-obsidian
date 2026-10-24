@@ -20,12 +20,13 @@ import { isolateHistory } from "@codemirror/commands";
 import { EditorSelection } from "@codemirror/state";
 import type { EditorState, TransactionSpec } from "@codemirror/state";
 import type { PresentationDocument } from "../format/document.ts";
-import { stepSlideSource } from "../format/reorder.ts";
+import { reorderSlideSource } from "../format/reorder.ts";
+import type { SlideReorder } from "../format/reorder.ts";
 import { slideStructureChange } from "./boundary-protection.ts";
 
 /** Preserve native text ranges by their slide/section identity and local offset. */
-export function slideStepTransaction(state: EditorState, document: PresentationDocument, ids: Iterable<string>, direction: "up" | "down"): TransactionSpec | null {
-  const planned = stepSlideSource(state.doc.toString(), document, ids, direction);
+export function slideReorderTransaction(state: EditorState, document: PresentationDocument, ids: Iterable<string>, action: SlideReorder): TransactionSpec | null {
+  const planned = reorderSlideSource(state.doc.toString(), document, ids, action);
   if (!planned) return null;
   const changes = state.changes({ from: planned.from, to: planned.to, insert: planned.insert });
   const length = changes.newLength;

@@ -36,7 +36,8 @@ import type { NotesActions } from "./notes-widgets.ts";
 import type { NotesUi } from "../settings/notes-ui.ts";
 import { payloadContentEnd } from "../format/payload.ts";
 import { slideAtPosition } from "../format/document.ts";
-import { slideStepTransaction } from "./reorder.ts";
+import { slideReorderTransaction } from "./reorder.ts";
+import type { SlideReorder } from "../format/reorder.ts";
 import { undo, redo } from "@codemirror/commands";
 
 const refreshPresentation = StateEffect.define<boolean>();
@@ -169,13 +170,13 @@ export class PresentationEditor extends Component {
   onload(): void { this.running = true; }
   onunload(): void { this.running = false; this.views.clear(); }
 
-  step(editor: Editor, ids: Iterable<string>, direction: "up" | "down"): boolean {
+  reorder(editor: Editor, ids: Iterable<string>, action: SlideReorder): boolean {
     const view = [...this.views].find(view => view.state.field(editorInfoField, false)?.editor === editor);
     const file = view?.state.field(editorInfoField, false)?.file;
     if (!this.running || !view || !file) return false;
     const snapshot = this.reader.snapshot(file, view.state.doc.toString());
     if (!snapshot) return false;
-    const transaction = slideStepTransaction(view.state, snapshot.document, ids, direction);
+    const transaction = slideReorderTransaction(view.state, snapshot.document, ids, action);
     if (!transaction) return false;
     view.dispatch(transaction);
     return true;

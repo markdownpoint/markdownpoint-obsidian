@@ -19,7 +19,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { indexPresentation } from "../src/format/document.ts";
-import { stepSlideSource } from "../src/format/reorder.ts";
+import type { PresentationDocument } from "../src/format/document.ts";
+import { reorderSlideSource } from "../src/format/reorder.ts";
+import type { SlideDropTarget } from "../src/format/reorder.ts";
+
+const stepSlideSource = (source: string, document: PresentationDocument, ids: Iterable<string>, direction: "up" | "down") =>
+  reorderSlideSource(source, document, ids, { kind: "step", direction });
 
 const slide = (id: string): string => `<!-- slide: ${id} -->\n<!-- text: title -->\n${id}\n\n`;
 const section = (id: string): string => `<!-- section: ${id} -->\n# ${id}\n\n`;
@@ -27,6 +32,12 @@ const order = (markdown: string): string[] => indexPresentation(markdown, 0)!.sl
 
 function moved(markdown: string, ids: readonly string[], direction: "up" | "down"): string {
   const change = stepSlideSource(markdown, indexPresentation(markdown, 0)!, ids, direction);
+  assert.ok(change);
+  return markdown.slice(0, change.from) + change.insert + markdown.slice(change.to);
+}
+
+function dropped(markdown: string, ids: readonly string[], target: SlideDropTarget): string {
+  const change = reorderSlideSource(markdown, indexPresentation(markdown, 0)!, ids, { kind: "drop", target });
   assert.ok(change);
   return markdown.slice(0, change.from) + change.insert + markdown.slice(change.to);
 }
@@ -104,4 +115,43 @@ void test("section and slide IDs can match, while missing targets and interleave
   assert.equal(stepSlideSource(markdown, document, ["same", "missing"], "down"), null);
   const interleaved = slide("alpha") + '<!-- composition: shared -->\n<!-- control: body -->\nWords.\n' + slide("bravo");
   assert.equal(stepSlideSource(interleaved, indexPresentation(interleaved, 0)!, ["bravo"], "up"), null);
+});
+
+void test("a drop gathers split selections in source order before or after the target slide", () => {
+  const markdown = ["alpha", "bravo", "charlie", "delta", "echo"].map(slide).join("");
+  assert.equal(dropped(markdown, ["delta", "bravo"], { kind: "slide", id: "alpha", edge: "before" }),
+    ["bravo", "delta", "alpha", "charlie", "echo"].map(slide).join(""));
+  assert.equal(dropped(markdown, ["bravo", "delta"], { kind: "slide", id: "echo", edge: "after" }),
+    ["alpha", "charlie", "echo", "bravo", "delta"].map(slide).join(""));
+  assert.equal(dropped(markdown, ["bravo", "delta"], { kind: "slide", id: "delta", edge: "after" }),
+    ["alpha", "charlie", "bravo", "delta", "echo"].map(slide).join(""));
+});
+
+void test("dropping on a section places the whole group at its start, retaining empty sections and compositions", () => {
+  const tail = '<!-- composition: shared -->\n<!-- control: caption -->\nReusable.\n';
+  const markdown = section("opening") + slide("alpha") + section("empty") + section("ending") + slide("bravo") + slide("charlie") + tail;
+  assert.equal(dropped(markdown, ["charlie", "alpha"], { kind: "section", id: "empty" }),
+    section("opening") + section("empty") + slide("alpha") + slide("charlie") + section("ending") + slide("bravo") + tail);
+  assert.equal(dropped(markdown, ["bravo"], { kind: "section", id: "opening" }),
+    section("opening") + slide("bravo") + slide("alpha") + section("empty") + section("ending") + slide("charlie") + tail);
+});
+
+void test("no-op and missing drop targets leave the source untouched", () => {
+  const markdown = section("opening") + slide("alpha") + slide("bravo");
+  const document = indexPresentation(markdown, 0)!;
+  for (const target of [
+    { kind: "slide", id: "alpha", edge: "before" },
+    { kind: "section", id: "opening" },
+    { kind: "section", id: "missing" },
+    { kind: "slide", id: "missing", edge: "after" },
+  ] as const) assert.equal(reorderSlideSource(markdown, document, ["alpha"], { kind: "drop", target }), null);
+});
+
+void test("a drop preserves notes and unknown text bytes, and validates an unfinished final fence", () => {
+  const rich = '<!-- slide: bravo -->\n<!-- text: custom.caption -->\nAuthored words.\n\n\n<!-- notes -->\nA reminder.\n\n';
+  const markdown = slide("alpha") + rich + slide("charlie");
+  assert.equal(dropped(markdown, ["bravo"], { kind: "slide", id: "charlie", edge: "after" }), slide("alpha") + slide("charlie") + rich);
+  const unfinished = slide("alpha") + '<!-- slide: bravo -->\n<!-- text: body -->\n```md\nExample';
+  assert.equal(reorderSlideSource(unfinished, indexPresentation(unfinished, 0)!, ["bravo"],
+    { kind: "drop", target: { kind: "slide", id: "alpha", edge: "before" } }), null);
 });
