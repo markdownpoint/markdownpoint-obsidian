@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { reconcileSelection, selectionAfter, selectionOf } from "../selection/list-selection.ts";
+import { reconcileSelection, selectionAfter, selectionAfterRemoval, selectionOf } from "../selection/list-selection.ts";
 import type { ListSelectionAction } from "../selection/list-selection.ts";
 import type { OutlinePresentation, OutlineState } from "./model.ts";
 
@@ -28,13 +28,28 @@ export class OutlineSession {
 
   follow(presentation: OutlinePresentation | null): void {
     const order = presentation?.slides.map(slide => slide.id) ?? [];
-    const same = presentation !== null && presentation.path === this.current.presentation?.path;
-    const activeSlideId = same && order.includes(this.current.activeSlideId ?? "")
-      ? this.current.activeSlideId : order[0] ?? null;
+    const present = new Set(order);
+    const same = presentation !== null && presentation.path === this.current.presentation?.path &&
+      presentation.documentId === this.current.presentation.documentId;
     const previous = same ? reconcileSelection(order, this.current.selection) : selectionOf<string>([], null);
-    const selection = previous.selected.size ? previous
-      : selectionOf(activeSlideId ? [activeSlideId] : [], activeSlideId);
+    const removed = new Set([...this.current.selection.selected].filter(id => !present.has(id)));
+    const before = previous.selected.size || !same ? []
+      : this.current.presentation?.slides.map(slide => slide.id).filter(id => present.has(id) || removed.has(id)) ?? [];
+    const neighbor = same && removed.size ? selectionAfterRemoval(before, removed) : null;
+    const selection = previous.selected.size ? previous : neighbor?.selected.size ? neighbor
+      : selectionOf(order[0] ? [order[0]] : [], order[0] ?? null);
+    const activeSlideId = same && present.has(this.current.activeSlideId ?? "")
+      ? this.current.activeSlideId : selection.cursor;
     this.current = { presentation, activeSlideId, selection };
+  }
+
+  selectForMenu(id: string): boolean {
+    const order = this.current.presentation?.slides.map(slide => slide.id) ?? [];
+    if (!order.includes(id)) return false;
+    if (!this.current.selection.selected.has(id)) {
+      this.current = { ...this.current, selection: selectionAfter(order, this.current.selection, { kind: "select", id }) };
+    }
+    return true;
   }
 
   select(action: ListSelectionAction<string>): boolean {

@@ -172,6 +172,16 @@
   cursor: text;
 }
 
+.markdownpoint-save-retry {
+  margin-top: var(--size-4-2);
+}
+
+.markdownpoint-empty-draft {
+  padding: var(--size-4-6) 0;
+  color: var(--markdownpoint-muted);
+  font-family: var(--font-interface);
+}
+
 .markdownpoint-field-ghost.is-compact {
   display: block;
 }

@@ -48,7 +48,7 @@ function device(initial?: unknown) {
       state.disk = next;
       return Promise.resolve();
     },
-    failed: (_path, error) => { state.errors.push(error); },
+    failed: (_path, _document, error) => { state.errors.push(error); },
   };
   return { state, host, stored: () => stored };
 }
@@ -170,6 +170,23 @@ void test("failed disk writes retain recovery data and retry without a backgroun
   assert.equal(CompanionDocument.read(state.disk)!.records.has("a"), false);
 });
 
+void test("undo after a failed save clears a now-satisfied change without another write", async () => {
+  const { state, host } = device();
+  let saved = 0;
+  host.saved = () => { saved++; };
+  const data = new SlideData(host);
+  await data.remember(path, document, state.disk, ["a"]);
+  state.writeFails = true;
+  data.observe(path, document, state.disk, new Set(["b"]));
+  await data.settled(path, document);
+  assert.equal(state.errors.length, 1);
+  assert.equal(saved, 0);
+  data.observe(path, document, state.disk, new Set(["a", "b"]));
+  await data.settled(path, document);
+  assert.equal(saved, 1);
+  assert.equal(state.calls, 1);
+});
+
 void test("a failed recovery backup prevents deletion and retry durably preserves the newest record", async () => {
   const { state, host } = device();
   const data = new SlideData(host);
@@ -287,6 +304,56 @@ void test("folder renames carry recovery data while copies with the same documen
   reopened.observe("renamed/slides.md", document, state.disk, new Set(["a", "b"]));
   await reopened.settled("renamed/slides.md", document);
   assert.equal(writtenPath, "renamed/presentation.mdpoint");
+});
+
+void test("recovery survives a temporary file rename and plugin reload before the name is restored", async () => {
+  const { state, host } = device();
+  const data = new SlideData(host);
+  await data.remember(path, document, state.disk, ["a"]);
+  await data.rename(path, "deck/draft.md");
+  const reopened = new SlideData(host);
+  await reopened.ready;
+  await reopened.rename("deck/draft.md", path);
+  assert.equal(reopened.remembered(path, document).get("a"), '{"layout":"title"}');
+});
+
+void test("retry after a folder rename saves and reports completion at the new path", async () => {
+  const { state, host } = device();
+  const writes: string[] = [], saved: string[] = [];
+  const process = host.process.bind(host);
+  host.process = (path, update, canCommit) => { writes.push(path); return process(path, update, canCommit); };
+  host.saved = (path, id) => { assert.equal(id, document); saved.push(path); };
+  const data = new SlideData(host);
+  await data.remember(path, document, state.disk, ["a"]);
+  state.writeFails = true;
+  data.observe(path, document, state.disk, new Set(["b"]));
+  await data.settled(path, document);
+  await data.rename("deck", "renamed");
+  state.writeFails = false;
+  data.retry("renamed/slides.md", document);
+  await data.settled("renamed/slides.md", document);
+  assert.deepEqual(writes, ["deck/presentation.mdpoint", "renamed/presentation.mdpoint"]);
+  assert.deepEqual([...CompanionDocument.read(state.disk)!.records.keys()], ["b"]);
+  assert.deepEqual(saved, ["renamed/slides.md"]);
+});
+
+void test("retry refuses a temporary non-presentation name and remains available after renaming back", async () => {
+  const { state, host } = device();
+  const data = new SlideData(host);
+  await data.remember(path, document, state.disk, ["a"]);
+  state.writeFails = true;
+  data.observe(path, document, state.disk, new Set(["b"]));
+  await data.settled(path, document);
+  await data.rename(path, "deck/draft.md");
+  state.writeFails = false;
+  assert.equal(data.retry("deck/draft.md", document), false);
+  await data.settled("deck/draft.md", document);
+  assert.equal(state.calls, 1);
+  await data.rename("deck/draft.md", path);
+  assert.equal(data.retry(path, document), true);
+  await data.settled(path, document);
+  assert.deepEqual([...CompanionDocument.read(state.disk)!.records.keys()], ["b"]);
+  assert.equal(state.calls, 2);
 });
 
 void test("malformed stored data cannot introduce arbitrary records", async () => {

@@ -38,6 +38,7 @@ export interface OutlineSection {
 
 /** A verified format adapter supplies this view model; the outline never discovers files itself. */
 export interface OutlinePresentation {
+  readonly documentId: string;
   readonly path: string;
   readonly slides: readonly OutlineSlide[];
   readonly sections: readonly OutlineSection[];

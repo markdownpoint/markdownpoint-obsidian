@@ -24,18 +24,22 @@ import { isRecord, presentationCompanionPath, presentationIdentity } from "../fo
 import { outlineSections, outlineSlides } from "../outline/model.ts";
 import type { OutlinePresentation } from "../outline/model.ts";
 import { uiText } from "../ui-text.ts";
+import type { SlideData } from "./slide-data.ts";
+import { CompanionDocument } from "../format/companion.ts";
 
 interface PresentationSource {
   readonly file: TFile;
   readonly path: string;
   readonly companionPath: string;
   readonly companion: unknown;
+  readonly companionText: string;
   markdown: string | null;
   snapshot: PresentationSnapshot | null;
 }
 
 export interface PresentationSnapshot {
   readonly id: string;
+  readonly bodyStart: number;
   readonly document: PresentationDocument;
   readonly outline: OutlinePresentation;
 }
@@ -51,6 +55,7 @@ export class PresentationReader extends Component {
     private readonly app: App,
     private readonly publish: (model: OutlinePresentation | null, view: MarkdownView | null) => void,
     private readonly changed: (file: TFile) => void,
+    private readonly data: SlideData | null = null,
   ) { super(); }
 
   onload(): void {
@@ -61,9 +66,7 @@ export class PresentationReader extends Component {
     this.registerEvent(this.app.workspace.on("file-open", () => this.refreshActive()));
     this.registerEvent(this.app.workspace.on("editor-change", (_editor, info) => {
       if (!(info instanceof MarkdownView) || !info.file) return;
-      const source = this.sources.get(info.file);
-      if (source) this.update(source, info.getViewData(), info);
-      else if (!this.reads.has(info.file) && this.app.workspace.getMostRecentLeaf() === info.leaf) this.refresh(info);
+      if (!this.syncEditor(info) && !this.reads.has(info.file) && this.app.workspace.getMostRecentLeaf() === info.leaf) this.refresh(info);
     }));
     this.registerEvent(this.app.metadataCache.on("changed", (file, markdown) => {
       const source = this.sources.get(file);
@@ -146,13 +149,15 @@ export class PresentationReader extends Component {
       file.extension.toLowerCase() === "mdpoint" && !file.name.startsWith("._"));
     try {
       if (!companionPath || !(companionFile instanceof TFile) || companions?.length !== 1) { this.forget(file); return; }
-      const companion: unknown = JSON.parse(await this.app.vault.read(companionFile));
+      await this.data?.ready.catch(() => undefined);
+      const companionText = await this.app.vault.read(companionFile);
+      const companion: unknown = JSON.parse(companionText);
       const markdown = view ? view.getViewData() : await this.app.vault.read(file);
       // The file's newest request owns its metadata. A reused editor is never a
       // source for that earlier file, and unloading invalidates every request.
       if (!this.running || this.reads.get(file) !== request || file.path !== path ||
         this.app.vault.getAbstractFileByPath(path) !== file || (view && view.file !== file)) return;
-      const source: PresentationSource = { file, path, companionPath, companion, markdown: null, snapshot: null };
+      const source: PresentationSource = { file, path, companionPath, companion, companionText, markdown: null, snapshot: null };
       this.sources.set(file, source);
       this.update(source, markdown, view);
     } catch {
@@ -176,7 +181,32 @@ export class PresentationReader extends Component {
     const snapshot = this.snapshot(source.file, markdown);
     if (snapshot && this.requested === source.file) this.followed = source.file;
     if (this.followed === source.file) this.publish(snapshot?.outline ?? null, view);
+    if (snapshot) this.data?.observe(source.path, snapshot.id, source.companionText, new Set(snapshot.document.slides.map(slide => slide.id)));
     this.changed(source.file);
+  }
+
+  /** Explicit native actions publish before their caret/outline handoff. */
+  syncEditor(view: MarkdownView): boolean {
+    const source = view.file && this.sources.get(view.file);
+    if (!this.running || !source || source.path !== view.file?.path) return false;
+    this.update(source, view.getViewData(), view);
+    return true;
+  }
+
+  /** A just-undone slide may be visible before its companion restore reaches disk. */
+  companionFor(file: TFile, snapshot: PresentationSnapshot): string | null {
+    const source = this.sources.get(file);
+    if (!this.running || !source || source.path !== file.path) return null;
+    const companion = CompanionDocument.read(source.companionText);
+    if (!companion) return null;
+    const missing = new Map<string, string>();
+    for (const slide of snapshot.document.slides) {
+      if (companion.records.has(slide.id)) continue;
+      const remembered = this.data?.remembered(source.path, snapshot.id).get(slide.id);
+      if (remembered === undefined) return null;
+      missing.set(slide.id, remembered);
+    }
+    return companion.change(missing);
   }
 
   /** One current source index is shared by outline projection and editor consumers. */
@@ -209,15 +239,20 @@ export class PresentationReader extends Component {
     if (!identity || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
     const document = indexPresentation(markdown, identity.bodyStart);
     const slides = source.companion.slides;
-    if (!document || document.slides.some(slide => !Object.hasOwn(slides, slide.id))) return null;
+    if (!document) return null;
     const skipped = new Set<string>();
     for (const slide of document.slides) {
-      const metadata = slides[slide.id];
+      let metadata: unknown = slides[slide.id];
+      if (!Object.hasOwn(slides, slide.id)) {
+        const remembered = this.data?.remembered(source.path, identity.id).get(slide.id);
+        if (remembered === undefined) return null;
+        metadata = JSON.parse(remembered);
+      }
       if (!isRecord(metadata) || (metadata.skipped !== undefined && typeof metadata.skipped !== "boolean")) return null;
       if (metadata.skipped === true) skipped.add(slide.id);
     }
     const sections = outlineSections(markdown, document);
     if (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from)) return null;
-    return { id: identity.id, document, outline: { path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections } };
+    return { id: identity.id, bodyStart: identity.bodyStart, document, outline: { documentId: identity.id, path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections } };
   }
 }

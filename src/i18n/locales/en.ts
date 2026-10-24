@@ -33,6 +33,14 @@ export const en = {
     },
   },
   notes: { label: "Speaker notes", placeholder: "Notes" },
+  slides: {
+    delete: ({ count }: { count: number }) => count === 1 ? "Delete slide" : "Delete slides",
+    deleteFailed: "The slide could not be deleted.",
+    recoveryUnavailable: "Could not open slide recovery data.",
+    saveFailed: "Could not save slide data. A recovery copy is kept on this device.",
+    retry: "Retry",
+    empty: "No slides",
+  },
   commands: {
     focusOutline: "Focus outline",
     focusEditor: "Focus editor",

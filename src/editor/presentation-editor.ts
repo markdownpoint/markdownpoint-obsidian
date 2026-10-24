@@ -25,7 +25,7 @@ import type { Editor, TFile } from "obsidian";
 import type { PresentationReader, PresentationSnapshot } from "../presentation/reader.ts";
 import { outlineSlideNumbers } from "../outline/model.ts";
 import { uiNumber, uiText } from "../ui-text.ts";
-import { boundaryChangesAllowed } from "./boundary-protection.ts";
+import { boundaryChangesAllowed, slideStructureChange } from "./boundary-protection.ts";
 import { compactFieldAt, writingFields } from "./writing-fields.ts";
 import type { WritingField } from "./writing-fields.ts";
 import { fieldDecorations, focusWritingField, insertWritingBlock } from "./field-widgets.ts";
@@ -39,11 +39,15 @@ import { slideAtPosition } from "../format/document.ts";
 import { slideReorderTransaction } from "./reorder.ts";
 import type { SlideReorder } from "../format/reorder.ts";
 import { undo, redo } from "@codemirror/commands";
+import type { SlideData } from "../presentation/slide-data.ts";
+import { planSlideDeletion } from "../format/delete.ts";
+import { slideDeletionTransaction } from "./delete.ts";
 
 const refreshPresentation = StateEffect.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
 
 interface DraftState {
+  readonly empty: boolean;
   readonly id: string | null;
   readonly snapshot: PresentationSnapshot | null;
   readonly markers: readonly DraftMarker[];
@@ -68,6 +72,12 @@ class SlideBoundary extends WidgetType {
     const element = view.dom.ownerDocument.defaultView!.createDiv({ cls: "markdownpoint-slide-boundary" });
     element.createSpan({ text: this.label, cls: "markdownpoint-slide-number" });
     return element;
+  }
+}
+
+class EmptyDraft extends WidgetType {
+  toDOM(view: EditorView): HTMLElement {
+    return view.dom.ownerDocument.defaultView!.createDiv({ cls: "markdownpoint-empty-draft", text: uiText.slides.empty });
   }
 }
 
@@ -103,6 +113,7 @@ export class PresentationEditor extends Component {
     private readonly reader: PresentationReader,
     private readonly notesUi: NotesUi,
     private readonly caretChanged: (editor: MarkdownView, slideId: string) => void,
+    private readonly data: SlideData | null = null,
   ) {
     super();
     const field = this.field = StateField.define<DraftState>({
@@ -124,7 +135,8 @@ export class PresentationEditor extends Component {
           const next = info instanceof MarkdownView ? info.contentEl : null;
           if (container !== next) container?.removeClass("markdownpoint-presentation");
           container = next;
-          container?.toggleClass("markdownpoint-presentation", view.state.field(field).markers.length > 0);
+          const draft = view.state.field(field);
+          container?.toggleClass("markdownpoint-presentation", draft.snapshot !== null || draft.markers.length > 0);
         };
         sync();
         this.reportCaret(view);
@@ -151,8 +163,10 @@ export class PresentationEditor extends Component {
       }),
       EditorView.atomicRanges.of(view => view.state.field(field).decorations),
       EditorState.transactionFilter.of(transaction => {
-        const markers = transaction.startState.field(field).markers;
         const draft = transaction.startState.field(field);
+        const markers = draft.markers;
+        if (draft.empty && transaction.docChanged && transaction.annotation(slideStructureChange) !== true &&
+          ["input", "delete", "move"].some(event => transaction.isUserEvent(event))) return [];
         const noteFields = draft.notes.flatMap(slot => slot.field ? [slot.field] : []);
         const fields = [...draft.fields, ...draft.notes.flatMap(slot => slot.field && draft.openedNotes.has(slot.slideId) ? [slot.field] : [])];
         if (!transaction.docChanged && transaction.selection && transaction.annotation(Transaction.userEvent) === "select" &&
@@ -186,7 +200,37 @@ export class PresentationEditor extends Component {
     const view = [...this.views].find(view => view.state.field(editorInfoField, false)?.editor === editor);
     const file = view?.state.field(editorInfoField, false)?.file;
     if (!this.running || !view || !file || !this.reader.matchesIdentity(file, view.state.doc.toString())) return false;
-    return (direction === "undo" ? undo : redo)({ state: view.state, dispatch: transaction => view.dispatch(transaction) });
+    const changed = (direction === "undo" ? undo : redo)({ state: view.state, dispatch: transaction => view.dispatch(transaction) });
+    const owner = view.state.field(editorInfoField, false);
+    if (changed && owner instanceof MarkdownView) {
+      this.reader.syncEditor(owner);
+      const snapshot = this.reader.snapshot(file, view.state.doc.toString());
+      const position = Math.max(0, Math.min(view.state.selection.main.head, view.state.doc.length - 1));
+      const slide = snapshot && slideAtPosition(snapshot.document, position);
+      if (slide) this.caretChanged(owner, slide.id);
+    }
+    return changed;
+  }
+
+  async deleteSlides(editor: Editor, ids: Iterable<string>, canApply: () => boolean): Promise<boolean> {
+    const view = [...this.views].find(view => view.state.field(editorInfoField, false)?.editor === editor);
+    const owner = view?.state.field(editorInfoField, false);
+    if (!this.running || !this.data || !view || !(owner instanceof MarkdownView) || !owner.file) return false;
+    const file = owner.file;
+    const selected = new Set(ids);
+    await this.reader.refreshView(owner);
+    if (!this.running || !this.views.has(view) || owner.file !== file || owner.getMode() !== "source" || !canApply()) return false;
+    const before = view.state.doc;
+    const snapshot = this.reader.snapshot(file, before.toString());
+    const companion = snapshot && this.reader.companionFor(file, snapshot);
+    if (!snapshot || companion === null) return false;
+    const plan = planSlideDeletion(before.toString(), snapshot.document, companion, selected);
+    if (!plan || !await this.data.remember(file.path, snapshot.id, companion, selected)) return false;
+    if (!this.running || !this.views.has(view) || owner.file !== file || owner.getMode() !== "source" ||
+      view.state.doc !== before || !this.reader.matchesIdentity(file, before.toString()) || !canApply()) return false;
+    view.dispatch(slideDeletionTransaction(view.state, snapshot.document, plan));
+    this.reader.syncEditor(owner);
+    return true;
   }
 
   private reportCaret(view: EditorView): void {
@@ -274,6 +318,12 @@ export class PresentationEditor extends Component {
     const id = snapshot?.id ?? previous?.id;
     const openedNotes = this.notesUi.opened(id ?? "");
     if (snapshot && previous?.snapshot === snapshot && openedNotes === previous.openedNotes && !transaction?.selection && focused === previous.focused) return previous;
+    if (snapshot && !snapshot.document.slides.length && !snapshot.document.sections.length && !markdown.slice(snapshot.bodyStart).trim()) {
+      return { id: snapshot.id, snapshot, empty: true, fields: [], notes: [], openedNotes, focused,
+        markers: [{ from: 0, markerTo: state.doc.length, text: markdown, label: null }],
+        decorations: Decoration.set([Decoration.replace({ block: true, widget: new EmptyDraft() }).range(0, state.doc.length)]),
+      };
+    }
     let markers: readonly DraftMarker[] = [];
     if (snapshot) {
       const numbers = outlineSlideNumbers(snapshot.outline.slides, number => uiNumber.format(number));
@@ -318,6 +368,6 @@ export class PresentationEditor extends Component {
       const first = state.doc.sliceString(section.markerTo, section.to).search(/\S/);
       if (first >= 0) ranges.push(Decoration.line({ class: "markdownpoint-section-heading" }).range(state.doc.lineAt(section.markerTo + first).from));
     }
-    return { id: markers.length ? id ?? null : null, snapshot, markers, fields, notes, openedNotes, focused, decorations: Decoration.set(ranges, true) };
+    return { id: markers.length ? id ?? null : null, snapshot, empty: false, markers, fields, notes, openedNotes, focused, decorations: Decoration.set(ranges, true) };
   }
 }

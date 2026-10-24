@@ -56,14 +56,14 @@ void test("sections keep authored names, empty sections, and continuous numbers 
   const document = indexPresentation(markdown, 0)!;
   const sections = outlineSections(markdown, document);
   const slides = outlineSlides(markdown, document, "Title", new Set(["skipped"]));
-  assert.deepEqual(outlineRows({ path: "slides.md", slides, sections }, String).map(row => [row.kind, row.label]), [
+  assert.deepEqual(outlineRows({ documentId: "test-document", path: "slides.md", slides, sections }, String).map(row => [row.kind, row.label]), [
     ["section", "A beginning & a promise"], ["slide", "1. First idea."], ["slide", "– An aside."],
     ["section", "Room to think"], ["section", "Closing"], ["slide", "2. A last thought."], ["section", "Later"],
   ]);
   const allSkipped = slides.map(slide => ({ ...slide, skipped: true }));
-  assert.ok(outlineRows({ path: "slides.md", slides: allSkipped, sections }, String)
+  assert.ok(outlineRows({ documentId: "test-document", path: "slides.md", slides: allSkipped, sections }, String)
     .filter(row => row.kind === "slide").every(row => row.label.startsWith("– ")));
-  assert.equal(outlineRows({ path: "slides.md", slides: [], sections }, String).length, 4);
+  assert.equal(outlineRows({ documentId: "test-document", path: "slides.md", slides: [], sections }, String).length, 4);
 });
 
 void test("a temporary empty or incomplete section heading keeps the slide structure available", () => {

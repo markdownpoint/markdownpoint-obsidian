@@ -16,11 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ItemView, Platform, setTooltip } from "obsidian";
+import { ItemView, Menu, Platform, setTooltip } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import { outlineRows } from "./model.ts";
 import type { OutlineState } from "./model.ts";
-import type { ListSelectionAction } from "../selection/list-selection.ts";
+import type { ListSelection, ListSelectionAction } from "../selection/list-selection.ts";
 import type { SlideReorder } from "../format/reorder.ts";
 import { OutlineDrag } from "./drag.ts";
 import { uiNumber, uiText } from "../ui-text.ts";
@@ -32,6 +32,8 @@ export interface OutlineDelegate {
   select(action: ListSelectionAction<string>): void;
   reorder(action: SlideReorder): void;
   history(direction: "undo" | "redo"): void;
+  selectForMenu(id: string): boolean;
+  deleteSlides(selection: ListSelection<string>): void;
 }
 
 export class MarkdownPointOutlineView extends ItemView {
@@ -42,6 +44,18 @@ export class MarkdownPointOutlineView extends ItemView {
     this.drag = this.addChild(new OutlineDrag(this.contentEl, delegate));
     this.registerDomEvent(this.contentEl, "keydown", event => {
       if (event.altKey) return;
+      if (!event.ctrlKey && !event.metaKey && (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) {
+        const focused = this.contentEl.ownerDocument.activeElement;
+        const button = focused?.instanceOf(HTMLElement) ? focused.closest<HTMLButtonElement>("button[data-slide-id]") : null;
+        const id = button?.dataset.slideId;
+        if (button && id) {
+          event.preventDefault();
+          event.stopPropagation();
+          const bounds = button.getBoundingClientRect();
+          this.menuFor(id)?.showAtPosition({ x: bounds.left, y: bounds.bottom }, button.ownerDocument);
+        }
+        return;
+      }
       const modifier = Platform.isMacOS ? event.metaKey : event.ctrlKey;
       const key = event.key.toLowerCase();
       if (modifier && this.delegate.state().presentation &&
@@ -117,6 +131,7 @@ export class MarkdownPointOutlineView extends ItemView {
             this.delegate.select({ kind: event.shiftKey ? "range" : modifier ? "toggle" : "select", id: item.id });
             this.focusSelection();
           });
+          button.addEventListener("contextmenu", event => { this.menuFor(item.id, event); });
         }
       }
       if (list.children[index] !== row) list.insertBefore(row, list.children[index] ?? null);
@@ -150,6 +165,20 @@ export class MarkdownPointOutlineView extends ItemView {
       chosen.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
     else this.contentEl.querySelector("ol")?.focus({ preventScroll: true });
+  }
+
+  private menuFor(id: string, event?: MouseEvent): Menu | null {
+    if (!this.delegate.selectForMenu(id)) return null;
+    this.focusSelection();
+    const { presentation, selection } = this.delegate.state();
+    const current = () => this.delegate.state().presentation?.path === presentation?.path &&
+      this.delegate.state().presentation?.documentId === presentation?.documentId;
+    const menu = event ? Menu.forEvent(event) : new Menu();
+    menu.addItem(entry => entry.setTitle(uiText.slides.delete({ count: selection.selected.size })).setIcon("trash-2").onClick(() => {
+      if (current()) this.delegate.deleteSlides(selection);
+    }));
+    menu.onHide(() => { if (this.contentEl.isConnected && current()) this.focusSelection(); });
+    return menu;
   }
 
   private move(key: string, extend: boolean): void {

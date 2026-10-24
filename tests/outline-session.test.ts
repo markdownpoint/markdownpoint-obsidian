@@ -22,7 +22,7 @@ import { OutlineSession } from "../src/outline/session.ts";
 import type { OutlinePresentation } from "../src/outline/model.ts";
 
 function deck(ids: readonly string[], path = "presentation/slides.md"): OutlinePresentation {
-  return { path, sections: [], slides: ids.map((id, index) => ({ id, title: id, line: index * 8, skipped: false })) };
+  return { documentId: "test-document", path, sections: [], slides: ids.map((id, index) => ({ id, title: id, line: index * 8, skipped: false })) };
 }
 
 void test("modifier selection uses MDP rules while the writing slide stays in place", () => {
@@ -100,4 +100,44 @@ void test("missing targets and an empty presentation cannot create stale selecti
   assert.equal(session.select({ kind: "all" }), false);
   assert.equal(session.state.selection.selected.size, 0);
   assert.equal(session.state.selection.cursor, null);
+});
+
+void test("a menu retains a selected group and selects another row without moving the writing location", () => {
+  const session = new OutlineSession();
+  session.follow(deck(["one", "two", "three"]));
+  session.select({ kind: "toggle", id: "three" });
+  const selected = session.state.selection;
+  assert.ok(session.selectForMenu("three"));
+  assert.equal(session.state.selection, selected);
+  assert.ok(session.selectForMenu("two"));
+  assert.deepEqual([...session.state.selection.selected], ["two"]);
+  assert.equal(session.state.activeSlideId, "one");
+});
+
+void test("replacing a presentation at the same path invalidates a captured action selection", () => {
+  const session = new OutlineSession();
+  const original = deck(["one", "two"]);
+  session.follow(original);
+  session.selectForMenu("two");
+  const captured = session.state.selection;
+  session.follow({ ...original, documentId: "another-document" });
+  assert.notEqual(session.state.selection, captured);
+  assert.equal(session.state.selection.cursor, "one");
+});
+
+void test("deletion selects the next surviving slide while preserving an independent writing slide", () => {
+  const session = new OutlineSession();
+  session.follow(deck(["one", "two", "three", "four"]));
+  session.selectForMenu("two");
+  session.select({ kind: "range", id: "three" });
+  session.follow(deck(["one", "four"]));
+  assert.deepEqual([...session.state.selection.selected], ["four"]);
+  assert.equal(session.state.activeSlideId, "one");
+  session.activate("four");
+  session.follow(deck(["one"]));
+  assert.equal(session.state.selection.cursor, "one");
+  assert.equal(session.state.activeSlideId, "one");
+  session.follow(deck([]));
+  assert.equal(session.state.selection.cursor, null);
+  assert.equal(session.state.activeSlideId, null);
 });

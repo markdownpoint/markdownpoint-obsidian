@@ -18,6 +18,10 @@ The **Move slides up** and **Move slides down** commands are available from the 
 
 Drag a selected row to move the selected group. A thin insertion line shows the destination before or after a slide; dropping on a section heading places the group at that section's start. A drop gathers the selected slides in their existing order and is one undoable action. Release outside the outline or press Escape to cancel.
 
+Right-click an outline row and choose **Delete slide**, or **Delete slides** for a selected group. Shift+F10 or the context-menu key opens the same menu. Opening it keeps a selected group and preserves the writing position. Deletion is one native undo event; empty sections remain. Undo also restores the slide's companion data after closing and reopening the tab. Recovery records stay on this device, and a failed companion save offers **Retry**.
+
+An empty Live Preview draft shows **No slides** and protects its hidden presentation metadata. Source mode remains editable.
+
 Writing remains in Obsidian's native Markdown editor. Live Preview shows numbered slide boundaries and protects their markers from ordinary typing, deletion, and movement. Writing areas show faint placeholders when empty and small headers when populated. Labels use the text binding's readable name, including numbered fields such as Body 2 and custom names. Generated identity suffixes stay hidden; an unnamed text object shows Text. Composition text inputs use their control name. Each area retains its original binding and position in the Markdown. Speaker notes open through a full-width disclosure beneath each slide, with a faint Notes placeholder when empty. Disclosure state is local to the device and vault. Placeholder words never become saved content. Source mode keeps raw Markdown editable. Layout thumbnails, slide creation, and slide clipboard operations are still in development. Other presentation data filenames are not currently supported.
 
 Live Preview follows MDP's blank-line rule: one terminal blank line separates fields; additional blank lines remain authored space. Leading and interior empty paragraphs stay intact.

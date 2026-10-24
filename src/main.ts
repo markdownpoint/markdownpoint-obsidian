@@ -29,6 +29,8 @@ import { PresentationEditor } from "./editor/presentation-editor.ts";
 import { PresentationReader } from "./presentation/reader.ts";
 import { NotesUi } from "./settings/notes-ui.ts";
 import type { SlideReorder } from "./format/reorder.ts";
+import { PresentationStorage } from "./presentation/storage.ts";
+import type { ListSelection } from "./selection/list-selection.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -38,12 +40,14 @@ export default class MarkdownPointPlugin extends Plugin {
   private running = false;
   private reader: PresentationReader | null = null;
   private presentationEditor: PresentationEditor | null = null;
+  private storage: PresentationStorage | null = null;
 
   private get presentation(): OutlinePresentation | null { return this.outline.state.presentation; }
   private get activeSlideId(): string | null { return this.outline.state.activeSlideId; }
 
   onload(): void {
     this.running = true;
+    this.storage = this.addChild(new PresentationStorage(this.app));
     this.localUi = loadLocalUi(this.app);
     this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
       state: () => this.outline.state,
@@ -56,6 +60,12 @@ export default class MarkdownPointPlugin extends Plugin {
       history: direction => this.run(() => this.editPresentation(editor => {
         this.presentationEditor?.history(editor.editor, direction);
       })),
+      selectForMenu: id => {
+        if (!this.outline.selectForMenu(id)) return false;
+        this.refreshOutline();
+        return true;
+      },
+      deleteSlides: selection => this.deleteOutlineSlides(selection),
     }));
     this.addSettingTab(new MarkdownPointSettingTab(this.app, this, this.localUi,
       side => this.setOutlineSide(side)));
@@ -101,10 +111,10 @@ export default class MarkdownPointPlugin extends Plugin {
         this.outline.follow(null);
         this.refreshOutline();
       }
-    }, file => this.presentationEditor?.refresh(file));
+    }, file => this.presentationEditor?.refresh(file), this.storage.data);
     this.addChild(this.reader);
     this.presentationEditor = new PresentationEditor(this.reader, new NotesUi(this.app),
-      (editor, slideId) => this.followCaret(editor, slideId));
+      (editor, slideId) => this.followCaret(editor, slideId), this.storage.data);
     this.addChild(this.presentationEditor);
     this.registerEditorExtension(this.presentationEditor.extension);
   }
@@ -115,6 +125,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.editorLeaf = null;
     this.reader = null;
     this.presentationEditor = null;
+    this.storage = null;
     // Registered views and events are released by Obsidian; retain its saved workspace layout.
   }
 
@@ -198,7 +209,7 @@ export default class MarkdownPointPlugin extends Plugin {
       this.app.workspace.getLeavesOfType("markdown").includes(leaf) ? view : null;
   }
 
-  private async editPresentation(edit: (editor: MarkdownView) => void): Promise<void> {
+  private async editPresentation(edit: (editor: MarkdownView) => void | Promise<void>): Promise<void> {
     const path = this.presentation?.path;
     if (!path) return;
     const existing = this.currentEditorLeaf();
@@ -207,7 +218,20 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!existing) await this.reader?.refreshView(leaf.view);
     if (!this.running || this.presentation?.path !== path || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
     const editor = await this.editingView(leaf);
-    if (editor && this.presentation?.path === path && editor.file?.path === path) edit(editor);
+    if (editor && this.presentation?.path === path && editor.file?.path === path) await edit(editor);
+  }
+
+  private deleteOutlineSlides(selection: ListSelection<string>): void {
+    const path = this.presentation?.path;
+    const current = () => this.running && this.presentation?.path === path && this.outline.state.selection === selection;
+    if (!path || !current()) return;
+    this.run(async () => {
+      try {
+        await this.editPresentation(async editor => {
+          await this.presentationEditor?.deleteSlides(editor.editor, selection.selected, current);
+        });
+      } catch (error) { this.storage?.preparationFailed(error); }
+    });
   }
 
   private reorderSlides(action: SlideReorder): void {

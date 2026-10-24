@@ -22,7 +22,8 @@ export interface SlideDataHost {
   loadRecovery(): Promise<unknown>;
   saveRecovery(data: unknown): Promise<void>;
   process(path: string, update: (source: string) => Promise<string>, canCommit: () => boolean): Promise<void>;
-  failed(path: string, error: unknown): void;
+  failed(path: string, document: string, error: unknown): void;
+  saved?(path: string, document: string): void;
 }
 
 interface SavedSlides {
@@ -55,7 +56,10 @@ export class SlideData {
     const stored = await this.host.loadRecovery();
     if (!Array.isArray(stored)) return;
     for (const value of stored) {
-      if (!isRecord(value) || typeof value.path !== "string" || !presentationCompanionPath(value.path) ||
+      // A file can be temporarily renamed away from slides.md. Keep its recovery
+      // records so a later rename back does not lose native undo's companion data.
+      if (!isRecord(value) || typeof value.path !== "string" || value.path.includes("\\") ||
+        value.path.split("/").some(part => !part || part === "." || part === "..") ||
         !isDocumentId(value.document) || !isRecord(value.records)) continue;
       const records = new Map<string, string>();
       for (const [id, raw] of Object.entries(value.records)) {
@@ -103,12 +107,18 @@ export class SlideData {
     if (next.companion !== companion || (entry.saving && membershipChanged)) {
       entry.dirty = true;
       this.save(entry);
+    } else if (!entry.saving && entry.dirty) {
+      entry.dirty = false;
+      this.host.saved?.(entry.path, entry.document);
     }
   }
 
-  retry(path: string, document: string): void {
+  retry(path: string, document: string): boolean {
     const entry = this.entries.get(this.key(path, document));
-    if (entry?.present) { entry.dirty = true; this.save(entry); }
+    if (!this.running || !entry?.present || !presentationCompanionPath(path)) return false;
+    entry.dirty = true;
+    this.save(entry);
+    return true;
   }
 
   async settled(path: string, document: string): Promise<void> {
@@ -131,14 +141,14 @@ export class SlideData {
   }
 
   private save(entry: SavedSlides): void {
-    if (!this.running || entry.saving || !entry.present) return;
+    if (!this.running || entry.saving || !entry.present || !presentationCompanionPath(entry.path)) return;
     // Assign before starting, including when a host completes its callback synchronously.
     let failed = false;
     entry.saving = Promise.resolve().then(async () => {
       while (this.running && entry.dirty && entry.present) {
-        entry.dirty = false;
         const path = presentationCompanionPath(entry.path);
         if (!path) return;
+        entry.dirty = false;
         await this.host.process(path, async source => {
           if (!this.running || !entry.present) return source;
           if (!this.matches(source, entry.document)) throw new Error("Presentation identity changed before saving slide data");
@@ -152,10 +162,11 @@ export class SlideData {
           return this.running ? next.companion : source;
         }, () => this.running);
       }
+      if (this.running) this.host.saved?.(entry.path, entry.document);
     }).catch((error: unknown) => {
       failed = true;
       entry.dirty = true;
-      if (this.running) this.host.failed(entry.path, error);
+      if (this.running) this.host.failed(entry.path, entry.document, error);
     }).finally(() => {
       entry.saving = null;
       if (entry.dirty && !failed) this.save(entry);
