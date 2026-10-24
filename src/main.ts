@@ -31,6 +31,8 @@ import { NotesUi } from "./settings/notes-ui.ts";
 import type { SlideReorder } from "./format/reorder.ts";
 import { PresentationStorage } from "./presentation/storage.ts";
 import type { ListSelection } from "./selection/list-selection.ts";
+import { SlideMenus } from "./editor/slide-menus.ts";
+import type { SlideMenuTarget } from "./editor/slide-menus.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -41,6 +43,7 @@ export default class MarkdownPointPlugin extends Plugin {
   private reader: PresentationReader | null = null;
   private presentationEditor: PresentationEditor | null = null;
   private storage: PresentationStorage | null = null;
+  private slideMenus: SlideMenus | null = null;
 
   private get presentation(): OutlinePresentation | null { return this.outline.state.presentation; }
   private get activeSlideId(): string | null { return this.outline.state.activeSlideId; }
@@ -117,6 +120,8 @@ export default class MarkdownPointPlugin extends Plugin {
       (editor, slideId) => this.followCaret(editor, slideId), this.storage.data);
     this.addChild(this.presentationEditor);
     this.registerEditorExtension(this.presentationEditor.extension);
+    this.slideMenus = this.addChild(new SlideMenus(this.app, this.reader, target => this.deleteDraftSlide(target)));
+    this.registerEditorExtension(this.slideMenus.extension);
   }
 
   onunload(): void {
@@ -126,6 +131,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.reader = null;
     this.presentationEditor = null;
     this.storage = null;
+    this.slideMenus = null;
     // Registered views and events are released by Obsidian; retain its saved workspace layout.
   }
 
@@ -230,6 +236,21 @@ export default class MarkdownPointPlugin extends Plugin {
         await this.editPresentation(async editor => {
           await this.presentationEditor?.deleteSlides(editor.editor, selection.selected, current);
         });
+      } catch (error) { this.storage?.preparationFailed(error); }
+    });
+  }
+
+  private deleteDraftSlide(target: SlideMenuTarget): void {
+    const current = () => this.running && this.slideMenus?.current(target) === true;
+    this.run(async () => {
+      try {
+        if (!current()) return;
+        const editor = await this.editingView(target.owner.leaf);
+        if (editor && current()) {
+          const deleted = await this.presentationEditor?.deleteSlides(editor.editor, [target.slide], current);
+          if (deleted && current() && this.app.workspace.getMostRecentLeaf() === editor.leaf &&
+            !this.presentationEditor?.focus(editor.editor)) editor.editor.focus();
+        }
       } catch (error) { this.storage?.preparationFailed(error); }
     });
   }
