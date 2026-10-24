@@ -58,12 +58,15 @@ function inlineText(tokens: readonly unknown[]): string {
   }).join("");
 }
 
-/** Authored text supplies the label; notes and template decoration never do. */
+/** Prefer authored Title text, then the first other text; notes never supply labels. */
 export function outlineSlides(markdown: string, document: PresentationDocument, emptyTitle: string, skipped: ReadonlySet<string>): OutlineSlide[] {
   return document.slides.map(slide => {
     let title = "";
-    for (const block of slide.blocks) {
-      if (block.kind !== "text") continue;
+    const blocks = [
+      ...slide.blocks.filter(block => block.kind === "text" && block.id === "title"),
+      ...slide.blocks.filter(block => block.kind === "text" && block.id !== "title"),
+    ];
+    for (const block of blocks) {
       // Tokenize the payload together so a multiline HTML comment is omitted as
       // one token rather than exposing its middle lines as an outline label.
       const source = markdown.slice(block.contentFrom, block.to).replace(/^#{1,6}[ \t]+/gm, "");

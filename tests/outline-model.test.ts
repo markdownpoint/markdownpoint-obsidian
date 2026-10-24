@@ -38,6 +38,12 @@ void test("HTML tags and leading single-line or multiline comments are omitted f
   }
 });
 
+void test("populated Title takes precedence over earlier Eyebrow and Body fields, with authored fallbacks", () => {
+  const markdown = '<!-- slide: first -->\n<!-- text: eyebrow -->\nOpening thought\n<!-- text: body -->\nEarlier body.\n<!-- text: title -->\n**A place to begin**\n<!-- notes -->\nA reminder.\n<!-- slide: empty-title -->\n<!-- text: eyebrow -->\nA useful lead\n<!-- text: title -->\n\n<!-- text: body -->\nDetails.\n<!-- slide: comment-title -->\n<!-- text: title -->\n<!-- An annotation. -->\n<!-- text: body -->\nA real fallback.\n';
+  const slides = outlineSlides(markdown, indexPresentation(markdown, 0)!, "Title", new Set());
+  assert.deepEqual(slides.map(slide => slide.title), ["A place to begin", "A useful lead", "A real fallback."]);
+});
+
 void test("sections keep authored names, empty sections, and continuous numbers around skipped slides", () => {
   const markdown = '<!-- section: intro -->\r\n# *A beginning* &amp; a promise\r\n\r\n<!-- slide: first -->\r\n<!-- text: title -->\r\nFirst idea.\r\n<!-- slide: skipped -->\r\n<!-- text: title -->\r\nAn aside.\r\n<!-- section: empty -->\r\n# Room to think\r\n<!-- section: closing -->\r\n# Closing\r\n<!-- slide: last -->\r\n<!-- text: title -->\r\nA last thought.\r\n<!-- section: trailing -->\r\n# Later\r\n';
   const document = indexPresentation(markdown, 0)!;
