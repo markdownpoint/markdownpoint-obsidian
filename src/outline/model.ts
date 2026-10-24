@@ -99,7 +99,7 @@ export function outlineRows(presentation: OutlinePresentation, formatNumber: (nu
   const numbers = outlineSlideNumbers(presentation.slides, formatNumber);
   const slides = presentation.slides.map(slide => ({
     kind: "slide" as const, id: slide.id, line: slide.line,
-    label: `${numbers.get(slide.id)} ${slide.title}`,
+    label: `${numbers.get(slide.id)}${slide.skipped ? "" : "."} ${slide.title}`,
   }));
   const sections = presentation.sections.map(section => ({
     kind: "section" as const, id: section.id, line: section.line, label: section.title,
@@ -109,5 +109,5 @@ export function outlineRows(presentation: OutlinePresentation, formatNumber: (nu
 
 export function outlineSlideNumbers(slides: readonly OutlineSlide[], formatNumber: (number: number) => string): ReadonlyMap<string, string> {
   let number = 0;
-  return new Map(slides.map(slide => [slide.id, slide.skipped ? "–" : `${formatNumber(++number)}.`]));
+  return new Map(slides.map(slide => [slide.id, slide.skipped ? "–" : formatNumber(++number)]));
 }

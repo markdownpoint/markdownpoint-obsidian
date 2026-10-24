@@ -23,6 +23,7 @@ export const en = {
   left: "Left",
   right: "Right",
   emptySlide: "Title",
+  fields: { title: "Title", body: "Body", eyebrow: "Eyebrow" },
   commands: {
     focusOutline: "Focus outline",
     focusEditor: "Focus editor",

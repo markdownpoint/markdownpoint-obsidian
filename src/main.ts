@@ -153,7 +153,7 @@ export default class MarkdownPointPlugin extends Plugin {
     await leaf.loadIfDeferred();
     if (!this.running || leaf !== this.currentEditorLeaf()) return;
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
-    if (leaf.view instanceof MarkdownView) leaf.view.editor.focus();
+    if (leaf.view instanceof MarkdownView && !this.presentationEditor?.focus(leaf.view.editor)) leaf.view.editor.focus();
   }
 
   private async showOutline(focus: boolean): Promise<void> {
