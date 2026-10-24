@@ -20,6 +20,8 @@ import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 
+const sentenceCase = { brands: ["MarkdownPoint", "Obsidian"], enforceCamelCaseLower: true };
+
 export default defineConfig([
   { ignores: ["main.js", "dist/**", "coverage/**", "test-vault/**", ".verification/**"] },
   ...obsidianmd.configs.recommended,
@@ -30,8 +32,12 @@ export default defineConfig([
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/consistent-type-imports": "error",
       "obsidianmd/prefer-file-manager-trash-file": "error",
-      "obsidianmd/ui/sentence-case": "error",
+      "obsidianmd/ui/sentence-case": ["error", sentenceCase],
     },
+  },
+  {
+    files: ["src/i18n/locales/en.ts"],
+    rules: { "obsidianmd/ui/sentence-case-locale-module": ["error", sentenceCase] },
   },
   {
     files: ["src/**/*.ts"],

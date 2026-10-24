@@ -16,14 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export const uiText = {
-  name: "MarkdownPoint",
-  outline: "Outline",
-  sidebar: "Sidebar",
-  left: "Left",
-  right: "Right",
-  commands: {
-    focusOutline: "Focus outline",
-    focusEditor: "Focus editor",
-  },
-};
+import { getLanguage } from "obsidian";
+import { getTranslations } from "./i18n/index.ts";
+
+export const uiText = getTranslations(getLanguage());
