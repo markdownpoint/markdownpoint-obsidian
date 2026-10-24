@@ -35,6 +35,7 @@ interface PresentationSource {
 }
 
 export interface PresentationSnapshot {
+  readonly id: string;
   readonly document: PresentationDocument;
   readonly outline: OutlinePresentation;
 }
@@ -190,22 +191,23 @@ export class PresentationReader extends Component {
 
   matchesIdentity(file: TFile, markdown: string): boolean {
     const source = this.sources.get(file);
-    return this.running && source !== undefined && source.path === file.path && this.identityBodyStart(source, markdown) !== null;
+    return this.running && source !== undefined && source.path === file.path && this.identity(source, markdown) !== null;
   }
 
-  private identityBodyStart(source: PresentationSource, markdown: string): number | null {
+  private identity(source: PresentationSource, markdown: string): { id: string; bodyStart: number } | null {
     const header = getFrontMatterInfo(markdown);
     let frontmatter: unknown;
     try { frontmatter = header.exists ? parseYaml(header.frontmatter) : null; }
     catch { return null; }
-    if (!presentationIdentity(frontmatter, source.companion) || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
-    return header.contentStart;
+    const id = presentationIdentity(frontmatter, source.companion);
+    if (!id || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
+    return { id, bodyStart: header.contentStart };
   }
 
   private parse(source: PresentationSource, markdown: string): PresentationSnapshot | null {
-    const bodyStart = this.identityBodyStart(source, markdown);
-    if (bodyStart === null || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
-    const document = indexPresentation(markdown, bodyStart);
+    const identity = this.identity(source, markdown);
+    if (!identity || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
+    const document = indexPresentation(markdown, identity.bodyStart);
     const slides = source.companion.slides;
     if (!document || document.slides.some(slide => !Object.hasOwn(slides, slide.id))) return null;
     const skipped = new Set<string>();
@@ -216,6 +218,6 @@ export class PresentationReader extends Component {
     }
     const sections = outlineSections(markdown, document);
     if (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from)) return null;
-    return { document, outline: { path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections } };
+    return { id: identity.id, document, outline: { path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections } };
   }
 }

@@ -26,6 +26,7 @@ import { MarkdownPointSettingTab } from "./settings/tab.ts";
 import { uiText } from "./ui-text.ts";
 import { PresentationEditor } from "./editor/presentation-editor.ts";
 import { PresentationReader } from "./presentation/reader.ts";
+import { NotesUi } from "./settings/notes-ui.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -80,7 +81,7 @@ export default class MarkdownPointPlugin extends Plugin {
       }
     }, file => this.presentationEditor?.refresh(file));
     this.addChild(this.reader);
-    this.presentationEditor = new PresentationEditor(this.reader);
+    this.presentationEditor = new PresentationEditor(this.reader, new NotesUi(this.app));
     this.addChild(this.presentationEditor);
     this.registerEditorExtension(this.presentationEditor.extension);
   }

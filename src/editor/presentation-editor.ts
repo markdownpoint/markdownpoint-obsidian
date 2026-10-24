@@ -28,16 +28,24 @@ import { uiNumber, uiText } from "../ui-text.ts";
 import { boundaryChangesAllowed } from "./boundary-protection.ts";
 import { compactFieldAt, writingFields } from "./writing-fields.ts";
 import type { WritingField } from "./writing-fields.ts";
-import { fieldDecorations, focusWritingField } from "./field-widgets.ts";
+import { fieldDecorations, focusWritingField, insertWritingBlock } from "./field-widgets.ts";
+import { validatedNotesInsertion, slideNotes } from "./notes.ts";
+import type { SlideNotes } from "./notes.ts";
+import { notesDecorations } from "./notes-widgets.ts";
+import type { NotesActions } from "./notes-widgets.ts";
+import type { NotesUi } from "../settings/notes-ui.ts";
 
 const refreshPresentation = StateEffect.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
 
 interface DraftState {
+  readonly id: string | null;
   readonly snapshot: PresentationSnapshot | null;
   readonly markers: readonly DraftMarker[];
   readonly decorations: DecorationSet;
   readonly fields: readonly WritingField[];
+  readonly notes: readonly SlideNotes[];
+  readonly openedNotes: ReadonlySet<string>;
   readonly focused: boolean;
 }
 
@@ -65,8 +73,27 @@ export class PresentationEditor extends Component {
   private readonly views = new Set<EditorView>();
   private readonly pending = new WeakSet<EditorView>();
   private running = false;
+  private readonly notesActions: NotesActions = {
+    toggle: (view, slideId) => {
+      const draft = view.state.field(this.field);
+      if (!this.running || !draft.id) return;
+      this.notesUi.setOpen(draft.id, slideId, !draft.openedNotes.has(slideId));
+      const file = view.state.field(editorInfoField, false)?.file;
+      if (file) this.refresh(file);
+    },
+    edit: (view, slideId) => {
+      const draft = view.state.field(this.field);
+      const slot = draft.notes.find(slot => slot.slideId === slideId);
+      if (!this.running || !slot || !draft.openedNotes.has(slideId)) return;
+      if (slot.field) focusWritingField(view, slot.field);
+      else if (draft.snapshot) {
+        const insertion = validatedNotesInsertion(view.state.doc.toString(), draft.snapshot.document, slideId);
+        if (insertion) insertWritingBlock(view, insertion);
+      }
+    },
+  };
 
-  constructor(private readonly reader: PresentationReader) {
+  constructor(private readonly reader: PresentationReader, private readonly notesUi: NotesUi) {
     super();
     const field = this.field = StateField.define<DraftState>({
       create: state => this.build(state),
@@ -93,10 +120,21 @@ export class PresentationEditor extends Component {
         return { update: sync, destroy: () => { views.delete(view); container?.removeClass("markdownpoint-presentation"); } };
       }),
       EditorView.focusChangeEffect.of((_state, focused) => editorFocus.of(focused)),
+      EditorView.domEventHandlers({
+        focus: (_event, view) => {
+          // Let a pointer's native selection settle before revealing a folded
+          // area. Keyboard focus may retain a caret in notes at document end.
+          view.dom.ownerDocument.defaultView?.queueMicrotask(() => {
+            if (this.running && this.views.has(view) && view.hasFocus) this.revealSelectedNotes(view);
+          });
+        },
+      }),
       EditorView.atomicRanges.of(view => view.state.field(field).decorations),
       EditorState.transactionFilter.of(transaction => {
         const markers = transaction.startState.field(field).markers;
-        const fields = transaction.startState.field(field).fields;
+        const draft = transaction.startState.field(field);
+        const noteFields = draft.notes.flatMap(slot => slot.field ? [slot.field] : []);
+        const fields = [...draft.fields, ...draft.notes.flatMap(slot => slot.field && draft.openedNotes.has(slot.slideId) ? [slot.field] : [])];
         if (!transaction.docChanged && transaction.selection && transaction.annotation(Transaction.userEvent) === "select" &&
           transaction.newSelection.ranges.length === 1 && transaction.newSelection.main.empty) {
           const compact = compactFieldAt(fields, transaction.newSelection.main.head, transaction.startState.doc.length);
@@ -104,7 +142,7 @@ export class PresentationEditor extends Component {
             changes: { from: compact.contentFrom, insert: "\n" }, selection: { anchor: compact.contentFrom }, sequential: true,
           }];
         }
-        return boundaryChangesAllowed(transaction, [...markers, ...fields.map(field => ({ from: field.from, markerTo: field.contentFrom }))]) ? transaction : [];
+        return boundaryChangesAllowed(transaction, [...markers, ...draft.fields, ...noteFields].map(range => ({ from: range.from, markerTo: "contentFrom" in range ? range.contentFrom : range.markerTo }))) ? transaction : [];
       }),
     ];
   }
@@ -117,12 +155,13 @@ export class PresentationEditor extends Component {
     if (!view || view.state.field(editorLivePreviewField, false) !== true) return false;
     const draft = view.state.field(this.field);
     if (!draft.markers.length) return false;
+    this.revealSelectedNotes(view);
     if (view.state.selection.ranges.length !== 1 || !view.state.selection.main.empty) {
       view.focus();
       return true;
     }
     const head = view.state.selection.main.head;
-    const field = draft.fields.find(field => head >= field.from && head < field.contentFrom);
+    const field = [...draft.fields, ...draft.notes.flatMap(slot => slot.field ? [slot.field] : [])].find(field => head >= field.from && head < field.contentFrom);
     const marker = draft.markers.find(marker => head >= marker.from && head < marker.markerTo);
     const beforeSlides = head < (draft.markers.find(marker => marker.label !== null)?.from ?? 0);
     const inSection = draft.snapshot?.document.sections.some(section => head >= section.markerTo && head < section.to);
@@ -134,10 +173,26 @@ export class PresentationEditor extends Component {
       else {
         const position = slide?.blocks[0]?.contentFrom ?? marker?.markerTo;
         if (position !== undefined) view.dispatch({ selection: { anchor: position } });
+        this.revealSelectedNotes(view);
         view.focus();
       }
     } else view.focus();
     return true;
+  }
+
+  private revealSelectedNotes(view: EditorView): void {
+    const draft = view.state.field(this.field);
+    if (!draft.id) return;
+    const hidden = draft.notes.filter(slot => {
+      const field = slot.field;
+      return field && !draft.openedNotes.has(slot.slideId) && view.state.selection.ranges.some(range =>
+        range.to >= field.from && (range.from < field.to || (field.to === view.state.doc.length && range.from === field.to)));
+    });
+    if (!hidden.length) return;
+    for (const slot of hidden) this.notesUi.setOpen(draft.id, slot.slideId, true);
+    view.dispatch({ effects: refreshPresentation.of(view.hasFocus) });
+    const file = view.state.field(editorInfoField, false)?.file;
+    if (file) this.refresh(file);
   }
 
   refresh(file: TFile): void {
@@ -158,7 +213,9 @@ export class PresentationEditor extends Component {
       ? this.reader.snapshot(file, state.doc.toString()) : null;
     let focused = previous?.focused ?? false;
     for (const effect of transaction?.effects ?? []) if (effect.is(editorFocus) || effect.is(refreshPresentation)) focused = effect.value;
-    if (snapshot && previous?.snapshot === snapshot && !transaction?.selection && focused === previous.focused) return previous;
+    const id = snapshot?.id ?? previous?.id;
+    const openedNotes = this.notesUi.opened(id ?? "");
+    if (snapshot && previous?.snapshot === snapshot && openedNotes === previous.openedNotes && !transaction?.selection && focused === previous.focused) return previous;
     let markers: readonly DraftMarker[] = [];
     if (snapshot) {
       const numbers = outlineSlideNumbers(snapshot.outline.slides, number => uiNumber.format(number));
@@ -175,24 +232,34 @@ export class PresentationEditor extends Component {
       if (mapped.every(marker => marker.from < marker.markerTo && state.doc.lineAt(marker.from).from === marker.from &&
         state.doc.sliceString(marker.from, marker.markerTo) === marker.text)) markers = mapped;
     }
+    const mapField = (field: WritingField): WritingField | null => {
+      const from = transaction?.docChanged ? transaction.changes.mapPos(field.from, 1) : field.from;
+      const contentFrom = transaction?.docChanged ? transaction.changes.mapPos(field.contentFrom, -1) : field.contentFrom;
+      const to = transaction?.docChanged ? transaction.changes.mapPos(field.to, 1) : field.to;
+      return state.doc.lineAt(from).from === from && state.doc.sliceString(from, contentFrom) === field.markerText
+        ? { ...field, from, contentFrom, to, populated: state.doc.sliceString(contentFrom, to).trim().length > 0 } : null;
+    };
     let fields = snapshot ? writingFields(state.doc.toString(), snapshot.document, uiText.fields) : [];
     if (!snapshot && markers.length && previous?.fields.length) {
-      fields = previous.fields.map(field => {
-        const from = transaction?.docChanged ? transaction.changes.mapPos(field.from, 1) : field.from;
-        const contentFrom = transaction?.docChanged ? transaction.changes.mapPos(field.contentFrom, -1) : field.contentFrom;
-        const to = transaction?.docChanged ? transaction.changes.mapPos(field.to, 1) : field.to;
-        return { ...field, from, contentFrom, to, populated: state.doc.sliceString(contentFrom, to).trim().length > 0 };
-      }).filter(field => state.doc.lineAt(field.from).from === field.from && state.doc.sliceString(field.from, field.contentFrom) === field.markerText);
+      fields = previous.fields.flatMap(field => { const mapped = mapField(field); return mapped ? [mapped] : []; });
     }
-    const entryPoints = new Set(fields.filter(field => field.contentFrom === field.to && field.to < state.doc.length).map(field => field.contentFrom));
+    let notes = snapshot ? slideNotes(state.doc.toString(), snapshot.document, uiText.notes.placeholder) : [];
+    if (!snapshot && markers.length && previous) notes = previous.notes.flatMap(slot => {
+      const field = slot.field && mapField(slot.field);
+      return field ? [{ ...slot, at: field.from, field }] : [];
+    });
+    const noteFields = notes.flatMap(slot => slot.field && openedNotes.has(slot.slideId) ? [slot.field] : []);
+    const entryPoints = new Set([...fields, ...noteFields].filter(field => field.contentFrom === field.to && field.to < state.doc.length).map(field => field.contentFrom));
+    for (const slot of notes) if (!slot.field) entryPoints.add(slot.at);
     const ranges = markers.map(marker => Decoration.replace({
       block: true, inclusiveStart: !entryPoints.has(marker.from), ...(marker.label === null ? {} : { widget: new SlideBoundary(marker.label) }),
     }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to));
     ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
+    ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions));
     for (const section of snapshot?.document.sections ?? []) {
       const first = state.doc.sliceString(section.markerTo, section.to).search(/\S/);
       if (first >= 0) ranges.push(Decoration.line({ class: "markdownpoint-section-heading" }).range(state.doc.lineAt(section.markerTo + first).from));
     }
-    return { snapshot, markers, fields, focused, decorations: Decoration.set(ranges, true) };
+    return { id: markers.length ? id ?? null : null, snapshot, markers, fields, notes, openedNotes, focused, decorations: Decoration.set(ranges, true) };
   }
 }

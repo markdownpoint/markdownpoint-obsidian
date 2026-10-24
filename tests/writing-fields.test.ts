@@ -29,6 +29,7 @@ void test("writing fields keep empty roles, original marker bytes, and native co
   assert.deepEqual(fields.map(field => [field.key, field.label, field.populated]), [
     ["first:eyebrow", "Eyebrow", false], ["first:title", "Title", true], ["first:body", "Body", false],
   ]);
+  assert.deepEqual(fields.map(field => field.opening), [true, false, false]);
   for (const field of fields) assert.equal(field.markerText, markdown.slice(field.from, field.contentFrom));
   assert.equal(markdown.slice(fields[1]!.contentFrom, fields[1]!.to).trim(), "A clear idea.");
   assert.equal(fields[2]!.contentFrom, markdown.length);

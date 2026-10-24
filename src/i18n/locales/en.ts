@@ -24,6 +24,7 @@ export const en = {
   right: "Right",
   emptySlide: "Title",
   fields: { title: "Title", body: "Body", eyebrow: "Eyebrow" },
+  notes: { label: "Speaker notes", placeholder: "Notes" },
   commands: {
     focusOutline: "Focus outline",
     focusEditor: "Focus editor",

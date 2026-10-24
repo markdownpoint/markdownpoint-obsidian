@@ -20,6 +20,7 @@ import type { PresentationDocument } from "../format/document.ts";
 
 export interface WritingField {
   readonly key: string;
+  readonly opening: boolean;
   readonly role: "title" | "body" | "eyebrow";
   readonly label: string;
   readonly from: number;
@@ -41,7 +42,7 @@ export function writingFields(markdown: string, document: PresentationDocument, 
     const role = (["title", "body", "eyebrow"] as const).find(role => role === block.id);
     if (!role) continue;
     fields.push({
-      key: `${slide.id}:${role}`, role, label: labels[role], from: block.from, contentFrom: block.contentFrom, to: block.to,
+      key: `${slide.id}:${role}`, opening: block === slide.blocks[0], role, label: labels[role], from: block.from, contentFrom: block.contentFrom, to: block.to,
       markerText: markdown.slice(block.from, block.contentFrom), populated: markdown.slice(block.contentFrom, block.to).trim().length > 0,
     });
   }
