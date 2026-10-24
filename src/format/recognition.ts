@@ -26,6 +26,14 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+export function isDocumentId(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
+}
+
+export function isStableId(value: unknown): value is string {
+  return typeof value === "string" && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value);
+}
+
 /**
  * Recognizes the pair's identity only, not its layouts or full format conformance.
  * Both files must explicitly declare format 1 and the same lowercase UUID;
@@ -35,6 +43,6 @@ export function presentationIdentity(frontmatter: unknown, companion: unknown): 
   if (!isRecord(frontmatter) || !isRecord(companion)) return null;
   if (frontmatter.markdownpoint !== 1 || companion.markdownpoint !== 1 || companion.kind !== "presentation") return null;
   const document = frontmatter.document;
-  if (typeof document !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(document)) return null;
+  if (!isDocumentId(document)) return null;
   return companion.document === document ? document : null;
 }

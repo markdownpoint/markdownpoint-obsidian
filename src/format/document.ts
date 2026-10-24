@@ -17,6 +17,7 @@
  */
 
 import { Lexer } from "marked";
+import { isStableId } from "./recognition.ts";
 
 export interface DocumentBlock {
   readonly kind: "text" | "notes";
@@ -55,7 +56,6 @@ export function slideAtPosition(document: PresentationDocument, position: number
 
 const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*([^\s]+))?\s*-->[ \t]*$/;
 const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[:\s]|-->|$)(?:\s*:?\s*[^\s<>]*)?\s*(?:-->|$)/i;
-const stableId = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 /** A candidate directive consumed by a code token is content, not a slide boundary. */
 function inCode(markdown: string, line: string): boolean {
@@ -101,7 +101,7 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
       if (!match || newline < 0) return null;
       const kind = match[1];
       const id = match[2];
-      if (kind === "notes" ? id !== undefined : !id || !id.split(".").every(part => stableId.test(part))) return null;
+      if (kind === "notes" ? id !== undefined : !id || !id.split(".").every(isStableId)) return null;
       if (kind !== "text" && id?.includes(".")) return null;
 
       if (block) block.to = offset;
