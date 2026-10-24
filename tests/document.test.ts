@@ -126,5 +126,37 @@ void test("caret lookup follows slide ranges without claiming section headings o
   assert.equal(slideAtPosition(document, document.sections[1]!.markerTo), null);
   assert.equal(slideAtPosition(document, last.to), null);
   assert.equal(slideAtPosition(document, markdown.length - 1), null);
-  assert.equal(slideAtPosition({ slides: [], sections: [] }, 0), null);
+  assert.equal(slideAtPosition({ slides: [], compositions: [], sections: [] }, 0), null);
+});
+
+void test("composition definitions retain complete control and text ranges wherever they occur", () => {
+  const leading = '<!-- composition: shared -->\r\n<!-- control: caption -->\r\nDefault words.\r\n\r\n<!-- text: label -->\r\nStatic words.\r\n';
+  const section = '<!-- section: opening -->\r\n# Opening\r\n';
+  const slide = '<!-- slide: actual -->\r\n<!-- text: badge.caption -->\r\nInstance words.\r\n';
+  const ending = '<!-- composition: other -->\r\n<!-- control: body -->\r\nFinal words.\r\n\r\n \t';
+  const markdown = leading + section + slide + ending;
+  const document = indexPresentation(markdown, 0)!;
+  assert.deepEqual(document.slides.map(slide => slide.id), ["actual"]);
+  assert.deepEqual(document.compositions.map(part => part.id), ["shared", "other"]);
+  assert.deepEqual(document.compositions.map(part => markdown.slice(part.from, part.to)), [leading, ending]);
+  assert.deepEqual(document.compositions[0]!.blocks.map(block => [block.kind, block.id, markdown.slice(block.contentFrom, block.to)]), [
+    ["control", "caption", "Default words.\r\n\r\n"], ["text", "label", "Static words.\r\n"],
+  ]);
+  assert.equal(document.slides[0]!.blocks[0]!.id, "badge.caption");
+  assert.equal(document.sections[0]!.to, leading.length + section.length);
+  assert.equal(slideAtPosition(document, markdown.length - 1), null);
+});
+
+void test("literal composition/control examples stay in their field and real definitions have globally unique IDs", () => {
+  const markdown = '<!-- composition: shared -->\n<!-- control: sample -->\n```md\n<!-- composition: example -->\n<!-- control: example -->\n```\n<!-- slide: actual -->\n<!-- text: title -->\nWords.\n';
+  const document = indexPresentation(markdown, 0)!;
+  assert.deepEqual(document.compositions.map(part => part.id), ["shared"]);
+  assert.equal(document.compositions[0]!.blocks.length, 1);
+  assert.ok(markdown.slice(document.compositions[0]!.blocks[0]!.contentFrom, document.compositions[0]!.blocks[0]!.to).includes('<!-- control: example -->'));
+  for (const source of [
+    '<!-- composition: same -->\n<!-- composition: same -->\n',
+    '<!-- composition: same -->\n<!-- slide: same -->\n',
+    '<!-- slide: same -->\n<!-- composition: same -->\n',
+  ]) assert.equal(indexPresentation(source, 0), null);
+  assert.ok(indexPresentation('<!-- section: same -->\n# Same\n<!-- composition: same -->\n', 0));
 });

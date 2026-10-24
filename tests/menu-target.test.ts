@@ -39,7 +39,7 @@ void test("draft margins select their nearest slide but reusable composition tex
   assert.equal(slideForMenu(document, source.indexOf("Shared"), source), null);
   assert.equal(slideForMenu(document, source.length, source), null);
   assert.equal(slideForMenu(document, -1, source), null);
-  assert.equal(slideForMenu({ slides: [], sections: [] }, 0, ""), null);
+  assert.equal(slideForMenu({ slides: [], compositions: [], sections: [] }, 0, ""), null);
 });
 
 void test("a leading composition and frontmatter do not borrow the first slide's actions", () => {

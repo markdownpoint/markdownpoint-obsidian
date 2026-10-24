@@ -20,7 +20,7 @@ import { Lexer } from "marked";
 import { isStableId } from "./recognition.ts";
 
 export interface DocumentBlock {
-  readonly kind: "text" | "notes";
+  readonly kind: "text" | "notes" | "control";
   readonly id: string | null;
   readonly from: number;
   readonly contentFrom: number;
@@ -38,6 +38,8 @@ export interface DocumentSlide {
 
 export interface PresentationDocument {
   readonly slides: readonly DocumentSlide[];
+  /** Reusable definitions share the source shape, but never enter slide navigation. */
+  readonly compositions: readonly DocumentSlide[];
   readonly sections: readonly DocumentSection[];
 }
 
@@ -70,10 +72,11 @@ function inCode(markdown: string, line: string): boolean {
  */
 export function indexPresentation(markdown: string, bodyStart: number): PresentationDocument | null {
   const slides: DocumentSlide[] = [];
+  const compositions: DocumentSlide[] = [];
   const sections: DocumentSection[] = [];
   const seen = new Set<string>();
   const sectionIds = new Set<string>();
-  let slide: DocumentSlide | null = null;
+  let part: DocumentSlide | null = null;
   let section: DocumentSection | null = null;
   let block: DocumentBlock | null = null;
   let container: "slide" | "composition" | null = null;
@@ -109,8 +112,8 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
       if (section) section.to = offset;
       section = null;
       if (kind === "slide" || kind === "composition" || kind === "section") {
-        if (slide) slide.to = offset;
-        slide = null;
+        if (part) part.to = offset;
+        part = null;
         container = kind === "section" ? null : kind;
         if (kind === "section" && id) {
           if (sectionIds.has(id)) return null;
@@ -118,17 +121,17 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
           section = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length };
           sections.push(section);
         }
-        if (kind === "slide" && id) {
+        if ((kind === "slide" || kind === "composition") && id) {
           if (seen.has(id)) return null;
           seen.add(id);
-          slide = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length, blocks: [] };
-          slides.push(slide);
+          part = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length, blocks: [] };
+          (kind === "slide" ? slides : compositions).push(part);
         }
       } else {
         if (!container || (kind === "control" && container !== "composition")) return null;
-        if (slide && (kind === "text" || kind === "notes")) {
+        if (part && (kind === "text" || kind === "notes" || kind === "control")) {
           block = { kind, id: id ?? null, from: offset, contentFrom: end, to: markdown.length };
-          slide.blocks.push(block);
+          part.blocks.push(block);
         }
       }
       payloadFrom = end;
@@ -146,5 +149,5 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
       if (fence && !new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*$`).test(closing)) return null;
     }
   }
-  return { slides, sections };
+  return { slides, compositions, sections };
 }
