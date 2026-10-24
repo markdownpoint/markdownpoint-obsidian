@@ -1,0 +1,56 @@
+/*
+ * MarkdownPoint - Plugin for Obsidian
+ * Copyright (c) 2026 Johan Sanneblad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+.markdownpoint-outline {
+  padding: var(--size-4-2);
+}
+
+.markdownpoint-outline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.markdownpoint-outline .markdownpoint-outline-row {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: var(--input-height);
+  padding: var(--size-4-2);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.markdownpoint-outline .markdownpoint-outline-row[aria-current="true"] {
+  background: var(--background-modifier-active-hover);
+}
+
+.markdownpoint-outline .markdownpoint-outline-row:not([aria-current="true"]):hover {
+  background: var(--background-modifier-hover);
+}
+
+.markdownpoint-outline .markdownpoint-outline-row:focus-visible {
+  outline: var(--border-width) solid var(--interactive-accent);
+  outline-offset: -2px;
+}

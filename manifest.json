@@ -1,0 +1,9 @@
+{
+  "id": "markdownpoint",
+  "name": "MarkdownPoint",
+  "version": "0.0.0",
+  "minAppVersion": "1.13.0",
+  "description": "Writing and organizing presentations, with visual finishing in the MarkdownPoint desktop app.",
+  "author": "Johan Sanneblad",
+  "isDesktopOnly": true
+}
