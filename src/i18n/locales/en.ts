@@ -35,6 +35,10 @@ export const en = {
   notes: { label: "Speaker notes", placeholder: "Notes" },
   clipboard: { copyText: "Copy", copyFailed: "Could not copy text to the clipboard." },
   slides: {
+    copy: ({ count }: { count: number }) => count === 1 ? "Copy slide" : "Copy slides",
+    copyFailed: "Could not copy slides to the clipboard.",
+    copyUnavailable: "Could not read the presentation or its theme files.",
+    copyChanged: "The presentation changed before it could be copied. Try again.",
     delete: ({ count }: { count: number }) => count === 1 ? "Delete slide" : "Delete slides",
     deleteFailed: "The slide could not be deleted.",
     recoveryUnavailable: "Could not open slide recovery data.",

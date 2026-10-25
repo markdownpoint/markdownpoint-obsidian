@@ -45,7 +45,7 @@ export class SlideMenus extends Component {
   constructor(
     private readonly app: App,
     private readonly reader: PresentationReader,
-    private readonly deleteSlide: (target: SlideMenuTarget) => void,
+    private readonly actions: { copy(target: SlideMenuTarget): void; delete(target: SlideMenuTarget): void },
   ) {
     super();
     this.extension = ViewPlugin.define(view => {
@@ -227,7 +227,9 @@ export class SlideMenus extends Component {
 
   private addItems(menu: Menu, target: SlideMenuTarget): void {
     if (!this.current(target)) return;
+    menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.copy({ count: 1 }))
+      .setIcon("copy").onClick(() => { if (this.current(target)) this.actions.copy(target); }));
     menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.delete({ count: 1 }))
-      .setIcon("trash-2").onClick(() => { if (this.current(target)) this.deleteSlide(target); }));
+      .setIcon("trash-2").onClick(() => { if (this.current(target)) this.actions.delete(target); }));
   }
 }

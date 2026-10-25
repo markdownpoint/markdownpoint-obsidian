@@ -33,6 +33,7 @@ import { PresentationStorage } from "./presentation/storage.ts";
 import type { ListSelection } from "./selection/list-selection.ts";
 import { SlideMenus } from "./editor/slide-menus.ts";
 import type { SlideMenuTarget } from "./editor/slide-menus.ts";
+import { PresentationClipboard } from "./presentation/clipboard.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -44,6 +45,7 @@ export default class MarkdownPointPlugin extends Plugin {
   private presentationEditor: PresentationEditor | null = null;
   private storage: PresentationStorage | null = null;
   private slideMenus: SlideMenus | null = null;
+  private clipboard: PresentationClipboard | null = null;
 
   private get presentation(): OutlinePresentation | null { return this.outline.state.presentation; }
   private get activeSlideId(): string | null { return this.outline.state.activeSlideId; }
@@ -69,6 +71,7 @@ export default class MarkdownPointPlugin extends Plugin {
         return true;
       },
       deleteSlides: selection => this.deleteOutlineSlides(selection),
+      copySlides: (selection, window) => this.copyOutlineSlides(selection, window),
     }));
     this.addSettingTab(new MarkdownPointSettingTab(this.app, this, this.localUi,
       side => this.setOutlineSide(side)));
@@ -120,7 +123,10 @@ export default class MarkdownPointPlugin extends Plugin {
       (editor, slideId) => this.followCaret(editor, slideId), this.storage.data);
     this.addChild(this.presentationEditor);
     this.registerEditorExtension(this.presentationEditor.extension);
-    this.slideMenus = this.addChild(new SlideMenus(this.app, this.reader, target => this.deleteDraftSlide(target)));
+    this.clipboard = this.addChild(new PresentationClipboard(this.app, this.reader));
+    this.slideMenus = this.addChild(new SlideMenus(this.app, this.reader, {
+      copy: target => this.copyDraftSlide(target), delete: target => this.deleteDraftSlide(target),
+    }));
     this.registerEditorExtension(this.slideMenus.extension);
     this.registerMarkdownPostProcessor((element, context) => this.slideMenus?.readingSection(element, context));
   }
@@ -133,6 +139,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.presentationEditor = null;
     this.storage = null;
     this.slideMenus = null;
+    this.clipboard = null;
     // Registered views and events are released by Obsidian; retain its saved workspace layout.
   }
 
@@ -238,6 +245,25 @@ export default class MarkdownPointPlugin extends Plugin {
           await this.presentationEditor?.deleteSlides(editor.editor, selection.selected, current);
         });
       } catch (error) { this.storage?.preparationFailed(error); }
+    });
+  }
+
+  private copyOutlineSlides(selection: ListSelection<string>, window: Window): void {
+    const presentation = this.presentation;
+    const file = presentation && this.app.vault.getFileByPath(presentation.path);
+    if (!presentation || !file) return;
+    const current = () => this.running && this.presentation?.path === presentation.path &&
+      this.presentation.documentId === presentation.documentId && this.outline.state.selection === selection;
+    const owner = this.currentEditorLeaf()?.view;
+    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+    this.run(async () => { await this.clipboard?.copy({ view, file, window, canApply: current }, selection.selected); });
+  }
+
+  private copyDraftSlide(target: SlideMenuTarget): void {
+    const current = () => this.running && this.slideMenus?.current(target) === true;
+    this.run(async () => {
+      await this.clipboard?.copy({ view: target.owner, file: target.file,
+        window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current }, [target.slide]);
     });
   }
 

@@ -128,6 +128,9 @@ export class PresentationReader extends Component {
     await this.read(view.file, view);
   }
 
+  /** Read a retained outline's closed presentation without opening a document tab. */
+  async refreshClosedFile(file: TFile): Promise<void> { await this.read(file, null); }
+
   private findView(file: TFile): MarkdownView | null {
     const recent = this.app.workspace.getMostRecentLeaf();
     if (recent?.view instanceof MarkdownView && recent.view.file === file) return recent.view;

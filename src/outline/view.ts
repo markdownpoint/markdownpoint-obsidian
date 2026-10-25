@@ -33,6 +33,7 @@ export interface OutlineDelegate {
   reorder(action: SlideReorder): void;
   history(direction: "undo" | "redo"): void;
   selectForMenu(id: string): boolean;
+  copySlides(selection: ListSelection<string>, window: Window): void;
   deleteSlides(selection: ListSelection<string>): void;
 }
 
@@ -174,6 +175,9 @@ export class MarkdownPointOutlineView extends ItemView {
     const current = () => this.delegate.state().presentation?.path === presentation?.path &&
       this.delegate.state().presentation?.documentId === presentation?.documentId;
     const menu = event ? Menu.forEvent(event) : new Menu();
+    menu.addItem(entry => entry.setTitle(uiText.slides.copy({ count: selection.selected.size })).setIcon("copy").onClick(() => {
+      if (current()) this.delegate.copySlides(selection, this.contentEl.ownerDocument.defaultView!);
+    }));
     menu.addItem(entry => entry.setTitle(uiText.slides.delete({ count: selection.selected.size })).setIcon("trash-2").onClick(() => {
       if (current()) this.delegate.deleteSlides(selection);
     }));
