@@ -25,6 +25,7 @@ import type { SlideReorder } from "../format/reorder.ts";
 import { renderThumbnail } from "./thumbnail.ts";
 import { OutlineDrag } from "./drag.ts";
 import { uiNumber, uiText } from "../ui-text.ts";
+import { MARKDOWNPOINT_ICON_ID } from "../markdownpoint-icon.ts";
 
 export const OUTLINE_VIEW_TYPE = "markdownpoint-outline";
 
@@ -110,7 +111,7 @@ export class MarkdownPointOutlineView extends ItemView {
 
   getViewType(): string { return OUTLINE_VIEW_TYPE; }
   getDisplayText(): string { return uiText.name; }
-  getIcon(): string { return "list"; }
+  getIcon(): string { return MARKDOWNPOINT_ICON_ID; }
 
   onOpen(): Promise<void> {
     this.contentEl.addClass("markdownpoint-outline");

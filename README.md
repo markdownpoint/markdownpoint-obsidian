@@ -8,9 +8,15 @@ MarkdownPoint turns a presentation into a calm, continuous draft in Obsidian. Wr
 
 Your presentation stays in its own folder in your vault. Both apps work with the same files.
 
-## Start a presentation
+The screenshots use the Minimal theme and Notebook Navigator. Both are optional.
+
+## Install
 
 Requires **Obsidian 1.13 or newer** on desktop. The MarkdownPoint desktop app handles presentation design, playback and export.
+
+For manual installation, place the plugin's `main.js`, `manifest.json` and `styles.css` together in your vault's `.obsidian/plugins/markdownpoint/` folder. Use your configured settings-folder name if it differs from `.obsidian`. Reload Obsidian, then enable **MarkdownPoint** under **Settings → Community plugins**.
+
+## Start a presentation
 
 After enabling the plugin, open Obsidian’s command palette and choose **MarkdownPoint: New presentation**.
 

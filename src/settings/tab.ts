@@ -21,8 +21,11 @@ import type { App, Plugin, SettingDefinitionItem } from "obsidian";
 import type { LocalUiState, OutlineSide } from "./local-ui.ts";
 import type { SharedSettings } from "./shared.ts";
 import { uiText } from "../ui-text.ts";
+import { MARKDOWNPOINT_ICON_ID } from "../markdownpoint-icon.ts";
 
 export class MarkdownPointSettingTab extends PluginSettingTab {
+  icon = MARKDOWNPOINT_ICON_ID;
+
   constructor(
     app: App,
     plugin: Plugin,

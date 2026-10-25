@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { MarkdownView, Plugin, TFile } from "obsidian";
+import { addIcon, MarkdownView, Plugin, removeIcon, TFile } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import type { OutlinePresentation } from "./outline/model.ts";
 import { OutlineSession } from "./outline/session.ts";
@@ -38,6 +38,7 @@ import { SlideCreation } from "./presentation/new-slide.ts";
 import { PresentationClipboard } from "./presentation/clipboard.ts";
 import { PresentationCreation } from "./presentation/create-presentation.ts";
 import { openPresentationInDesktop } from "./presentation/handoff.ts";
+import { MARKDOWNPOINT_ICON_ID, MARKDOWNPOINT_ICON_SVG } from "./markdownpoint-icon.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -57,6 +58,8 @@ export default class MarkdownPointPlugin extends Plugin {
   private get activeSlideId(): string | null { return this.outline.state.activeSlideId; }
 
   onload(): void {
+    addIcon(MARKDOWNPOINT_ICON_ID, MARKDOWNPOINT_ICON_SVG);
+    this.register(() => removeIcon(MARKDOWNPOINT_ICON_ID));
     this.running = true;
     this.sharedSettings = new SharedSettings(this);
     this.storage = this.addChild(new PresentationStorage(this.app));
