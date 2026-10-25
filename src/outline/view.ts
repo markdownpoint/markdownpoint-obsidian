@@ -34,6 +34,7 @@ export interface OutlineDelegate {
   history(direction: "undo" | "redo"): void;
   selectForMenu(id: string): boolean;
   copySlides(selection: ListSelection<string>, window: Window): void;
+  pasteSlides(after: string | null, window: Window): void;
   deleteSlides(selection: ListSelection<string>): void;
 }
 
@@ -43,6 +44,9 @@ export class MarkdownPointOutlineView extends ItemView {
   constructor(leaf: WorkspaceLeaf, private readonly delegate: OutlineDelegate) {
     super(leaf);
     this.drag = this.addChild(new OutlineDrag(this.contentEl, delegate));
+    this.registerDomEvent(this.contentEl, "contextmenu", event => {
+      if (!this.delegate.state().presentation?.slides.length) this.menuFor(null, event);
+    });
     this.registerDomEvent(this.contentEl, "keydown", event => {
       if (event.altKey) return;
       if (!event.ctrlKey && !event.metaKey && (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) {
@@ -54,6 +58,10 @@ export class MarkdownPointOutlineView extends ItemView {
           event.stopPropagation();
           const bounds = button.getBoundingClientRect();
           this.menuFor(id)?.showAtPosition({ x: bounds.left, y: bounds.bottom }, button.ownerDocument);
+        } else if (!this.delegate.state().presentation?.slides.length) {
+          const bounds = this.contentEl.getBoundingClientRect();
+          this.menuFor(null)?.showAtPosition({ x: bounds.left, y: bounds.top }, this.contentEl.ownerDocument);
+          event.preventDefault(); event.stopPropagation();
         }
         return;
       }
@@ -168,17 +176,20 @@ export class MarkdownPointOutlineView extends ItemView {
     else this.contentEl.querySelector("ol")?.focus({ preventScroll: true });
   }
 
-  private menuFor(id: string, event?: MouseEvent): Menu | null {
-    if (!this.delegate.selectForMenu(id)) return null;
+  private menuFor(id: string | null, event?: MouseEvent): Menu | null {
+    if (!this.delegate.state().presentation || (id !== null && !this.delegate.selectForMenu(id))) return null;
     this.focusSelection();
     const { presentation, selection } = this.delegate.state();
     const current = () => this.delegate.state().presentation?.path === presentation?.path &&
       this.delegate.state().presentation?.documentId === presentation?.documentId;
     const menu = event ? Menu.forEvent(event) : new Menu();
-    menu.addItem(entry => entry.setTitle(uiText.slides.copy({ count: selection.selected.size })).setIcon("copy").onClick(() => {
+    if (id !== null) menu.addItem(entry => entry.setTitle(uiText.slides.copy({ count: selection.selected.size })).setIcon("copy").onClick(() => {
       if (current()) this.delegate.copySlides(selection, this.contentEl.ownerDocument.defaultView!);
     }));
-    menu.addItem(entry => entry.setTitle(uiText.slides.delete({ count: selection.selected.size })).setIcon("trash-2").onClick(() => {
+    menu.addItem(entry => entry.setTitle(uiText.slides.paste).setIcon("clipboard-paste").onClick(() => {
+      if (current()) this.delegate.pasteSlides(id, this.contentEl.ownerDocument.defaultView!);
+    }));
+    if (id !== null) menu.addItem(entry => entry.setTitle(uiText.slides.delete({ count: selection.selected.size })).setIcon("trash-2").onClick(() => {
       if (current()) this.delegate.deleteSlides(selection);
     }));
     menu.onHide(() => { if (this.contentEl.isConnected && current()) this.focusSelection(); });

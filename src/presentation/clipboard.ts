@@ -18,9 +18,13 @@
 
 import { Component, MarkdownView, Notice } from "obsidian";
 import type { App, TFile } from "obsidian";
-import { SLIDE_CLIPBOARD_MIME } from "../format/clipboard.ts";
+import { decodeSlideClipboard, SLIDE_CLIPBOARD_MIME } from "../format/clipboard.ts";
 import { clipboardVaultId } from "../settings/clipboard.ts";
 import { uiText } from "../ui-text.ts";
+import { readJsonObject } from "../format/json.ts";
+import { prepareClipboardPaste, sameClipboardDestination } from "../format/paste.ts";
+import type { PresentationEditor } from "../editor/presentation-editor.ts";
+import type { SlideData } from "./slide-data.ts";
 import { SlideCopy } from "./copy.ts";
 import type { SlideCopyResult } from "./copy.ts";
 import type { PresentationReader } from "./reader.ts";
@@ -38,8 +42,10 @@ interface CopyContext {
 export class PresentationClipboard extends Component {
   private readonly copier: SlideCopy<CopyContext>;
   private running = false;
+  private pastes: Promise<void> = Promise.resolve();
 
-  constructor(private readonly app: App, reader: PresentationReader) {
+  constructor(private readonly app: App, private readonly reader: PresentationReader,
+    private readonly editor: PresentationEditor, private readonly data: SlideData | null) {
     super();
     this.copier = new SlideCopy({
       current: context => this.current(context),
@@ -71,6 +77,49 @@ export class PresentationClipboard extends Component {
       this.app.vault.getFileByPath(context.path) === context.file && context.canApply() &&
       (context.view ? context.view.file === context.file && leaves.includes(context.view.leaf)
         : !leaves.some(leaf => leaf.view instanceof MarkdownView && leaf.view.file === context.file));
+  }
+
+  /** Capture the clipboard at invocation; additive pastes run in their requested order. */
+  paste(input: Omit<CopyContext, "path">, after: string | null, editingView: () => Promise<MarkdownView | null>): Promise<void> {
+    const initial = { ...input, path: input.file.path };
+    const reading = input.window.navigator.clipboard.read().then(async items => {
+      for (const item of items) if (item.types.includes(SLIDE_CLIPBOARD_MIME)) return (await item.getType(SLIDE_CLIPBOARD_MIME)).text();
+      return null;
+    }).then(source => ({ source, error: null }), (error: unknown) => ({ source: null, error }));
+    const action = this.pastes.then(async () => {
+      if (!this.current(initial)) return;
+      const result = await reading;
+      if (!this.current(initial)) return;
+      if (result.error) throw result.error instanceof Error ? result.error : new Error("Clipboard read failed", { cause: result.error });
+      const packet = result.source && decodeSlideClipboard(result.source);
+      if (!packet) { new Notice(uiText.slides.pasteEmpty); return; }
+      const view = await editingView();
+      if (!view) return;
+      const context = { ...initial, view };
+      if (!this.current(context)) return;
+      await this.reader.refreshView(view);
+      const markdown = view.getViewData(), snapshot = this.reader.snapshot(input.file, markdown);
+      const companion = snapshot && this.reader.companionFor(input.file, snapshot);
+      const metadata = companion && readJsonObject(companion);
+      if (!snapshot || !companion || !metadata || !this.current(context)) return;
+      const theme = await readEmbeddedTheme(this.app.vault, context.path, metadata, packet.theme.layouts.keys());
+      if (!this.current(context)) return;
+      if (!theme || !sameClipboardDestination(packet, { vault: clipboardVaultId(this.app), path: context.path, document: snapshot.id }, theme)) {
+        new Notice(uiText.slides.pasteDestination); return;
+      }
+      const remembered = [...(this.data?.remembered(context.path, snapshot.id).keys() ?? []), ...(this.data?.remembered(context.path, snapshot.id, "compositions").keys() ?? [])];
+      const prepared = prepareClipboardPaste(packet, markdown, snapshot.document, companion, remembered, () => `id-${crypto.randomUUID()}`);
+      const current = () => this.current(context) && view.getViewData() === markdown &&
+        this.reader.companionFor(input.file, snapshot) === companion;
+      if (!prepared || !current()) { new Notice(uiText.slides.pasteChanged); return; }
+      const inserted = await this.editor.insertSlides(view.editor, prepared.slides, after, current, prepared.compositions);
+      if (!inserted && this.current(context)) new Notice(uiText.slides.pasteChanged);
+    }).catch((error: unknown) => {
+      console.error(error);
+      if (this.running && initial.canApply()) new Notice(uiText.slides.pasteFailed);
+    });
+    this.pastes = action;
+    return action;
   }
 
   async copy(input: Omit<CopyContext, "path">, ids: Iterable<string>): Promise<SlideCopyResult> {

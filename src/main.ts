@@ -72,6 +72,7 @@ export default class MarkdownPointPlugin extends Plugin {
       },
       deleteSlides: selection => this.deleteOutlineSlides(selection),
       copySlides: (selection, window) => this.copyOutlineSlides(selection, window),
+      pasteSlides: (after, window) => this.pasteOutlineSlides(after, window),
     }));
     this.addSettingTab(new MarkdownPointSettingTab(this.app, this, this.localUi,
       side => this.setOutlineSide(side)));
@@ -123,9 +124,9 @@ export default class MarkdownPointPlugin extends Plugin {
       (editor, slideId) => this.followCaret(editor, slideId), this.storage.data);
     this.addChild(this.presentationEditor);
     this.registerEditorExtension(this.presentationEditor.extension);
-    this.clipboard = this.addChild(new PresentationClipboard(this.app, this.reader));
+    this.clipboard = this.addChild(new PresentationClipboard(this.app, this.reader, this.presentationEditor, this.storage.data));
     this.slideMenus = this.addChild(new SlideMenus(this.app, this.reader, {
-      copy: target => this.copyDraftSlide(target), delete: target => this.deleteDraftSlide(target),
+      copy: target => this.copyDraftSlide(target), paste: target => this.pasteDraftSlides(target), delete: target => this.deleteDraftSlide(target),
     }));
     this.registerEditorExtension(this.slideMenus.extension);
     this.registerMarkdownPostProcessor((element, context) => this.slideMenus?.readingSection(element, context));
@@ -259,11 +260,31 @@ export default class MarkdownPointPlugin extends Plugin {
     this.run(async () => { await this.clipboard?.copy({ view, file, window, canApply: current }, selection.selected); });
   }
 
+  private pasteOutlineSlides(after: string | null, window: Window): void {
+    const presentation = this.presentation;
+    const file = presentation && this.app.vault.getFileByPath(presentation.path);
+    if (!presentation || !file) return;
+    const current = () => this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
+    const owner = this.currentEditorLeaf()?.view;
+    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+    this.run(async () => { await this.clipboard?.paste({ view, file, window, canApply: current }, after, async () => {
+      const leaf = await this.ensureEditorLeaf();
+      return leaf && current() ? this.editingView(leaf) : null;
+    }); });
+  }
+
+  private pasteDraftSlides(target: SlideMenuTarget): void {
+    const current = () => this.running && this.slideMenus?.current(target) === true;
+    this.run(async () => { await this.clipboard?.paste({ view: target.owner, file: target.file,
+      window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current }, target.slide,
+    () => this.editingView(target.owner.leaf)); });
+  }
+
   private copyDraftSlide(target: SlideMenuTarget): void {
     const current = () => this.running && this.slideMenus?.current(target) === true;
     this.run(async () => {
       await this.clipboard?.copy({ view: target.owner, file: target.file,
-        window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current }, [target.slide]);
+        window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current }, target.slide ? [target.slide] : []);
     });
   }
 
@@ -274,7 +295,7 @@ export default class MarkdownPointPlugin extends Plugin {
         if (!current()) return;
         const editor = await this.editingView(target.owner.leaf);
         if (editor && current()) {
-          const deleted = await this.presentationEditor?.deleteSlides(editor.editor, [target.slide], current);
+          const deleted = await this.presentationEditor?.deleteSlides(editor.editor, target.slide ? [target.slide] : [], current);
           if (deleted && current() && this.app.workspace.getMostRecentLeaf() === editor.leaf) editor.editor.focus();
         }
       } catch (error) { this.storage?.preparationFailed(error); }

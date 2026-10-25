@@ -31,7 +31,7 @@ export interface SlideMenuTarget {
   readonly file: TFile;
   readonly path: string;
   readonly document: string;
-  readonly slide: string;
+  readonly slide: string | null;
 }
 
 /** Add slide actions to the native text menu without changing its selection. */
@@ -45,7 +45,7 @@ export class SlideMenus extends Component {
   constructor(
     private readonly app: App,
     private readonly reader: PresentationReader,
-    private readonly actions: { copy(target: SlideMenuTarget): void; delete(target: SlideMenuTarget): void },
+    private readonly actions: { copy(target: SlideMenuTarget): void; paste(target: SlideMenuTarget): void; delete(target: SlideMenuTarget): void },
   ) {
     super();
     this.extension = ViewPlugin.define(view => {
@@ -110,6 +110,12 @@ export class SlideMenus extends Component {
     const element = node?.instanceOf(Element) ? node : node?.parentElement;
     if (!element || element.closest(".internal-embed, .metadata-container, .inline-title")) return;
     const container = owner.previewMode.containerEl;
+    const snapshot = this.reader.snapshot(owner.file, owner.getViewData());
+    if (snapshot && !snapshot.document.slides.length) {
+      const target = this.target(owner, snapshot.bodyStart);
+      if (target) this.addItems(Menu.forEvent(event), target);
+      return;
+    }
     let section: HTMLElement | null = null;
     for (let parent: Element | null = element; parent && parent !== container; parent = parent.parentElement) {
       if (parent.instanceOf(HTMLElement) && this.readingSections.has(parent)) { section = parent; break; }
@@ -158,6 +164,16 @@ export class SlideMenus extends Component {
       !owner.file || !this.reader.snapshot(owner.file, owner.getViewData())) return;
     const container = owner.previewMode.containerEl;
     const selection = container.ownerDocument.getSelection();
+    const empty = owner.file && this.reader.snapshot(owner.file, owner.getViewData())?.document.slides.length === 0;
+    if (empty) {
+      const bounds = focused.getBoundingClientRect();
+      const context = new container.ownerDocument.defaultView!.MouseEvent("contextmenu", {
+        bubbles: true, cancelable: true, clientX: bounds.left, clientY: bounds.top, button: 2,
+      });
+      focused.dispatchEvent(context);
+      if (context.defaultPrevented) { event.preventDefault(); event.stopPropagation(); }
+      return;
+    }
     const node = selection?.focusNode;
     if (!node || !container.contains(node) || !selection.rangeCount) return;
     const target = node.instanceOf(Element) ? node : node.parentElement;
@@ -184,7 +200,9 @@ export class SlideMenus extends Component {
     if (!snapshot) return null;
     const slide = explicitId ? snapshot.document.slides.find(slide => slide.id === explicitId)
       : slideForMenu(snapshot.document, position, markdown, snapshot.bodyStart);
-    return slide ? { owner, file, path: file.path, document: snapshot.id, slide: slide.id } : null;
+    return slide || (!snapshot.document.slides.length && (position >= snapshot.bodyStart ||
+      (owner.getMode() === "source" && owner.containerEl.querySelector(".markdownpoint-empty-draft") !== null)))
+      ? { owner, file, path: file.path, document: snapshot.id, slide: slide?.id ?? null } : null;
   }
 
   private pointerMenu(view: EditorView, event: MouseEvent, capture: boolean): void {
@@ -227,9 +245,11 @@ export class SlideMenus extends Component {
 
   private addItems(menu: Menu, target: SlideMenuTarget): void {
     if (!this.current(target)) return;
-    menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.copy({ count: 1 }))
+    if (target.slide) menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.copy({ count: 1 }))
       .setIcon("copy").onClick(() => { if (this.current(target)) this.actions.copy(target); }));
-    menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.delete({ count: 1 }))
+    menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.paste)
+      .setIcon("clipboard-paste").onClick(() => { if (this.current(target)) this.actions.paste(target); }));
+    if (target.slide) menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.delete({ count: 1 }))
       .setIcon("trash-2").onClick(() => { if (this.current(target)) this.actions.delete(target); }));
   }
 }
