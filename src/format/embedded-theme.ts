@@ -16,9 +16,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { parseTree } from "jsonc-parser";
-import type { Node, ParseError } from "jsonc-parser";
+import { readJsonObject } from "./json.ts";
 import { isDocumentId, isRecord, isStableId, presentationCompanionPath } from "./recognition.ts";
+
+export interface EmbeddedThemeDocument {
+  readonly path: string;
+  readonly source: string;
+  readonly value: Readonly<Record<string, unknown>>;
+}
+
+export interface EmbeddedTheme {
+  readonly id: string;
+  readonly root: string;
+  readonly master: EmbeddedThemeDocument;
+  readonly layouts: ReadonlyMap<string, EmbeddedThemeDocument>;
+}
 
 export interface EmbeddedThemePaths {
   readonly id: string;
@@ -39,22 +51,8 @@ export function embeddedThemePaths(markdownPath: string, companion: unknown, lay
   return { id: companion.design, root, master: root + "/master.json", layouts: new Map([...keys].map(key => [key, `${root}/${key}.json`])) };
 }
 
-/** Read the JSON envelope without accepting ambiguous keys or nonfinite numbers. */
+/** Validate the supported Theme envelope while keeping its original source separately. */
 export function themeDocument(source: string, kind: "master" | "layout"): Record<string, unknown> | null {
-  const content = source.startsWith("\uFEFF") ? source.slice(1) : source;
-  const errors: ParseError[] = [];
-  const root = parseTree(content, errors, { disallowComments: true, allowTrailingComma: false });
-  if (!root || errors.length || root.type !== "object") return null;
-  const pending: Node[] = [root];
-  while (pending.length) {
-    const node = pending.pop()!;
-    if (node.type === "number" && !Number.isFinite(node.value)) return null;
-    if (node.type === "object") {
-      const names = (node.children ?? []).map(property => property.children![0]!.value as unknown);
-      if (new Set(names).size !== names.length) return null;
-    }
-    pending.push(...node.children ?? []);
-  }
-  const value: unknown = JSON.parse(content);
-  return isRecord(value) && value.markdownpoint === 1 && value.kind === kind ? value : null;
+  const value = readJsonObject(source);
+  return value?.markdownpoint === 1 && value.kind === kind ? value : null;
 }

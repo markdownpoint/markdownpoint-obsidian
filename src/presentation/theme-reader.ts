@@ -17,23 +17,11 @@
  */
 
 import { embeddedThemePaths, themeDocument } from "../format/embedded-theme.ts";
+import type { EmbeddedTheme } from "../format/embedded-theme.ts";
 
 interface ThemeVault<File> {
   getFileByPath(path: string): File | null;
   read(file: File): Promise<string>;
-}
-
-export interface EmbeddedThemeDocument {
-  readonly path: string;
-  readonly source: string;
-  readonly value: Readonly<Record<string, unknown>>;
-}
-
-export interface EmbeddedTheme {
-  readonly id: string;
-  readonly root: string;
-  readonly master: EmbeddedThemeDocument;
-  readonly layouts: ReadonlyMap<string, EmbeddedThemeDocument>;
 }
 
 /** A user operation reads its required embedded documents once and verifies the same bytes before returning. */
