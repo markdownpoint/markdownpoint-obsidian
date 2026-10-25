@@ -46,9 +46,9 @@ export class CompanionDocument {
     }));
   }
 
-  static read(source: string): CompanionDocument | null {
+  static read(source: string, mapName: "slides" | "compositions" = "slides"): CompanionDocument | null {
     const root = objectTree(source);
-    const maps = root?.children?.filter(property => property.children?.[0]?.value === "slides");
+    const maps = root?.children?.filter(property => property.children?.[0]?.value === mapName);
     const map = maps?.length === 1 ? maps[0]?.children?.[1] : undefined;
     if (map?.type !== "object") return null;
     const properties = map.children ?? [];
