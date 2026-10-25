@@ -76,6 +76,6 @@ echo ""
 echo "=== All checks passed ==="
 
 # Deploying into personal vaults is a local convenience, not something CI should do
-if [ -z "${CI:-}" ] && [ -x "$SCRIPT_DIR/build-local.sh" ]; then
-    "$SCRIPT_DIR/build-local.sh"
+if [ -z "${CI:-}" ] && [ -x "$SCRIPT_DIR/local/build-local.sh" ]; then
+    "$SCRIPT_DIR/local/build-local.sh"
 fi
