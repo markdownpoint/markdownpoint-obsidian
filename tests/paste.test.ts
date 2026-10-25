@@ -19,7 +19,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { decodeSlideClipboard, encodeSlideClipboard } from "../src/format/clipboard.ts";
-import { prepareClipboardPaste, sameClipboardDestination } from "../src/format/paste.ts";
+import { prepareClipboardPaste, sameClipboardPresentation, sameClipboardTheme } from "../src/format/paste.ts";
 import { indexPresentation } from "../src/format/document.ts";
 import { planSlideInsertion } from "../src/format/insert.ts";
 import { embeddedThemePaths, themeDocument } from "../src/format/embedded-theme.ts";
@@ -62,10 +62,14 @@ void test("orphaned and recoverable identities are not recycled by a copied slid
 });
 
 void test("same-origin asset references require the original vault, document, path and theme sources", () => {
-  assert.equal(sameClipboardDestination(packet, origin, theme), true);
-  for (const key of ["vault", "path", "document"] as const) assert.equal(sameClipboardDestination(packet, { ...origin, [key]: "different" }, theme), false);
-  assert.equal(sameClipboardDestination(packet, origin, { ...theme, master: { ...theme.master, source: master + " " } }), false);
-  assert.equal(sameClipboardDestination(packet, origin, { ...theme, layouts: new Map() }), false);
+  assert.equal(sameClipboardPresentation(packet, origin), true);
+  assert.equal(sameClipboardPresentation(packet, { ...origin, path: "deck/Slides.MD" }), true);
+  assert.equal(sameClipboardPresentation(packet, { ...origin, path: "other/slides.md" }), false);
+  for (const key of ["vault", "path", "document"] as const) assert.equal(sameClipboardPresentation(packet, { ...origin, [key]: "different" }), false);
+  assert.equal(sameClipboardTheme(packet, theme), true);
+  assert.equal(sameClipboardTheme(packet, { ...theme, root: "other/themes/basic" }), true);
+  assert.equal(sameClipboardTheme(packet, { ...theme, master: { ...theme.master, source: master + " " } }), false);
+  assert.equal(sameClipboardTheme(packet, { ...theme, layouts: new Map() }), false);
 });
 
 void test("a locally owned Cut restores identity once; repeated Paste and Undo Cut clone instead", () => {

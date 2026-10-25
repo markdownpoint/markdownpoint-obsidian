@@ -76,6 +76,8 @@ void test("theme creation inventories media variants, overrides and embedded fon
     ...basicTheme.master.value, objects: [{ asset }], "font-files": { Custom: ["fonts/custom.eot"] },
   } } });
   assert.deepEqual(themeAssetPaths(make({ light: "media/light.svg", dark: "media/dark.svg" })), ["media/light.svg", "media/dark.svg", "fonts/custom.eot"]);
+  assert.deepEqual(themeAssetPaths({ ...basicTheme, master: { ...basicTheme.master, value: { ...basicTheme.master.value,
+    objects: [{ type: "video", "poster-frame": 2.5 }, { type: "web-video", "poster-frame": "media/poster.png" }] } } }), ["media/poster.png"]);
   for (const path of ["../outside.svg", "/absolute.svg", "media/../outside.svg", "https://example.com/file.svg", "previews/cover.jpg", "example/media/file.jpg"]) {
     assert.equal(themeAssetPaths(make(path)), null, path);
   }

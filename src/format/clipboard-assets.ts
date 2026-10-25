@@ -68,7 +68,6 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
     for (const [object, base] of objects) {
       add(object.asset, [...base, "asset"]);
       add(object["poster-frame"], [...base, "poster-frame"]);
-      add(nested(object.source, "poster"), [...base, "source", "poster"]);
       add(nested(object["image-result"], "source"), [...base, "image-result", "source"]);
       add(nested(object.model, "asset"), [...base, "model", "asset"]);
       if (base[0] === "objects" && object.type === "composition" && typeof object.source === "string" && isRecord(object.controls)) {

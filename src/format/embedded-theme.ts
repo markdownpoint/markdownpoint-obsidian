@@ -80,6 +80,7 @@ export function themeAssetPaths(theme: EmbeddedTheme): readonly string[] | null 
       if (!isRecord(object)) continue;
       const assets = isRecord(object.asset) ? Object.values(object.asset) : [object.asset];
       if (!assets.every(add)) return null;
+      if (typeof object["poster-frame"] === "string" && !add(object["poster-frame"])) return null;
     }
   }
   const fonts = theme.master.value["font-files"];

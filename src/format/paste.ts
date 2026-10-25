@@ -22,11 +22,15 @@ import { CompanionDocument } from "./companion.ts";
 import { prepareSlideCopies } from "./copy.ts";
 import type { PresentationDocument } from "./document.ts";
 import type { EmbeddedTheme } from "./embedded-theme.ts";
+import { presentationCompanionPath } from "./recognition.ts";
 
-/** Keep existing media references only inside the same presentation and theme. */
-export function sameClipboardDestination(packet: SlideClipboard, origin: ClipboardOrigin, theme: EmbeddedTheme): boolean {
-  return packet.origin.vault === origin.vault && packet.origin.path === origin.path && packet.origin.document === origin.document &&
-    packet.theme.id === theme.id && packet.theme.master.source === theme.master.source &&
+export function sameClipboardPresentation(packet: SlideClipboard, origin: ClipboardOrigin): boolean {
+  return packet.origin.vault === origin.vault && packet.origin.document === origin.document &&
+    presentationCompanionPath(packet.origin.path) === presentationCompanionPath(origin.path);
+}
+
+export function sameClipboardTheme(packet: SlideClipboard, theme: EmbeddedTheme): boolean {
+  return packet.theme.id === theme.id && packet.theme.master.source === theme.master.source &&
     [...packet.theme.layouts].every(([key, layout]) => theme.layouts.get(key)?.source === layout.source);
 }
 

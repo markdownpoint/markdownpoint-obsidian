@@ -28,7 +28,7 @@ void test("all declared slide media locations are collected once, including post
   const value = captured(JSON.stringify({ background: { image: "media/back.png", "image-result": { source: "generated/original.png" } },
     objects: ["inherited", { id: "photo", type: "image", asset: "media/picture.png", "image-result": { source: "generated/original.png" } },
       { id: "movie", type: "video", asset: "media/movie.mp4", "poster-frame": "media/poster.jpg" },
-      { id: "web", type: "web-video", source: { url: "https://example.com/watch", poster: "media/web.webp" } },
+      { id: "web", type: "web-video", url: "https://example.com/watch", "poster-frame": "media/web.webp" },
       { id: "words", type: "text", model: { asset: "generated/letters.glb" } }],
     overrides: { removed: null, image: { asset: "media/override.png" }, text: { model: { asset: "media/model.glb" } }, sound: { asset: "media/music.wav" } } }));
   assert.deepEqual(planClipboardAssets(value)?.files, ["media/back.png", "generated/original.png", "media/picture.png", "media/movie.mp4", "media/poster.jpg",
@@ -53,6 +53,7 @@ void test("remapping replaces only asset values and retains raw precision, escap
   assert.equal(changed.slides[0]!.markdown, value.slides[0]!.markdown);
   assert.equal(JSON.stringify(value), before);
   assert.equal(plan.remap(new Map([["media/picture.png", "media/picture.png"]]))!.slides[0]!.record, record);
+  assert.deepEqual(planClipboardAssets(captured('{"objects":[{"type":"shape","source":{"poster":"media/unknown.png"}}]}'))?.files, []);
 });
 
 void test("every copied asset must receive a safe destination before any record is returned", () => {

@@ -22,13 +22,15 @@ import { decodeSlideClipboard, SLIDE_CLIPBOARD_MIME } from "../format/clipboard.
 import { clipboardVaultId, clipboardDigest, ownsClipboardCut, CLIPBOARD_CUT_KEY } from "../settings/clipboard.ts";
 import { uiText } from "../ui-text.ts";
 import { readJsonObject } from "../format/json.ts";
-import { prepareClipboardPaste, sameClipboardDestination } from "../format/paste.ts";
+import { prepareClipboardPaste, sameClipboardPresentation, sameClipboardTheme } from "../format/paste.ts";
 import type { PresentationEditor } from "../editor/presentation-editor.ts";
 import type { SlideData } from "./slide-data.ts";
 import { SlideCopy } from "./copy.ts";
 import type { SlideCopyResult } from "./copy.ts";
 import type { PresentationReader } from "./reader.ts";
 import { readEmbeddedTheme } from "./theme-reader.ts";
+import { ThemeArtworkMismatch, transferSlideAssets } from "./transfer-assets.ts";
+import type { TransferredSlides } from "./transfer-assets.ts";
 
 interface CopyContext {
   readonly view: MarkdownView | null;
@@ -44,6 +46,7 @@ export class PresentationClipboard extends Component {
   private running = false;
   private intent = 0;
   private pastes: Promise<void> = Promise.resolve();
+  private transfer: AbortController | null = null;
 
   constructor(private readonly app: App, private readonly reader: PresentationReader,
     private readonly editor: PresentationEditor, private readonly data: SlideData | null) {
@@ -70,7 +73,7 @@ export class PresentationClipboard extends Component {
   }
 
   onload(): void { this.running = true; }
-  onunload(): void { this.running = false; this.copier.stop(); }
+  onunload(): void { this.running = false; this.copier.stop(); this.transfer?.abort(); }
 
   private current(context: CopyContext): boolean {
     const leaves = this.app.workspace.getLeavesOfType("markdown");
@@ -105,20 +108,40 @@ export class PresentationClipboard extends Component {
       if (!snapshot || !companion || !metadata || !this.current(context)) return;
       const theme = await readEmbeddedTheme(this.app.vault, context.path, metadata, packet.theme.layouts.keys());
       if (!this.current(context)) return;
-      if (!theme || !sameClipboardDestination(packet, { vault: clipboardVaultId(this.app), path: context.path, document: snapshot.id }, theme)) {
+      const origin = { vault: clipboardVaultId(this.app), path: context.path, document: snapshot.id };
+      if (packet.origin.vault !== origin.vault) { new Notice(uiText.slides.pasteVault); return; }
+      if (!theme || !sameClipboardTheme(packet, theme)) {
         new Notice(uiText.slides.pasteDestination); return;
       }
-      const digest = await clipboardDigest(result.source!);
-      const remembered = new Map([...(this.data?.remembered(context.path, snapshot.id) ?? []), ...(this.data?.remembered(context.path, snapshot.id, "compositions") ?? [])]);
-      const prepared = prepareClipboardPaste(packet, markdown, snapshot.document, companion, remembered, () => `id-${crypto.randomUUID()}`, ownsClipboardCut(this.app, digest));
+      const documents = [theme.master, ...theme.layouts.values()].map(document => {
+        const file = this.app.vault.getFileByPath(document.path);
+        return { file, path: document.path, mtime: file?.stat.mtime, size: file?.stat.size };
+      });
       const current = () => this.current(context) && view.getViewData() === markdown &&
-        this.reader.companionFor(input.file, snapshot) === companion;
-      if (!prepared || !current()) { new Notice(uiText.slides.pasteChanged); return; }
-      const inserted = await this.editor.insertSlides(view.editor, prepared.slides, after, current, prepared.compositions);
-      if (!inserted && this.current(context)) new Notice(uiText.slides.pasteChanged);
+        this.reader.companionFor(input.file, snapshot) === companion && documents.every(document => document.file &&
+          this.app.vault.getFileByPath(document.path) === document.file && document.file.stat.mtime === document.mtime && document.file.stat.size === document.size);
+      const samePresentation = sameClipboardPresentation(packet, origin), controller = new context.window.document.defaultView!.AbortController();
+      this.transfer = controller;
+      let transferred: TransferredSlides | null = null, inserted = false;
+      try {
+        if (!samePresentation) transferred = await transferSlideAssets(this.app, packet, context.file, theme, context.window, current, controller.signal);
+        const incoming = transferred ? { ...packet, captured: transferred.captured } : packet;
+        const digest = samePresentation ? await clipboardDigest(result.source!) : null;
+        const remembered = new Map([...(this.data?.remembered(context.path, snapshot.id) ?? []), ...(this.data?.remembered(context.path, snapshot.id, "compositions") ?? [])]);
+        const prepared = prepareClipboardPaste(incoming, markdown, snapshot.document, companion, remembered, () => `id-${crypto.randomUUID()}`,
+          digest !== null && ownsClipboardCut(this.app, digest));
+        const valid = () => current() && (!transferred || transferred.current());
+        if (!prepared || !valid()) { if (this.current(context)) new Notice(uiText.slides.pasteChanged); return; }
+        inserted = await this.editor.insertSlides(view.editor, prepared.slides, after, valid, prepared.compositions);
+        if (!inserted && this.current(context)) new Notice(uiText.slides.pasteChanged);
+      } finally {
+        controller.abort();
+        if (this.transfer === controller) this.transfer = null;
+        if (transferred && !inserted) await transferred.cleanup().catch((error: unknown) => console.error(error));
+      }
     }).catch((error: unknown) => {
       console.error(error);
-      if (this.running && initial.canApply()) new Notice(uiText.slides.pasteFailed);
+      if (this.running && initial.canApply()) new Notice(error instanceof ThemeArtworkMismatch ? uiText.slides.pasteArtwork : uiText.slides.pasteFailed);
     });
     this.pastes = action;
     return action;
