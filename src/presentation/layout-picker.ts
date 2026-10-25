@@ -23,17 +23,18 @@ import { layoutName, orderedLayouts } from "../format/new-slide.ts";
 import { slideStructure } from "../format/structure.ts";
 import { renderThumbnail } from "../outline/thumbnail.ts";
 import { LAYOUT_DIGITS, layoutDigit } from "../settings/layout-shortcuts.ts";
-import type { LayoutAssignments, LayoutShortcuts } from "../settings/layout-shortcuts.ts";
+import type { LayoutAssignments } from "../settings/layout-shortcuts.ts";
+import type { SharedSettings } from "../settings/shared.ts";
 import { uiText } from "../ui-text.ts";
 
 export class LayoutPicker extends Modal {
   private active = false;
   private assignments: LayoutAssignments = {};
-  constructor(app: App, private readonly theme: EmbeddedTheme, private readonly shortcuts: LayoutShortcuts, private readonly choose: (key: string) => void) { super(app); }
+  constructor(app: App, private readonly theme: EmbeddedTheme, private readonly shortcuts: SharedSettings, private readonly choose: (key: string) => void) { super(app); }
 
   onOpen(): void {
     this.active = true;
-    this.assignments = this.shortcuts.value;
+    this.assignments = this.shortcuts.layoutShortcuts;
     this.setTitle(uiText.slides.new);
     this.modalEl.addClass("markdownpoint-layout-picker");
     const grid = this.contentEl.createDiv({ cls: "markdownpoint-layout-grid" });
@@ -93,7 +94,7 @@ export class LayoutPicker extends Modal {
       if (!this.active) return;
       menu.hide();
       void this.shortcuts.assign(key, digit).then(() => {
-        if (this.active) { this.assignments = this.shortcuts.value; this.refreshShortcuts(); }
+        if (this.active) { this.assignments = this.shortcuts.layoutShortcuts; this.refreshShortcuts(); }
       }).catch((error: unknown) => { console.error(error); new Notice(uiText.slides.shortcutFailed); });
     };
     const choices = (target: Menu) => {

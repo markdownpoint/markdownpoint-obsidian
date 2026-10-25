@@ -18,7 +18,8 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignLayoutDigit, layoutDigit, LayoutShortcuts, readLayoutAssignments } from "../src/settings/layout-shortcuts.ts";
+import { SharedSettings } from "../src/settings/shared.ts";
+import { assignLayoutDigit, layoutDigit, readLayoutAssignments } from "../src/settings/layout-shortcuts.ts";
 
 void test("default digits follow MDP layout keys across themes; an empty map means no shortcuts", () => {
   const defaults = readLayoutAssignments(undefined);
@@ -40,34 +41,34 @@ void test("shared settings preserve unrelated data, serialize assignments, and s
   let disk: unknown = { untouched: { mode: "keep" }, layoutShortcuts: {} };
   const writes: unknown[] = [];
   const host = { loadData: () => Promise.resolve(disk), saveData: (data: unknown) => { writes.push(data); disk = data; return Promise.resolve(); } };
-  const settings = new LayoutShortcuts(host); await settings.ready;
+  const settings = new SharedSettings(host); await settings.ready;
   await Promise.all([settings.assign("title", "1"), settings.assign("body", "2"), settings.assign("title", "3")]);
-  assert.deepEqual(settings.value, { "2": "body", "3": "title" });
+  assert.deepEqual(settings.layoutShortcuts, { "2": "body", "3": "title" });
   assert.deepEqual(disk, { untouched: { mode: "keep" }, layoutShortcuts: { "2": "body", "3": "title" } });
   assert.equal(writes.length, 3);
-  const reopened = new LayoutShortcuts(host); await reopened.ready; assert.deepEqual(reopened.value, settings.value);
+  const reopened = new SharedSettings(host); await reopened.ready; assert.deepEqual(reopened.layoutShortcuts, settings.layoutShortcuts);
   disk = { untouched: { mode: "remote" }, layoutShortcuts: { "9": "title" } };
-  await reopened.reload(); assert.deepEqual(reopened.value, { "9": "title" });
+  await reopened.reload(); assert.deepEqual(reopened.layoutShortcuts, { "9": "title" });
 });
 
 void test("a failed settings save does not publish the assignment or block a later change", async () => {
   let fail = true;
-  const settings = new LayoutShortcuts({ loadData: () => Promise.resolve({ layoutShortcuts: {} }), saveData: () => fail ? Promise.reject(new Error("Write failed")) : Promise.resolve() });
+  const settings = new SharedSettings({ loadData: () => Promise.resolve({ layoutShortcuts: {} }), saveData: () => fail ? Promise.reject(new Error("Write failed")) : Promise.resolve() });
   await settings.ready;
-  await assert.rejects(settings.assign("title", "1")); assert.deepEqual(settings.value, {});
-  fail = false; await settings.assign("title", "2"); assert.deepEqual(settings.value, { "2": "title" });
+  await assert.rejects(settings.assign("title", "1")); assert.deepEqual(settings.layoutShortcuts, {});
+  fail = false; await settings.assign("title", "2"); assert.deepEqual(settings.layoutShortcuts, { "2": "title" });
 });
 
 void test("an external settings reload waits for pending writes without deadlocking subsequent assignments", async () => {
   let finish!: () => void, signal!: () => void, disk: unknown = { layoutShortcuts: {} };
   const started = new Promise<void>(resolve => { signal = resolve; });
   let first = true;
-  const settings = new LayoutShortcuts({ loadData: () => Promise.resolve(disk), saveData: async data => {
+  const settings = new SharedSettings({ loadData: () => Promise.resolve(disk), saveData: async data => {
     if (first) { first = false; signal(); await new Promise<void>(resolve => { finish = resolve; }); }
     disk = data;
   } });
   await settings.ready;
   const saved = settings.assign("title", "1"); await started;
   const reload = settings.reload(), another = settings.assign("body", "2"); finish();
-  await Promise.all([saved, reload, another]); assert.deepEqual(settings.value, { "1": "title", "2": "body" });
+  await Promise.all([saved, reload, another]); assert.deepEqual(settings.layoutShortcuts, { "1": "title", "2": "body" });
 });

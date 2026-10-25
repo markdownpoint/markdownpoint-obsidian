@@ -24,7 +24,7 @@ import { embeddedThemePaths } from "../format/embedded-theme.ts";
 import { prepareNewSlide } from "../format/new-slide.ts";
 import { readJsonObject } from "../format/json.ts";
 import { uiText } from "../ui-text.ts";
-import type { LayoutShortcuts } from "../settings/layout-shortcuts.ts";
+import type { SharedSettings } from "../settings/shared.ts";
 import { LayoutPicker } from "./layout-picker.ts";
 import type { PresentationReader } from "./reader.ts";
 import { readEmbeddedTheme } from "./theme-reader.ts";
@@ -41,7 +41,7 @@ export class SlideCreation extends Component {
   private picker: LayoutPicker | null = null;
   private running = false;
   private revision = 0;
-  constructor(private readonly app: App, private readonly reader: PresentationReader, private readonly editor: PresentationEditor, private readonly shortcuts: LayoutShortcuts,
+  constructor(private readonly app: App, private readonly reader: PresentationReader, private readonly editor: PresentationEditor, private readonly shortcuts: SharedSettings,
     private readonly inserted: (id: string) => void) { super(); }
   onload(): void { this.running = true; }
   onunload(): void { this.running = false; this.revision++; this.picker?.close(); }

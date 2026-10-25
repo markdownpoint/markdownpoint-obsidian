@@ -28,6 +28,9 @@ import type { SlideData } from "./slide-data.ts";
 import { readEmbeddedTheme } from "./theme-reader.ts";
 import { embeddedThemePaths } from "../format/embedded-theme.ts";
 import type { EmbeddedTheme } from "../format/embedded-theme.ts";
+import { assignedSlideImages } from "../format/slide-images.ts";
+import { readSlideImages } from "./image-reader.ts";
+import type { SlideImagePreview } from "./image-reader.ts";
 import { slideStructure } from "../format/structure.ts";
 import { CompanionDocument } from "../format/companion.ts";
 
@@ -47,6 +50,7 @@ export interface PresentationSnapshot {
   readonly bodyStart: number;
   readonly document: PresentationDocument;
   readonly outline: OutlinePresentation;
+  readonly images: ReadonlyMap<string, readonly SlideImagePreview[]>;
 }
 
 export class PresentationReader extends Component {
@@ -117,7 +121,9 @@ export class PresentationReader extends Component {
       const themeRoot = source?.theme?.root ?? candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1) + "themes";
       const themeChange = [file.path, oldPath].some(path => path !== undefined && (path === themeRoot || path.startsWith(themeRoot + "/")));
       if (themeChange && source) source.theme = null;
-      const affected = themeChange || file === candidate || file.path === companionPath || companionChange ||
+      const root = candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1);
+      const mediaChange = [file.path, oldPath].some(path => path !== undefined && ["media", "generated"].some(folder => path === root + folder || path.startsWith(root + folder + "/")));
+      const affected = themeChange || mediaChange || file === candidate || file.path === companionPath || companionChange ||
         [file.path, oldPath].some(path => path !== undefined &&
           [candidate.path, source?.path, source?.companionPath].some(owned => owned === path || owned?.startsWith(path + "/")));
       if (!affected) continue;
@@ -273,6 +279,7 @@ export class PresentationReader extends Component {
     const slides = source.companion.slides;
     if (!document) return null;
     const skipped = new Set<string>();
+    const images = new Map<string, readonly SlideImagePreview[]>();
     const structures = new Map<string, ReturnType<typeof slideStructure>>();
     for (const slide of document.slides) {
       let metadata: unknown = slides[slide.id];
@@ -284,9 +291,11 @@ export class PresentationReader extends Component {
       if (!isRecord(metadata) || (metadata.skipped !== undefined && typeof metadata.skipped !== "boolean")) return null;
       if (metadata.skipped === true) skipped.add(slide.id);
       structures.set(slide.id, slideStructure(metadata, source.theme));
+      const current = Object.hasOwn(slides, slide.id) ? source.companion : { ...source.companion, slides: { ...slides, [slide.id]: metadata } };
+      images.set(slide.id, readSlideImages(this.app.vault, assignedSlideImages(source.path, current, slide.id, source.theme)));
     }
     const sections = outlineSections(markdown, document);
     if (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from)) return null;
-    return { id: identity.id, bodyStart: identity.bodyStart, document, outline: { documentId: identity.id, path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped).map(slide => ({ ...slide, structure: structures.get(slide.id) })), sections } };
+    return { id: identity.id, bodyStart: identity.bodyStart, document, images, outline: { documentId: identity.id, path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped).map(slide => ({ ...slide, structure: structures.get(slide.id) })), sections } };
   }
 }

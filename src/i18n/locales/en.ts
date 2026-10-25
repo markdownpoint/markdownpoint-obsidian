@@ -32,6 +32,7 @@ export const en = {
       footer: "Footer", number: "Number",
     },
   },
+  images: { show: "Show slide images", description: "Show up to five images below each slide thumbnail.", preview: "Slide image" },
   notes: { label: "Speaker notes", placeholder: "Notes" },
   clipboard: { copyText: "Copy", copyFailed: "Could not copy text to the clipboard." },
   slides: {

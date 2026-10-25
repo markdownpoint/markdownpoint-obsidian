@@ -23,6 +23,8 @@ import type { DecorationSet } from "@codemirror/view";
 import { Component, MarkdownView, editorInfoField, editorLivePreviewField } from "obsidian";
 import type { Editor, TFile } from "obsidian";
 import type { PresentationReader, PresentationSnapshot } from "../presentation/reader.ts";
+import type { SlideImagePreview } from "../presentation/image-reader.ts";
+import { imageSpacing, ImageSpace } from "./image-spacing.ts";
 import { slideThumbnails } from "./thumbnail-widgets.ts";
 import type { SlideStructure } from "../format/structure.ts";
 import { outlineSlideNumbers } from "../outline/model.ts";
@@ -51,6 +53,7 @@ import { slideInsertionTransaction } from "./insert.ts";
 
 const refreshPresentation = StateEffect.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
+const noImageSpaces: ReadonlyMap<string, number> = new Map();
 
 interface DraftState {
   readonly empty: boolean;
@@ -62,6 +65,8 @@ interface DraftState {
   readonly notes: readonly SlideNotes[];
   readonly openedNotes: ReadonlySet<string>;
   readonly focused: boolean;
+  readonly showImages: boolean;
+  readonly imageSpaces: ReadonlyMap<string, number>;
 }
 
 interface DraftMarker {
@@ -71,6 +76,8 @@ interface DraftMarker {
   readonly label: string | null;
   readonly slideId?: string;
   readonly structure?: SlideStructure | null;
+  readonly images?: readonly SlideImagePreview[];
+  readonly slideTo?: number;
 }
 
 class SlideBoundary extends WidgetType {
@@ -123,6 +130,7 @@ export class PresentationEditor extends Component {
     private readonly notesUi: NotesUi,
     private readonly caretChanged: (editor: MarkdownView, slideId: string) => void,
     private readonly data: SlideData | null = null,
+    private readonly showSlideImages: () => boolean = () => true,
   ) {
     super();
     const field = this.field = StateField.define<DraftState>({
@@ -135,9 +143,14 @@ export class PresentationEditor extends Component {
     });
     const views = this.views;
     this.extension = [
+      imageSpacing,
       field,
-      slideThumbnails(view => new Map(view.state.field(field).markers.flatMap(marker =>
-        marker.slideId && marker.structure ? [[marker.slideId, marker.structure] as const] : []))),
+      slideThumbnails(view => {
+        const draft = view.state.field(field);
+        return { id: draft.id, slides: new Map(draft.markers.flatMap(marker => marker.slideId ? [[marker.slideId, {
+          structure: marker.structure ?? null, images: draft.showImages ? marker.images ?? [] : [],
+        }] as const] : [])) };
+      }),
       ViewPlugin.define(view => {
         views.add(view);
         let container: HTMLElement | null = null;
@@ -352,6 +365,10 @@ export class PresentationEditor extends Component {
     if (file) this.refresh(file);
   }
 
+  refreshAll(): void {
+    for (const view of this.views) view.dispatch({ effects: refreshPresentation.of(view.hasFocus) });
+  }
+
   refresh(file: TFile): void {
     for (const view of this.views) {
       if (view.state.field(editorInfoField, false)?.file !== file || this.pending.has(view)) continue;
@@ -373,10 +390,13 @@ export class PresentationEditor extends Component {
     for (const effect of transaction?.effects ?? []) if (effect.is(editorFocus) || effect.is(refreshPresentation)) focused = effect.value;
     const id = snapshot?.id ?? previous?.id;
     const openedNotes = this.notesUi.opened(id ?? "");
+    const showImages = preview && this.showSlideImages();
+    const spacing = state.field(imageSpacing, false);
+    const imageSpaces = showImages && spacing && spacing.id === id ? spacing.heights : noImageSpaces;
     const selectionChanged = transaction?.selection && !transaction.startState.selection.eq(transaction.newSelection);
-    if (snapshot && previous?.snapshot === snapshot && openedNotes === previous.openedNotes && !selectionChanged && focused === previous.focused) return previous;
+    if (snapshot && previous?.snapshot === snapshot && openedNotes === previous.openedNotes && !selectionChanged && focused === previous.focused && showImages === previous.showImages && imageSpaces === previous.imageSpaces) return previous;
     if (snapshot && !snapshot.document.slides.length && !snapshot.document.sections.length && !markdown.slice(snapshot.bodyStart).trim()) {
-      return { id: snapshot.id, snapshot, empty: true, fields: [], notes: [], openedNotes, focused,
+      return { id: snapshot.id, snapshot, empty: true, fields: [], notes: [], openedNotes, focused, showImages, imageSpaces,
         markers: [{ from: 0, markerTo: state.doc.length, text: markdown, label: null }],
         decorations: Decoration.set([Decoration.replace({ block: true, widget: new EmptyDraft() }).range(0, state.doc.length)]),
       };
@@ -386,7 +406,8 @@ export class PresentationEditor extends Component {
       const numbers = outlineSlideNumbers(snapshot.outline.slides, number => uiNumber.format(number));
       const structures = new Map(snapshot.outline.slides.map(slide => [slide.id, slide.structure]));
       markers = [
-        ...snapshot.document.slides.map(slide => ({ from: slide.from, markerTo: slide.markerTo, text: state.doc.sliceString(slide.from, slide.markerTo), label: numbers.get(slide.id) ?? "", slideId: slide.id, structure: structures.get(slide.id) })),
+        ...snapshot.document.slides.map(slide => ({ from: slide.from, markerTo: slide.markerTo, text: state.doc.sliceString(slide.from, slide.markerTo), label: numbers.get(slide.id) ?? "", slideId: slide.id,
+          structure: structures.get(slide.id), images: snapshot.images.get(slide.id), slideTo: slide.to })),
         ...snapshot.document.sections.map(section => ({ from: section.from, markerTo: section.markerTo, text: state.doc.sliceString(section.from, section.markerTo), label: null })),
       ];
     } else if (file && preview && previous?.markers.length && this.reader.matchesIdentity(file, markdown)) {
@@ -394,6 +415,7 @@ export class PresentationEditor extends Component {
       // unlock known separators. Map them, then verify their actual source.
       const mapped = transaction?.docChanged ? previous.markers.map(marker => ({
         ...marker, from: transaction.changes.mapPos(marker.from, 1), markerTo: transaction.changes.mapPos(marker.markerTo, -1),
+        ...(marker.slideTo !== undefined ? { slideTo: transaction.changes.mapPos(marker.slideTo, 1) } : {}),
       })) : previous.markers;
       if (mapped.every(marker => marker.from < marker.markerTo && state.doc.lineAt(marker.from).from === marker.from &&
         state.doc.sliceString(marker.from, marker.markerTo) === marker.text)) markers = mapped;
@@ -422,11 +444,16 @@ export class PresentationEditor extends Component {
     }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to));
     ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
     ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions));
+    if (showImages) for (const marker of markers) {
+      if (!marker.slideId || marker.slideTo === undefined || !marker.images?.length) continue;
+      ranges.push(Decoration.widget({ block: true, side: marker.slideTo < state.doc.length ? 0 : 2,
+        widget: new ImageSpace(marker.slideId, imageSpaces.get(marker.slideId) ?? 0) }).range(marker.slideTo));
+    }
     for (const section of snapshot?.document.sections ?? []) {
       const first = state.doc.sliceString(section.markerTo, section.to).search(/\S/);
       if (first >= 0) ranges.push(Decoration.line({ class: `markdownpoint-section-heading${section === snapshot?.document.sections[0] ? " markdownpoint-first-section" : ""}` })
         .range(state.doc.lineAt(section.markerTo + first).from));
     }
-    return { id: markers.length ? id ?? null : null, snapshot, empty: false, markers, fields, notes, openedNotes, focused, decorations: Decoration.set(ranges, true) };
+    return { id: markers.length ? id ?? null : null, snapshot, empty: false, markers, fields, notes, openedNotes, focused, showImages, imageSpaces, decorations: Decoration.set(ranges, true) };
   }
 }

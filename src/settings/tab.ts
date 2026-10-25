@@ -19,6 +19,7 @@
 import { PluginSettingTab } from "obsidian";
 import type { App, Plugin, SettingDefinitionItem } from "obsidian";
 import type { LocalUiState, OutlineSide } from "./local-ui.ts";
+import type { SharedSettings } from "./shared.ts";
 import { uiText } from "../ui-text.ts";
 
 export class MarkdownPointSettingTab extends PluginSettingTab {
@@ -27,6 +28,8 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
     plugin: Plugin,
     private readonly localUi: LocalUiState,
     private readonly setOutlineSide: (side: OutlineSide) => Promise<void>,
+    private readonly shared: SharedSettings,
+    private readonly imagesChanged: () => void,
   ) {
     super(app, plugin);
   }
@@ -40,17 +43,20 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
         defaultValue: "right",
         options: { left: uiText.left, right: uiText.right },
       },
-    }];
+    }, { name: uiText.images.show, desc: uiText.images.description,
+      control: { type: "toggle", key: "showSlideImages", defaultValue: true } }];
   }
 
   getControlValue(key: string): unknown {
-    return key === "outlineSide" ? this.localUi.outlineSide : undefined;
+    return key === "outlineSide" ? this.localUi.outlineSide : key === "showSlideImages" ? this.shared.showSlideImages : undefined;
   }
 
-  /** This control is device-local; the base implementation would write it to synced plugin data. */
+  /** Keep local workspace state separate from synced writing preferences. */
   async setControlValue(key: string, value: unknown): Promise<void> {
     if (key === "outlineSide" && (value === "left" || value === "right")) {
       await this.setOutlineSide(value);
+    } else if (key === "showSlideImages" && typeof value === "boolean") {
+      await this.shared.setShowSlideImages(value); this.imagesChanged();
     }
   }
 }

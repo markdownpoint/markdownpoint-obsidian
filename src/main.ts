@@ -33,7 +33,7 @@ import { PresentationStorage } from "./presentation/storage.ts";
 import type { ListSelection } from "./selection/list-selection.ts";
 import { SlideMenus } from "./editor/slide-menus.ts";
 import type { SlideMenuTarget } from "./editor/slide-menus.ts";
-import { LayoutShortcuts } from "./settings/layout-shortcuts.ts";
+import { SharedSettings } from "./settings/shared.ts";
 import { SlideCreation } from "./presentation/new-slide.ts";
 import { PresentationClipboard } from "./presentation/clipboard.ts";
 
@@ -47,7 +47,7 @@ export default class MarkdownPointPlugin extends Plugin {
   private presentationEditor: PresentationEditor | null = null;
   private storage: PresentationStorage | null = null;
   private slideMenus: SlideMenus | null = null;
-  private layoutShortcuts: LayoutShortcuts | null = null;
+  private sharedSettings: SharedSettings | null = null;
   private slideCreation: SlideCreation | null = null;
   private clipboard: PresentationClipboard | null = null;
 
@@ -56,7 +56,7 @@ export default class MarkdownPointPlugin extends Plugin {
 
   onload(): void {
     this.running = true;
-    this.layoutShortcuts = new LayoutShortcuts(this);
+    this.sharedSettings = new SharedSettings(this);
     this.storage = this.addChild(new PresentationStorage(this.app));
     this.localUi = loadLocalUi(this.app);
     this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
@@ -82,7 +82,7 @@ export default class MarkdownPointPlugin extends Plugin {
       pasteSlides: (after, window) => this.pasteOutlineSlides(after, window),
     }));
     this.addSettingTab(new MarkdownPointSettingTab(this.app, this, this.localUi,
-      side => this.setOutlineSide(side)));
+      side => this.setOutlineSide(side), this.sharedSettings, () => this.presentationEditor?.refreshAll()));
     this.addCommand({
       id: "focus-outline",
       name: uiText.commands.focusOutline,
@@ -133,10 +133,11 @@ export default class MarkdownPointPlugin extends Plugin {
     }, file => this.presentationEditor?.refresh(file), this.storage.data);
     this.addChild(this.reader);
     this.presentationEditor = new PresentationEditor(this.reader, new NotesUi(this.app),
-      (editor, slideId) => this.followCaret(editor, slideId), this.storage.data);
+      (editor, slideId) => this.followCaret(editor, slideId), this.storage.data, () => this.sharedSettings?.showSlideImages ?? true);
     this.addChild(this.presentationEditor);
+    void this.sharedSettings.ready.then(() => { if (this.running) this.presentationEditor?.refreshAll(); }).catch(() => undefined);
     this.registerEditorExtension(this.presentationEditor.extension);
-    this.slideCreation = this.addChild(new SlideCreation(this.app, this.reader, this.presentationEditor, this.layoutShortcuts, id => {
+    this.slideCreation = this.addChild(new SlideCreation(this.app, this.reader, this.presentationEditor, this.sharedSettings, id => {
       this.outline.select({ kind: "select", id });
       this.outline.activate(id);
       this.refreshOutline();
@@ -159,12 +160,12 @@ export default class MarkdownPointPlugin extends Plugin {
     this.slideMenus = null;
     this.clipboard = null;
     this.slideCreation = null;
-    this.layoutShortcuts = null;
+    this.sharedSettings = null;
     // Registered views and events are released by Obsidian; retain its saved workspace layout.
   }
 
   async onExternalSettingsChange(): Promise<void> {
-    try { await this.layoutShortcuts?.reload(); } catch (error) { console.error(error); }
+    try { await this.sharedSettings?.reload(); if (this.running) this.presentationEditor?.refreshAll(); } catch (error) { console.error(error); }
   }
 
   /** The format adapter must verify the presentation before publishing it through this handoff. */

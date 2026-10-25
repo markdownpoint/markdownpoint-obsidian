@@ -480,3 +480,60 @@
   font-size: var(--font-ui-small);
   line-height: var(--line-height-normal);
 }
+
+.markdownpoint-slide-column {
+  position: absolute;
+  top: var(--markdownpoint-thumbnail-top);
+  inset-inline-end: var(--markdownpoint-thumbnail-right);
+  width: 44px;
+  pointer-events: auto;
+}
+
+.markdownpoint-slide-column.has-images {
+  padding-bottom: var(--size-4-3);
+}
+
+.markdownpoint-slide-column .markdownpoint-slide-tools {
+  position: static;
+  width: 100%;
+}
+
+.markdownpoint-slide-images {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.markdownpoint-slide-images:empty {
+  display: none;
+}
+
+.markdownpoint-slide-image {
+  display: block;
+  width: 100%;
+  height: 32px;
+  object-fit: contain;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  background: var(--background-secondary);
+}
+
+.markdownpoint-slide-image-space {
+  height: var(--markdownpoint-image-space);
+  padding: 0;
+  line-height: 0;
+  pointer-events: none;
+}
+
+.markdownpoint-slide-column .markdownpoint-slide-tools.is-fallback {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 26px;
+}
+
+.markdownpoint-slide-tools.is-fallback svg {
+  width: 14px;
+  height: 14px;
+}

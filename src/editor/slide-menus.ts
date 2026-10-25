@@ -212,7 +212,7 @@ export class SlideMenus extends Component {
     const content = node !== null && view.contentDOM.contains(node);
     if (content !== capture) return;
     const element = node?.instanceOf(Element) ? node : node?.parentElement;
-    const explicitId = element?.closest<HTMLElement>(".markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide]")?.dataset.slide;
+    const explicitId = element?.closest<HTMLElement>(".markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide], .markdownpoint-slide-column[data-slide]")?.dataset.slide;
     const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false);
     const target = position === null && !explicitId ? null : this.target(owner, position ?? 0, explicitId);
     // Native Obsidian creates the content menu asynchronously. Capture its pointer
@@ -234,7 +234,7 @@ export class SlideMenus extends Component {
     if (!(owner instanceof MarkdownView)) return;
     const focused = view.dom.ownerDocument.activeElement;
     const control = focused?.instanceOf(HTMLElement) && view.contentDOM.contains(focused) && focused !== view.contentDOM ? focused : null;
-    const explicitId = control?.closest<HTMLElement>(".markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide]")?.dataset.slide;
+    const explicitId = control?.closest<HTMLElement>(".markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide], .markdownpoint-slide-column[data-slide]")?.dataset.slide;
     if (!this.target(owner, view.state.selection.main.head, explicitId)) return;
     const bounds = control?.getBoundingClientRect() ?? view.coordsAtPos(view.state.selection.main.head);
     if (!bounds) return;
