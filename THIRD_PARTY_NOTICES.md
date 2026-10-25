@@ -1,6 +1,6 @@
 # Third-party notices
 
-## Marked 18.0.13
+## Marked 18.1.1
 
 The document index uses Marked to identify code blocks. The following is its upstream license notice; the contribution language refers to Marked.
 
