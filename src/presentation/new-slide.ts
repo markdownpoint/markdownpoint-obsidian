@@ -24,6 +24,7 @@ import { embeddedThemePaths } from "../format/embedded-theme.ts";
 import { prepareNewSlide } from "../format/new-slide.ts";
 import { readJsonObject } from "../format/json.ts";
 import { uiText } from "../ui-text.ts";
+import type { LayoutShortcuts } from "../settings/layout-shortcuts.ts";
 import { LayoutPicker } from "./layout-picker.ts";
 import type { PresentationReader } from "./reader.ts";
 import { readEmbeddedTheme } from "./theme-reader.ts";
@@ -40,7 +41,7 @@ export class SlideCreation extends Component {
   private picker: LayoutPicker | null = null;
   private running = false;
   private revision = 0;
-  constructor(private readonly app: App, private readonly reader: PresentationReader, private readonly editor: PresentationEditor,
+  constructor(private readonly app: App, private readonly reader: PresentationReader, private readonly editor: PresentationEditor, private readonly shortcuts: LayoutShortcuts,
     private readonly inserted: (id: string) => void) { super(); }
   onload(): void { this.running = true; }
   onunload(): void { this.running = false; this.revision++; this.picker?.close(); }
@@ -51,6 +52,7 @@ export class SlideCreation extends Component {
     const current = () => this.running && revision === this.revision && input.canApply() && input.file.path === path &&
       this.app.vault.getFileByPath(path) === input.file;
     try {
+      await this.shortcuts.ready.catch(() => undefined);
       if (input.view) await this.reader.refreshView(input.view);
       else await this.reader.refreshClosedFile(input.file);
       if (!current() || (input.view && input.view.file !== input.file)) return;
@@ -64,7 +66,7 @@ export class SlideCreation extends Component {
       const theme = metadata && keys.length ? await readEmbeddedTheme(this.app.vault, path, metadata, keys) : null;
       if (!current()) return;
       if (!theme) { new Notice(uiText.slides.layoutsUnavailable); return; }
-      this.picker = new LayoutPicker(this.app, theme, key => {
+      this.picker = new LayoutPicker(this.app, theme, this.shortcuts, key => {
         this.picker = null;
         void this.insert(input, after, theme, key, current).catch((error: unknown) => {
           console.error(error); if (current()) new Notice(uiText.slides.newFailed);

@@ -36,6 +36,11 @@ export const en = {
   clipboard: { copyText: "Copy", copyFailed: "Could not copy text to the clipboard." },
   slides: {
     new: "New slide",
+    shortcut: "Shortcut",
+    noShortcut: "None",
+    shortcutHint: "Press a number to insert a layout. Right-click a layout to assign a shortcut.",
+    shortcutFailed: "Could not save layout shortcuts.",
+    layoutShortcutLabel: ({ name, digit }: { name: string; digit: string | null }) => digit ? `${name}, shortcut ${digit}` : name,
     layoutsUnavailable: "No layouts are available in this presentation.",
     layoutChanged: "The layout changed. Choose it again.",
     newFailed: "The presentation changed before the slide could be added. Try again.",

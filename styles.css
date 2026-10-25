@@ -440,3 +440,43 @@
   white-space: normal;
   text-align: center;
 }
+
+.markdownpoint-layout-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+  width: 100%;
+  max-width: 128px;
+}
+
+.markdownpoint-layout-caption .markdownpoint-layout-name {
+  min-width: 0;
+  text-align: left;
+}
+
+.markdownpoint-layout-shortcut {
+  flex: none;
+  min-width: 18px;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 3px;
+  box-shadow: none;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.markdownpoint-layout-shortcut.is-unassigned {
+  visibility: hidden;
+}
+
+.markdownpoint-layout-hint {
+  margin: var(--size-4-4) var(--size-4-1) 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-normal);
+}

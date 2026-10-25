@@ -33,6 +33,7 @@ import { PresentationStorage } from "./presentation/storage.ts";
 import type { ListSelection } from "./selection/list-selection.ts";
 import { SlideMenus } from "./editor/slide-menus.ts";
 import type { SlideMenuTarget } from "./editor/slide-menus.ts";
+import { LayoutShortcuts } from "./settings/layout-shortcuts.ts";
 import { SlideCreation } from "./presentation/new-slide.ts";
 import { PresentationClipboard } from "./presentation/clipboard.ts";
 
@@ -46,6 +47,7 @@ export default class MarkdownPointPlugin extends Plugin {
   private presentationEditor: PresentationEditor | null = null;
   private storage: PresentationStorage | null = null;
   private slideMenus: SlideMenus | null = null;
+  private layoutShortcuts: LayoutShortcuts | null = null;
   private slideCreation: SlideCreation | null = null;
   private clipboard: PresentationClipboard | null = null;
 
@@ -54,6 +56,7 @@ export default class MarkdownPointPlugin extends Plugin {
 
   onload(): void {
     this.running = true;
+    this.layoutShortcuts = new LayoutShortcuts(this);
     this.storage = this.addChild(new PresentationStorage(this.app));
     this.localUi = loadLocalUi(this.app);
     this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
@@ -133,7 +136,7 @@ export default class MarkdownPointPlugin extends Plugin {
       (editor, slideId) => this.followCaret(editor, slideId), this.storage.data);
     this.addChild(this.presentationEditor);
     this.registerEditorExtension(this.presentationEditor.extension);
-    this.slideCreation = this.addChild(new SlideCreation(this.app, this.reader, this.presentationEditor, id => {
+    this.slideCreation = this.addChild(new SlideCreation(this.app, this.reader, this.presentationEditor, this.layoutShortcuts, id => {
       this.outline.select({ kind: "select", id });
       this.outline.activate(id);
       this.refreshOutline();
@@ -156,7 +159,12 @@ export default class MarkdownPointPlugin extends Plugin {
     this.slideMenus = null;
     this.clipboard = null;
     this.slideCreation = null;
+    this.layoutShortcuts = null;
     // Registered views and events are released by Obsidian; retain its saved workspace layout.
+  }
+
+  async onExternalSettingsChange(): Promise<void> {
+    try { await this.layoutShortcuts?.reload(); } catch (error) { console.error(error); }
   }
 
   /** The format adapter must verify the presentation before publishing it through this handoff. */
