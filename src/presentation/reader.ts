@@ -181,7 +181,8 @@ export class PresentationReader extends Component {
     const snapshot = this.snapshot(source.file, markdown);
     if (snapshot && this.requested === source.file) this.followed = source.file;
     if (this.followed === source.file) this.publish(snapshot?.outline ?? null, view);
-    if (snapshot) this.data?.observe(source.path, snapshot.id, source.companionText, new Set(snapshot.document.slides.map(slide => slide.id)));
+    if (snapshot) this.data?.observe(source.path, snapshot.id, source.companionText,
+      new Set(snapshot.document.slides.map(slide => slide.id)), new Set(snapshot.document.compositions.map(part => part.id)));
     this.changed(source.file);
   }
 
@@ -193,20 +194,28 @@ export class PresentationReader extends Component {
     return true;
   }
 
-  /** A just-undone slide may be visible before its companion restore reaches disk. */
+  /** Just-undone source may be visible before its companion restore reaches disk. */
   companionFor(file: TFile, snapshot: PresentationSnapshot): string | null {
     const source = this.sources.get(file);
     if (!this.running || !source || source.path !== file.path) return null;
-    const companion = CompanionDocument.read(source.companionText);
-    if (!companion) return null;
-    const missing = new Map<string, string>();
-    for (const slide of snapshot.document.slides) {
-      if (companion.records.has(slide.id)) continue;
-      const remembered = this.data?.remembered(source.path, snapshot.id).get(slide.id);
-      if (remembered === undefined) return null;
-      missing.set(slide.id, remembered);
+    let companion = source.companionText;
+    for (const kind of ["slides", "compositions"] as const) {
+      const parts = snapshot.document[kind];
+      if (!parts.length && kind === "compositions") continue;
+      const data = kind === "compositions" ? CompanionDocument.ensure(companion, kind) : CompanionDocument.read(companion, kind);
+      if (!data) return null;
+      const missing = new Map<string, string>();
+      for (const part of parts) {
+        if (data.records.has(part.id)) continue;
+        const remembered = this.data?.remembered(source.path, snapshot.id, kind).get(part.id);
+        if (remembered === undefined) return null;
+        missing.set(part.id, remembered);
+      }
+      const updated = missing.size ? data.change(missing) : companion;
+      if (updated === null) return null;
+      companion = updated;
     }
-    return companion.change(missing);
+    return companion;
   }
 
   /** One current source index is shared by outline projection and editor consumers. */

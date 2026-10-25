@@ -95,3 +95,18 @@ void test("reference edits respect escaped JSON spelling and last-value semantic
     assert.equal(remapRecordReferences(invalid, new Map(), new Map()), null);
   }
 });
+
+void test("restoring a definition creates only its absent map and preserves unrelated raw metadata", () => {
+  const source = '{\n  "slides": {},\n  "unknown": 9007199254740993\n}\n';
+  const raw = '{"objects":[],"future":9007199254740995}';
+  const saved = new Map([["card", raw]]);
+  assert.equal(reconcileSlideRecords(source, saved, new Set(), "compositions")!.companion, source);
+  const restored = reconcileSlideRecords(source, saved, new Set(["card"]), "compositions")!;
+  assert.equal(CompanionDocument.read(restored.companion, "compositions")!.records.get("card"), raw);
+  assert.equal(restored.companion.includes('"unknown": 9007199254740993'), true);
+  const removed = reconcileSlideRecords(restored.companion, saved, new Set(), "compositions")!;
+  assert.equal(CompanionDocument.read(removed.companion, "compositions")!.records.size, 0);
+  for (const invalid of ['{"slides":{},"compositions":null}', '{"slides":{},"compositions":{},"compositions":{}}', '[]']) {
+    assert.equal(CompanionDocument.ensure(invalid, "compositions"), null);
+  }
+});

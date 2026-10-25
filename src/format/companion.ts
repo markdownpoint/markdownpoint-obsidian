@@ -19,6 +19,8 @@
 import { applyEdits, parseTree } from "jsonc-parser";
 import type { Edit, Node, ParseError } from "jsonc-parser";
 
+export type CompanionMap = "slides" | "compositions";
+
 function objectTree(source: string): Node | null {
   const errors: ParseError[] = [];
   const tree = parseTree(source, errors, { disallowComments: true, allowTrailingComma: false });
@@ -75,7 +77,7 @@ export class CompanionDocument {
     }));
   }
 
-  static read(source: string, mapName: "slides" | "compositions" = "slides"): CompanionDocument | null {
+  static read(source: string, mapName: CompanionMap = "slides"): CompanionDocument | null {
     const root = objectTree(source);
     const maps = root?.children?.filter(property => property.children?.[0]?.value === mapName);
     const map = maps?.length === 1 ? maps[0]?.children?.[1] : undefined;
@@ -88,6 +90,19 @@ export class CompanionDocument {
       names.push(name);
     }
     return new Set(names).size === names.length ? new CompanionDocument(source, map, properties, names) : null;
+  }
+
+  /** Prepare an absent map without overwriting a malformed or duplicate one. */
+  static ensure(source: string, mapName: CompanionMap): CompanionDocument | null {
+    const existing = CompanionDocument.read(source, mapName);
+    if (existing) return existing;
+    const root = objectTree(source);
+    if (!root || root.children?.some(property => property.children?.[0]?.value === mapName)) return null;
+    const first = root.children?.[0], last = root.children?.at(-1);
+    const gap = first ? source.slice(root.offset + 1, first.offset) || " " : " ";
+    const changed = applyEdits(source, [{ offset: last ? last.offset + last.length : root.offset + 1, length: 0,
+      content: (last ? "," : "") + gap + JSON.stringify(mapName) + ": {}" }]);
+    return CompanionDocument.read(changed, mapName);
   }
 
   /** Null removes a record. A string inserts/replaces its complete JSON object. */
@@ -130,9 +145,9 @@ export interface ReconciledSlideRecords {
   readonly remembered: ReadonlyMap<string, string>;
 }
 
-/** Only explicitly managed slide records follow their markers through native undo. */
-export function reconcileSlideRecords(companion: string, remembered: ReadonlyMap<string, string>, present: ReadonlySet<string>): ReconciledSlideRecords | null {
-  const document = CompanionDocument.read(companion);
+/** Only explicitly managed records follow markers of their own kind through native undo. */
+export function reconcileSlideRecords(companion: string, remembered: ReadonlyMap<string, string>, present: ReadonlySet<string>, mapName: CompanionMap = "slides"): ReconciledSlideRecords | null {
+  const document = mapName === "compositions" ? CompanionDocument.ensure(companion, mapName) : CompanionDocument.read(companion, mapName);
   if (!document) return null;
   const next = new Map(remembered);
   const changes = new Map<string, string | null>();
@@ -142,6 +157,6 @@ export function reconcileSlideRecords(companion: string, remembered: ReadonlyMap
     if (!present.has(id)) { if (current !== undefined) changes.set(id, null); }
     else if (current === undefined) changes.set(id, saved);
   }
-  const changed = document.change(changes);
+  const changed = changes.size ? document.change(changes) : companion;
   return changed === null ? null : { companion: changed, remembered: next };
 }

@@ -407,3 +407,81 @@ void test("malformed stored data cannot introduce arbitrary records", async () =
     assert.equal(data.remembered(path, document).size, 0);
   }
 });
+
+void test("copied slides and definitions share recovery, one disk write and native undo after reopening", async () => {
+  const { state: disk, host } = device();
+  const before = '<!-- slide: a -->\n<!-- slide: b -->\n';
+  const inserted = '<!-- slide: copy -->\n<!-- text: card.caption -->\nCopied words\n<!-- composition: card -->\n<!-- control: caption -->\nDefault words\n';
+  const slide = '{"objects":[{"id":"card","type":"composition","source":"card"}],"future":9007199254740993}';
+  const definition = '{"controls":{"caption":{"type":"text"}},"future":9007199254740995}';
+  let prepared = CompanionDocument.read(disk.disk)!.change(new Map([["copy", slide]]))!;
+  prepared = CompanionDocument.ensure(prepared, "compositions")!.change(new Map([["card", definition]]))!;
+  let data = new SlideData(host);
+  assert.ok(await data.remember(path, document, prepared, ["copy"], ["card"]));
+  let editor = EditorState.create({ doc: before, extensions: [history()] });
+  editor = editor.update({ changes: { from: before.length, insert: inserted }, annotations: isolateHistory.of("full"), userEvent: "input.markdownpoint" }).state;
+  const synchronize = async () => {
+    const indexed = indexPresentation(editor.doc.toString(), 0)!;
+    data.observe(path, document, disk.disk, new Set(indexed.slides.map(part => part.id)), new Set(indexed.compositions.map(part => part.id)));
+    await data.settled(path, document);
+  };
+  await synchronize();
+  assert.equal(disk.calls, 1);
+  assert.equal(CompanionDocument.read(disk.disk)!.records.get("copy"), slide);
+  assert.equal(CompanionDocument.read(disk.disk, "compositions")!.records.get("card"), definition);
+  data.stop();
+  data = new SlideData(host);
+  await data.ready;
+  editor = EditorState.fromJSON(editor.toJSON({ history: historyField }), { extensions: [history()] }, { history: historyField });
+  assert.equal(data.remembered(path, document, "compositions").get("card"), definition);
+  assert.ok(undo({ state: editor, dispatch: transaction => { editor = transaction.state; } }));
+  await synchronize();
+  assert.equal(disk.calls, 2);
+  assert.equal(editor.doc.toString(), before);
+  assert.equal(CompanionDocument.read(disk.disk)!.records.has("copy"), false);
+  assert.equal(CompanionDocument.read(disk.disk, "compositions")!.records.has("card"), false);
+  assert.ok(redo({ state: editor, dispatch: transaction => { editor = transaction.state; } }));
+  await synchronize();
+  assert.equal(disk.calls, 3);
+  assert.equal(CompanionDocument.read(disk.disk)!.records.get("copy"), slide);
+  assert.equal(CompanionDocument.read(disk.disk, "compositions")!.records.get("card"), definition);
+  assert.deepEqual(disk.errors, []);
+});
+
+void test("definition write failure preserves both recoveries and a retry restores the complete pair", async () => {
+  const { state: disk, host } = device();
+  const prepared = source('"copy":{"objects":[{"type":"composition","source":"card"}]}').replace('"unrelated":true', '"unrelated":true,"compositions":{"card":{"name":"Kept"}}');
+  let data = new SlideData(host);
+  assert.ok(await data.remember(path, document, prepared, ["copy"], ["card"]));
+  disk.writeFails = true;
+  data.observe(path, document, disk.disk, new Set(["a", "b", "copy"]), new Set(["card"]));
+  await data.settled(path, document);
+  assert.equal(disk.disk, source());
+  data.stop();
+  data = new SlideData(host);
+  await data.ready;
+  assert.equal(data.remembered(path, document, "compositions").get("card"), '{"name":"Kept"}');
+  disk.writeFails = false;
+  data.observe(path, document, disk.disk, new Set(["a", "b", "copy"]), new Set(["card"]));
+  await data.settled(path, document);
+  assert.equal(CompanionDocument.read(disk.disk)!.records.has("copy"), true);
+  assert.equal(CompanionDocument.read(disk.disk, "compositions")!.records.get("card"), '{"name":"Kept"}');
+});
+
+void test("definition membership is independent of slide IDs and newer external metadata survives removal", async () => {
+  const { state: disk, host } = device();
+  disk.disk = source().replace('"unrelated":true', '"unrelated":true,"compositions":{"card":{"name":"Original"},"other":{"name":"Untouched"}}');
+  const data = new SlideData(host);
+  assert.ok(await data.remember(path, document, disk.disk, [], ["card"]));
+  for (let index = 0; index < 100; index++) data.observe(path, document, disk.disk, new Set(["a", "b"]), new Set(["card", "other"]));
+  await data.settled(path, document);
+  assert.equal(disk.calls, 0);
+  disk.disk = disk.disk.replace('"name":"Original"', '"name":"Newer"');
+  data.observe(path, document, disk.disk, new Set(["a", "b", "card"]), new Set(["other"]));
+  await data.settled(path, document);
+  assert.equal(CompanionDocument.read(disk.disk, "compositions")!.records.has("card"), false);
+  assert.equal(CompanionDocument.read(disk.disk, "compositions")!.records.get("other"), '{"name":"Untouched"}');
+  data.observe(path, document, disk.disk, new Set(["a", "b"]), new Set(["card", "other"]));
+  await data.settled(path, document);
+  assert.equal(CompanionDocument.read(disk.disk, "compositions")!.records.get("card"), '{"name":"Newer"}');
+});
