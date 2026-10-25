@@ -19,6 +19,7 @@
 import { gatheredOrder, steppedOrder } from "../selection/list-selection.ts";
 import { indexPresentation } from "./document.ts";
 import type { PresentationDocument } from "./document.ts";
+import { terminateSourceBlock } from "./payload.ts";
 
 export interface SourceChange {
   readonly from: number;
@@ -64,12 +65,7 @@ export function reorderSlideSource(markdown: string, document: PresentationDocum
   const insert = next.slice(first, last + 1).map((block, index) => {
     const raw = markdown.slice(block.from, block.to);
     const followed = first + index < next.length - 1 || to < markdown.length;
-    if (!followed || raw.endsWith("\n")) return raw;
-    // Fold an unterminated whitespace-only tail into the existing organizational
-    // blank line. Adding a new line there would turn the old one into authored
-    // space. Otherwise a single newline separates the words from their neighbor.
-    const closed = raw.replace(/(^|\n)([ \t]*)(\r?\n)([ \t]+)$/, "$1$2$4$3");
-    return closed.endsWith("\n") ? closed : closed + newline;
+    return followed ? terminateSourceBlock(raw, newline) : raw;
   }).join("");
   const proposed = markdown.slice(0, from) + insert + markdown.slice(to);
   // In particular, a final unfinished code fence cannot swallow a slide when

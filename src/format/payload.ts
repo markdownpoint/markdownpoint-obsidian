@@ -29,3 +29,11 @@ export function payloadContentEnd(markdown: string, from: number, to: number): n
   // earlier lines, including leading/interior/trailing empty paragraphs, stay.
   return start === from || markdown[start - 1] === "\n" ? start : end;
 }
+
+/** Close a block before its next neighbor without creating another authored blank line. */
+export function terminateSourceBlock(source: string, newline: string): string {
+  if (!source || source.endsWith("\n")) return source;
+  // Fold an unterminated whitespace tail into the existing organizational line.
+  const closed = source.replace(/(^|\n)([ \t]*)(\r?\n)([ \t]+)$/, "$1$2$4$3");
+  return closed.endsWith("\n") ? closed : closed + newline;
+}
