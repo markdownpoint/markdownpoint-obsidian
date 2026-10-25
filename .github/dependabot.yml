@@ -21,6 +21,8 @@ updates:
       - dependency-name: '@codemirror/*'
       # The API declarations stay at the minimum supported Obsidian version in manifest.json.
       - dependency-name: obsidian
+      # Slide markers must be read with the MarkdownPoint app's exact Marked version; it moves only with the app.
+      - dependency-name: marked
       # typescript-eslint 8 requires typescript <6.1.0, so a major typescript bump fails to install.
       - dependency-name: typescript
         update-types: ['version-update:semver-major']

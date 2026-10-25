@@ -284,3 +284,16 @@ test('literal composition/control examples stay in their field and real definiti
         assert.equal(indexPresentation(source, 0), null);
     assert.ok(indexPresentation('<!-- section: same -->\n# Same\n<!-- composition: same -->\n', 0));
 });
+
+test('a line break tag starts a paragraph, so a fenced example after it keeps its marker as content', () => {
+    const fence = '```';
+    const rest = '\n<!-- slide: two -->\n<!-- text: body -->\nTwo\n';
+    for (const opening of ['<!-- text: body -->\n<br>\n', '<!-- text: body -->\nIntro\n\n<br/>\n']) {
+        const markdown = `<!-- slide: one -->\n${opening}${fence}markdown\n<!-- slide: example -->\n${fence}\n${rest}`;
+        assert.deepEqual(
+            indexPresentation(markdown, 0)?.slides.map(slide => slide.id),
+            ['one', 'two'],
+            opening
+        );
+    }
+});

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Lexer } from 'marked';
+import { blockTokens } from './block-grammar.ts';
 import { isStableId } from './recognition.ts';
 
 export interface DocumentBlock {
@@ -62,7 +62,7 @@ const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[
 /** A candidate directive consumed by a code token is content, not a slide boundary. */
 function containingCode(markdown: string, line: string) {
     const source = markdown.replace(/\r\n?/g, '\n');
-    const last = new Lexer().blockTokens(source).at(-1);
+    const last = blockTokens(source).at(-1);
     return last?.type === 'code' && last.raw.trimEnd().endsWith(line.trimEnd())
         ? { raw: last.raw, leading: source.slice(0, source.length - last.raw.length).trim().length === 0 }
         : undefined;
@@ -71,7 +71,7 @@ function containingCode(markdown: string, line: string) {
 /** Ask the same grammar using a bounded probe, not the growing document prefix. */
 function closesFence(fence: string, line: string): boolean {
     if (!line.trimStart().startsWith(fence[0]!)) return false;
-    const token = new Lexer().blockTokens(`${fence}\n${line}\n`)[0];
+    const token = blockTokens(`${fence}\n${line}\n`)[0];
     return token?.type === 'code' && token.text === '';
 }
 
@@ -173,7 +173,7 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     }
     if (openFence) return null;
     if (swallowedMarker) {
-        const last = new Lexer().blockTokens(markdown.slice(payloadFrom).replace(/\r\n?/g, '\n')).at(-1);
+        const last = blockTokens(markdown.slice(payloadFrom).replace(/\r\n?/g, '\n')).at(-1);
         if (last?.type === 'code') {
             const fence = /^ {0,3}(`{3,}|~{3,})/.exec(last.raw)?.[1];
             const closing = last.raw.replace(/\n+$/, '').split('\n').at(-1) ?? '';

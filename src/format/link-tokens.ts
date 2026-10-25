@@ -18,6 +18,7 @@
 
 import { Lexer, Marked, Tokenizer } from 'marked';
 import type { Token } from 'marked';
+import { blockRules } from './block-grammar.ts';
 
 interface EmphasisMask {
     from: number;
@@ -148,7 +149,7 @@ function maskFormatting(source: string, masked: string): EmphasisMask {
 const grammar = new Marked({
     gfm: true,
     tokenizer: {
-        html: source => (/^<br[ \t]*\/?>/i.test(source) ? undefined : false),
+        ...blockRules,
         del: () => undefined,
         emStrong(source, masked, previous = '') {
             if (source[0] !== '*' && source[0] !== '_') return false;
