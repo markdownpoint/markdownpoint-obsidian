@@ -1,9 +1,10 @@
 {
   "id": "markdownpoint",
   "name": "MarkdownPoint",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "minAppVersion": "1.13.0",
-  "description": "Writing and organizing presentations, with visual finishing in the MarkdownPoint desktop app.",
+  "description": "Write and organize presentations in a continuous draft, then finish them in MarkdownPoint.",
   "author": "Johan Sanneblad",
-  "isDesktopOnly": true
+  "isDesktopOnly": true,
+  "authorUrl": "https://markdownpoint.com"
 }
