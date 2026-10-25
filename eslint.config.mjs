@@ -16,41 +16,42 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { defineConfig } from "eslint/config";
-import obsidianmd from "eslint-plugin-obsidianmd";
-import globals from "globals";
+import { defineConfig } from 'eslint/config';
+import obsidianmd from 'eslint-plugin-obsidianmd';
+import globals from 'globals';
 
-const sentenceCase = { brands: ["MarkdownPoint", "Obsidian"], enforceCamelCaseLower: true };
+const sentenceCase = { brands: ['MarkdownPoint', 'Obsidian'], enforceCamelCaseLower: true };
 
 export default defineConfig([
-  { ignores: ["main.js", "dist/**", "coverage/**", "test-vault/**", ".verification/**"] },
-  ...obsidianmd.configs.recommended,
-  {
-    files: ["src/**/*.ts", "tests/**/*.ts"],
-    languageOptions: { parserOptions: { project: "./tsconfig.json" } },
-    rules: {
-      "@typescript-eslint/no-explicit-any": "error",
-      "@typescript-eslint/consistent-type-imports": "error",
-      "obsidianmd/prefer-file-manager-trash-file": "error",
-      "obsidianmd/ui/sentence-case": ["error", sentenceCase],
+    { ignores: ['main.js', 'dist/**', 'coverage/**', 'test-vault/**', '.verification/**'] },
+    { linterOptions: { reportUnusedDisableDirectives: 'error' } },
+    ...obsidianmd.configs.recommended,
+    {
+        files: ['src/**/*.ts', 'tests/**/*.ts'],
+        languageOptions: { parserOptions: { project: './tsconfig.json' } },
+        rules: {
+            '@typescript-eslint/no-explicit-any': 'error',
+            '@typescript-eslint/consistent-type-imports': 'error',
+            'obsidianmd/prefer-file-manager-trash-file': 'error',
+            'obsidianmd/ui/sentence-case': ['error', sentenceCase]
+        }
     },
-  },
-  {
-    files: ["src/i18n/locales/en.ts"],
-    rules: { "obsidianmd/ui/sentence-case-locale-module": ["error", sentenceCase] },
-  },
-  {
-    files: ["src/**/*.ts"],
-    rules: { "obsidianmd/no-nodejs-modules": "error" },
-  },
-  {
-    files: ["tests/**/*.ts", "*.mjs"],
-    languageOptions: { globals: globals.node },
-    rules: {
-      "obsidianmd/no-nodejs-modules": "off",
-      "obsidianmd/prefer-active-doc": "off",
-      "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": "off",
+    {
+        files: ['src/i18n/locales/en.ts'],
+        rules: { 'obsidianmd/ui/sentence-case-locale-module': ['error', sentenceCase] }
     },
-  },
+    {
+        files: ['src/**/*.ts'],
+        rules: { 'obsidianmd/no-nodejs-modules': 'error' }
+    },
+    {
+        files: ['tests/**/*.ts', '*.mjs'],
+        languageOptions: { globals: globals.node },
+        rules: {
+            'obsidianmd/no-nodejs-modules': 'off',
+            'obsidianmd/prefer-active-doc': 'off',
+            'no-restricted-imports': 'off',
+            '@typescript-eslint/no-restricted-imports': 'off'
+        }
+    }
 ]);

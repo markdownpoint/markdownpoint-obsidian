@@ -1,0 +1,8 @@
+node_modules
+main.js
+coverage
+LICENSE
+# The Basic theme files mirror the published MarkdownPoint format byte for byte
+src/themes/basic/*.json
+# Verbatim third-party license texts, embedded in main.js
+THIRD_PARTY_NOTICES.md

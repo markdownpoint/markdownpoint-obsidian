@@ -18,647 +18,652 @@
 
 .markdownpoint-outline,
 .markdownpoint-presentation {
-  --markdownpoint-thumbnail-width: 58px;
+    --markdownpoint-thumbnail-width: 58px;
 }
 
 .markdownpoint-outline {
-  --markdownpoint-muted: color-mix(in srgb, var(--text-normal) 70%, transparent);
-  padding: var(--size-4-2);
+    --markdownpoint-muted: color-mix(in srgb, var(--text-normal) 70%, transparent);
+    padding: var(--size-4-2);
 }
 
 .markdownpoint-outline-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 .markdownpoint-outline-list > li {
-  position: relative;
-  margin: 0;
-  padding: 0;
+    position: relative;
+    margin: 0;
+    padding: 0;
 }
 
 .markdownpoint-outline-list > .is-drop-before::before,
 .markdownpoint-outline-list > .is-drop-after::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  height: 1px;
-  background: var(--markdownpoint-muted);
-  pointer-events: none;
-  z-index: 1;
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    height: 1px;
+    background: var(--markdownpoint-muted);
+    pointer-events: none;
+    z-index: 1;
 }
 
 .markdownpoint-outline-list > .is-drop-before::before {
-  top: 0;
+    top: 0;
 }
 
 .markdownpoint-outline-list > .is-drop-after::after {
-  bottom: 0;
+    bottom: 0;
 }
 
 .markdownpoint-outline .markdownpoint-outline-row.is-dragging {
-  opacity: 0.45;
+    opacity: 0.45;
 }
 
 .markdownpoint-outline .markdownpoint-outline-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--size-4-3);
-  width: 100%;
-  height: auto;
-  min-height: var(--input-height);
-  padding: 9px var(--size-4-2);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  color: var(--text-normal);
-  text-align: start;
-  white-space: normal;
-  overflow-wrap: anywhere;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--size-4-3);
+    width: 100%;
+    height: auto;
+    min-height: var(--input-height);
+    padding: 9px var(--size-4-2);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-normal);
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
-.markdownpoint-outline .markdownpoint-outline-row[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--text-normal) 8%, var(--background-secondary));
+.markdownpoint-outline .markdownpoint-outline-row[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--text-normal) 8%, var(--background-secondary));
 }
 
-.markdownpoint-outline .markdownpoint-outline-row[aria-current="true"] .markdownpoint-outline-title {
-  min-width: 0;
-  flex: 1;
-  font-weight: var(--font-semibold);
+.markdownpoint-outline .markdownpoint-outline-row[aria-current='true'] .markdownpoint-outline-title {
+    min-width: 0;
+    flex: 1;
+    font-weight: var(--font-semibold);
 }
 
 .markdownpoint-outline-title {
-  min-width: 0;
-  flex: 1;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.markdownpoint-outline .markdownpoint-outline-row:not([aria-pressed="true"]):hover {
-  background: var(--background-modifier-hover);
+.markdownpoint-outline .markdownpoint-outline-row:not([aria-pressed='true']):hover {
+    background: var(--background-modifier-hover);
 }
 
 .markdownpoint-outline .markdownpoint-outline-row:focus-visible {
-  outline: 1px solid var(--markdownpoint-muted);
-  outline-offset: -1px;
+    outline: 1px solid var(--markdownpoint-muted);
+    outline-offset: -1px;
 }
 
 .markdownpoint-outline-section {
-  margin: 0;
-  padding: var(--size-4-2);
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold);
-  color: var(--markdownpoint-muted);
-  overflow-wrap: anywhere;
+    margin: 0;
+    padding: var(--size-4-2);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    color: var(--markdownpoint-muted);
+    overflow-wrap: anywhere;
 }
 
 .markdownpoint-presentation .markdown-source-view.mod-cm6 .cm-content > .markdownpoint-slide-boundary {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-3);
-  padding-block: var(--size-4-6) var(--size-4-3);
-  color: var(--text-muted);
-  font-family: var(--font-interface);
-  font-size: var(--font-ui-small);
-  line-height: var(--line-height-tight);
+    position: relative;
+    display: flex;
+    width: calc(100% + var(--markdownpoint-thumbnail-width) + 16px);
+    align-items: center;
+    gap: var(--size-4-3);
+    padding-block: var(--size-4-6) var(--size-4-3);
+    color: var(--text-muted);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-small);
+    line-height: var(--line-height-tight);
 }
 
 .markdownpoint-slide-boundary::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--background-modifier-border);
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--background-modifier-border);
 }
 
 .markdownpoint-presentation {
-  --markdownpoint-muted: color-mix(in srgb, var(--text-normal) 70%, transparent);
-  --markdownpoint-faint: color-mix(in srgb, var(--text-normal) 10%, transparent);
-  --markdownpoint-notes-indent: calc(var(--font-ui-small) + var(--size-2-2));
+    --markdownpoint-muted: color-mix(in srgb, var(--text-normal) 70%, transparent);
+    --markdownpoint-faint: color-mix(in srgb, var(--text-normal) 10%, transparent);
+    --markdownpoint-notes-indent: calc(var(--font-ui-small) + var(--size-2-2));
 }
 
 .markdownpoint-presentation .markdown-source-view.is-live-preview.show-properties .metadata-container:not(.mod-error),
 .markdownpoint-presentation .inline-title {
-  display: none;
+    display: none;
 }
 
 .markdownpoint-field-header {
-  padding-top: var(--size-4-4);
-  color: var(--markdownpoint-muted);
-  font-family: var(--font-interface);
-  font-size: var(--font-ui-smaller);
-  line-height: 18px;
+    padding-top: var(--size-4-4);
+    color: var(--markdownpoint-muted);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-smaller);
+    line-height: 18px;
 }
 
 .markdownpoint-field-label {
-  box-sizing: border-box;
-  height: 21px;
-  padding-bottom: 3px;
+    box-sizing: border-box;
+    height: 21px;
+    padding-bottom: 3px;
 }
 
 .markdownpoint-field-header.is-opening {
-  padding-top: 0;
+    padding-top: 0;
 }
 
 .markdownpoint-field-header.is-empty .markdownpoint-field-label {
-  height: 0;
-  padding: 0;
-  overflow: hidden;
+    height: 0;
+    padding: 0;
+    overflow: hidden;
 }
 
 .markdownpoint-field-header.is-empty {
-  opacity: 0;
+    opacity: 0;
 }
 
 .markdownpoint-field-header.is-revealing {
-  animation: markdownpoint-reveal-header 180ms ease-out;
+    animation: markdownpoint-reveal-header 180ms ease-out;
 }
 
 .markdownpoint-field-ghost {
-  color: var(--markdownpoint-faint);
-  cursor: text;
+    color: var(--markdownpoint-faint);
+    cursor: text;
 }
 
 .markdownpoint-save-retry {
-  margin-top: var(--size-4-2);
+    margin-top: var(--size-4-2);
 }
 
 .markdownpoint-empty-draft {
-  padding: var(--size-4-6) 0;
-  color: var(--markdownpoint-muted);
-  font-family: var(--font-interface);
+    padding: var(--size-4-6) 0;
+    color: var(--markdownpoint-muted);
+    font-family: var(--font-interface);
 }
 
 .markdownpoint-field-ghost.is-compact {
-  display: block;
+    display: block;
 }
 
 .markdownpoint-writing-field.markdownpoint-field-title,
 .markdownpoint-field-ghost.is-compact.markdownpoint-field-title {
-  font-size: 1.6em;
-  font-weight: var(--font-semibold);
-  line-height: 1.3;
+    font-size: 1.6em;
+    font-weight: var(--font-semibold);
+    line-height: 1.3;
 }
 
 .markdownpoint-writing-field.markdownpoint-field-title .cm-header {
-  font-size: inherit;
+    font-size: inherit;
 }
 
 .markdownpoint-writing-field.markdownpoint-field-eyebrow,
 .markdownpoint-field-ghost.is-compact.markdownpoint-field-eyebrow {
-  font-size: 0.85em;
-  line-height: 1.5;
+    font-size: 0.85em;
+    line-height: 1.5;
 }
 
 .markdownpoint-presentation .markdown-source-view.mod-cm6 .cm-content > .markdownpoint-section-heading {
-  padding-top: var(--size-4-6);
-  font-size: var(--h2-size);
-  font-weight: var(--font-semibold);
+    padding-top: var(--size-4-6);
+    font-size: var(--h2-size);
+    font-weight: var(--font-semibold);
 }
 
 .markdownpoint-presentation .markdown-source-view.mod-cm6 .cm-content > .markdownpoint-first-section {
-  padding-top: 0;
+    padding-top: 0;
 }
 
 .markdownpoint-notes {
-  padding: var(--size-4-4) 0 var(--size-4-2);
-  font-family: var(--font-interface);
+    padding: var(--size-4-4) 0 var(--size-4-2);
+    font-family: var(--font-interface);
 }
 
 .markdownpoint-notes .markdownpoint-notes-toggle,
 .markdownpoint-notes .markdownpoint-notes-empty {
-  width: 100%;
-  height: auto;
-  padding: var(--size-2-2) 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  text-align: start;
+    width: 100%;
+    height: auto;
+    padding: var(--size-2-2) 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-align: start;
 }
 
 .markdownpoint-notes .markdownpoint-notes-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--size-2-2);
-  color: var(--markdownpoint-muted);
-  font-size: var(--font-ui-small);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--size-2-2);
+    color: var(--markdownpoint-muted);
+    font-size: var(--font-ui-small);
 }
 
 .markdownpoint-notes-chevron {
-  display: flex;
-  --icon-size: var(--font-ui-small);
+    display: flex;
+    --icon-size: var(--font-ui-small);
 }
 
 .markdownpoint-notes .markdownpoint-notes-toggle:hover {
-  color: var(--text-normal);
+    color: var(--text-normal);
 }
 
 .markdownpoint-notes .markdownpoint-notes-toggle:focus-visible {
-  outline: 1px solid var(--markdownpoint-muted);
-  outline-offset: 1px;
+    outline: 1px solid var(--markdownpoint-muted);
+    outline-offset: 1px;
 }
 
 .markdownpoint-notes .markdownpoint-notes-empty {
-  display: block;
-  color: var(--markdownpoint-faint);
-  font-family: var(--font-text);
-  font-size: var(--font-text-size);
-  font-weight: var(--font-normal);
-  line-height: var(--line-height-normal);
-  cursor: text;
+    display: block;
+    color: var(--markdownpoint-faint);
+    font-family: var(--font-text);
+    font-size: var(--font-text-size);
+    font-weight: var(--font-normal);
+    line-height: var(--line-height-normal);
+    cursor: text;
 }
 
 .markdownpoint-notes .markdownpoint-notes-empty,
 .markdownpoint-presentation .markdown-source-view.mod-cm6 .markdownpoint-notes-field {
-  position: relative;
-  padding-inline-start: var(--markdownpoint-notes-indent);
+    position: relative;
+    padding-inline-start: var(--markdownpoint-notes-indent);
 }
 
 .markdownpoint-notes .markdownpoint-notes-empty::before,
 .markdownpoint-presentation .markdown-source-view.mod-cm6 .markdownpoint-notes-field::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: calc(var(--font-ui-small) / 2);
-  width: 1px;
-  background: var(--background-modifier-border);
-  pointer-events: none;
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--font-ui-small) / 2);
+    width: 1px;
+    background: var(--background-modifier-border);
+    pointer-events: none;
 }
 
 .markdownpoint-notes .markdownpoint-notes-empty:focus-visible {
-  color: var(--markdownpoint-muted);
-  outline: none;
+    color: var(--markdownpoint-muted);
+    outline: none;
 }
 
 .markdownpoint-presentation .markdown-source-view.mod-cm6 .markdownpoint-terminal-line {
-  height: 0;
-  min-height: 0;
-  padding-block: 0;
-  font-size: 0;
-  line-height: 0;
-  overflow: hidden;
+    height: 0;
+    min-height: 0;
+    padding-block: 0;
+    font-size: 0;
+    line-height: 0;
+    overflow: hidden;
 }
 
 @keyframes markdownpoint-reveal-header {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .markdownpoint-field-header.is-revealing {
-    animation: none;
-  }
+    .markdownpoint-field-header.is-revealing {
+        animation: none;
+    }
 }
 
 /* Structural previews show writing and media areas, independent of slide styling. */
 .markdownpoint-thumbnail {
-  display: block;
-  flex: 0 0 var(--markdownpoint-thumbnail-width, 58px);
-  width: var(--markdownpoint-thumbnail-width, 58px);
-  border: 1px solid color-mix(in srgb, var(--text-muted) 24%, transparent);
-  border-radius: 4px;
-  color: var(--text-normal);
-  background: var(--background-primary);
-  overflow: hidden;
+    display: block;
+    flex: 0 0 var(--markdownpoint-thumbnail-width, 58px);
+    width: var(--markdownpoint-thumbnail-width, 58px);
+    border: 1px solid color-mix(in srgb, var(--text-muted) 24%, transparent);
+    border-radius: 4px;
+    color: var(--text-normal);
+    background: var(--background-primary);
+    overflow: hidden;
 }
 
 .markdownpoint-thumbnail.is-unavailable {
-  display: none;
+    display: none;
 }
 
 .markdownpoint-thumbnail svg {
-  display: block;
-  width: 100%;
-  height: auto;
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 .markdownpoint-thumbnail-region {
-  fill: color-mix(in srgb, currentColor 38%, var(--background-primary));
-  stroke: var(--background-primary);
-  stroke-width: 1px;
-  vector-effect: non-scaling-stroke;
+    fill: color-mix(in srgb, currentColor 38%, var(--background-primary));
+    stroke: var(--background-primary);
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
 }
 
 .markdownpoint-outline-row:hover .markdownpoint-thumbnail-region,
 .markdownpoint-slide-tools:hover .markdownpoint-thumbnail-region {
-  fill: color-mix(in srgb, currentColor 48%, var(--background-primary));
+    fill: color-mix(in srgb, currentColor 48%, var(--background-primary));
 }
 
-.markdownpoint-outline-row[aria-current="true"] .markdownpoint-thumbnail,
+.markdownpoint-outline-row[aria-current='true'] .markdownpoint-thumbnail,
 .markdownpoint-outline-row:hover .markdownpoint-thumbnail,
 .markdownpoint-slide-tools:hover,
 .markdownpoint-slide-tools:focus-visible {
-  border-color: var(--markdownpoint-muted);
-  color: var(--text-normal);
+    border-color: var(--markdownpoint-muted);
+    color: var(--text-normal);
 }
 
 .markdownpoint-presentation .markdown-source-view.is-live-preview .cm-content {
-  padding-inline-end: calc(var(--markdownpoint-thumbnail-width) + 16px);
-}
-
-.markdownpoint-presentation .markdown-source-view.mod-cm6 .cm-content > .markdownpoint-slide-boundary {
-  position: relative;
-  width: calc(100% + var(--markdownpoint-thumbnail-width) + 16px);
+    padding-inline-end: calc(var(--markdownpoint-thumbnail-width) + 16px);
 }
 
 .markdownpoint-presentation .markdownpoint-slide-tools {
-  position: absolute;
-  inset-inline-end: var(--markdownpoint-thumbnail-right);
-  top: var(--markdownpoint-thumbnail-top);
-  width: var(--markdownpoint-thumbnail-width);
-  height: auto;
-  padding: 0;
-  box-shadow: none;
-  outline: none;
-  cursor: pointer;
-  z-index: 1;
+    position: absolute;
+    inset-inline-end: var(--markdownpoint-thumbnail-right);
+    top: var(--markdownpoint-thumbnail-top);
+    width: var(--markdownpoint-thumbnail-width);
+    height: auto;
+    padding: 0;
+    box-shadow: none;
+    outline: none;
+    cursor: pointer;
+    z-index: 1;
 }
 
 .markdownpoint-slide-tools-layer {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 2;
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 2;
 }
 
 .markdownpoint-slide-tools-layer .markdownpoint-slide-tools {
-  pointer-events: auto;
-  background: var(--background-primary);
+    pointer-events: auto;
+    background: var(--background-primary);
 }
 
 .markdownpoint-outline-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--size-4-2) var(--size-4-2);
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--size-4-2) var(--size-4-2);
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
 }
 
 .markdownpoint-layout-picker {
-  width: 780px;
-  max-width: 90vw;
+    width: 780px;
+    max-width: 90vw;
 }
 
 .markdownpoint-layout-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
-  gap: var(--size-4-3);
-  padding: var(--size-4-1);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+    gap: var(--size-4-3);
+    padding: var(--size-4-1);
 }
 
 .markdownpoint-layout-grid .markdownpoint-layout-choice {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--size-4-2);
-  height: auto;
-  padding: var(--size-4-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius-m);
-  box-shadow: none;
-  background: transparent;
-  color: var(--text-normal);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--size-4-2);
+    height: auto;
+    padding: var(--size-4-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-m);
+    box-shadow: none;
+    background: transparent;
+    color: var(--text-normal);
 }
 
 .markdownpoint-layout-choice .markdownpoint-thumbnail {
-  width: 100%;
-  max-width: 128px;
-  flex: none;
+    width: 100%;
+    max-width: 128px;
+    flex: none;
 }
 
 .markdownpoint-layout-choice:hover,
 .markdownpoint-layout-choice:focus-visible {
-  border-color: var(--text-muted);
-  outline: none;
-  background: var(--background-modifier-hover);
+    border-color: var(--text-muted);
+    outline: none;
+    background: var(--background-modifier-hover);
 }
 
 .markdownpoint-layout-name {
-  font-size: var(--font-ui-small);
-  white-space: normal;
-  text-align: center;
+    font-size: var(--font-ui-small);
+    white-space: normal;
+    text-align: center;
 }
 
 .markdownpoint-layout-caption {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--size-4-2);
-  width: 100%;
-  max-width: 128px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--size-4-2);
+    width: 100%;
+    max-width: 128px;
 }
 
 .markdownpoint-layout-caption .markdownpoint-layout-name {
-  min-width: 0;
-  text-align: start;
+    min-width: 0;
+    text-align: start;
 }
 
 .markdownpoint-layout-shortcut {
-  flex: none;
-  min-width: 18px;
-  padding: 1px 4px;
-  border: 0;
-  border-radius: 3px;
-  box-shadow: none;
-  background: var(--background-modifier-hover);
-  color: var(--text-muted);
-  font-family: var(--font-interface);
-  font-size: var(--font-ui-smaller);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
+    flex: none;
+    min-width: 18px;
+    padding: 1px 4px;
+    border: 0;
+    border-radius: 3px;
+    box-shadow: none;
+    background: var(--background-modifier-hover);
+    color: var(--text-muted);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-smaller);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
 }
 
 .markdownpoint-layout-shortcut.is-unassigned {
-  visibility: hidden;
+    visibility: hidden;
 }
 
 .markdownpoint-layout-hint {
-  margin: var(--size-4-4) var(--size-4-1) 0;
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  line-height: var(--line-height-normal);
+    margin: var(--size-4-4) var(--size-4-1) 0;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    line-height: var(--line-height-normal);
 }
 
 .markdownpoint-slide-column {
-  position: absolute;
-  top: var(--markdownpoint-thumbnail-top);
-  inset-inline-end: var(--markdownpoint-thumbnail-right);
-  width: var(--markdownpoint-thumbnail-width);
-  pointer-events: auto;
+    position: absolute;
+    top: var(--markdownpoint-thumbnail-top);
+    inset-inline-end: var(--markdownpoint-thumbnail-right);
+    width: var(--markdownpoint-thumbnail-width);
+    pointer-events: auto;
 }
 
 .markdownpoint-slide-column.has-images {
-  padding-bottom: var(--size-4-3);
+    padding-bottom: var(--size-4-3);
 }
 
 .markdownpoint-slide-column .markdownpoint-slide-tools {
-  position: static;
-  width: 100%;
+    position: static;
+    width: 100%;
 }
 
 .markdownpoint-slide-images {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
 }
 
 .markdownpoint-slide-images:empty {
-  display: none;
+    display: none;
 }
 
 .markdownpoint-slide-image {
-  display: block;
-  width: 100%;
-  height: 32px;
-  object-fit: contain;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 3px;
-  background: var(--background-secondary);
-  transition: border-color 120ms ease, filter 120ms ease;
+    display: block;
+    width: 100%;
+    height: 32px;
+    object-fit: contain;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 3px;
+    background: var(--background-secondary);
+    transition:
+        border-color 120ms ease,
+        filter 120ms ease;
 }
 
 .markdownpoint-slide-image:hover {
-  border-color: var(--markdownpoint-muted);
-  filter: brightness(1.08);
+    border-color: var(--markdownpoint-muted);
+    filter: brightness(1.08);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .markdownpoint-slide-image {
-    transition: none;
-  }
+    .markdownpoint-slide-image {
+        transition: none;
+    }
 }
 
 .markdownpoint-slide-image-space {
-  height: var(--markdownpoint-image-space);
-  padding: 0;
-  line-height: 0;
-  pointer-events: none;
+    height: var(--markdownpoint-image-space);
+    padding: 0;
+    line-height: 0;
+    pointer-events: none;
 }
 
 .markdownpoint-slide-column .markdownpoint-slide-tools.is-fallback {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 26px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 26px;
 }
 
 .markdownpoint-slide-tools.is-fallback svg {
-  width: 14px;
-  height: 14px;
+    width: 14px;
+    height: 14px;
 }
 
 .markdownpoint-creation-modal {
-  width: 600px;
-  max-width: 90vw;
+    width: 600px;
+    max-width: 90vw;
 }
 
 .markdownpoint-creation-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-4);
 }
 
 .markdownpoint-creation-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-2);
 }
 
 .markdownpoint-creation-field > span,
 .markdownpoint-creation-label {
-  font-size: var(--font-ui-small);
-  color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
 }
 
 .markdownpoint-creation-field input,
 .markdownpoint-creation-field select {
-  width: 100%;
+    width: 100%;
 }
 
 .markdownpoint-creation-themes {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: var(--size-4-2);
-  margin-top: calc(-1 * var(--size-4-2));
-  max-height: 280px;
-  overflow-y: auto;
-  padding: var(--size-2-2);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: var(--size-4-2);
+    margin-top: calc(-1 * var(--size-4-2));
+    max-height: 280px;
+    overflow-y: auto;
+    padding: var(--size-2-2);
 }
 
 .markdownpoint-creation-modal .markdownpoint-creation-theme {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: var(--size-4-3);
-  height: auto;
-  padding: var(--size-4-3);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-m);
-  background: var(--background-primary);
-  box-shadow: none;
-  text-align: start;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: var(--size-4-3);
+    height: auto;
+    padding: var(--size-4-3);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background: var(--background-primary);
+    box-shadow: none;
+    text-align: start;
 }
 
-.markdownpoint-creation-modal .markdownpoint-creation-theme[aria-checked="true"] {
-  border-color: var(--text-muted);
-  background: var(--background-modifier-hover);
+.markdownpoint-creation-modal .markdownpoint-creation-theme[aria-checked='true'] {
+    border-color: var(--text-muted);
+    background: var(--background-modifier-hover);
 }
 
 .markdownpoint-creation-modal .markdownpoint-creation-theme:focus-visible {
-  outline: 1px solid var(--text-muted);
-  outline-offset: 2px;
+    outline: 1px solid var(--text-muted);
+    outline-offset: 2px;
 }
 
 .markdownpoint-creation-preview {
-  width: 72px;
-  flex: 0 0 72px;
-  overflow: hidden;
+    width: 72px;
+    flex: 0 0 72px;
+    overflow: hidden;
 }
 
 .markdownpoint-creation-preview img {
-  display: block;
-  width: 100%;
-  height: auto;
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 .markdownpoint-creation-caption {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-2);
-  min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-2);
+    min-width: 0;
 }
 
 .markdownpoint-creation-detail {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    white-space: nowrap;
 }
 
 .markdownpoint-creation-error {
-  color: var(--text-error);
-  font-size: var(--font-ui-small);
+    color: var(--text-error);
+    font-size: var(--font-ui-small);
 }
 
 .markdownpoint-creation-error:empty {
-  display: none;
+    display: none;
 }
 
 .markdownpoint-creation-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--size-4-2);
-  margin-top: var(--size-4-2);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-2);
 }
