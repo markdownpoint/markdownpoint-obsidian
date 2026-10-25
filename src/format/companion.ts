@@ -27,6 +27,35 @@ function objectTree(source: string): Node | null {
 
 export function isSlideRecordSource(source: string): boolean { return objectTree(source) !== null; }
 
+/** Update only known navigation/reference values, retaining every other source byte. */
+export function remapRecordReferences(source: string, slides: ReadonlyMap<string, string>, compositions: ReadonlyMap<string, string>): string | null {
+  const root = objectTree(source);
+  if (!root) return null;
+  // Match JSON's last-value semantics without serializing its unknown numbers,
+  // properties or escapes. The original property spelling is never replaced.
+  const field = (object: Node | undefined, name: string): Node | undefined => object?.type === "object"
+    ? object.children?.filter(property => property.children?.[0]?.value === name).at(-1)?.children?.[1] : undefined;
+  const edits: Edit[] = [];
+  const replace = (node: Node | undefined, ids: ReadonlyMap<string, string>, prefix = ""): void => {
+    const value: unknown = node?.value;
+    if (!node || node.type !== "string" || typeof value !== "string" || !value.startsWith(prefix)) return;
+    const next = ids.get(value.slice(prefix.length));
+    if (next !== undefined && prefix + next !== value) edits.push({ offset: node.offset, length: node.length, content: JSON.stringify(prefix + next) });
+  };
+  const objects = field(root, "objects");
+  if (objects?.type === "array") for (const object of objects.children ?? []) {
+    replace(field(object, "link"), slides, "slide:");
+    if (field(object, "type")?.value === "composition") replace(field(object, "source"), compositions);
+  }
+  const overrides = field(root, "overrides");
+  if (overrides?.type === "object") {
+    const effective = new Map<unknown, Node | undefined>();
+    for (const property of overrides.children ?? []) effective.set(property.children?.[0]?.value, property.children?.[1]);
+    for (const override of effective.values()) replace(field(override, "link"), slides, "slide:");
+  }
+  return applyEdits(source, edits);
+}
+
 /** Complete record source keeps unknown properties, escapes and number precision. */
 export class CompanionDocument {
   readonly records: ReadonlyMap<string, string>;

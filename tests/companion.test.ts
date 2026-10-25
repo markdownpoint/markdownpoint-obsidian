@@ -18,7 +18,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompanionDocument, reconcileSlideRecords } from "../src/format/companion.ts";
+import { CompanionDocument, reconcileSlideRecords, remapRecordReferences } from "../src/format/companion.ts";
 
 void test("record changes combine removals, replacements and additions without damaging separators", () => {
   const source = '{"untouched":1,"slides":{"a":{"v":1},"b":{"v":2},"c":{"v":3}},"tail":2}';
@@ -63,4 +63,35 @@ void test("malformed replacement records refuse without changing source", () => 
     assert.equal(CompanionDocument.read(source)!.change(new Map([["a", raw]])), null, raw);
   }
   assert.equal(CompanionDocument.read(source)!.change(new Map()), source);
+});
+
+void test("copy references change in own objects and overrides without rewriting other JSON", () => {
+  const source = String.raw`{ "layout":"title", "future":900719925474099312345, "escaped":"\u00e9",
+    "objects":["title",{"id":"picture","type":"image","asset":"assets/one.png","link":"slide:one","extra":{"link":"slide:one"}},
+      {"id":"card","type":"composition","source":"card","link":"slide:two","controls":{"label":"slide:one"}}],
+    "overrides":{"title":{"link":"slide:one","name":"slide:one"},"removed":null,"other":{"link":"https://example.com/slide:one"}},
+    "link":"slide:one", "source":"card", "controls":{"caption":{"type":"text","default":"[Go](slide:one)"}} }`;
+  const expected = source.replace('"link":"slide:one","extra"', '"link":"slide:copy-one","extra"')
+    .replace('"source":"card","link":"slide:two"', '"source":"copy-card","link":"slide:copy-two"')
+    .replace('"title":{"link":"slide:one"', '"title":{"link":"slide:copy-one"');
+  assert.equal(remapRecordReferences(source, new Map([["one", "copy-one"], ["two", "copy-two"]]), new Map([["card", "copy-card"]])), expected);
+  assert.equal(remapRecordReferences(source, new Map(), new Map()), source);
+});
+
+void test("composition references change only for composition instances and only when mapped", () => {
+  const source = '{"objects":[{"type":"composition","source":"card"},{"type":"composition","source":"other"},{"type":"video","source":"card"}],"overrides":{"card":{"source":"card"}}}';
+  assert.equal(remapRecordReferences(source, new Map(), new Map([["card", "copy-card"]])), source.replace('"source":"card"', '"source":"copy-card"'));
+  assert.equal(remapRecordReferences(source, new Map(), new Map([["card", "card"]])), source);
+});
+
+void test("reference edits respect escaped JSON spelling and last-value semantics", () => {
+  const source = String.raw`{"objects":[{"link":"slide:one"}],"obje\u0063ts":[{"type":"image","link":"slide:one","li\u006ek":"slide\u003atwo"}]}`;
+  assert.equal(remapRecordReferences(source, new Map([["one", "copy-one"], ["two", "copy-two"]]), new Map()),
+    source.replace('"slide\\u003atwo"', '"slide:copy-two"'));
+  const shadowed = String.raw`{"overrides":{"title":{"link":"slide:one"},"ti\u0074le":{"link":"https://example.com"},"body":{"link":"slide:one"},"bo\u0064y":{"link":"slide:two"}}}`;
+  assert.equal(remapRecordReferences(shadowed, new Map([["one", "copy-one"], ["two", "copy-two"]]), new Map()),
+    shadowed.replace('"link":"slide:two"', '"link":"slide:copy-two"'));
+  for (const invalid of ["null", "[]", '{"objects": [}', '{"objects":[],}', '{/*comment*/}']) {
+    assert.equal(remapRecordReferences(invalid, new Map(), new Map()), null);
+  }
 });
