@@ -44,7 +44,7 @@ export const nl: Translations = {
         }
     },
     images: {
-        show: 'Dia-afbeeldingen tonen',
+        show: 'Afbeeldingen tonen',
         description: 'Toon maximaal vijf afbeeldingen onder de miniatuur van elke dia in de editor.',
         preview: 'Dia-afbeelding'
     },
@@ -124,6 +124,7 @@ export const nl: Translations = {
         changed: 'Gewijzigd',
         fixed: 'Opgelost',
         close: 'Sluiten',
+        section: 'Releasenotes',
         setting: ({ version }: { version: string }) => `Nieuw in MarkdownPoint ${version}`,
         settingDescription: 'Bekijk wat er in recente versies is veranderd.',
         view: 'Bekijk recente updates',

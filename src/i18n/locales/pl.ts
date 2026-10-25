@@ -44,7 +44,7 @@ export const pl: Translations = {
         }
     },
     images: {
-        show: 'Pokaż obrazy slajdów',
+        show: 'Pokaż obrazy',
         description: 'Pokazuje do pięciu obrazów pod miniaturą każdego slajdu w edytorze.',
         preview: 'Obraz slajdu'
     },
@@ -122,6 +122,7 @@ export const pl: Translations = {
         changed: 'Zmienione',
         fixed: 'Poprawione',
         close: 'Zamknij',
+        section: 'Informacje o wersji',
         setting: ({ version }: { version: string }) => `Co nowego w MarkdownPoint ${version}`,
         settingDescription: 'Zobacz, co zmieniło się w ostatnich wydaniach.',
         view: 'Zobacz nowości',

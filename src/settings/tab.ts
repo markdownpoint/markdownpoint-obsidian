@@ -43,18 +43,6 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
     getSettingDefinitions(): SettingDefinitionItem[] {
         return [
             {
-                name: uiText.whatsNew.setting({ version: this.version }),
-                desc: uiText.whatsNew.settingDescription,
-                render: setting => {
-                    setting.addButton(button => button.setButtonText(uiText.whatsNew.view).onClick(() => this.showWhatsNew()));
-                }
-            },
-            {
-                name: uiText.whatsNew.showOnUpdate,
-                desc: uiText.whatsNew.showOnUpdateDescription,
-                control: { type: 'toggle', key: 'showReleaseNotes', defaultValue: true }
-            },
-            {
                 name: uiText.sidebar,
                 control: {
                     type: 'dropdown',
@@ -67,6 +55,24 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
                 name: uiText.images.show,
                 desc: uiText.images.description,
                 control: { type: 'toggle', key: 'showSlideImages', defaultValue: true }
+            },
+            {
+                type: 'group',
+                heading: uiText.whatsNew.section,
+                items: [
+                    {
+                        name: uiText.whatsNew.setting({ version: this.version }),
+                        desc: uiText.whatsNew.settingDescription,
+                        render: setting => {
+                            setting.addButton(button => button.setButtonText(uiText.whatsNew.view).onClick(() => this.showWhatsNew()));
+                        }
+                    },
+                    {
+                        name: uiText.whatsNew.showOnUpdate,
+                        desc: uiText.whatsNew.showOnUpdateDescription,
+                        control: { type: 'toggle', key: 'showReleaseNotes', defaultValue: true }
+                    }
+                ]
             }
         ];
     }

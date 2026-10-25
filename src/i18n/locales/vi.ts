@@ -44,7 +44,7 @@ export const vi: Translations = {
         }
     },
     images: {
-        show: 'Hiển thị hình ảnh trang chiếu',
+        show: 'Hiển thị hình ảnh',
         description: 'Hiển thị tối đa năm hình ảnh bên dưới hình thu nhỏ của mỗi trang chiếu trong trình soạn thảo.',
         preview: 'Hình ảnh trang chiếu'
     },
@@ -123,6 +123,7 @@ export const vi: Translations = {
         changed: 'Thay đổi',
         fixed: 'Sửa lỗi',
         close: 'Đóng',
+        section: 'Ghi chú phát hành',
         setting: ({ version }: { version: string }) => `Có gì mới trong MarkdownPoint ${version}`,
         settingDescription: 'Xem những thay đổi trong các bản phát hành gần đây.',
         view: 'Xem cập nhật gần đây',

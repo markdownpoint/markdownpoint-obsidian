@@ -44,7 +44,7 @@ export const fr: Translations = {
         }
     },
     images: {
-        show: 'Afficher les images des diapositives',
+        show: 'Afficher les images',
         description: 'Afficher jusqu’à cinq images sous la vignette de chaque diapositive dans l’éditeur.',
         preview: 'Image de la diapositive'
     },
@@ -125,6 +125,7 @@ export const fr: Translations = {
         changed: 'Modifié',
         fixed: 'Corrigé',
         close: 'Fermer',
+        section: 'Notes de version',
         setting: ({ version }: { version: string }) => `Nouveautés de MarkdownPoint ${version}`,
         settingDescription: 'Voir ce qui a changé dans les versions récentes.',
         view: 'Voir les mises à jour récentes',

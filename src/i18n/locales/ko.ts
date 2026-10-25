@@ -44,7 +44,7 @@ export const ko: Translations = {
         }
     },
     images: {
-        show: '슬라이드 이미지 표시',
+        show: '이미지 표시',
         description: '편집기에서 각 슬라이드의 썸네일 아래에 이미지를 최대 5개까지 표시합니다.',
         preview: '슬라이드 이미지'
     },
@@ -122,6 +122,7 @@ export const ko: Translations = {
         changed: '변경',
         fixed: '수정',
         close: '닫기',
+        section: '릴리스 노트',
         setting: ({ version }: { version: string }) => `MarkdownPoint ${version}의 새로운 기능`,
         settingDescription: '최근 릴리스에서 달라진 점을 확인하세요.',
         view: '최근 업데이트 보기',

@@ -44,7 +44,7 @@ export const ptBR: Translations = {
         }
     },
     images: {
-        show: 'Mostrar imagens dos slides',
+        show: 'Mostrar imagens',
         description: 'Mostrar até cinco imagens abaixo da miniatura de cada slide no editor.',
         preview: 'Imagem do slide'
     },
@@ -122,6 +122,7 @@ export const ptBR: Translations = {
         changed: 'Alterado',
         fixed: 'Corrigido',
         close: 'Fechar',
+        section: 'Notas de lançamento',
         setting: ({ version }: { version: string }) => `Novidades do MarkdownPoint ${version}`,
         settingDescription: 'Veja o que mudou nas versões recentes.',
         view: 'Ver atualizações recentes',

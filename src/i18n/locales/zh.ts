@@ -43,7 +43,7 @@ export const zh: Translations = {
             number: '编号'
         }
     },
-    images: { show: '显示幻灯片图像', description: '在编辑器中，每张幻灯片的缩略图下方最多显示五张图像。', preview: '幻灯片图像' },
+    images: { show: '显示图像', description: '在编辑器中，每张幻灯片的缩略图下方最多显示五张图像。', preview: '幻灯片图像' },
     notes: { label: '演讲者注释', placeholder: '注释' },
     clipboard: { copyText: '复制', copyFailed: '无法复制文本。' },
     presentations: {
@@ -117,6 +117,7 @@ export const zh: Translations = {
         changed: '变更',
         fixed: '修复',
         close: '关闭',
+        section: '版本说明',
         setting: ({ version }: { version: string }) => `MarkdownPoint ${version} 的新功能`,
         settingDescription: '查看最近几个版本的改动。',
         view: '查看最近更新',

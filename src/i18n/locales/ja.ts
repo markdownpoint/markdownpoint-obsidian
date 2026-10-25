@@ -44,7 +44,7 @@ export const ja: Translations = {
         }
     },
     images: {
-        show: 'スライドの画像を表示',
+        show: '画像を表示',
         description: 'エディタで各スライドのサムネールの下に画像を最大5枚表示します。',
         preview: 'スライドの画像'
     },
@@ -125,6 +125,7 @@ export const ja: Translations = {
         changed: '変更',
         fixed: '修正',
         close: '閉じる',
+        section: 'リリースノート',
         setting: ({ version }: { version: string }) => `MarkdownPoint ${version}の新機能`,
         settingDescription: '最近のリリースで変わった点を確認します。',
         view: '最近の更新を表示',

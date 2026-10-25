@@ -44,7 +44,7 @@ export const uk: Translations = {
         }
     },
     images: {
-        show: 'Показувати зображення слайдів',
+        show: 'Показувати зображення',
         description: 'Показувати до п’яти зображень під мініатюрою кожного слайда в редакторі.',
         preview: 'Зображення слайда'
     },
@@ -122,6 +122,7 @@ export const uk: Translations = {
         changed: 'Змінено',
         fixed: 'Виправлено',
         close: 'Закрити',
+        section: 'Примітки до випуску',
         setting: ({ version }: { version: string }) => `Що нового в MarkdownPoint ${version}`,
         settingDescription: 'Що змінилося в останніх випусках.',
         view: 'Переглянути оновлення',

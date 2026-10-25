@@ -43,7 +43,7 @@ export const zhTW: Translations = {
             number: '數字'
         }
     },
-    images: { show: '顯示投影片圖片', description: '在編輯器中，於每張投影片的縮圖下方顯示最多五張圖片。', preview: '投影片圖片' },
+    images: { show: '顯示圖片', description: '在編輯器中，於每張投影片的縮圖下方顯示最多五張圖片。', preview: '投影片圖片' },
     notes: { label: '簡報者附註', placeholder: '附註' },
     clipboard: { copyText: '複製', copyFailed: '無法複製文字。' },
     presentations: {
@@ -117,6 +117,7 @@ export const zhTW: Translations = {
         changed: '變更',
         fixed: '修正',
         close: '關閉',
+        section: '發行記錄',
         setting: ({ version }: { version: string }) => `MarkdownPoint ${version} 的新功能`,
         settingDescription: '查看最近幾個版本的變動。',
         view: '查看最近更新',

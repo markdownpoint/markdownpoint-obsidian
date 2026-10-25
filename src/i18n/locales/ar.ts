@@ -44,7 +44,7 @@ export const ar: Translations = {
         }
     },
     images: {
-        show: 'إظهار صور الشرائح',
+        show: 'إظهار الصور',
         description: 'إظهار ما يصل إلى خمس صور أسفل الصورة المصغرة لكل شريحة في المحرر.',
         preview: 'صورة الشريحة'
     },
@@ -121,6 +121,7 @@ export const ar: Translations = {
         changed: 'مُغيّر',
         fixed: 'مُصلح',
         close: 'إغلاق',
+        section: 'ملاحظات الإصدار',
         setting: ({ version }: { version: string }) => `الجديد في MarkdownPoint ${version}`,
         settingDescription: 'اطّلع على ما تغيّر في الإصدارات الأخيرة.',
         view: 'عرض التحديثات الأخيرة',

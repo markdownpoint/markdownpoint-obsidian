@@ -8,8 +8,8 @@ Please report security issues privately through GitHub's [security advisory form
 
 - **Nothing leaves your device.** The plugin makes no network requests. There is no telemetry, no analytics and no server belonging to this plugin.
 - **Presentations stay in your vault.** The plugin reads and writes a presentation’s `slides.md`, `presentation.mdpoint`, theme files and media through Obsidian’s vault API. Creating a presentation or pasting slides adds files to the presentation’s folder.
-- **Settings are stored in your vault.** Layout shortcuts and **Show slide images** are saved in `.obsidian/plugins/markdownpoint/data.json`, which syncs with your vault’s plugin settings.
-- **Some state stays on this device.** Sidebar placement, expanded notes and the clipboard bookkeeping for cut slides use Obsidian’s local storage for the vault. When slide data can’t be saved, a recovery copy is kept in this device’s IndexedDB storage until it can be saved.
+- **Settings are stored in your vault.** Layout shortcuts, **Show images**, **Show release notes after updating** and the last version whose release notes were shown are saved in `.obsidian/plugins/markdownpoint/data.json`, which syncs with your vault’s plugin settings.
+- **Some state stays on this device.** Sidebar placement, expanded notes, a copy of the last version whose release notes were shown and the clipboard bookkeeping for cut slides use Obsidian’s local storage for the vault. When slide data can’t be saved, a recovery copy is kept in this device’s IndexedDB storage until it can be saved.
 - **Copying slides uses the system clipboard.** Copy and cut write the slides’ text and presentation data to the clipboard, where other apps can read it, as with any copied text. Paste reads it back.
 
 ## Things worth knowing

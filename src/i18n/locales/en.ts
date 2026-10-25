@@ -42,7 +42,7 @@ export const en = {
         }
     },
     images: {
-        show: 'Show slide images',
+        show: 'Show images',
         description: 'Show up to five images below each slide’s thumbnail in the editor.',
         preview: 'Slide image'
     },
@@ -119,6 +119,7 @@ export const en = {
         changed: 'Changed',
         fixed: 'Fixed',
         close: 'Close',
+        section: 'Release notes',
         setting: ({ version }: { version: string }) => `What’s new in MarkdownPoint ${version}`,
         settingDescription: 'See what changed in recent releases.',
         view: 'View recent updates',

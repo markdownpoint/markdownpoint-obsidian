@@ -44,7 +44,7 @@ export const fa: Translations = {
         }
     },
     images: {
-        show: 'نمایش تصاویر اسلایدها',
+        show: 'نمایش تصاویر',
         description: 'حداکثر پنج تصویر را زیر تصویرک هر اسلاید در ویرایشگر نمایش دهید.',
         preview: 'تصویر اسلاید'
     },
@@ -122,6 +122,7 @@ export const fa: Translations = {
         changed: 'تغییریافته',
         fixed: 'رفع‌شده',
         close: 'بستن',
+        section: 'یادداشت‌های انتشار',
         setting: ({ version }: { version: string }) => `تازه‌های MarkdownPoint ${version}`,
         settingDescription: 'تغییرات نسخه‌های اخیر را ببینید.',
         view: 'دیدن تازه‌ها',

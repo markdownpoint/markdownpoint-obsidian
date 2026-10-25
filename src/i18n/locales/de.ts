@@ -44,7 +44,7 @@ export const de: Translations = {
         }
     },
     images: {
-        show: 'Folienbilder anzeigen',
+        show: 'Bilder anzeigen',
         description: 'Bis zu fünf Bilder unter der Miniatur jeder Folie im Editor anzeigen.',
         preview: 'Folienbild'
     },
@@ -125,6 +125,7 @@ export const de: Translations = {
         changed: 'Geändert',
         fixed: 'Behoben',
         close: 'Schließen',
+        section: 'Versionshinweise',
         setting: ({ version }: { version: string }) => `Neu in MarkdownPoint ${version}`,
         settingDescription: 'Was sich in den letzten Versionen geändert hat.',
         view: 'Neuerungen ansehen',

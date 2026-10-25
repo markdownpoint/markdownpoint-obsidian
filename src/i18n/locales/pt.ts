@@ -44,7 +44,7 @@ export const pt: Translations = {
         }
     },
     images: {
-        show: 'Mostrar imagens dos diapositivos',
+        show: 'Mostrar imagens',
         description: 'Mostrar até cinco imagens abaixo da miniatura de cada diapositivo no editor.',
         preview: 'Imagem do diapositivo'
     },
@@ -123,6 +123,7 @@ export const pt: Translations = {
         changed: 'Alterado',
         fixed: 'Corrigido',
         close: 'Fechar',
+        section: 'Notas da versão',
         setting: ({ version }: { version: string }) => `Novidades do MarkdownPoint ${version}`,
         settingDescription: 'Veja o que mudou nas versões recentes.',
         view: 'Ver atualizações recentes',

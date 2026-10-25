@@ -64,7 +64,7 @@ Notes stay with their slide when you move, copy or delete it. Each device rememb
 
 Up to five of a slide’s images appear below its thumbnail in the margin. The background comes first, then images in the layout’s image areas, then any other images on the slide.
 
-Add and change images in MarkdownPoint. To hide the previews, turn off **Settings → MarkdownPoint → Show slide images**.
+Add and change images in MarkdownPoint. To hide the previews, turn off **Settings → MarkdownPoint → Show images**.
 
 ## Arrange slides in the outline
 
@@ -138,7 +138,7 @@ The move commands work while the outline has focus. Tab and Obsidian’s tab-swi
 
 After an update, MarkdownPoint shows the release notes once. To stop this, turn off **Settings → MarkdownPoint → Show release notes after updating**. To read them at any time, select **View recent updates** in the same settings.
 
-Sidebar placement and expanded notes are stored on each device. Layout shortcuts, **Show slide images** and **Show release notes after updating** are plugin settings. They sync when your vault syncs plugin settings. Obsidian manages sidebar visibility and width.
+Sidebar placement and expanded notes are stored on each device. Layout shortcuts, **Show images** and **Show release notes after updating** are plugin settings. They sync when your vault syncs plugin settings. Obsidian manages sidebar visibility and width.
 
 ## Languages
 

@@ -43,7 +43,7 @@ export const th: Translations = {
             number: 'ตัวเลข'
         }
     },
-    images: { show: 'แสดงรูปภาพสไลด์', description: 'แสดงรูปภาพสูงสุด 5 รูปใต้ภาพขนาดย่อของแต่ละสไลด์ในเอดิเตอร์', preview: 'รูปภาพสไลด์' },
+    images: { show: 'แสดงรูปภาพ', description: 'แสดงรูปภาพสูงสุด 5 รูปใต้ภาพขนาดย่อของแต่ละสไลด์ในเอดิเตอร์', preview: 'รูปภาพสไลด์' },
     notes: { label: 'โน้ตผู้นำเสนอ', placeholder: 'โน้ต' },
     clipboard: { copyText: 'คัดลอก', copyFailed: 'ไม่สามารถคัดลอกข้อความได้' },
     presentations: {
@@ -117,6 +117,7 @@ export const th: Translations = {
         changed: 'เปลี่ยนแปลง',
         fixed: 'แก้ไข',
         close: 'ปิด',
+        section: 'บันทึกประจำรุ่น',
         setting: ({ version }: { version: string }) => `มีอะไรใหม่ใน MarkdownPoint ${version}`,
         settingDescription: 'ดูสิ่งที่เปลี่ยนไปในรุ่นล่าสุด',
         view: 'ดูการอัปเดตล่าสุด',

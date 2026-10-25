@@ -44,7 +44,7 @@ export const id: Translations = {
         }
     },
     images: {
-        show: 'Tampilkan gambar slide',
+        show: 'Tampilkan gambar',
         description: 'Tampilkan hingga lima gambar di bawah thumbnail setiap slide di pengubah.',
         preview: 'Gambar slide'
     },
@@ -122,6 +122,7 @@ export const id: Translations = {
         changed: 'Diubah',
         fixed: 'Diperbaiki',
         close: 'Tutup',
+        section: 'Catatan rilis',
         setting: ({ version }: { version: string }) => `Yang baru di MarkdownPoint ${version}`,
         settingDescription: 'Lihat apa yang berubah pada rilis terbaru.',
         view: 'Lihat pembaruan terbaru',

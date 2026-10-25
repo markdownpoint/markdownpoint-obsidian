@@ -44,7 +44,7 @@ export const tr: Translations = {
         }
     },
     images: {
-        show: 'Slayt görsellerini göster',
+        show: 'Görselleri göster',
         description: 'Editörde her slaytın küçük resminin altında en fazla beş görsel göster.',
         preview: 'Slayt görseli'
     },
@@ -122,6 +122,7 @@ export const tr: Translations = {
         changed: 'Değişti',
         fixed: 'Düzeltildi',
         close: 'Kapat',
+        section: 'Sürüm notları',
         setting: ({ version }: { version: string }) => `MarkdownPoint ${version} sürümündeki yenilikler`,
         settingDescription: 'Son sürümlerde nelerin değiştiğini gör.',
         view: 'Son güncellemeleri görüntüle',
