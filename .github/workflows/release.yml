@@ -1,0 +1,85 @@
+# MarkdownPoint - Plugin for Obsidian
+# Copyright (c) 2026 Johan Sanneblad
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+name: Release Obsidian plugin
+
+on:
+  push:
+    tags:
+      # Obsidian requires the tag to be the bare version, with no leading "v"
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions: read-all
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.x'
+          cache: npm
+
+      - name: Check and build plugin
+        run: |
+          npm ci
+          npm run check
+
+      # A mismatch here means the tag and the manifest disagree, which Obsidian's
+      # release checks reject
+      - name: Verify manifest version matches the tag
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          manifest="$(node -p "require('./manifest.json').version")"
+          if [ "$tag" != "$manifest" ]; then
+            echo "Tag $tag does not match manifest version $manifest"
+            exit 1
+          fi
+          echo "Tag and manifest agree on $tag"
+
+      - name: Attest release assets
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+
+          # The three files must be individual assets, not a zip, so that Obsidian
+          # can fetch them directly
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title="$tag" \
+            --generate-notes \
+            main.js manifest.json styles.css

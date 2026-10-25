@@ -1,13 +1,17 @@
-# Preparing a release
+# Releasing
 
-1. Set the same `x.y.z` version in `manifest.json` and `package.json`, update the lockfile, and map that version to the minimum Obsidian version in `versions.json`.
-2. Run `npm ci`, `npm run check` and `npm run package`. Review the CI results on the supported build platforms and verify the editor in a dedicated test vault.
-3. The installation files are `main.js`, `manifest.json` and `styles.css` in `dist/markdownpoint-<version>/`. Keep the license notices embedded in `main.js`.
-4. Create a GitHub release whose tag exactly matches the manifest version, without a `v` prefix. Attach the three installation files individually.
-5. Submit the repository through the [Obsidian Community directory](https://community.obsidian.md). Connect the owning GitHub account and choose the appropriate publisher profile. The directory reads the default branch's manifest; installation requires the matching GitHub release and attachments.
+Releases are published from a bare version tag, such as `1.0.1`. Pushing the tag starts `.github/workflows/release.yml`, which runs the quality gate, checks that the tag matches `manifest.json`, attests the files and creates the GitHub release with `main.js`, `manifest.json` and `styles.css` as individual assets.
 
-`npm run package` only prepares local files. It does not create a Git tag, publish a release, or submit the plugin.
+Run the release script from a clean `main` that matches `origin/main`:
 
-The user manual and screenshots live in `README.md` and `images/`. Check their relative links before publishing. Keep licensing and build instructions in their dedicated files.
+```sh
+node scripts/release
+```
 
-See Obsidian's [submission guide](https://docs.obsidian.md/Plugins/Releasing/Submit%20your%20plugin) and [plugin submission requirements](https://docs.obsidian.md/community-directory/submission-requirements-for-plugins) for the current directory process. A submission does not itself grant an Official badge.
+Choose a patch, minor or major release. The script runs `npm run check`, uses `npm version` to update `package.json`, `package-lock.json`, `manifest.json` and `versions.json` in one commit with an annotated bare tag, then pushes `main` and the tag together. `node scripts/release minor --dry-run` checks everything without changing anything.
+
+While the version in the files has never been tagged, as before the first release, the script also offers to release that current version without a version commit. It tags the current `main` and pushes the tag.
+
+`versions.json` maps each plugin version to its minimum Obsidian version, taken from `minAppVersion` in `manifest.json`. Raise `minAppVersion` before releasing when a new version needs a newer Obsidian.
+
+For the first release, run `node scripts/release` and choose the current version. When the workflow has published the GitHub release with its three files, submit the repository through the [Obsidian Community directory](https://community.obsidian.md) and choose the publisher profile. The directory reads the default branch's manifest and installs from the matching GitHub release. See Obsidian's [submission guide](https://docs.obsidian.md/Plugins/Releasing/Submit%20your%20plugin) and [plugin submission requirements](https://docs.obsidian.md/community-directory/submission-requirements-for-plugins). A submission does not itself grant an Official badge.

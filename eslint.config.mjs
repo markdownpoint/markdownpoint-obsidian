@@ -23,7 +23,7 @@ import globals from 'globals';
 const sentenceCase = { brands: ['MarkdownPoint', 'Obsidian'], enforceCamelCaseLower: true };
 
 export default defineConfig([
-    { ignores: ['main.js', 'dist/**', 'coverage/**', 'test-vault/**', '.verification/**'] },
+    { ignores: ['main.js', 'coverage/**', 'test-vault/**', '.verification/**'] },
     { linterOptions: { reportUnusedDisableDirectives: 'error' } },
     ...obsidianmd.configs.recommended,
     {
@@ -45,13 +45,32 @@ export default defineConfig([
         rules: { 'obsidianmd/no-nodejs-modules': 'error' }
     },
     {
-        files: ['tests/**/*.ts', '*.mjs'],
+        files: ['tests/**/*.ts', '*.mjs', 'scripts/**/*.js'],
         languageOptions: { globals: globals.node },
         rules: {
             'obsidianmd/no-nodejs-modules': 'off',
             'obsidianmd/prefer-active-doc': 'off',
             'no-restricted-imports': 'off',
             '@typescript-eslint/no-restricted-imports': 'off'
+        }
+    },
+    {
+        files: ['tests/**/*.ts'],
+        rules: {
+            'no-restricted-properties': [
+                'error',
+                { object: 'describe', property: 'only', message: 'Do not commit describe.only()' },
+                { object: 'it', property: 'only', message: 'Do not commit it.only()' },
+                { object: 'test', property: 'only', message: 'Do not commit test.only()' }
+            ]
+        }
+    },
+    {
+        // Build and release tooling runs in Node, not in Obsidian: it reports to the terminal and owns the test vault's paths
+        files: ['*.mjs', 'scripts/**/*.js'],
+        rules: {
+            'obsidianmd/rule-custom-message': 'off',
+            'obsidianmd/hardcoded-config-path': 'off'
         }
     }
 ]);

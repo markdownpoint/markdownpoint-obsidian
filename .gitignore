@@ -7,7 +7,6 @@ CLAUDE.md
 /CONTINUOUS-DRAFT-DESIGN.md
 /INTEGRATION.md
 node_modules/
-dist/
 coverage/
 *.tsbuildinfo
 /main.js
