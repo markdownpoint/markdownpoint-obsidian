@@ -341,6 +341,9 @@
 
 .markdownpoint-thumbnail-region {
   fill: color-mix(in srgb, currentColor 38%, var(--background-primary));
+  stroke: var(--background-primary);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
 }
 
 .markdownpoint-outline-row:hover .markdownpoint-thumbnail-region,
