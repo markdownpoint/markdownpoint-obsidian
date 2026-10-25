@@ -22,6 +22,7 @@ export const ptBR: Translations = {
     name: 'MarkdownPoint',
     outline: 'Sumário',
     sidebar: 'Barra lateral',
+    sidebarDescription: 'Mostrar o sumário na barra lateral esquerda ou direita. Se usar o Notebook Navigator, mantenha-o à direita.',
     left: 'Esquerda',
     right: 'Direita',
     emptySlide: 'Slide sem título',

@@ -120,7 +120,7 @@ Work on layout, images, animation and presenting there. Return to `slides.md` fo
 
 ## Settings and hotkeys
 
-Use **Settings → MarkdownPoint → Sidebar** to put the outline on the left or right. Show and hide that sidebar with Obsidian’s own controls.
+Use **Settings → MarkdownPoint → Sidebar** to put the outline on the left or right. If you use Notebook Navigator, keep the outline on the right. Show and hide that sidebar with Obsidian’s own controls.
 
 The plugin sets no hotkeys. Assign your own under **Settings → Hotkeys**:
 

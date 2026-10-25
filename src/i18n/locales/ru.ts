@@ -22,6 +22,8 @@ export const ru: Translations = {
     name: 'MarkdownPoint',
     outline: 'Структура',
     sidebar: 'Боковая панель',
+    sidebarDescription:
+        'Показывать структуру в левой или правой боковой панели. Если вы используете Notebook Navigator, оставьте её справа.',
     left: 'Левая',
     right: 'Правая',
     emptySlide: 'Слайд без названия',

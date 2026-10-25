@@ -22,6 +22,8 @@ export const fa: Translations = {
     name: 'MarkdownPoint',
     outline: 'نمای کلی',
     sidebar: 'نوار کناری',
+    sidebarDescription:
+        'نمای کلی را در نوار کناری چپ یا راست نمایش دهید. اگر از Notebook Navigator استفاده می‌کنید، نمای کلی را در سمت راست نگه دارید.',
     left: 'چپ',
     right: 'راست',
     emptySlide: 'اسلاید بی‌عنوان',

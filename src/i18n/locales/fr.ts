@@ -22,6 +22,8 @@ export const fr: Translations = {
     name: 'MarkdownPoint',
     outline: 'Plan',
     sidebar: 'Barre latérale',
+    sidebarDescription:
+        'Afficher le plan dans la barre latérale gauche ou droite. Si vous utilisez Notebook Navigator, gardez-le à droite.',
     left: 'Gauche',
     right: 'Droite',
     emptySlide: 'Diapositive sans titre',

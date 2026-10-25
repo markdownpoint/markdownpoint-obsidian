@@ -22,6 +22,7 @@ export const zhTW: Translations = {
     name: 'MarkdownPoint',
     outline: '大綱',
     sidebar: '側邊欄',
+    sidebarDescription: '在左側或右側的側邊欄中顯示大綱。使用 Notebook Navigator 時，請將大綱保留在右側。',
     left: '左側',
     right: '右側',
     emptySlide: '未命名投影片',

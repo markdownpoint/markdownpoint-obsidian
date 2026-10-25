@@ -22,6 +22,7 @@ export const ja: Translations = {
     name: 'MarkdownPoint',
     outline: 'アウトライン',
     sidebar: 'サイドバー',
+    sidebarDescription: 'アウトラインを左または右のサイドバーに表示します。Notebook Navigatorを使う場合は右のままにしてください。',
     left: '左',
     right: '右',
     emptySlide: 'タイトルなしのスライド',

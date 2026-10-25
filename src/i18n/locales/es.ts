@@ -22,6 +22,7 @@ export const es: Translations = {
     name: 'MarkdownPoint',
     outline: 'Esquema',
     sidebar: 'Barra lateral',
+    sidebarDescription: 'Muestra el esquema en la barra lateral izquierda o derecha. Si usas Notebook Navigator, mantenlo a la derecha.',
     left: 'Izquierda',
     right: 'Derecha',
     emptySlide: 'Diapositiva sin título',

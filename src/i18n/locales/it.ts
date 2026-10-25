@@ -22,6 +22,7 @@ export const it: Translations = {
     name: 'MarkdownPoint',
     outline: 'Struttura',
     sidebar: 'Barra laterale',
+    sidebarDescription: 'Mostra la struttura nella barra laterale sinistra o destra. Se usi Notebook Navigator, tienila a destra.',
     left: 'Sinistra',
     right: 'Destra',
     emptySlide: 'Diapositiva senza titolo',

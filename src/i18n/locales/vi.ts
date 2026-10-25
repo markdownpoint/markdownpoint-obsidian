@@ -22,6 +22,7 @@ export const vi: Translations = {
     name: 'MarkdownPoint',
     outline: 'Đề cương',
     sidebar: 'Thanh bên',
+    sidebarDescription: 'Hiển thị đề cương ở thanh bên trái hoặc phải. Nếu dùng Notebook Navigator, hãy giữ đề cương ở bên phải.',
     left: 'Trái',
     right: 'Phải',
     emptySlide: 'Trang chiếu chưa có tiêu đề',

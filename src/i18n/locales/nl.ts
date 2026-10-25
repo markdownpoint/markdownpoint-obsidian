@@ -22,6 +22,7 @@ export const nl: Translations = {
     name: 'MarkdownPoint',
     outline: 'Overzicht',
     sidebar: 'Zijbalk',
+    sidebarDescription: 'Toon het overzicht in de linker- of rechterzijbalk. Houd het rechts als je Notebook Navigator gebruikt.',
     left: 'Links',
     right: 'Rechts',
     emptySlide: 'Dia zonder titel',

@@ -22,6 +22,7 @@ export const pt: Translations = {
     name: 'MarkdownPoint',
     outline: 'Índice',
     sidebar: 'Barra lateral',
+    sidebarDescription: 'Mostrar o índice na barra lateral esquerda ou direita. Se utilizar o Notebook Navigator, mantenha-o à direita.',
     left: 'Esquerda',
     right: 'Direita',
     emptySlide: 'Diapositivo sem título',

@@ -22,6 +22,7 @@ export const ko: Translations = {
     name: 'MarkdownPoint',
     outline: '개요',
     sidebar: '사이드바',
+    sidebarDescription: '개요를 왼쪽 또는 오른쪽 사이드바에 표시합니다. Notebook Navigator를 사용하는 경우 오른쪽에 두세요.',
     left: '왼쪽',
     right: '오른쪽',
     emptySlide: '제목 없는 슬라이드',

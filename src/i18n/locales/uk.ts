@@ -22,6 +22,8 @@ export const uk: Translations = {
     name: 'MarkdownPoint',
     outline: 'Вміст',
     sidebar: 'Бічна панель',
+    sidebarDescription:
+        'Показувати вміст у лівій або правій бічній панелі. Якщо ви використовуєте Notebook Navigator, залиште його праворуч.',
     left: 'Ліва',
     right: 'Права',
     emptySlide: 'Слайд без заголовка',

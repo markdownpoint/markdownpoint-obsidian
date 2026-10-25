@@ -20,6 +20,7 @@ export const en = {
     name: 'MarkdownPoint',
     outline: 'Outline',
     sidebar: 'Sidebar',
+    sidebarDescription: 'Show the outline in the left or right sidebar. If you use Notebook Navigator, keep it on the right.',
     left: 'Left',
     right: 'Right',
     emptySlide: 'Untitled slide',

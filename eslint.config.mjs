@@ -20,8 +20,12 @@ import { defineConfig } from 'eslint/config';
 import obsidianmd from 'eslint-plugin-obsidianmd';
 import globals from 'globals';
 
-// "What’s new" is the name of a dialog, so a sentence naming it keeps its capital
-const sentenceCase = { brands: ['MarkdownPoint', 'Obsidian'], ignoreRegex: ['the What’s new dialog'], enforceCamelCaseLower: true };
+const sentenceCase = {
+    brands: ['MarkdownPoint', 'Notebook Navigator', 'Obsidian'],
+    // "What’s new" is the name of a dialog, so a sentence naming it keeps its capital
+    ignoreRegex: ['the What’s new dialog'],
+    enforceCamelCaseLower: true
+};
 
 export default defineConfig([
     { ignores: ['main.js', 'coverage/**', 'test-vault/**', '.verification/**'] },

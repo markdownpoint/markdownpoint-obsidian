@@ -22,6 +22,8 @@ export const id: Translations = {
     name: 'MarkdownPoint',
     outline: 'Kerangka',
     sidebar: 'Bilah samping',
+    sidebarDescription:
+        'Tampilkan kerangka di bilah samping kiri atau kanan. Jika menggunakan Notebook Navigator, biarkan kerangka di kanan.',
     left: 'Kiri',
     right: 'Kanan',
     emptySlide: 'Slide tanpa judul',

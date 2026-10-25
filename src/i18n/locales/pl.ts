@@ -22,6 +22,7 @@ export const pl: Translations = {
     name: 'MarkdownPoint',
     outline: 'Konspekt',
     sidebar: 'Pasek boczny',
+    sidebarDescription: 'Pokazuje konspekt na lewym lub prawym pasku bocznym. Jeśli używasz Notebook Navigator, zostaw go po prawej.',
     left: 'Lewy',
     right: 'Prawy',
     emptySlide: 'Slajd bez tytułu',

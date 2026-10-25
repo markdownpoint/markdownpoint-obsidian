@@ -22,6 +22,8 @@ export const de: Translations = {
     name: 'MarkdownPoint',
     outline: 'Gliederung',
     sidebar: 'Seitenleiste',
+    sidebarDescription:
+        'Die Gliederung in der linken oder rechten Seitenleiste anzeigen. Wenn du Notebook Navigator verwendest, behalte sie rechts.',
     left: 'Links',
     right: 'Rechts',
     emptySlide: 'Folie ohne Titel',

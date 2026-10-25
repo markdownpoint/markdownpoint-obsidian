@@ -22,6 +22,7 @@ export const th: Translations = {
     name: 'MarkdownPoint',
     outline: 'โครงเรื่อง',
     sidebar: 'แถบด้านข้าง',
+    sidebarDescription: 'แสดงโครงเรื่องในแถบด้านข้างซ้ายหรือขวา หากใช้ Notebook Navigator ให้คงโครงเรื่องไว้ทางขวา',
     left: 'ซ้าย',
     right: 'ขวา',
     emptySlide: 'สไลด์ไม่มีชื่อเรื่อง',

@@ -22,6 +22,7 @@ export const tr: Translations = {
     name: 'MarkdownPoint',
     outline: 'Anahat',
     sidebar: 'Kenar çubuğu',
+    sidebarDescription: 'Anahattı sol veya sağ kenar çubuğunda göster. Notebook Navigator kullanıyorsan sağda tut.',
     left: 'Sol',
     right: 'Sağ',
     emptySlide: 'Başlıksız slayt',

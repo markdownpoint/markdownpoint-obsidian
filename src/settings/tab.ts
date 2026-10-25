@@ -44,6 +44,7 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
         return [
             {
                 name: uiText.sidebar,
+                desc: uiText.sidebarDescription,
                 control: {
                     type: 'dropdown',
                     key: 'outlineSide',

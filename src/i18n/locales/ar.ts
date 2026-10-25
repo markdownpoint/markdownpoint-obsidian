@@ -22,6 +22,8 @@ export const ar: Translations = {
     name: 'MarkdownPoint',
     outline: 'المخطط التفصيلي',
     sidebar: 'الشريط الجانبي',
+    sidebarDescription:
+        'إظهار المخطط التفصيلي في الشريط الجانبي الأيسر أو الأيمن. عند استخدام Notebook Navigator، أبقِ المخطط التفصيلي على اليمين.',
     left: 'الأيسر',
     right: 'الأيمن',
     emptySlide: 'شريحة بدون عنوان',
