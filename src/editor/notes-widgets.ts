@@ -67,7 +67,13 @@ export function notesDecorations(state: EditorState, slots: readonly SlideNotes[
     if (slot.field) {
       ranges.push(Decoration.replace({ block: true, inclusiveStart: !entryPoints.has(slot.at), inclusiveEnd: false, widget })
         .range(slot.at, open ? slot.field.contentFrom : slot.field.to));
-      if (open) ranges.push(...writingAreaDecorations(state, slot.field, focused, uiText.notes.label, "markdownpoint-notes-field"));
+      if (open) {
+        // The disclosure shares a line block with the first note line, which hides that line from Obsidian's per-line text direction.
+        if (slot.field.contentFrom < slot.field.to || slot.field.to === state.doc.length) {
+          ranges.push(Decoration.line({ attributes: { dir: "auto" } }).range(slot.field.contentFrom));
+        }
+        ranges.push(...writingAreaDecorations(state, slot.field, focused, uiText.notes.label, "markdownpoint-notes-field"));
+      }
     } else ranges.push(Decoration.widget({ block: true, side: slot.at < state.doc.length ? -1 : 1, widget }).range(slot.at));
   }
   return ranges;

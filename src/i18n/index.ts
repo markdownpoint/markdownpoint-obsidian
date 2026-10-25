@@ -16,12 +16,37 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { ar } from "./locales/ar.ts";
+import { de } from "./locales/de.ts";
 import { en } from "./locales/en.ts";
+import { es } from "./locales/es.ts";
+import { fa } from "./locales/fa.ts";
+import { fr } from "./locales/fr.ts";
+import { id } from "./locales/id.ts";
+import { it } from "./locales/it.ts";
+import { ja } from "./locales/ja.ts";
+import { ko } from "./locales/ko.ts";
+import { nl } from "./locales/nl.ts";
+import { pl } from "./locales/pl.ts";
+import { ptBR } from "./locales/pt-BR.ts";
+import { pt } from "./locales/pt.ts";
+import { ru } from "./locales/ru.ts";
+import { th } from "./locales/th.ts";
+import { tr } from "./locales/tr.ts";
+import { uk } from "./locales/uk.ts";
+import { vi } from "./locales/vi.ts";
+import { zhTW } from "./locales/zh-TW.ts";
+import { zh } from "./locales/zh.ts";
 
 /** Every locale supplies the English catalog's complete set of messages. */
 export type Translations = typeof en;
 
-const catalogs = new Map<string, Translations>([["en", en]]);
+/** Keyed by Obsidian's language codes; `zh` is Simplified Chinese. */
+const catalogs = new Map<string, Translations>([
+  ["ar", ar], ["de", de], ["en", en], ["es", es], ["fa", fa], ["fr", fr], ["id", id], ["it", it], ["ja", ja], ["ko", ko],
+  ["nl", nl], ["pl", pl], ["pt", pt], ["pt-BR", ptBR], ["ru", ru], ["th", th], ["tr", tr], ["uk", uk], ["vi", vi],
+  ["zh", zh], ["zh-TW", zhTW],
+]);
 
 export function getTranslations(language: string): Translations {
   return catalogs.get(language) ?? en;

@@ -18,8 +18,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { registerHooks } from "node:module";
-import { transformSync } from "esbuild";
+import "./support/editor-hooks.ts";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { editorInfoField, editorLivePreviewField } from "./support/obsidian-fields.ts";
@@ -29,18 +28,6 @@ import { ImageSpace, setImageSpacing } from "../src/editor/image-spacing.ts";
 import { NotesUi } from "../src/settings/notes-ui.ts";
 import type { PresentationReader } from "../src/presentation/reader.ts";
 
-// Parameter properties need transformation; the production bundle uses esbuild too.
-registerHooks({
-  resolve(specifier, context, next) {
-    return specifier === "obsidian" ? { url: new URL("./support/obsidian-fields.ts", import.meta.url).href, shortCircuit: true } : next(specifier, context);
-  },
-  load(url, context, next) {
-    const result = next(url, context);
-    if (!url.endsWith(".ts") || result.source == null) return result;
-    const source = typeof result.source === "string" ? result.source : new TextDecoder().decode(result.source);
-    return { ...result, format: "module", source: transformSync(source, { loader: "ts", target: "esnext", format: "esm" }).code };
-  },
-});
 const { PresentationEditor } = await import("../src/editor/presentation-editor.ts");
 
 function spacers(state: EditorState): { at: number; height: number }[] {

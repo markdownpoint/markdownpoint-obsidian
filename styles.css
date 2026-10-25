@@ -75,7 +75,7 @@
   background: transparent;
   box-shadow: none;
   color: var(--text-normal);
-  text-align: left;
+  text-align: start;
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -239,7 +239,7 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  text-align: left;
+  text-align: start;
 }
 
 .markdownpoint-notes .markdownpoint-notes-toggle {
@@ -460,7 +460,7 @@
 
 .markdownpoint-layout-caption .markdownpoint-layout-name {
   min-width: 0;
-  text-align: left;
+  text-align: start;
 }
 
 .markdownpoint-layout-shortcut {
