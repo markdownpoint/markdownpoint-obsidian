@@ -52,8 +52,8 @@ test('different lengths and contents are not treated as the same media', async (
 });
 
 test('cancellation closes both streams and releases their readers', async () => {
-    let canceled = 0,
-        checks = 0;
+    let canceled = 0;
+    let checks = 0;
     const endless = () =>
         new ReadableStream<Uint8Array>({
             pull(controller) {
@@ -63,8 +63,8 @@ test('cancellation closes both streams and releases their readers', async () => 
                 canceled++;
             }
         });
-    const first = endless(),
-        second = endless();
+    const first = endless();
+    const second = endless();
     await assert.rejects(
         equalByteStreams(first, second, () => ++checks < 8),
         /canceled/

@@ -25,8 +25,8 @@ import { indexPresentation } from '../src/format/document.ts';
 import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.ts';
 import { clipboardVaultId, CLIPBOARD_VAULT_KEY, clipboardDigest, ownsClipboardCut, CLIPBOARD_CUT_KEY } from '../src/settings/clipboard.ts';
 
-const uuid = '11111111-1111-4111-8111-111111111111',
-    path = 'deck/slides.md';
+const uuid = '11111111-1111-4111-8111-111111111111';
+const path = 'deck/slides.md';
 const companion = JSON.stringify({
     markdownpoint: 1,
     kind: 'presentation',
@@ -36,8 +36,8 @@ const companion = JSON.stringify({
 });
 const markdown = '<!-- slide: one -->\n<!-- text: body -->\nFirst words.\n<!-- slide: two -->\n<!-- text: body -->\nSecond words.\n';
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
-const master = '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111"}',
-    layout = '{"markdownpoint":1,"kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+const master = '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
+const layout = '{"markdownpoint":1,"kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,
@@ -96,9 +96,9 @@ test('Copy captures a complete group in source order and leaves its source untou
 
 test('newer words or companion edits during preparation leave the clipboard untouched', async () => {
     for (const edit of ['markdown', 'companion'] as const) {
-        const { state, host, copier } = setup(),
-            entered = deferred(),
-            resume = deferred();
+        const { state, host, copier } = setup();
+        const entered = deferred();
+        const resume = deferred();
         host.theme = async () => {
             entered.resolve();
             await resume.promise;
@@ -114,9 +114,9 @@ test('newer words or companion edits during preparation leave the clipboard unto
 });
 
 test('a later copy intent supersedes slow earlier preparation', async () => {
-    const { state, host, copier } = setup(),
-        entered = deferred(),
-        resume = deferred();
+    const { state, host, copier } = setup();
+    const entered = deferred();
+    const resume = deferred();
     let calls = 0;
     host.theme = async () => {
         if (++calls === 1) {
@@ -135,10 +135,10 @@ test('a later copy intent supersedes slow earlier preparation', async () => {
 });
 
 test('an in-flight clipboard write finishes before the newer copy writes its result', async () => {
-    const { state, host, copier } = setup(),
-        writing = deferred(),
-        resume = deferred(),
-        secondPrepared = deferred();
+    const { state, host, copier } = setup();
+    const writing = deferred();
+    const resume = deferred();
+    const secondPrepared = deferred();
     host.write = async (_context, encoded) => {
         state.writes.push(encoded);
         if (state.writes.length === 1) {
@@ -167,9 +167,9 @@ test('an in-flight clipboard write finishes before the newer copy writes its res
 
 test('unload or loss of the captured context cancels pending Copy without a write', async () => {
     for (const stop of [false, true]) {
-        const { state, host, copier } = setup(),
-            entered = deferred(),
-            resume = deferred();
+        const { state, host, copier } = setup();
+        const entered = deferred();
+        const resume = deferred();
         host.theme = async () => {
             entered.resolve();
             await resume.promise;
@@ -186,10 +186,10 @@ test('unload or loss of the captured context cancels pending Copy without a writ
 });
 
 test('newer typing while Copy waits for an earlier write is checked when its turn arrives', async () => {
-    const { state, host, copier } = setup(),
-        writing = deferred(),
-        resume = deferred(),
-        prepared = deferred();
+    const { state, host, copier } = setup();
+    const writing = deferred();
+    const resume = deferred();
+    const prepared = deferred();
     host.write = async (_context, encoded) => {
         state.writes.push(encoded);
         writing.resolve();
@@ -212,8 +212,8 @@ test('newer typing while Copy waits for an earlier write is checked when its tur
 });
 
 test('failed or unavailable reads/writes do not poison a later Copy', async () => {
-    const { state, host, copier } = setup(),
-        write = host.write.bind(host);
+    const { state, host, copier } = setup();
+    const write = host.write.bind(host);
     host.write = () => Promise.reject(new Error('Clipboard unavailable'));
     assert.equal((await copier.copy('view', ['one'])).kind, 'failed');
     host.write = write;
@@ -224,8 +224,8 @@ test('failed or unavailable reads/writes do not poison a later Copy', async () =
 });
 
 test('clipboard origin identity persists only in vault-local storage and survives reload', () => {
-    let stored: unknown = null,
-        writes = 0;
+    let stored: unknown = null;
+    let writes = 0;
     const host = {
         loadLocalStorage: (key: string) => {
             assert.equal(key, CLIPBOARD_VAULT_KEY);

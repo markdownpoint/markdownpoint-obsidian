@@ -118,8 +118,8 @@ test('a Theme edited while its documents are read is refused without polling or 
 
 test('replacement or rename of a file cannot validate an earlier file object', async () => {
     for (const replacement of [true, false]) {
-        const { files, host } = vault(),
-            read = host.read;
+        const { files, host } = vault();
+        const read = host.read;
         let changed = false;
         host.read = async file => {
             const source = await read(file);

@@ -64,8 +64,8 @@ export function assignedSlideImages(
     const root = markdownPath.slice(0, markdownPath.lastIndexOf('/') + 1);
     const layout = theme && typeof slide.layout === 'string' ? theme.layouts.get(slide.layout)?.value : undefined;
     const scheme = typeof slide.scheme === 'string' ? slide.scheme : typeof layout?.scheme === 'string' ? layout.scheme : 'light';
-    const schemes = theme?.master.value.schemes,
-        definition = isRecord(schemes) ? schemes[scheme] : undefined;
+    const schemes = theme?.master.value.schemes;
+    const definition = isRecord(schemes) ? schemes[scheme] : undefined;
     const appearance = isRecord(definition) && definition.appearance === 'dark' ? 'dark' : scheme === 'dark' ? 'dark' : 'light';
     const picture = (value: unknown) => (isRecord(value) ? (value[scheme] ?? value[appearance] ?? value.light) : value);
     const objects = new Map<string, ImageObject>();
@@ -77,8 +77,8 @@ export function assignedSlideImages(
                 if (!current) continue;
                 if (override === null) objects.delete(id);
                 else if (isRecord(override)) {
-                    const asset = picture(override.asset),
-                        replacement = typeof asset === 'string';
+                    const asset = picture(override.asset);
+                    const replacement = typeof asset === 'string';
                     objects.set(id, {
                         ...current,
                         raw: { ...current.raw, ...override, type: current.raw.type },
@@ -108,11 +108,11 @@ export function assignedSlideImages(
         ownBackground !== undefined ? ownBackground : isRecord(companion.background) ? companion.background.image : undefined;
     const backgroundPath = imagePath(background, root, true);
     if (backgroundPath) references.push({ path: backgroundPath, name: null, category: 'background' });
-    const pending = [...objects.values()].map(object => ({ object, parent: null as Ancestor | null })),
-        expanded = new Set<string>();
+    const pending = [...objects.values()].map(object => ({ object, parent: null as Ancestor | null }));
+    const expanded = new Set<string>();
     for (let index = 0; index < pending.length; index++) {
-        const { object, parent } = pending[index]!,
-            raw = object.raw;
+        const { object, parent } = pending[index]!;
+        const raw = object.raw;
         if (raw.type === 'image' || raw.type === 'video') {
             const path = imagePath(object.asset, object.scope, object.scope === root);
             if (path)
@@ -132,8 +132,8 @@ export function assignedSlideImages(
         if (cycle) continue;
         const composition = companion.compositions[raw.source];
         if (!isRecord(composition) || !Array.isArray(composition.objects)) continue;
-        const controls = isRecord(composition.controls) ? composition.controls : {},
-            values = isRecord(raw.controls) ? raw.controls : {};
+        const controls = isRecord(composition.controls) ? composition.controls : {};
+        const values = isRecord(raw.controls) ? raw.controls : {};
         const instance = JSON.stringify([raw.source, values]);
         if (expanded.has(instance)) continue;
         expanded.add(instance);
@@ -146,8 +146,8 @@ export function assignedSlideImages(
             pending.push({ object: { raw: member, scope: root, asset, placeholder: bound }, parent: { source: raw.source, parent } });
         }
     }
-    const rank = { background: 0, placeholder: 1, image: 2 },
-        seen = new Set<string>();
+    const rank = { background: 0, placeholder: 1, image: 2 };
+    const seen = new Set<string>();
     return references
         .sort((a, b) => rank[a.category] - rank[b.category])
         .filter(reference => {

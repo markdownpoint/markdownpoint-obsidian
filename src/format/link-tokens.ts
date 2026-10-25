@@ -27,7 +27,7 @@ interface EmphasisMask {
 }
 const emphasisMasks = new WeakMap<Lexer, Map<string, EmphasisMask>>();
 
-/** MDP lets stars separate punctuation from adjacent words, including CJK. */
+/** The MarkdownPoint app lets stars separate punctuation from adjacent words, including CJK. */
 function relaxedStars(source: string): string {
     return source.replace(/(?!\*)[\p{P}\p{S}](?=\*+[^\s\p{P}\p{S}])|(?<=[^\s\p{P}\p{S}]\*+)(?!\*)[\p{P}\p{S}]/gu, char =>
         'a'.repeat(char.length)
@@ -122,9 +122,9 @@ function colorSpan(source: string): { length: number; content: string } | null {
 
 /** An enclosing emphasis delimiter cannot close inside another formatting span. */
 function maskFormatting(source: string, masked: string): EmphasisMask {
-    const offset = masked.length - source.length,
-        pieces: string[] = [],
-        shown: string[] = [];
+    const offset = masked.length - source.length;
+    const pieces: string[] = [];
+    const shown: string[] = [];
     let from = 0;
     for (let at = 0; at < source.length;) {
         const end = literalEnd(source, at);
@@ -144,7 +144,7 @@ function maskFormatting(source: string, masked: string): EmphasisMask {
     return { from: offset, shown: shown.length ? shown.join('') + source.slice(from) : source, mask, stars: relaxedStars(mask) };
 }
 
-/** MDP's extra inline formatting only contributes a container for its words. */
+/** The MarkdownPoint app's extra inline formatting only contributes a container for its words. */
 const grammar = new Marked({
     gfm: true,
     tokenizer: {
@@ -159,8 +159,8 @@ const grammar = new Marked({
             const saved = cache.get(masked);
             const prepared = saved && saved.from <= from ? saved : maskFormatting(source, masked);
             if (prepared !== saved) cache.set(masked, prepared);
-            let shown = prepared.shown.slice(from - prepared.from),
-                mask = prepared.mask;
+            let shown = prepared.shown.slice(from - prepared.from);
+            let mask = prepared.mask;
             if (source[0] === '*') {
                 // Only the opening neighbor is read from source; closing runs use the mask.
                 const opening = /^\*+[^*]?/u.exec(shown)![0];
@@ -171,8 +171,8 @@ const grammar = new Marked({
             }
             const token = Tokenizer.prototype.emStrong.call(this, shown, mask, previous);
             if (!token || shown === source) return token;
-            const raw = source.slice(0, token.raw.length),
-                width = token.type === 'strong' ? 2 : 1;
+            const raw = source.slice(0, token.raw.length);
+            const width = token.type === 'strong' ? 2 : 1;
             const text = raw.slice(width, -width);
             return { ...token, raw, text, tokens: this.lexer.inlineTokens(text) };
         }

@@ -48,14 +48,14 @@ export async function transferSlideAssets(
     current: () => boolean,
     signal: AbortSignal
 ): Promise<TransferredSlides> {
-    const plan = planClipboardAssets(packet.captured),
-        themeFiles = themeAssetPaths(packet.theme);
+    const plan = planClipboardAssets(packet.captured);
+    const themeFiles = themeAssetPaths(packet.theme);
     if (!plan || !themeFiles) throw new Error('Clipboard media references are unreadable');
     if (!current() || signal.aborted) throw new Error('Media transfer canceled');
     if (!plan.files.length && !themeFiles.length)
         return { captured: packet.captured, current: () => current() && !signal.aborted, cleanup: () => Promise.resolve() };
-    const source = presentationFiles(app.vault, packet.origin.path),
-        target = presentationFiles(app.vault, destination.path);
+    const source = presentationFiles(app.vault, packet.origin.path);
+    const target = presentationFiles(app.vault, destination.path);
     if (!source || !target || target.markdown !== destination) throw new Error('Presentation files are missing or ambiguous');
     const sources = await Promise.all([
         app.vault.read(source.markdown),
@@ -92,8 +92,8 @@ export async function transferSlideAssets(
     const check = () => {
         if (!valid()) throw new Error('Presentation or media changed during transfer');
     };
-    const created: { file: TFile; path: string; mtime: number; size: number }[] = [],
-        folders: { folder: TFolder; path: string }[] = [];
+    const created: { file: TFile; path: string; mtime: number; size: number }[] = [];
+    const folders: { folder: TFolder; path: string }[] = [];
     const companionPath = target.companion.path;
     const cleanup = async () => {
         // An edit elsewhere may now use these files. Keep them whenever that ownership is uncertain.
@@ -123,8 +123,8 @@ export async function transferSlideAssets(
         const parts = path.split('/').slice(0, -1);
         for (let i = 1; i <= parts.length; i++) {
             check();
-            const path = parts.slice(0, i).join('/'),
-                existing = app.vault.getAbstractFileByPath(path);
+            const path = parts.slice(0, i).join('/');
+            const existing = app.vault.getAbstractFileByPath(path);
             if (existing instanceof TFolder) continue;
             if (existing) throw new Error('A media folder is occupied by a file');
             const folder = await app.vault.createFolder(path);
@@ -148,8 +148,8 @@ export async function transferSlideAssets(
         if (first.stat.size !== second.stat.size) return false;
         // Vault resource URLs provide local response streams in the editor's own window.
         const reads = await Promise.allSettled([first, second].map(file => ownerWindow.fetch(app.vault.getResourcePath(file), { signal })));
-        const a = reads[0]?.status === 'fulfilled' ? reads[0].value : null,
-            b = reads[1]?.status === 'fulfilled' ? reads[1].value : null;
+        const a = reads[0]?.status === 'fulfilled' ? reads[0].value : null;
+        const b = reads[1]?.status === 'fulfilled' ? reads[1].value : null;
         if (!a?.ok || !b?.ok || !a.body || !b.body) {
             await Promise.allSettled([a?.body?.cancel(), b?.body?.cancel()]);
             throw new Error('A media file could not be read');
@@ -173,8 +173,8 @@ export async function transferSlideAssets(
             hold(file);
         }
         for (const relative of themeFiles) {
-            const original = app.vault.getFileByPath(`${packet.theme.root}/${relative}`),
-                path = `${theme.root}/${relative}`;
+            const original = app.vault.getFileByPath(`${packet.theme.root}/${relative}`);
+            const path = `${theme.root}/${relative}`;
             if (!original) throw new Error('A theme file is missing');
             hold(original);
             const existing = app.vault.getFileByPath(path);
@@ -187,13 +187,13 @@ export async function transferSlideAssets(
             check();
             const before = held.get(original)!;
             const digest = await clipboardDigest(JSON.stringify([relative, before.mtime, before.size]));
-            const category = relative.split('/')[0]!,
-                extension = relative.slice(relative.lastIndexOf('.')).toLowerCase();
+            const category = relative.split('/')[0]!;
+            const extension = relative.slice(relative.lastIndexOf('.')).toLowerCase();
             const base = `${category}/clip-${packet.token}-${digest}`;
             for (let suffix = 0; ; suffix++) {
                 check();
-                const name = `${base}${suffix ? `-${suffix}` : ''}${extension}`,
-                    path = destinationRoot + name;
+                const name = `${base}${suffix ? `-${suffix}` : ''}${extension}`;
+                const path = destinationRoot + name;
                 const existing = app.vault.getAbstractFileByPath(path);
                 if (existing instanceof TFolder) continue;
                 if (existing instanceof TFile) {

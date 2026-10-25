@@ -71,8 +71,8 @@ export class PresentationCreation extends Component {
     }
 
     private async openCreated(file: TFile, current: () => boolean): Promise<void> {
-        const path = file.path,
-            source = await this.app.vault.read(file);
+        const path = file.path;
+        const source = await this.app.vault.read(file);
         if (!current() || file.path !== path || this.app.vault.getFileByPath(path) !== file) return;
         const slide = indexPresentation(source, getFrontMatterInfo(source).contentStart)?.slides[0];
         const at = slide?.blocks.find(block => block.kind === 'text')?.contentFrom ?? slide?.markerTo ?? 0;
@@ -231,8 +231,8 @@ class CreationModal extends Modal {
         form.addEventListener('submit', event => {
             event.preventDefault();
             if (this.busy) return;
-            const cleaned = presentationFolderName(name.value),
-                destination = folders.find(entry => entry.path === folder.value);
+            const cleaned = presentationFolderName(name.value);
+            const destination = folders.find(entry => entry.path === folder.value);
             if (!cleaned) {
                 error.setText(uiText.presentations.invalidName);
                 name.focus();

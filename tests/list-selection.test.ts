@@ -196,8 +196,8 @@ test('items moved step past the one beside them, keeping their gaps, and those a
     assert.equal(stepped([7, 8], 'down'), null);
     assert.equal(stepped([], 'up'), null);
     // A list that shows some of its items steps among those, and every other item keeps its place.
-    const order = ['a', 'b', 'c', 'd', 'e'],
-        shown = ['a', 'c', 'e'];
+    const order = ['a', 'b', 'c', 'd', 'e'];
+    const shown = ['a', 'c', 'e'];
     assert.deepEqual(steppedOrder(order, shown, ['c'], 'down'), ['a', 'b', 'e', 'd', 'c']);
     assert.deepEqual(steppedOrder(order, shown, ['c'], 'up'), ['c', 'b', 'a', 'd', 'e']);
     assert.deepEqual(

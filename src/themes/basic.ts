@@ -33,19 +33,19 @@ import textImage from './basic/text-image.json' with { type: 'json' };
 import title from './basic/title.json' with { type: 'json' };
 
 const layouts = {
-    blank: blank,
+    blank,
     'content-with-header': contentWithHeader,
-    content: content,
+    content,
     'image-text-with-header': imageTextWithHeader,
     'image-text': imageText,
     'image-with-header': imageWithHeader,
-    image: image,
+    image,
     'one-liner': oneLiner,
-    section: section,
+    section,
     'solid-color': solidColor,
     'text-image-with-header': textImageWithHeader,
     'text-image': textImage,
-    title: title
+    title
 };
 
 /** Published Basic theme, adapted to the current format; provenance is in THIRD_PARTY_NOTICES.md. */

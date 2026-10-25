@@ -160,8 +160,8 @@ const definition = (id: string): PreparedPart => ({
 });
 
 test('a group and its new definitions enter different source positions without replacing intervening content', () => {
-    const held = definition('held'),
-        incoming = definition('card');
+    const held = definition('held');
+    const incoming = definition('card');
     const source = block('a') + block('b') + held.markdown;
     const companion = '{"slides":{"a":{},"b":{}},"compositions":{"held":{"keep":true}},"future":9007199254740995}';
     const result = planSlideInsertion(source, indexPresentation(source, 0)!, companion, [prepared('copy')], 'a', 0, [incoming])!;

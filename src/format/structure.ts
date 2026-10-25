@@ -41,9 +41,9 @@ const finite = (value: unknown): value is number => typeof value === 'number' &&
 /** Resolve only directly framed, flat objects. Unknown geometry stays out of the schematic. */
 export function slideStructure(record: unknown, theme: EmbeddedTheme | null): SlideStructure | null {
     if (!theme || !isRecord(record) || typeof record.layout !== 'string') return null;
-    const master = theme.master.value,
-        layout = theme.layouts.get(record.layout)?.value,
-        size = master.size;
+    const master = theme.master.value;
+    const layout = theme.layouts.get(record.layout)?.value;
+    const size = master.size;
     if (!layout || !isRecord(size) || !finite(size.width) || !finite(size.height) || size.width <= 0 || size.height <= 0) return null;
     const objects = new Map<string, Record<string, unknown>>();
     const ownIds = new Set<string>();
@@ -81,7 +81,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
     const regions: StructureRegion[] = [];
     for (const object of objects.values()) {
         const frame = object.frame;
-        // Hierarchy, animation, auto layout and 3D require MDP's renderer. Keep this
+        // Hierarchy, animation, auto layout and 3D require the MarkdownPoint app's renderer. Keep this
         // a source schematic instead of presenting guessed resolved positions.
         if (
             object.hidden === true ||

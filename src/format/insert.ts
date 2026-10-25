@@ -40,8 +40,8 @@ function sourceInsertion(markdown: string, at: number, parts: readonly PreparedP
         const closed = terminateSourceBlock(source, newline);
         return !closed || /\n[ \t]*\r?\n$/.test(closed) ? closed : closed + newline;
     };
-    const prefix = markdown.slice(0, at),
-        closed = separated(prefix);
+    const prefix = markdown.slice(0, at);
+    const closed = separated(prefix);
     let from = at;
     if (closed !== prefix) {
         from = 0;

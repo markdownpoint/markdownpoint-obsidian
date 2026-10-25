@@ -32,6 +32,7 @@ export default defineConfig([
         rules: {
             '@typescript-eslint/no-explicit-any': 'error',
             '@typescript-eslint/consistent-type-imports': 'error',
+            'one-var': ['error', 'never'],
             'obsidianmd/prefer-file-manager-trash-file': 'error',
             'obsidianmd/ui/sentence-case': ['error', sentenceCase]
         }

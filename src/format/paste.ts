@@ -50,8 +50,8 @@ export function prepareClipboardPaste(
     mint: () => string,
     restoreCut = false
 ): CapturedSlides | null {
-    const slides = CompanionDocument.read(companion),
-        definitions = CompanionDocument.ensure(companion, 'compositions');
+    const slides = CompanionDocument.read(companion);
+    const definitions = CompanionDocument.ensure(companion, 'compositions');
     if (!slides || !definitions) return null;
     const held: CapturedPart[] = [];
     for (const part of document.compositions) {

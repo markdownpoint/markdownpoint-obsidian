@@ -194,7 +194,6 @@ export default class MarkdownPointPlugin extends Plugin {
         this.slideCreation = this.addChild(
             new SlideCreation(this.app, this.reader, this.presentationEditor, this.sharedSettings, id => {
                 this.outline.select({ kind: 'select', id });
-                this.outline.activate(id);
                 this.refreshOutline();
             })
         );

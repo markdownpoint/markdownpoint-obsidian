@@ -95,9 +95,9 @@ test('only declared media controls authorize files, not text that resembles a pa
 
 test('remapping replaces only asset values and retains raw precision, escapes, words and unrelated metadata', () => {
     const record = String.raw`{ "unknown":900719925474099312345, "escape":"\u00e9", "description":"media/picture.png", "objects":[{"id":"photo","type":"image","asset":"media/picture.png"}], "extra":{"asset":"media/unrelated.png"} }`;
-    const value = captured(record),
-        before = JSON.stringify(value),
-        plan = planClipboardAssets(value)!;
+    const value = captured(record);
+    const before = JSON.stringify(value);
+    const plan = planClipboardAssets(value)!;
     assert.deepEqual(plan.files, ['media/picture.png']);
     const changed = plan.remap(new Map([['media/picture.png', 'media/copied/picture.png']]))!;
     assert.equal(changed.slides[0]!.record, record.replace('"asset":"media/picture.png"', '"asset":"media/copied/picture.png"'));

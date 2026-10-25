@@ -78,8 +78,8 @@ export class MarkdownPointOutlineView extends ItemView {
             if (modifier && !event.shiftKey && ['c', 'x', 'v'].includes(key) && this.delegate.state().presentation) {
                 event.preventDefault();
                 event.stopPropagation();
-                const state = this.delegate.state(),
-                    window = this.contentEl.ownerDocument.defaultView!;
+                const state = this.delegate.state();
+                const window = this.contentEl.ownerDocument.defaultView!;
                 if (key === 'v') this.delegate.pasteSlides(state.selection.cursor ?? state.activeSlideId, window);
                 else if (state.selection.selected.size) {
                     if (key === 'c') this.delegate.copySlides(state.selection, window);
@@ -127,10 +127,6 @@ export class MarkdownPointOutlineView extends ItemView {
     onOpen(): Promise<void> {
         this.contentEl.addClass('markdownpoint-outline');
         this.render();
-        return Promise.resolve();
-    }
-
-    onClose(): Promise<void> {
         return Promise.resolve();
     }
 

@@ -26,8 +26,8 @@ import { EditorState } from '@codemirror/state';
 import { history, undoDepth } from '@codemirror/commands';
 import { imageSpacing, imageSpaceNeeded, setImageSpacing } from '../src/editor/image-spacing.ts';
 
-const path = 'Talks/Field notes/slides.md',
-    root = 'Talks/Field notes/';
+const path = 'Talks/Field notes/slides.md';
+const root = 'Talks/Field notes/';
 const master = {
     schemes: { evening: { appearance: 'dark' } },
     objects: [{ id: 'logo', type: 'image', asset: { light: 'art/light.svg', dark: 'art/dark.svg' } }]

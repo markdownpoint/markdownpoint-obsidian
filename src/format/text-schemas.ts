@@ -50,7 +50,7 @@ function applyTypes(types: Map<string, string>, record: Record<string, unknown>,
         }
         if (!isRecord(object) || typeof object.type !== 'string' || (isRecord(record.overrides) && Object.hasOwn(record.overrides, id)))
             return false;
-        // MDP keeps the inherited object when a lower level collides with its ID.
+        // The MarkdownPoint app keeps the inherited object when a lower level collides with its ID.
         if (!inherited.has(id)) types.set(id, object.type);
     }
     return true;
@@ -86,7 +86,7 @@ export function copyTextSchemas(
     for (const block of part.blocks) {
         if (block.kind !== 'text' || block.id === null) continue;
         const type = types.get(block.id);
-        // Instance controls and retained unbound blocks use rich text in MDP too.
+        // Instance controls and retained unbound blocks use rich text in the MarkdownPoint app too.
         schemas.set(block.id, type === 'table' || type === 'chart' ? 'table' : 'rich-text');
     }
     return schemas;

@@ -75,8 +75,8 @@ export function selectionAfter<Id>(order: readonly Id[], state: ListSelection<Id
         case 'step': {
             const to = order.indexOf(action.to);
             if (at < 0 || to < 0 || to === at) return state;
-            const way = Math.sign(to - at),
-                selected = new Set(state.selected);
+            const way = Math.sign(to - at);
+            const selected = new Set(state.selected);
             // From a selected item onto another selected item: the items left behind go, and the cursor goes no further.
             if (state.selected.has(order[at]!) && state.selected.has(order[to]!)) {
                 for (let index = at; index !== to; index += way) selected.delete(order[index]!);

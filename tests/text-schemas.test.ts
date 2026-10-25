@@ -120,8 +120,8 @@ test('definitions use their own types while instance controls and unbound text r
 });
 
 test('missing or mismatched Theme data and malformed object structures refuse schema resolution', () => {
-    const part = fields(['title']),
-        record = { layout: 'title' };
+    const part = fields(['title']);
+    const record = { layout: 'title' };
     assert.equal(copyTextSchemas(part, 'slide', record, null), null);
     for (const badTheme of [
         { ...theme, layoutKey: 'other' },

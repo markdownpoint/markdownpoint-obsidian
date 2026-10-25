@@ -24,8 +24,8 @@ const punctuation = /\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])/g;
 const decode = (value: string): string => decodeHTMLStrict(value.replace(punctuation, '$1'));
 
 function columns(source: string): number {
-    const line = source.trim(),
-        separators: number[] = [];
+    const line = source.trim();
+    const separators: number[] = [];
     for (let index = 0; index < line.length; index++) {
         if (line[index] === '\\') index++;
         else if (line[index] === '|') separators.push(index);

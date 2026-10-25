@@ -137,9 +137,9 @@ export class SlideMenus extends Component {
         if (!section) {
             // Empty space belongs to the preceding rendered section; top padding uses
             // the first one. Section/composition text is excluded by the source target.
-            let top = -Infinity,
-                first: HTMLElement | null = null,
-                firstTop = Infinity;
+            let top = -Infinity;
+            let first: HTMLElement | null = null;
+            let firstTop = Infinity;
             for (const [candidate, context] of this.readingSections) {
                 if (context.sourcePath !== owner.file.path || !candidate.isConnected || !container.contains(candidate)) continue;
                 const bounds = candidate.getBoundingClientRect();

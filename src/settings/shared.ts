@@ -44,8 +44,8 @@ export class SharedSettings {
     }
 
     private async read(): Promise<void> {
-        const revision = ++this.revision,
-            loaded = await this.host.loadData();
+        const revision = ++this.revision;
+        const loaded = await this.host.loadData();
         if (revision !== this.revision) return;
         this.apply(isRecord(loaded) ? loaded : {});
     }

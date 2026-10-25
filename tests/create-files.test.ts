@@ -37,8 +37,8 @@ const contents = new Map([
 ]);
 
 function vault() {
-    const nodes = new Map<string, File | Folder>([['', { path: '', children: [] }]]),
-        writes: string[] = [];
+    const nodes = new Map<string, File | Folder>([['', { path: '', children: [] }]]);
+    const writes: string[] = [];
     let clock = 0;
     const state: { beforeWrite: (path: string) => void } = { beforeWrite: () => undefined };
     const parent = (path: string) => nodes.get(path.slice(0, Math.max(0, path.lastIndexOf('/')))) as Folder;

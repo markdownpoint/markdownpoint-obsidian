@@ -39,27 +39,27 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
     return ViewPlugin.define(view => {
         const host = view.scrollDOM.createDiv({ cls: 'markdownpoint-slide-tools-layer' });
         const columns = new Map<string, HTMLElement>();
-        let active = true,
-            pendingSpacing = false;
+        let active = true;
+        let pendingSpacing = false;
         const measure = () =>
             view.requestMeasure({
                 key: host,
                 read: () => {
-                    const available = readState(view),
-                        bounds = host.getBoundingClientRect(),
-                        content = view.contentDOM.getBoundingClientRect();
+                    const available = readState(view);
+                    const bounds = host.getBoundingClientRect();
+                    const content = view.contentDOM.getBoundingClientRect();
                     const ends = new Map(
                         [...view.contentDOM.querySelectorAll<HTMLElement>('.markdownpoint-slide-image-space[data-slide-end]')].map(
                             element => [element.dataset.slideEnd!, element]
                         )
                     );
-                    const current = view.state.field(imageSpacing),
-                        heights = new Map(current.id === available.id ? current.heights : []);
+                    const current = view.state.field(imageSpacing);
+                    const heights = new Map(current.id === available.id ? current.heights : []);
                     for (const id of heights.keys()) if (!available.slides.get(id)?.images.length) heights.delete(id);
                     const items: { id: string; chrome: SlideChrome; top: number; right: number }[] = [];
                     for (const boundary of view.contentDOM.querySelectorAll<HTMLElement>('.markdownpoint-slide-boundary[data-slide]')) {
-                        const id = boundary.dataset.slide!,
-                            chrome = available.slides.get(id);
+                        const id = boundary.dataset.slide!;
+                        const chrome = available.slides.get(id);
                         if (!chrome || (!chrome.structure && !chrome.images.length)) continue;
                         let next = boundary.nextElementSibling;
                         while (
@@ -71,8 +71,8 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                             (next?.matches('.markdownpoint-field-header')
                                 ? next.getBoundingClientRect().top
                                 : boundary.getBoundingClientRect().bottom) - bounds.top;
-                        const column = columns.get(id),
-                            height = column?.getBoundingClientRect().height ?? 0;
+                        const column = columns.get(id);
+                        const height = column?.getBoundingClientRect().height ?? 0;
                         items.push({ id, chrome, top, right: bounds.right - content.right });
                         const end = ends.get(id);
                         if (chrome.images.length && column && end) {

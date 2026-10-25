@@ -60,8 +60,8 @@ export async function creationThemes(vault: Vault): Promise<CreationTheme[]> {
     const masters = vault.getFiles().filter(file => file.name === 'master.json' && file.parent?.parent?.name === 'themes');
     const themes = await Promise.all(
         masters.map(async file => {
-            const folder = file.parent!,
-                theme = await readCreationTheme(vault, folder);
+            const folder = file.parent!;
+            const theme = await readCreationTheme(vault, folder);
             if (!theme) return null;
             const cover = vault.getFileByPath(`${folder.path}/previews/cover.jpg`);
             return {

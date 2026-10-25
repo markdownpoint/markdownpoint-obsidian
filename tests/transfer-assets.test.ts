@@ -24,20 +24,20 @@ import { readEmbeddedTheme } from '../src/presentation/theme-reader.ts';
 import { decodeSlideClipboard, encodeSlideClipboard } from '../src/format/clipboard.ts';
 import { ThemeArtworkMismatch, transferSlideAssets } from '../src/presentation/transfer-assets.ts';
 
-const sourceId = '11111111-1111-4111-8111-111111111111',
-    targetId = '22222222-2222-4222-8222-222222222222';
-const themeId = '33333333-3333-4333-8333-333333333333',
-    token = '44444444-4444-4444-8444-444444444444';
+const sourceId = '11111111-1111-4111-8111-111111111111';
+const targetId = '22222222-2222-4222-8222-222222222222';
+const themeId = '33333333-3333-4333-8333-333333333333';
+const token = '44444444-4444-4444-8444-444444444444';
 const header = (id: string) => `---\nmarkdownpoint: 1\ndocument: ${id}\n---\n\n`;
 
 async function fixture(media = ['media/photo.png'], artwork = false) {
     let clock = 0;
     const nodes = new Map<string, TFile | TFolder>([['', new TFolder('')]]);
-    const copies: string[] = [],
-        state: { beforeCopy: (path: string) => void; afterTrash: () => void } = {
-            beforeCopy: () => undefined,
-            afterTrash: () => undefined
-        };
+    const copies: string[] = [];
+    const state: { beforeCopy: (path: string) => void; afterTrash: () => void } = {
+        beforeCopy: () => undefined,
+        afterTrash: () => undefined
+    };
     const parentPath = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf('/')));
     const folder = (path: string): TFolder => {
         const held = nodes.get(path);
@@ -152,8 +152,8 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
 
 test('transfer copies media independently and repeated paste reuses its unchanged files', async () => {
     const f = await fixture(['media/photo.png', 'generated/original.png']);
-    const first = await f.transfer(),
-        second = await f.transfer();
+    const first = await f.transfer();
+    const second = await f.transfer();
     assert.equal(f.copies.length, 2);
     assert.equal(first.captured.slides[0]!.record, second.captured.slides[0]!.record);
     assert.equal(first.captured.slides[0]!.markdown, f.packet.captured.slides[0]!.markdown);
@@ -171,8 +171,8 @@ test('an edited destination image is preserved and a new copy is reused on later
     assert.ok(edited instanceof TFile);
     edited.bytes = new Uint8Array([9, 9, 9]);
     edited.stat.mtime++;
-    const second = await f.transfer(),
-        third = await f.transfer();
+    const second = await f.transfer();
+    const third = await f.transfer();
     assert.equal(f.copies.length, 2);
     assert.equal(second.captured.slides[0]!.record, third.captured.slides[0]!.record);
     assert.deepEqual(edited.bytes, new Uint8Array([9, 9, 9]));
@@ -190,12 +190,12 @@ test('failed copying removes only its own unused imports', async () => {
 });
 
 test('successful imports can be rolled back before insertion while newer companion edits keep them', async () => {
-    const first = await fixture(),
-        receipt = await first.transfer();
+    const first = await fixture();
+    const receipt = await first.transfer();
     await receipt.cleanup();
     assert.equal(first.vault.getFolderByPath('target/media'), null);
-    const second = await fixture(),
-        kept = await second.transfer();
+    const second = await fixture();
+    const kept = await second.transfer();
     const companion = second.vault.getFileByPath('target/presentation.mdpoint')!;
     companion.bytes = new TextEncoder().encode('{}');
     companion.stat.mtime++;
@@ -204,8 +204,8 @@ test('successful imports can be rolled back before insertion while newer compani
 });
 
 test('theme artwork with different bytes refuses the transfer without changing either presentation', async () => {
-    const f = await fixture([], true),
-        logo = f.vault.getFileByPath('target/themes/basic/media/logo.svg')!;
+    const f = await fixture([], true);
+    const logo = f.vault.getFileByPath('target/themes/basic/media/logo.svg')!;
     logo.bytes = new Uint8Array([9, 9, 9]);
     logo.stat.mtime++;
     await assert.rejects(f.transfer(), ThemeArtworkMismatch);
@@ -214,15 +214,15 @@ test('theme artwork with different bytes refuses the transfer without changing e
 });
 
 test('a later source or theme edit invalidates the returned insertion guard', async () => {
-    const f = await fixture(),
-        receipt = await f.transfer();
+    const f = await fixture();
+    const receipt = await f.transfer();
     f.vault.getFileByPath('target/themes/basic/title.json')!.stat.mtime++;
     assert.equal(receipt.current(), false);
 });
 
 test('an aborted transfer cannot return an insertable text-only packet', async () => {
-    const f = await fixture([]),
-        controller = new AbortController();
+    const f = await fixture([]);
+    const controller = new AbortController();
     const receipt = await f.transfer(() => true, controller.signal);
     controller.abort();
     assert.equal(receipt.current(), false);
@@ -236,8 +236,8 @@ test('an aborted transfer cannot return an insertable text-only packet', async (
 test('cleanup stops if ownership changes during the companion read or a deletion', async () => {
     const first = await fixture();
     let current = true;
-    const receipt = await first.transfer(() => current),
-        read = first.vault.read;
+    const receipt = await first.transfer(() => current);
+    const read = first.vault.read;
     first.vault.read = async file => {
         const source = await read(file);
         current = false;
@@ -259,10 +259,10 @@ test('cleanup stops if ownership changes during the companion read or a deletion
 
 test('newly copied media remains in the insertion guard through deletion, replacement or editing', async () => {
     for (const change of ['delete', 'replace', 'edit'] as const) {
-        const f = await fixture(),
-            receipt = await f.transfer(),
-            path = f.copies[0]!,
-            file = f.vault.getFileByPath(path)!;
+        const f = await fixture();
+        const receipt = await f.transfer();
+        const path = f.copies[0]!;
+        const file = f.vault.getFileByPath(path)!;
         if (change === 'delete') f.nodes.delete(path);
         else if (change === 'replace') f.nodes.set(path, new TFile(path, file.bytes, file.stat.mtime));
         else file.stat.mtime++;

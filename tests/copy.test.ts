@@ -48,8 +48,8 @@ const prepare = (held: readonly CapturedPart[] = [], value = captured, mint = al
     prepareSlideCopies(value, held, occupied, fields(value), mint);
 
 test('copy groups receive fresh slide identities and new dependencies arrive before their parents', () => {
-    const before = JSON.stringify(captured),
-        result = prepare()!;
+    const before = JSON.stringify(captured);
+    const result = prepare()!;
     assert.ok(result);
     assert.deepEqual(
         result.slides.map(part => part.id),
@@ -111,8 +111,8 @@ test('actual repeated insertion reuses nested definitions after an original defi
         });
         const mint = allocator();
         for (let cycle = 0; cycle < 3; cycle++) {
-            const document = indexPresentation(source, 0)!,
-                records = CompanionDocument.read(companion, 'compositions')!.records;
+            const document = indexPresentation(source, 0)!;
+            const records = CompanionDocument.read(companion, 'compositions')!.records;
             const held = document.compositions.map(part => ({
                 id: part.id,
                 markdown: source.slice(part.from, part.to),

@@ -57,11 +57,11 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
         if (!record) return null;
         definitions.set(part.id, record);
     }
-    const files = new Set<string>(),
-        edits = new Map<CapturedPart, { offset: number; length: number; value: string }[]>();
+    const files = new Set<string>();
+    const edits = new Map<CapturedPart, { offset: number; length: number; value: string }[]>();
     for (const part of [...captured.slides, ...captured.compositions]) {
-        const record = definitions.get(part.id) ?? readJsonObject(part.record),
-            tree = parseTree(part.record);
+        const record = definitions.get(part.id) ?? readJsonObject(part.record);
+        const tree = parseTree(part.record);
         if (!record || !tree) return null;
         const locations: Location[] = [];
         const add = (value: unknown, path: readonly (string | number)[]) => {

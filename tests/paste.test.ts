@@ -24,8 +24,8 @@ import { indexPresentation } from '../src/format/document.ts';
 import { planSlideInsertion } from '../src/format/insert.ts';
 import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.ts';
 
-const uuid = '11111111-1111-4111-8111-111111111111',
-    path = 'deck/slides.md';
+const uuid = '11111111-1111-4111-8111-111111111111';
+const path = 'deck/slides.md';
 const origin = { vault: uuid, path, document: uuid };
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
 const master = '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
@@ -45,8 +45,8 @@ const packet = decodeSlideClipboard(
 )!;
 
 test('same-presentation paste keeps raw fields, notes and metadata while creating independent IDs', () => {
-    let source = markdown,
-        companion = '{"slides":{"first":' + record + '}}';
+    let source = markdown;
+    let companion = '{"slides":{"first":' + record + '}}';
     for (let count = 0; count < 3; count++) {
         const document = indexPresentation(source, 0)!;
         const prepared = prepareClipboardPaste(packet, source, document, companion, new Map(), () => `new-${count}`)!;
@@ -95,8 +95,8 @@ test('same-origin asset references require the original vault, document, path an
 });
 
 test('a locally owned Cut restores identity once; repeated Paste and Undo Cut clone instead', () => {
-    const empty = indexPresentation('', 0)!,
-        companion = '{"slides":{}}';
+    const empty = indexPresentation('', 0)!;
+    const companion = '{"slides":{}}';
     const restored = prepareClipboardPaste(packet, '', empty, companion, new Map([['first', record]]), () => 'copy', true)!;
     assert.equal(restored.slides[0]!.id, 'first');
     const standing = indexPresentation(markdown, 0)!;

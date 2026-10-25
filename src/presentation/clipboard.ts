@@ -134,8 +134,8 @@ export class PresentationClipboard extends Component {
                 const context = { ...initial, view };
                 if (!this.current(context)) return;
                 await this.reader.refreshView(view);
-                const markdown = view.getViewData(),
-                    snapshot = this.reader.snapshot(input.file, markdown);
+                const markdown = view.getViewData();
+                const snapshot = this.reader.snapshot(input.file, markdown);
                 const companion = snapshot && this.reader.companionFor(input.file, snapshot);
                 const metadata = companion && readJsonObject(companion);
                 if (!snapshot || !companion || !metadata || !this.current(context)) return;
@@ -165,11 +165,11 @@ export class PresentationClipboard extends Component {
                             document.file.stat.mtime === document.mtime &&
                             document.file.stat.size === document.size
                     );
-                const samePresentation = sameClipboardPresentation(packet, origin),
-                    controller = new context.window.document.defaultView!.AbortController();
+                const samePresentation = sameClipboardPresentation(packet, origin);
+                const controller = new context.window.document.defaultView!.AbortController();
                 this.transfer = controller;
-                let transferred: TransferredSlides | null = null,
-                    inserted = false;
+                let transferred: TransferredSlides | null = null;
+                let inserted = false;
                 try {
                     if (!samePresentation)
                         transferred = await transferSlideAssets(
@@ -219,8 +219,8 @@ export class PresentationClipboard extends Component {
     }
 
     async cut(input: Omit<CopyContext, 'path'>, ids: Iterable<string>, editingView: () => Promise<MarkdownView | null>): Promise<void> {
-        const selected = [...ids],
-            intent = this.intent + 1;
+        const selected = [...ids];
+        const intent = this.intent + 1;
         const copied = await this.copy(input, selected);
         if (copied.kind !== 'copied' || intent !== this.intent) return;
         let digest: string | null = null;

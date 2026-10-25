@@ -75,8 +75,8 @@ export function captureSlides(
         if (!sources) return null;
         for (const id of sources) {
             if (seen.has(id)) continue;
-            const part = definitions.get(id),
-                record = records?.records.get(id);
+            const part = definitions.get(id);
+            const record = records?.records.get(id);
             if (!part || record === undefined) return null;
             seen.add(id);
             const captured = { id, markdown: markdown.slice(part.from, part.to), record };

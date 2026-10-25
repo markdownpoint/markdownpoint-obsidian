@@ -60,8 +60,8 @@ export class SlideCreation extends Component {
     }
 
     async choose(input: CreationContext, after: string | null): Promise<void> {
-        const revision = ++this.revision,
-            path = input.file.path;
+        const revision = ++this.revision;
+        const path = input.file.path;
         this.picker?.close();
         const current = () =>
             this.running &&
@@ -75,8 +75,8 @@ export class SlideCreation extends Component {
             else await this.reader.refreshClosedFile(input.file);
             if (!current() || (input.view && input.view.file !== input.file)) return;
             const markdown = input.view ? input.view.getViewData() : await this.app.vault.read(input.file);
-            const snapshot = this.reader.snapshot(input.file, markdown),
-                companion = snapshot && this.reader.companionFor(input.file, snapshot);
+            const snapshot = this.reader.snapshot(input.file, markdown);
+            const companion = snapshot && this.reader.companionFor(input.file, snapshot);
             const metadata = companion && readJsonObject(companion);
             const paths = metadata ? embeddedThemePaths(path, metadata, []) : null;
             const folder = paths && this.app.vault.getFolderByPath(paths.root);
@@ -121,10 +121,10 @@ export class SlideCreation extends Component {
         const view = await input.editingView();
         if (!view || !current() || view.file !== input.file) return;
         await this.reader.refreshView(view);
-        const markdown = view.getViewData(),
-            snapshot = this.reader.snapshot(input.file, markdown);
-        const companion = snapshot && this.reader.companionFor(input.file, snapshot),
-            metadata = companion && readJsonObject(companion);
+        const markdown = view.getViewData();
+        const snapshot = this.reader.snapshot(input.file, markdown);
+        const companion = snapshot && this.reader.companionFor(input.file, snapshot);
+        const metadata = companion && readJsonObject(companion);
         if (!current() || !snapshot || !metadata || !companion) return;
         const paths = [chosen.master.path, chosen.layouts.get(key)!.path];
         let themeChanged = false;

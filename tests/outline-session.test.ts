@@ -30,7 +30,7 @@ function deck(ids: readonly string[], path = 'presentation/slides.md'): OutlineP
     };
 }
 
-test('modifier selection uses MDP rules while the writing slide stays in place', () => {
+test('modifier selection follows the MarkdownPoint app while the writing slide stays in place', () => {
     const session = new OutlineSession();
     session.follow(deck(['one', 'two', 'three', 'four', 'five']));
     assert.equal(session.state.activeSlideId, 'one');

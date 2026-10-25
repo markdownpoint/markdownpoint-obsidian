@@ -28,8 +28,8 @@ export function renderThumbnail(container: HTMLElement, structure: SlideStructur
     container.empty();
     container.toggleClass('is-unavailable', !structure);
     if (!structure) return;
-    const document = container.ownerDocument,
-        svg = document.createElementNS(NS, 'svg');
+    const document = container.ownerDocument;
+    const svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${structure.width} ${structure.height}`);
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');

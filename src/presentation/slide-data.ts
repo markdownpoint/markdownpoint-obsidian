@@ -95,8 +95,8 @@ export class SlideData {
                 !isRecord(value.records)
             )
                 continue;
-            const records = recoveryRecords(value.records),
-                compositions = recoveryRecords(value.compositions);
+            const records = recoveryRecords(value.records);
+            const compositions = recoveryRecords(value.compositions);
             if (records.size || compositions.size)
                 this.entries.set(this.key(value.path, value.document), {
                     path: value.path,
@@ -132,8 +132,8 @@ export class SlideData {
         if (!this.running || !presentationCompanionPath(path) || !this.matches(companion, document)) return false;
         const data = CompanionDocument.read(companion);
         const definitions = CompanionDocument.read(companion, 'compositions');
-        const selected = new Set(ids),
-            selectedCompositions = new Set(compositionIds);
+        const selected = new Set(ids);
+        const selectedCompositions = new Set(compositionIds);
         if (
             !data ||
             (!selected.size && !selectedCompositions.size) ||

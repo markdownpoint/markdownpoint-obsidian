@@ -68,12 +68,12 @@ export function reorderSlideSource(
               ? gatheredOrder(blocks, selected, target, action.target.kind === 'section' ? 'after' : action.target.edge)
               : null;
     if (!next || (blocks[0]!.kind === 'section' && next[0] !== blocks[0])) return null;
-    let first = 0,
-        last = blocks.length - 1;
+    let first = 0;
+    let last = blocks.length - 1;
     while (next[first] === blocks[first]) first++;
     while (next[last] === blocks[last]) last--;
-    const from = blocks[first]!.from,
-        to = blocks[last]!.to;
+    const from = blocks[first]!.from;
+    const to = blocks[last]!.to;
     const newline = markdown.includes('\r\n') ? '\r\n' : '\n';
     const insert = next
         .slice(first, last + 1)

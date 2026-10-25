@@ -108,8 +108,8 @@ export class LayoutPicker extends Modal {
 
     private refreshShortcuts(): void {
         for (const button of this.contentEl.querySelectorAll<HTMLButtonElement>('button[data-layout]')) {
-            const key = button.dataset.layout!,
-                digit = layoutDigit(this.assignments, key);
+            const key = button.dataset.layout!;
+            const digit = layoutDigit(this.assignments, key);
             const badge = button.querySelector<HTMLElement>('.markdownpoint-layout-shortcut')!;
             badge.setText(digit ?? '');
             badge.toggleClass('is-unassigned', digit === null);
@@ -121,8 +121,8 @@ export class LayoutPicker extends Modal {
     }
 
     private shortcutMenu(button: HTMLButtonElement, key: string, event?: MouseEvent): void {
-        const menu = new Menu(),
-            selected = layoutDigit(this.assignments, key);
+        const menu = new Menu();
+        const selected = layoutDigit(this.assignments, key);
         const assign = (digit: string | null) => {
             if (!this.active) return;
             menu.hide();

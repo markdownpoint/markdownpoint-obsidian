@@ -110,8 +110,8 @@ export class CompanionDocument {
         if (existing) return existing;
         const root = objectTree(source);
         if (!root || root.children?.some(property => property.children?.[0]?.value === mapName)) return null;
-        const first = root.children?.[0],
-            last = root.children?.at(-1);
+        const first = root.children?.[0];
+        const last = root.children?.at(-1);
         const gap = first ? source.slice(root.offset + 1, first.offset) || ' ' : ' ';
         const changed = applyEdits(source, [
             {
@@ -142,8 +142,8 @@ export class CompanionDocument {
             const start = index;
             while (index < properties.length && updates.get(names[index]!) === null) index++;
             remaining -= index - start;
-            const previous = properties[start - 1],
-                last = properties[index - 1]!;
+            const previous = properties[start - 1];
+            const last = properties[index - 1]!;
             const from = index === properties.length && previous ? previous.offset + previous.length : properties[start]!.offset;
             const to = properties[index]?.offset ?? last.offset + last.length;
             edits.push({ offset: from, length: to - from, content: '' });

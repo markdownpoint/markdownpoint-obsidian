@@ -40,24 +40,24 @@ interface NewField {
 /** Whole columns read before their neighbors; spanning headers precede the columns below them. */
 function writingOrder(fields: readonly NewField[]): NewField[] {
     const positioned = fields.filter((field): field is NewField & { frame: NonNullable<NewField['frame']> } => field.frame !== null);
-    const incoming = positioned.map(() => 0),
-        following = positioned.map(() => [] as number[]);
+    const incoming = positioned.map(() => 0);
+    const following = positioned.map(() => [] as number[]);
     for (let before = 0; before < positioned.length; before++)
         for (let after = 0; after < positioned.length; after++) {
             if (before === after) continue;
-            const a = positioned[before]!.frame,
-                b = positioned[after]!.frame;
+            const a = positioned[before]!.frame;
+            const b = positioned[after]!.frame;
             if (a.y + a.height / 2 <= b.y && Math.max(a.x, b.x) < Math.min(a.x + a.width, b.x + b.width)) {
                 following[before]!.push(after);
                 incoming[after]!++;
             }
         }
-    const ready = positioned.flatMap((_, index) => (incoming[index] === 0 ? [index] : [])),
-        result: NewField[] = [];
+    const ready = positioned.flatMap((_, index) => (incoming[index] === 0 ? [index] : []));
+    const result: NewField[] = [];
     while (ready.length) {
         ready.sort((a, b) => {
-            const left = positioned[a]!,
-                right = positioned[b]!;
+            const left = positioned[a]!;
+            const right = positioned[b]!;
             return left.frame.x - right.frame.x || left.frame.y - right.frame.y || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
         });
         const index = ready.shift()!;

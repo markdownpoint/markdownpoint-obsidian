@@ -19,10 +19,10 @@
 .markdownpoint-outline,
 .markdownpoint-presentation {
     --markdownpoint-thumbnail-width: 58px;
+    --markdownpoint-muted: color-mix(in srgb, var(--text-normal) 70%, transparent);
 }
 
 .markdownpoint-outline {
-    --markdownpoint-muted: color-mix(in srgb, var(--text-normal) 70%, transparent);
     padding: var(--size-4-2);
 }
 
@@ -139,7 +139,6 @@
 }
 
 .markdownpoint-presentation {
-    --markdownpoint-muted: color-mix(in srgb, var(--text-normal) 70%, transparent);
     --markdownpoint-faint: color-mix(in srgb, var(--text-normal) 10%, transparent);
     --markdownpoint-notes-indent: calc(var(--font-ui-small) + var(--size-2-2));
 }
@@ -372,16 +371,12 @@
 }
 
 .markdownpoint-presentation .markdownpoint-slide-tools {
-    position: absolute;
-    inset-inline-end: var(--markdownpoint-thumbnail-right);
-    top: var(--markdownpoint-thumbnail-top);
     width: var(--markdownpoint-thumbnail-width);
     height: auto;
     padding: 0;
     box-shadow: none;
     outline: none;
     cursor: pointer;
-    z-index: 1;
 }
 
 .markdownpoint-slide-tools-layer {

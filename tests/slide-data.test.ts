@@ -170,7 +170,8 @@ test('new slide records survive failed saving, recovery reopening and serialized
 test('undo while a deletion is saving follows with a restore even before a file event', async () => {
     const { state, host } = device();
     const initial = state.disk;
-    let release!: () => void, began!: () => void;
+    let release!: () => void;
+    let began!: () => void;
     const gate = new Promise<void>(resolve => {
         release = resolve;
     });
@@ -203,7 +204,8 @@ test('atomic save captures newer external metadata, and a stale observation cann
     const data = new SlideData(host);
     await data.remember(path, document, initial, ['a']);
     state.disk = source('"a":{"external":"preserve"},"b":{"layout":"body"},"external":{"unknown":true}');
-    let release!: () => void, began!: () => void;
+    let release!: () => void;
+    let began!: () => void;
     const gate = new Promise<void>(resolve => {
         release = resolve;
     });
@@ -318,9 +320,9 @@ test('unloading during a pending backup cannot commit an earlier deletion after 
     const initial = state.disk;
     const data = new SlideData(host);
     await data.remember(path, document, initial, ['a']);
-    let release!: () => void,
-        began!: () => void,
-        writes = 0;
+    let release!: () => void;
+    let began!: () => void;
+    let writes = 0;
     const gate = new Promise<void>(resolve => {
         release = resolve;
     });
@@ -360,9 +362,9 @@ test('unloading while Vault.process is queued cancels at the actual commit callb
     const initial = state.disk;
     const data = new SlideData(host);
     await data.remember(path, document, initial, ['a']);
-    let release!: () => void,
-        began!: () => void,
-        writes = 0;
+    let release!: () => void;
+    let began!: () => void;
+    let writes = 0;
     const gate = new Promise<void>(resolve => {
         release = resolve;
     });
@@ -430,8 +432,8 @@ test('recovery survives a temporary file rename and plugin reload before the nam
 
 test('retry after a folder rename saves and reports completion at the new path', async () => {
     const { state, host } = device();
-    const writes: string[] = [],
-        saved: string[] = [];
+    const writes: string[] = [];
+    const saved: string[] = [];
     const process = host.process.bind(host);
     host.process = (path, update, canCommit) => {
         writes.push(path);

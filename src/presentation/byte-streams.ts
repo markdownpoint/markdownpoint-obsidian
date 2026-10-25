@@ -22,12 +22,12 @@ export async function equalByteStreams(
     second: ReadableStream<Uint8Array>,
     current: () => boolean
 ): Promise<boolean> {
-    const left = first.getReader(),
-        right = second.getReader();
+    const left = first.getReader();
+    const right = second.getReader();
     let a: ReadableStreamReadResult<Uint8Array> = { done: false, value: new Uint8Array() };
     let b: ReadableStreamReadResult<Uint8Array> = { done: false, value: new Uint8Array() };
-    let ai = 0,
-        bi = 0;
+    let ai = 0;
+    let bi = 0;
     try {
         for (;;) {
             if (!current()) throw new Error('File comparison canceled');

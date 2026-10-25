@@ -68,9 +68,9 @@ export function historyReorderSelection(
         ]
             .sort((a, b) => a.from - b.from)
             .map(part => part.key);
-    const prior = order(before),
-        current = order(after),
-        known = new Set(prior);
+    const prior = order(before);
+    const current = order(after);
+    const known = new Set(prior);
     if (prior.length !== current.length || current.some(key => !known.has(key)) || prior.every((key, index) => key === current[index]))
         return null;
     const selection = reorderedSelection(transaction.startState, before, after, transaction.changes);

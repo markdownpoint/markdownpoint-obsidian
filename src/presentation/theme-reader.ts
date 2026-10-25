@@ -43,8 +43,8 @@ export async function readEmbeddedTheme<File>(
             targets.map(async target => {
                 const file = vault.getFileByPath(target.path);
                 if (!file) return null;
-                const source = await vault.read(file),
-                    value = themeDocument(source, target.kind);
+                const source = await vault.read(file);
+                const value = themeDocument(source, target.kind);
                 return value ? { ...target, file, document: { path: target.path, source, value } } : null;
             })
         );

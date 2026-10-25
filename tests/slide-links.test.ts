@@ -107,7 +107,7 @@ test('repeated matching links preserve Unicode, visible link-like words and auth
     assert.equal(rewrite(source), '🌲 [slide:two](slide:copy-two)\r\n\r\n[Again](slide:copy-two)  \r\n\r\n\t');
 });
 
-test('MDP line breaks retain following inline links without opening opaque HTML blocks', () => {
+test('MarkdownPoint line breaks retain following inline links without opening opaque HTML blocks', () => {
     for (const source of [
         '<br>\n[Next](slide:two)',
         '<BR/>\r\n[Next](slide:two)',
@@ -140,7 +140,7 @@ test('one contextual parse recognizes multiline destinations and titles inside q
     assert.equal(rewrite(code), code);
 });
 
-test('MDP bare URL spans stay literal even when they contain link-shaped characters', () => {
+test('MarkdownPoint bare URL spans stay literal even when they contain link-shaped characters', () => {
     for (const source of [
         'ftp://example.com/[Go](slide:two)',
         'https://example.com?q=[Go](slide:two)',
@@ -193,7 +193,7 @@ test('parse-only provenance cannot collide with authored URI spelling or leak in
     assert.equal(rewrite(reference + '\n\n[real](slide:two)'), reference + '\n\n[real](slide:copy-two)');
 });
 
-test('MDP formatting boundaries keep adjacent real links separate from literal URLs', () => {
+test('MarkdownPoint formatting boundaries keep adjacent real links separate from literal URLs', () => {
     for (const source of [
         '==ftp://x==[Go](slide:two)',
         '~~ftp://x~~[Go](slide:two)',

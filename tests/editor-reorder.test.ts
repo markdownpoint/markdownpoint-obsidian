@@ -119,8 +119,8 @@ test('repeated slide steps stay separate in native undo and redo', () => {
 });
 
 test('multiple native text selections keep their words, directions and main range after moving', () => {
-    const beta = markdown.indexOf('Beta'),
-        gamma = markdown.indexOf('Gamma');
+    const beta = markdown.indexOf('Beta');
+    const gamma = markdown.indexOf('Gamma');
     const state = editor(EditorSelection.create([EditorSelection.range(beta + 4, beta), EditorSelection.range(gamma, gamma + 5)], 1));
     const next = state.update(slideStepTransaction(state, documentOf(state), ['bravo'], 'up')!).state;
     assert.deepEqual(

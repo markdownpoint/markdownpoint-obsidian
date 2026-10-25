@@ -30,8 +30,8 @@ const markdown = ['one', 'two', 'three'].map(block).join('');
 const companion = '{"slides":{"one":{},"two":{},"three":{}}}';
 
 test('deletion preserves text selections in surviving slides', () => {
-    const anchor = markdown.indexOf('Thought three'),
-        head = anchor + 'Thought three'.length;
+    const anchor = markdown.indexOf('Thought three');
+    const head = anchor + 'Thought three'.length;
     const state = EditorState.create({ doc: markdown, selection: EditorSelection.range(anchor, head) });
     const document = indexPresentation(markdown, 0)!;
     const plan = planSlideDeletion(markdown, document, companion, ['one'])!;

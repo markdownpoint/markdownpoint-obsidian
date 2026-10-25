@@ -26,9 +26,9 @@ const markdown = { path: 'deck/slides.md' };
 const pair = { markdown, companion: file };
 
 test('a companion change during recovery preparation is reread without overwriting it', async () => {
-    let disk = 'old',
-        attempts = 0,
-        preparations = 0;
+    let disk = 'old';
+    let attempts = 0;
+    let preparations = 0;
     const vault = {
         getPair: () => pair,
         read: () => Promise.resolve(disk),
@@ -88,8 +88,8 @@ test('a real vault write failure is reported without retries', async () => {
 
 test('replacing either member or introducing a conflict during recovery preparation cannot receive the old write', async () => {
     for (const replacement of [null, { ...pair, companion: { path } }, { ...pair, markdown: { path: markdown.path } }]) {
-        let current: typeof pair | null = pair,
-            disk = 'original';
+        let current: typeof pair | null = pair;
+        let disk = 'original';
         const vault = {
             getPair: () => current,
             read: () => Promise.resolve(disk),
@@ -110,8 +110,8 @@ test('replacing either member or introducing a conflict during recovery preparat
 });
 
 test('replacing Markdown while Vault.process is queued cannot commit old slide membership', async () => {
-    let current: typeof pair | null = pair,
-        disk = 'original';
+    let current: typeof pair | null = pair;
+    let disk = 'original';
     const vault = {
         getPair: () => current,
         read: () => Promise.resolve(disk),

@@ -59,8 +59,8 @@ export class SlideCopy<Context> {
     }
 
     async copy(context: Context, ids: Iterable<string>): Promise<SlideCopyResult> {
-        const revision = ++this.revision,
-            selected = [...ids];
+        const revision = ++this.revision;
+        const selected = [...ids];
         const current = () => this.running && revision === this.revision && this.host.current(context);
         try {
             if (!current()) return { kind: 'canceled' };

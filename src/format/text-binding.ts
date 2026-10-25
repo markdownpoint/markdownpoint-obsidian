@@ -24,7 +24,7 @@ export interface TextBindingName {
 /** A text object's readable name, or a composition instance's control name. */
 export function textBindingName(binding: string): TextBindingName {
     const parts = binding.slice(binding.lastIndexOf('.') + 1).split('-');
-    // Only MDP's explicit allocation spelling is technical: id- plus a letter
+    // Only the MarkdownPoint app's explicit allocation spelling is technical: id- plus a letter
     // and five letters/digits. A similarly sized authored word stays intact.
     if (parts.at(-2) === 'id' && /^[a-z][a-z0-9]{5}$/.test(parts.at(-1) ?? '')) parts.splice(-2);
     const number = parts.length > 1 && /^\d+$/.test(parts.at(-1)!) ? parts.pop()! : null;

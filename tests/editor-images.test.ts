@@ -75,8 +75,8 @@ test('unfinished code fences retain image clearance at mapped slide ends until p
     }).state;
     const original = spacers(state);
     assert.equal(original.length, 2);
-    const opening = '~~~js\n',
-        insertion = source.indexOf('Words.');
+    const opening = '~~~js\n';
+    const insertion = source.indexOf('Words.');
     state = state.update({ changes: { from: insertion, insert: opening } }).state;
     assert.equal(indexPresentation(state.doc.toString(), 0), null);
     assert.deepEqual(

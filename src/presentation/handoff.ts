@@ -56,13 +56,13 @@ export async function openPresentationInDesktop(app: App, input: Handoff, data: 
         }
         const [markdown, source] = await Promise.all([app.vault.read(pair.markdown), app.vault.read(pair.companion)]);
         if (!current()) return;
-        const latest = presentationFiles(app.vault, path),
-            header = getFrontMatterInfo(markdown);
-        const metadata = readJsonObject(source),
-            document = indexPresentation(markdown, header.contentStart);
+        const latest = presentationFiles(app.vault, path);
+        const header = getFrontMatterInfo(markdown);
+        const metadata = readJsonObject(source);
+        const document = indexPresentation(markdown, header.contentStart);
         const frontmatter: unknown = header.exists ? parseYaml(header.frontmatter) : null;
-        const slides = metadata?.slides,
-            compositions = metadata?.compositions;
+        const slides = metadata?.slides;
+        const compositions = metadata?.compositions;
         if (
             latest?.markdown !== pair.markdown ||
             latest.companion !== pair.companion ||

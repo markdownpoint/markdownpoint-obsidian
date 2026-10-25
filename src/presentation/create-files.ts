@@ -39,8 +39,8 @@ export async function createPresentationFiles<File extends StoredFile, Folder ex
     files: ReadonlyMap<string, string | File>,
     canContinue: () => boolean
 ): Promise<File> {
-    const folders: { folder: Folder; path: string }[] = [],
-        created: { file: File; path: string; mtime: number; size: number }[] = [];
+    const folders: { folder: Folder; path: string }[] = [];
+    const created: { file: File; path: string; mtime: number; size: number }[] = [];
     const check = () => {
         if (!canContinue()) throw new Error('Presentation creation canceled');
     };
@@ -67,8 +67,8 @@ export async function createPresentationFiles<File extends StoredFile, Folder ex
             )
         );
         for (const relative of [...parents].sort((a, b) => a.split('/').length - b.split('/').length)) {
-            const path = `${root}/${relative}`,
-                folder = await vault.createFolder(path);
+            const path = `${root}/${relative}`;
+            const folder = await vault.createFolder(path);
             folders.push({ folder, path });
             check();
         }
@@ -81,8 +81,8 @@ export async function createPresentationFiles<File extends StoredFile, Folder ex
         let markdown: File | null = null;
         for (const relative of order) {
             check();
-            const source = files.get(relative)!,
-                path = `${root}/${relative}`;
+            const source = files.get(relative)!;
+            const path = `${root}/${relative}`;
             if (vault.getAbstractFileByPath(path)) throw new Error('A presentation file appeared during creation');
             const file = typeof source === 'string' ? await vault.create(path, source) : await vault.copy(source, path);
             created.push({ file, path, mtime: file.stat.mtime, size: file.stat.size });

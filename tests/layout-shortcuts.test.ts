@@ -21,7 +21,7 @@ import { test } from 'vitest';
 import { SharedSettings } from '../src/settings/shared.ts';
 import { assignLayoutDigit, layoutDigit, readLayoutAssignments } from '../src/settings/layout-shortcuts.ts';
 
-test('default digits follow MDP layout keys across themes; an empty map means no shortcuts', () => {
+test('default digits follow MarkdownPoint layout keys across themes; an empty map means no shortcuts', () => {
     const defaults = readLayoutAssignments(undefined);
     assert.equal(defaults['1'], 'section');
     assert.equal(defaults['4'], 'content-with-header');
@@ -80,9 +80,9 @@ test('a failed settings save does not publish the assignment or block a later ch
 });
 
 test('an external settings reload waits for pending writes without deadlocking subsequent assignments', async () => {
-    let finish!: () => void,
-        signal!: () => void,
-        disk: unknown = { layoutShortcuts: {} };
+    let finish!: () => void;
+    let signal!: () => void;
+    let disk: unknown = { layoutShortcuts: {} };
     const started = new Promise<void>(resolve => {
         signal = resolve;
     });
@@ -103,8 +103,8 @@ test('an external settings reload waits for pending writes without deadlocking s
     await settings.ready;
     const saved = settings.assign('title', '1');
     await started;
-    const reload = settings.reload(),
-        another = settings.assign('body', '2');
+    const reload = settings.reload();
+    const another = settings.assign('body', '2');
     finish();
     await Promise.all([saved, reload, another]);
     assert.deepEqual(settings.layoutShortcuts, { '1': 'title', '2': 'body' });

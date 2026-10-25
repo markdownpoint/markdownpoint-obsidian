@@ -107,10 +107,10 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
         master: { path: paths.master, source: value.theme.master, value: master },
         layouts: new Map([...layouts].map(([key, document]) => [key, { ...document, path: paths.layouts.get(key)! }]))
     };
-    const slides: CapturedPart[] = [],
-        compositions: CapturedPart[] = [];
-    const seen = new Set<string>(),
-        referenced = new Set<string>();
+    const slides: CapturedPart[] = [];
+    const compositions: CapturedPart[] = [];
+    const seen = new Set<string>();
+    const referenced = new Set<string>();
     const schemas = new Map<string, ReadonlyMap<string, 'rich-text' | 'table'>>();
     for (const [kind, incoming, target] of [
         ['slide', value.slides, slides],
@@ -126,8 +126,8 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
             )
                 return null;
             seen.add(part.id);
-            const document = indexPresentation(part.markdown, 0),
-                record = readJsonObject(part.record);
+            const document = indexPresentation(part.markdown, 0);
+            const record = readJsonObject(part.record);
             const parts = kind === 'slide' ? document?.slides : document?.compositions;
             const indexed = parts?.[0];
             if (

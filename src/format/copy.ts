@@ -26,8 +26,8 @@ import { isStableId } from './recognition.ts';
 
 /** Reuse exact contents apart from structural identity, line endings and the terminal organizational gap. */
 function definitionKey(part: CapturedPart): string | null {
-    const document = indexPresentation(part.markdown, 0),
-        definition = document?.compositions[0];
+    const document = indexPresentation(part.markdown, 0);
+    const definition = document?.compositions[0];
     if (
         !document ||
         document.slides.length ||
@@ -72,16 +72,16 @@ export function prepareSlideCopies(
         used.add(id);
         return id;
     };
-    const keys = new Map<string, string>(),
-        matches = new Map<string, string>();
+    const keys = new Map<string, string>();
+    const matches = new Map<string, string>();
     for (const part of held) {
         const key = definitionKey(part);
         if (key === null) return null;
         keys.set(part.id, key);
         if (!matches.has(key)) matches.set(key, part.id);
     }
-    const waiting = new Map<string, number>(),
-        parents = new Map<string, string[]>();
+    const waiting = new Map<string, number>();
+    const parents = new Map<string, string[]>();
     for (const part of incoming) {
         if (!isSlideRecordSource(part.record)) return null;
         const isDefinition = definitions.has(part.id);
@@ -95,8 +95,8 @@ export function prepareSlideCopies(
             parents.set(child, dependents);
         }
     }
-    const slideIds = new Map<string, string>(),
-        compositionIds = new Map<string, string>();
+    const slideIds = new Map<string, string>();
+    const compositionIds = new Map<string, string>();
     for (const part of captured.slides) {
         if (preserveSlideIds && occupied.has(part.id)) return null;
         const id = preserveSlideIds ? part.id : fresh();
@@ -106,8 +106,8 @@ export function prepareSlideCopies(
     const ready = captured.compositions.filter(part => waiting.get(part.id) === 0);
     const added: CapturedPart[] = [];
     for (let index = 0; index < ready.length; index++) {
-        const part = ready[index]!,
-            fields = schemas.get(part.id);
+        const part = ready[index]!;
+        const fields = schemas.get(part.id);
         if (!fields) return null;
         const candidate = prepareCopiedPart(part, 'composition', slideIds, compositionIds, fields);
         const key = candidate && definitionKey(candidate);
