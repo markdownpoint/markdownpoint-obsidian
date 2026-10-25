@@ -60,9 +60,18 @@ const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*([^
 const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[:\s]|-->|$)(?:\s*:?\s*[^\s<>]*)?\s*(?:-->|$)/i;
 
 /** A candidate directive consumed by a code token is content, not a slide boundary. */
-function inCode(markdown: string, line: string): boolean {
-  const last = new Lexer().blockTokens(markdown.replace(/\r\n?/g, "\n")).at(-1);
-  return last?.type === "code" && last.raw.trimEnd().endsWith(line.trimEnd());
+function containingCode(markdown: string, line: string) {
+  const source = markdown.replace(/\r\n?/g, "\n");
+  const last = new Lexer().blockTokens(source).at(-1);
+  return last?.type === "code" && last.raw.trimEnd().endsWith(line.trimEnd())
+    ? { raw: last.raw, leading: source.slice(0, source.length - last.raw.length).trim().length === 0 } : undefined;
+}
+
+/** Ask the same grammar using a bounded probe, not the growing document prefix. */
+function closesFence(fence: string, line: string): boolean {
+  if (!line.trimStart().startsWith(fence[0]!)) return false;
+  const token = new Lexer().blockTokens(`${fence}\n${line}\n`)[0];
+  return token?.type === "code" && token.text === "";
 }
 
 /**
@@ -83,6 +92,9 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
   let payloadFrom = bodyStart;
   let hasFence = false;
   let swallowedMarker = false;
+  let openFence: string | null = null;
+  // Bare CR can introduce lexer lines inside one source line. Keep full context there.
+  const scanFences = !/\r(?!\n)/.test(markdown);
   let offset = bodyStart;
   let lineNumber = markdown.slice(0, bodyStart).split("\n").length - 1;
 
@@ -90,13 +102,30 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     const newline = markdown.indexOf("\n", offset);
     const end = newline < 0 ? markdown.length : newline + 1;
     const line = markdown.slice(offset, newline < 0 ? end : newline).replace(/\r$/, "");
+    // A leading fence cannot later become part of a preceding link definition.
+    // Once Marked identifies it, scan to its closing line once.
+    // Retokenizing its growing payload at every example marker is quadratic.
+    if (openFence) {
+      if (closesFence(openFence, line)) {
+        openFence = null;
+        payloadFrom = end;
+        hasFence = false;
+        swallowedMarker = false;
+      }
+      offset = end;
+      lineNumber++;
+      continue;
+    }
     hasFence ||= line.includes("```") || line.includes("~~~");
     // Each field is its own Markdown block. HTML or a fence-like line in one
     // field must not change how the next field is interpreted.
     const match = marker.exec(line);
     if (match || markerLike.test(line)) {
-      if (hasFence && inCode(markdown.slice(payloadFrom, end), line)) {
+      const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), line) : undefined;
+      if (code) {
         swallowedMarker = true;
+        const fence = /^ {0,3}(`{3,}|~{3,})/.exec(code.raw)?.[1];
+        if (fence && code.leading && scanFences) openFence = fence;
         offset = end;
         lineNumber++;
         continue;
@@ -141,12 +170,13 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     offset = end;
     lineNumber++;
   }
+  if (openFence) return null;
   if (swallowedMarker) {
     const last = new Lexer().blockTokens(markdown.slice(payloadFrom).replace(/\r\n?/g, "\n")).at(-1);
     if (last?.type === "code") {
       const fence = /^ {0,3}(`{3,}|~{3,})/.exec(last.raw)?.[1];
-      const closing = last.raw.trimEnd().split("\n").at(-1) ?? "";
-      if (fence && !new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*$`).test(closing)) return null;
+      const closing = last.raw.replace(/\n+$/, "").split("\n").at(-1) ?? "";
+      if (fence && !closesFence(fence, closing)) return null;
     }
   }
   return { slides, compositions, sections };

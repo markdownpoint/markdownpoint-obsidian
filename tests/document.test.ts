@@ -93,6 +93,45 @@ void test("a code fence that swallows a marker and never closes cannot publish a
   assert.equal(indexPresentation(text, 0), null);
 });
 
+void test("sequential fenced examples retain literal markers and exact source ranges", () => {
+  for (const newline of ["\n", "\r\n"]) {
+    const words = ["Before.", "````md", "<!-- slide: example -->", "```", "<!-- notes -->", "  ````", "Between.",
+      "~~~md", "<!-- text: example -->", "~~~~~", "After.", ""].join(newline);
+    const source = `<!-- slide: first -->${newline}<!-- text: body -->${newline}${words}<!-- slide: second -->${newline}`;
+    const document = indexPresentation(source, 0)!;
+    assert.deepEqual(document.slides.map(slide => slide.id), ["first", "second"]);
+    const field = document.slides[0]!.blocks[0]!;
+    assert.equal(source.slice(field.contentFrom, field.to), words);
+    assert.equal(document.slides[1]!.line, source.slice(0, document.slides[1]!.from).split("\n").length - 1);
+  }
+});
+
+void test("an unfinished later fence still refuses swallowed markers after a closed example", () => {
+  const source = '<!-- slide: first -->\n<!-- text: body -->\n```md\n<!-- slide: example -->\n```\n\n~~~md\n<!-- slide: swallowed -->\n    ~~~\n';
+  assert.equal(indexPresentation(source, 0), null);
+  assert.deepEqual(indexPresentation(source + '~~~\n<!-- slide: second -->\n', 0)!.slides.map(slide => slide.id), ["first", "second"]);
+});
+
+void test("fence closure follows the lexer for mixed closing runs and trailing tabs", () => {
+  for (const prefix of ["", "Before.\n"]) {
+    const first = `<!-- slide: first -->\n<!-- text: body -->\n${prefix}\`\`\`md\n<!-- slide: literal -->\n`;
+    const rest = '<!-- slide: second -->\n<!-- text: body -->\n```md\n<!-- text: literal -->\n```\n<!-- slide: third -->\n';
+    assert.deepEqual(indexPresentation(first + '```~\n' + rest, 0)!.slides.map(slide => slide.id), ["first", "second", "third"]);
+    assert.equal(indexPresentation(first + '```\t\n<!-- slide: second -->\n', 0), null);
+    assert.equal(indexPresentation(first + '```\t\n', 0), null);
+  }
+});
+
+void test("multiline link titles retain the lexical context before a fence-like line", () => {
+  const source = '<!-- slide: first -->\n<!-- text: body -->\n[ref]: /help "A title\n~~~md\n<!-- slide: literal -->\nend"\n<!-- slide: second -->\n';
+  assert.deepEqual(indexPresentation(source, 0)!.slides.map(slide => slide.id), ["first", "second"]);
+});
+
+void test("bare carriage returns keep the full lexer context", () => {
+  const source = '<!-- slide: first -->\n<!-- text: body -->\n```md\n<!-- slide: literal -->\n  \r```\n<!-- slide: second -->\n';
+  assert.deepEqual(indexPresentation(source, 0)!.slides.map(slide => slide.id), ["first", "second"]);
+});
+
 void test("a large deck produces one ordered index without changing its source", () => {
   const text = Array.from({ length: 6000 }, (_, index) => `<!-- slide: page-${index} -->\n<!-- text: body -->\nWords for page ${index}.\n\n`).join("");
   const document = indexPresentation(text, 0)!;
