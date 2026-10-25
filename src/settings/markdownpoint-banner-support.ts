@@ -45,13 +45,5 @@ export function createGroupDefinition(
 }
 
 export function createRenderDefinition(options: SettingDefinitionRender): SettingDefinitionRender {
-    return {
-        ...options,
-        render: (setting, group) => {
-            // A settings refresh renders into the same row again, and the banner adds itself to the row, not to its
-            // control; without this a refresh while settings are open shows a second banner
-            for (const banner of Array.from(setting.settingEl.querySelectorAll(':scope > .markdownpoint-banner'))) banner.remove();
-            return options.render(setting, group);
-        }
-    };
+    return options;
 }
