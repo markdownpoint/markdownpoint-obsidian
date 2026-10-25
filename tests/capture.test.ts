@@ -64,6 +64,18 @@ void test("literal fenced directives, authored EOF whitespace and unknown record
   assert.equal(capture(markdown, companion, ["one"])!.slides[0]!.record, firstRecord);
 });
 
+void test("slide paint order retains inherited object names among complete own objects", () => {
+  const ordered = companion.replace('"objects":[{"id":"card"', '"objects":["title",{"id":"card"');
+  const result = capture(source, ordered)!;
+  assert.ok(result);
+  assert.equal(result.slides[1]!.record, secondRecord.replace('"objects":[', '"objects":["title",'));
+  assert.deepEqual(result.compositions.map(part => part.id), ["card", "badge"]);
+  for (const invalid of [12, null, true, "Invalid name"]) {
+    assert.equal(capture(source, ordered.replace('"objects":["title",', '"objects":[' + JSON.stringify(invalid) + ',')), null);
+  }
+  assert.equal(capture(source, companion.replace('"objects":[]', '"objects":["title"]')), null);
+});
+
 void test("incomplete selection or dependency source refuses capture instead of silently losing content", () => {
   for (const ids of [[], ["missing"], ["one", "missing"]]) assert.equal(capture(source, companion, ids), null);
   assert.equal(capture(source, companion.replace('"two":', '"other":')), null);

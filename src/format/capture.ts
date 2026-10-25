@@ -55,6 +55,9 @@ export function captureSlides(markdown: string, document: PresentationDocument, 
     const value: unknown = JSON.parse(pending[index]!.record);
     if (!isRecord(value) || (value.objects !== undefined && !Array.isArray(value.objects))) return null;
     for (const object of value.objects ?? []) {
+      // A slide can name inherited objects in its paint order. Definitions have
+      // no layout to inherit from, and those names introduce no dependencies.
+      if (typeof object === "string" && selected.has(pending[index]!.id) && isStableId(object)) continue;
       if (!isRecord(object)) return null;
       if (object.type !== "composition") continue;
       if (!isStableId(object.source)) return null;
