@@ -4,7 +4,7 @@ Write your slides where you keep your ideas.
 
 MarkdownPoint turns a presentation into a calm, continuous draft in Obsidian. Write the words, collect speaker notes, and arrange the story in a small slide outline. Open the same presentation in [MarkdownPoint](https://markdownpoint.com) for visual finishing and presenting.
 
-![A continuous presentation draft with speaker notes and the slide outline](images/continuous-draft.png)
+![A continuous presentation draft with speaker notes and the slide outline](images/continuous-draft-light.png)
 
 Your presentation stays in its own folder in your vault. Both apps work with the same files.
 
@@ -52,7 +52,7 @@ Notes stay with their slide when you move, copy or delete it. Which notes are ex
 
 ### Images beside the draft
 
-![An assigned image beside the writing area in dark mode](images/image-previews.png)
+![An assigned image beside the writing area](images/image-previews-light.png)
 
 Up to five assigned images appear below a slide’s small margin thumbnail. Background images come first, followed by named image areas and other assigned images.
 
@@ -92,7 +92,7 @@ Use Obsidian’s normal **Undo** and **Redo** to undo slide operations. The same
 
 ## Add a slide in a keystroke
 
-![The layout picker with filled text areas and assigned number shortcuts](images/layout-picker.png)
+![The layout picker with filled text areas and assigned number shortcuts](images/layout-picker-light.png)
 
 Click **+** above the outline or run **MarkdownPoint: New slide**. Choose a layout to insert it below the current slide.
 
