@@ -33,6 +33,7 @@ import { PresentationStorage } from "./presentation/storage.ts";
 import type { ListSelection } from "./selection/list-selection.ts";
 import { SlideMenus } from "./editor/slide-menus.ts";
 import type { SlideMenuTarget } from "./editor/slide-menus.ts";
+import { SlideCreation } from "./presentation/new-slide.ts";
 import { PresentationClipboard } from "./presentation/clipboard.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
@@ -45,6 +46,7 @@ export default class MarkdownPointPlugin extends Plugin {
   private presentationEditor: PresentationEditor | null = null;
   private storage: PresentationStorage | null = null;
   private slideMenus: SlideMenus | null = null;
+  private slideCreation: SlideCreation | null = null;
   private clipboard: PresentationClipboard | null = null;
 
   private get presentation(): OutlinePresentation | null { return this.outline.state.presentation; }
@@ -56,6 +58,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.localUi = loadLocalUi(this.app);
     this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
       state: () => this.outline.state,
+      newSlide: () => this.newSlide(),
       select: action => {
         if (!this.outline.select(action)) return;
         if (action.kind === "select") this.run(() => this.selectSlide(action.id));
@@ -91,6 +94,11 @@ export default class MarkdownPointPlugin extends Plugin {
         return true;
       },
     });
+    this.addCommand({ id: "new-slide", name: uiText.commands.newSlide, checkCallback: checking => {
+      if (!this.presentation) return false;
+      if (!checking) this.newSlide();
+      return true;
+    } });
     for (const direction of ["up", "down"] as const) {
       this.addCommand({
         id: `move-slides-${direction}`,
@@ -125,6 +133,11 @@ export default class MarkdownPointPlugin extends Plugin {
       (editor, slideId) => this.followCaret(editor, slideId), this.storage.data);
     this.addChild(this.presentationEditor);
     this.registerEditorExtension(this.presentationEditor.extension);
+    this.slideCreation = this.addChild(new SlideCreation(this.app, this.reader, this.presentationEditor, id => {
+      this.outline.select({ kind: "select", id });
+      this.outline.activate(id);
+      this.refreshOutline();
+    }));
     this.clipboard = this.addChild(new PresentationClipboard(this.app, this.reader, this.presentationEditor, this.storage.data));
     this.slideMenus = this.addChild(new SlideMenus(this.app, this.reader, {
       cut: target => this.cutDraftSlide(target), copy: target => this.copyDraftSlide(target), paste: target => this.pasteDraftSlides(target), delete: target => this.deleteDraftSlide(target),
@@ -142,6 +155,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.storage = null;
     this.slideMenus = null;
     this.clipboard = null;
+    this.slideCreation = null;
     // Registered views and events are released by Obsidian; retain its saved workspace layout.
   }
 
@@ -235,6 +249,20 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!this.running || this.presentation?.path !== path || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
     const editor = await this.editingView(leaf);
     if (editor && this.presentation?.path === path && editor.file?.path === path) await edit(editor);
+  }
+
+  private newSlide(): void {
+    const presentation = this.presentation;
+    const file = presentation && this.app.vault.getFileByPath(presentation.path);
+    if (!presentation || !file) return;
+    const after = this.activeSlideId;
+    const current = () => this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
+    const owner = this.currentEditorLeaf()?.view;
+    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+    this.run(async () => { await this.slideCreation?.choose({ file, view, canApply: current, editingView: async () => {
+      const leaf = await this.ensureEditorLeaf();
+      return leaf && current() ? this.editingView(leaf) : null;
+    } }, after); });
   }
 
   private deleteOutlineSlides(selection: ListSelection<string>): void {

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ItemView, Menu, Platform, setTooltip } from "obsidian";
+import { ItemView, Menu, Platform, setIcon, setTooltip } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import { outlineRows } from "./model.ts";
 import type { OutlineState } from "./model.ts";
@@ -30,6 +30,7 @@ export const OUTLINE_VIEW_TYPE = "markdownpoint-outline";
 
 export interface OutlineDelegate {
   state(): OutlineState;
+  newSlide(): void;
   select(action: ListSelectionAction<string>): void;
   reorder(action: SlideReorder): void;
   history(direction: "undo" | "redo"): void;
@@ -124,6 +125,16 @@ export class MarkdownPointOutlineView extends ItemView {
   render(): void {
     const ownsFocus = this.contentEl.contains(this.contentEl.ownerDocument.activeElement);
     const { presentation, activeSlideId, selection } = this.delegate.state();
+    let toolbar = this.contentEl.querySelector<HTMLElement>(".markdownpoint-outline-toolbar");
+    if (!toolbar) {
+      toolbar = this.contentEl.createDiv({ cls: "markdownpoint-outline-toolbar" });
+      toolbar.createSpan({ text: uiText.outline });
+      const add = toolbar.createEl("button", { cls: "clickable-icon", attr: { type: "button", "aria-label": uiText.slides.new } });
+      setIcon(add, "plus");
+      setTooltip(add, uiText.slides.new);
+      add.addEventListener("click", () => this.delegate.newSlide());
+    }
+    toolbar.querySelector("button")!.disabled = !presentation;
     const list = this.contentEl.querySelector("ol") ?? this.contentEl.createEl("ol", { cls: "markdownpoint-outline-list" });
     list.setAttribute("aria-label", uiText.outline);
     list.tabIndex = presentation?.slides.length ? -1 : 0;

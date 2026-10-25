@@ -19,6 +19,9 @@
 import { build, context } from "esbuild";
 import { readFile } from "node:fs/promises";
 
+const stylesheet = await build({ entryPoints: ["styles.css"], write: false, logLevel: "warning" });
+if (stylesheet.warnings.length) throw new Error("Stylesheet validation produced warnings");
+
 const notices = await readFile(new URL("./THIRD_PARTY_NOTICES.md", import.meta.url), "utf8");
 
 const options = {

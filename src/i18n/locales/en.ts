@@ -35,6 +35,10 @@ export const en = {
   notes: { label: "Speaker notes", placeholder: "Notes" },
   clipboard: { copyText: "Copy", copyFailed: "Could not copy text to the clipboard." },
   slides: {
+    new: "New slide",
+    layoutsUnavailable: "No layouts are available in this presentation.",
+    layoutChanged: "The layout changed. Choose it again.",
+    newFailed: "The presentation changed before the slide could be added. Try again.",
     actions: "Slide actions",
     copy: ({ count }: { count: number }) => count === 1 ? "Copy slide" : "Copy slides",
     cut: ({ count }: { count: number }) => count === 1 ? "Cut slide" : "Cut slides",
@@ -56,6 +60,7 @@ export const en = {
     empty: "No slides",
   },
   commands: {
+    newSlide: "New slide",
     focusOutline: "Focus outline",
     focusEditor: "Focus editor",
     moveSlidesUp: "Move slides up",

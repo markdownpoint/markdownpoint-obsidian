@@ -64,7 +64,7 @@
   width: 100%;
   height: auto;
   min-height: var(--input-height);
-  padding: 11px var(--size-4-2);
+  padding: 9px var(--size-4-2);
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -315,10 +315,10 @@
 /* Structural previews show authored regions and text density, independent of slide styling. */
 .markdownpoint-thumbnail {
   display: block;
-  flex: 0 0 66px;
-  width: 66px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 3px;
+  flex: 0 0 58px;
+  width: 58px;
+  border: 1px solid color-mix(in srgb, var(--text-muted) 24%, transparent);
+  border-radius: 4px;
   color: var(--text-muted);
   background: var(--background-primary);
   overflow: hidden;
@@ -352,19 +352,19 @@
 }
 
 .markdownpoint-presentation .markdown-source-view.is-live-preview .cm-content {
-  padding-inline-end: 68px;
+  padding-inline-end: 60px;
 }
 
 .markdownpoint-presentation .markdown-source-view.mod-cm6 .cm-content > .markdownpoint-slide-boundary {
   position: relative;
-  width: calc(100% + 68px);
+  width: calc(100% + 60px);
 }
 
 .markdownpoint-presentation .markdownpoint-slide-tools {
   position: absolute;
   inset-inline-end: var(--markdownpoint-thumbnail-right);
   top: var(--markdownpoint-thumbnail-top);
-  width: 52px;
+  width: 44px;
   height: auto;
   padding: 0;
   box-shadow: none;
@@ -384,4 +384,59 @@
 .markdownpoint-slide-tools-layer .markdownpoint-slide-tools {
   pointer-events: auto;
   background: var(--background-primary);
+}
+
+.markdownpoint-outline-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--size-4-2) var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.markdownpoint-layout-picker {
+  width: 560px;
+  max-width: 90vw;
+}
+
+.markdownpoint-layout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: var(--size-4-3);
+  padding: var(--size-4-1);
+}
+
+.markdownpoint-layout-grid .markdownpoint-layout-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--size-4-2);
+  height: auto;
+  padding: var(--size-4-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-normal);
+}
+
+.markdownpoint-layout-choice .markdownpoint-thumbnail {
+  width: 100%;
+  max-width: 128px;
+  flex: none;
+}
+
+.markdownpoint-layout-choice:hover,
+.markdownpoint-layout-choice:focus-visible {
+  border-color: var(--text-muted);
+  outline: none;
+  background: var(--background-modifier-hover);
+}
+
+.markdownpoint-layout-name {
+  font-size: var(--font-ui-small);
+  white-space: normal;
+  text-align: center;
 }
