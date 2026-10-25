@@ -48,16 +48,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '1.0.0',
         date: '2026-10-25',
-        info: 'The first release of MarkdownPoint for Obsidian. Write a presentation as one continuous draft in your vault, then design and present it in [MarkdownPoint](https://markdownpoint.com).',
-        new: [
-            'Write slides and their presenter notes in Live Preview as one continuous draft. Each text area shows its name from the layout.',
-            'Arrange slides in the **Outline** sidebar tab. Select one or several, then drag them or move them with **Cmd/Ctrl+Up/Down**.',
-            'Cut, copy, paste and delete whole slides from the right-click menu in the outline or the editor. A copied slide carries its notes and presentation data.',
-            'Run **New presentation** to start one with the Basic theme or a theme from another presentation in your vault.',
-            'Run **New slide** to choose a layout. Give layouts number shortcuts to insert them in one keystroke.',
-            'Run **Open in MarkdownPoint** to continue in the desktop app.',
-            'Use MarkdownPoint in 21 languages, with a right-to-left layout for Arabic and Persian.'
-        ]
+        new: ['First release 🎉']
     }
 ];
 
