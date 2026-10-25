@@ -21,7 +21,7 @@ import test from "node:test";
 import { indexPresentation } from "../src/format/document.ts";
 import { outlineRows, outlineSections, outlineSlides } from "../src/outline/model.ts";
 
-void test("outline labels use the first authored text, omit formatting, and ignore speaker notes", () => {
+void test("outline labels use the first authored text, omit formatting, and ignore presenter notes", () => {
   const markdown = '<!-- slide: first -->\n<!-- notes -->\nA private reminder.\n<!-- text: empty -->\n\n<!-- text: heading -->\n# **A clear [idea](https://example.com)** &amp; `&amp;`\n\n<!-- slide: empty -->\n<!-- text: heading -->\n';
   const document = indexPresentation(markdown, 0)!;
   const slides = outlineSlides(markdown, document, "Title", new Set());

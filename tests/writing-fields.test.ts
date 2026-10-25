@@ -37,7 +37,7 @@ void test("writing fields keep empty roles, original marker bytes, and native co
   assert.equal(fields[2]!.contentFrom, markdown.length);
 });
 
-void test("custom writing areas receive labels while speaker notes retain their own disclosure", () => {
+void test("custom writing areas receive labels while presenter notes retain their own disclosure", () => {
   const markdown = '<!-- slide: first -->\n<!-- text: data-table -->\nRaw table content.\n<!-- notes -->\nA private reminder.\n<!-- text: body -->\nBody words.\n';
   const fields = writingFields(markdown, indexPresentation(markdown, 0)!, labels);
   assert.deepEqual(fields.map(field => [field.role, field.label]), [["body", "Data table"], ["body", "Body"]]);
