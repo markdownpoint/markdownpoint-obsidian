@@ -24,7 +24,7 @@ import { planSlideInsertion } from "../src/format/insert.ts";
 import type { EmbeddedTheme } from "../src/format/embedded-theme.ts";
 
 function theme(value: Record<string, unknown>): EmbeddedTheme {
-  return { id: "theme", root: "deck/designs/theme", master: { path: "master.json", source: "{}", value: { objects: [{ id: "footer", type: "text" }], "layout-order": ["title", "missing", "title"] } },
+  return { key: "basic", id: "theme", root: "deck/themes/basic", master: { path: "master.json", source: "{}", value: { objects: [{ id: "footer", type: "text" }], "layout-order": ["title", "missing", "title"] } },
     layouts: new Map([["title", { path: "title.json", source: JSON.stringify(value), value }], ["blank", { path: "blank.json", source: "{}", value: {} }]]) };
 }
 const layouts = theme({ objects: [

@@ -94,7 +94,7 @@ export class SlideCreation extends Component {
     try {
       const theme = await readEmbeddedTheme(this.app.vault, input.file.path, metadata, [key]);
       if (!current()) return;
-      if (themeChanged || !theme || theme.id !== chosen.id || theme.master.source !== chosen.master.source || theme.layouts.get(key)?.source !== chosen.layouts.get(key)?.source) {
+      if (themeChanged || !theme || theme.key !== chosen.key || theme.id !== chosen.id || theme.master.source !== chosen.master.source || theme.layouts.get(key)?.source !== chosen.layouts.get(key)?.source) {
         new Notice(uiText.slides.layoutChanged); return;
       }
       const prepared = prepareNewSlide(theme, key, `id-${crypto.randomUUID()}`);

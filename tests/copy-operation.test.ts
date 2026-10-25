@@ -26,11 +26,11 @@ import { embeddedThemePaths, themeDocument } from "../src/format/embedded-theme.
 import { clipboardVaultId, CLIPBOARD_VAULT_KEY, clipboardDigest, ownsClipboardCut, CLIPBOARD_CUT_KEY } from "../src/settings/clipboard.ts";
 
 const uuid = "11111111-1111-4111-8111-111111111111", path = "deck/slides.md";
-const companion = JSON.stringify({ markdownpoint: 1, kind: "presentation", document: uuid, design: uuid, slides: { one: { layout: "title" }, two: { layout: "title" } } });
+const companion = JSON.stringify({ markdownpoint: 1, kind: "presentation", document: uuid, theme: "basic", slides: { one: { layout: "title" }, two: { layout: "title" } } });
 const markdown = '<!-- slide: one -->\n<!-- text: body -->\nFirst words.\n<!-- slide: two -->\n<!-- text: body -->\nSecond words.\n';
-const paths = embeddedThemePaths(path, { design: uuid }, ["title"])!;
-const master = '{"markdownpoint":1,"kind":"master"}', layout = '{"markdownpoint":1,"kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
-const theme = { id: uuid, root: paths.root, master: { path: paths.master, source: master, value: themeDocument(master, "master")! },
+const paths = embeddedThemePaths(path, { theme: "basic" }, ["title"])!;
+const master = '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111"}', layout = '{"markdownpoint":1,"kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+const theme = { key: "basic", id: uuid, root: paths.root, master: { path: paths.master, source: master, value: themeDocument(master, "master")! },
   layouts: new Map([["title", { path: paths.layouts.get("title")!, source: layout, value: themeDocument(layout, "layout")! }]]) };
 function deferred() { let resolve!: () => void; const promise = new Promise<void>(done => { resolve = done; }); return { promise, resolve }; }
 function setup() {

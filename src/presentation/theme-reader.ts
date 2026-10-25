@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { isDocumentId } from "../format/recognition.ts";
 import { embeddedThemePaths, themeDocument } from "../format/embedded-theme.ts";
 import type { EmbeddedTheme } from "../format/embedded-theme.ts";
 
@@ -44,7 +45,9 @@ export async function readEmbeddedTheme<File>(vault: ThemeVault<File>, markdownP
       vault.getFileByPath(read.path) === read.file && await vault.read(read.file) === read.document.source &&
       vault.getFileByPath(read.path) === read.file));
     if (stable.some(value => !value)) return null;
-    return { id: paths.id, root: paths.root, master: documents[0]!.document,
+    const id = documents[0]!.document.value.id;
+    if (!isDocumentId(id)) return null;
+    return { key: paths.key, id, root: paths.root, master: documents[0]!.document,
       layouts: new Map(documents.slice(1).map(read => [read.key!, read.document])) };
   } catch { return null; }
 }

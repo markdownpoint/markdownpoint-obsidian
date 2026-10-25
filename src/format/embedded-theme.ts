@@ -26,6 +26,7 @@ export interface EmbeddedThemeDocument {
 }
 
 export interface EmbeddedTheme {
+  readonly key: string;
   readonly id: string;
   readonly root: string;
   readonly master: EmbeddedThemeDocument;
@@ -33,26 +34,31 @@ export interface EmbeddedTheme {
 }
 
 export interface EmbeddedThemePaths {
-  readonly id: string;
+  readonly key: string;
   readonly root: string;
   readonly master: string;
   readonly layouts: ReadonlyMap<string, string>;
 }
 
+/** Theme folder keys are readable stable names that every supported filesystem accepts. */
+export function isThemeKey(value: unknown): value is string {
+  return isStableId(value) && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(value);
+}
+
 /** Current format1 embedded snapshot paths; global Theme discovery is separate. */
 export function embeddedThemePaths(markdownPath: string, companion: unknown, layoutKeys: Iterable<string>): EmbeddedThemePaths | null {
   if (!presentationCompanionPath(markdownPath) || markdownPath.includes("\\") ||
-    markdownPath.split("/").some(part => !part || part === "." || part === "..") || !isRecord(companion) || !isDocumentId(companion.design)) return null;
+    markdownPath.split("/").some(part => !part || part === "." || part === "..") || !isRecord(companion) || !isThemeKey(companion.theme)) return null;
   const keys = new Set(layoutKeys);
   for (const key of keys) {
-    if (!isStableId(key) || key === "master" || key === "manifest" || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(key)) return null;
+    if (!isThemeKey(key) || key === "master" || key === "manifest") return null;
   }
-  const root = markdownPath.slice(0, markdownPath.lastIndexOf("/") + 1) + `designs/${companion.design}`;
-  return { id: companion.design, root, master: root + "/master.json", layouts: new Map([...keys].map(key => [key, `${root}/${key}.json`])) };
+  const root = markdownPath.slice(0, markdownPath.lastIndexOf("/") + 1) + `themes/${companion.theme}`;
+  return { key: companion.theme, root, master: root + "/master.json", layouts: new Map([...keys].map(key => [key, `${root}/${key}.json`])) };
 }
 
 /** Validate the supported Theme envelope while keeping its original source separately. */
 export function themeDocument(source: string, kind: "master" | "layout"): Record<string, unknown> | null {
   const value = readJsonObject(source);
-  return value?.markdownpoint === 1 && value.kind === kind ? value : null;
+  return value?.markdownpoint === 1 && value.kind === kind && (kind !== "master" || isDocumentId(value.id)) ? value : null;
 }

@@ -19,7 +19,7 @@
 import { compositionSources } from "./capture.ts";
 import type { CapturedPart, CapturedSlides } from "./capture.ts";
 import { indexPresentation } from "./document.ts";
-import { embeddedThemePaths, themeDocument } from "./embedded-theme.ts";
+import { embeddedThemePaths, isThemeKey, themeDocument } from "./embedded-theme.ts";
 import { readJsonObject } from "./json.ts";
 import { isDocumentId, isRecord, isStableId } from "./recognition.ts";
 import { copyTextSchemas } from "./text-schemas.ts";
@@ -47,19 +47,19 @@ export interface SlideClipboard {
 /** Only this plugin's versioned custom format carries whole slides. */
 export function encodeSlideClipboard(token: string, origin: ClipboardOrigin, captured: CapturedSlides, theme: EmbeddedTheme): string | null {
   const parts = (values: readonly CapturedPart[]) => values.map(({ id, markdown, record }) => ({ id, markdown, record }));
-  const source = JSON.stringify({ version: 1, token, origin: { vault: origin.vault, path: origin.path, document: origin.document },
+  const source = JSON.stringify({ version: 2, token, origin: { vault: origin.vault, path: origin.path, document: origin.document },
     slides: parts(captured.slides), compositions: parts(captured.compositions),
-    theme: { id: theme.id, master: theme.master.source, layouts: [...theme.layouts].map(([key, document]) => ({ key, source: document.source })) } });
+    theme: { key: theme.key, id: theme.id, master: theme.master.source, layouts: [...theme.layouts].map(([key, document]) => ({ key, source: document.source })) } });
   return decodeSlideClipboard(source) ? source : null;
 }
 
 /** Validate untrusted transport data before identity preparation or file access. */
 export function decodeSlideClipboard(source: string): SlideClipboard | null {
   const value = readJsonObject(source);
-  if (!value || value.version !== 1 || !isDocumentId(value.token) || !isRecord(value.origin) ||
+  if (!value || value.version !== 2 || !isDocumentId(value.token) || !isRecord(value.origin) ||
     !isDocumentId(value.origin.vault) || !isDocumentId(value.origin.document) || typeof value.origin.path !== "string" ||
     !Array.isArray(value.slides) || !value.slides.length || !Array.isArray(value.compositions) || !isRecord(value.theme) ||
-    !isDocumentId(value.theme.id) || typeof value.theme.master !== "string" || !Array.isArray(value.theme.layouts)) return null;
+    !isThemeKey(value.theme.key) || !isDocumentId(value.theme.id) || typeof value.theme.master !== "string" || !Array.isArray(value.theme.layouts)) return null;
   const origin = { vault: value.origin.vault, path: value.origin.path, document: value.origin.document };
   const layouts = new Map<string, { source: string; value: Record<string, unknown> }>();
   for (const entry of value.theme.layouts) {
@@ -68,10 +68,10 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
     if (!parsed) return null;
     layouts.set(entry.key, { source: entry.source, value: parsed });
   }
-  const paths = embeddedThemePaths(origin.path, { design: value.theme.id }, layouts.keys());
+  const paths = embeddedThemePaths(origin.path, { theme: value.theme.key }, layouts.keys());
   const master = themeDocument(value.theme.master, "master");
-  if (!paths || !master) return null;
-  const theme: EmbeddedTheme = { id: paths.id, root: paths.root,
+  if (!paths || !master || master.id !== value.theme.id) return null;
+  const theme: EmbeddedTheme = { key: paths.key, id: value.theme.id, root: paths.root,
     master: { path: paths.master, source: value.theme.master, value: master },
     layouts: new Map([...layouts].map(([key, document]) => [key, { ...document, path: paths.layouts.get(key)! }])) };
   const slides: CapturedPart[] = [], compositions: CapturedPart[] = [];

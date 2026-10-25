@@ -114,7 +114,7 @@ export class PresentationReader extends Component {
       // conflicts removed from the source folder and files renamed out of it.
       const companionChange = [file.path, oldPath].some(path => path !== undefined && path.toLowerCase().endsWith(".mdpoint") &&
         path.slice(0, path.lastIndexOf("/") + 1) === candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1));
-      const themeRoot = source?.theme?.root ?? candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1) + "designs";
+      const themeRoot = source?.theme?.root ?? candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1) + "themes";
       const themeChange = [file.path, oldPath].some(path => path !== undefined && (path === themeRoot || path.startsWith(themeRoot + "/")));
       if (themeChange && source) source.theme = null;
       const affected = themeChange || file === candidate || file.path === companionPath || companionChange ||
@@ -176,7 +176,7 @@ export class PresentationReader extends Component {
         .flatMap(record => isRecord(record) && typeof record.layout === "string" ? [record.layout] : []) : [];
       const previous = this.sources.get(file)?.theme;
       const themePaths = embeddedThemePaths(path, companion, new Set(layouts));
-      const theme = previous && previous.root === themePaths?.root && isRecord(companion) && companion.design === previous.id && layouts.every(key => previous.layouts.has(key))
+      const theme = previous && previous.root === themePaths?.root && isRecord(companion) && companion.theme === previous.key && layouts.every(key => previous.layouts.has(key))
         ? previous : await readEmbeddedTheme(this.app.vault, path, companion, new Set(layouts));
       if (!this.running || this.reads.get(file) !== request || file.path !== path ||
         this.app.vault.getAbstractFileByPath(path) !== file || (view && view.file !== file)) return;

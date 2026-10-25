@@ -25,7 +25,7 @@ const field = { id: "title", type: "text", placeholder: true, frame: { x: 100, y
 const staticText = { id: "footer", type: "text", frame: { x: 100, y: 800, width: 500, height: 60 } };
 const master = { markdownpoint: 1, kind: "master", size: { width: 1600, height: 900 }, objects: [staticText], text: { footer: "Fixed" } };
 const layout = { markdownpoint: 1, kind: "layout", objects: [field] };
-const theme: EmbeddedTheme = { id: "id", root: "deck/designs/id", master: { path: "master.json", source: JSON.stringify(master), value: master },
+const theme: EmbeddedTheme = { key: "basic", id: "id", root: "deck/themes/basic", master: { path: "master.json", source: JSON.stringify(master), value: master },
   layouts: new Map([["title", { path: "title.json", source: JSON.stringify(layout), value: layout }]]) };
 void test("structural preview resolves actual frame dimensions and partial inherited overrides", () => {
   const preview = slideStructure({ layout: "title", overrides: { title: { frame: { x: 300 } }, footer: null } }, theme)!;
