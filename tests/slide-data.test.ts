@@ -22,10 +22,13 @@ import { SlideData } from "../src/presentation/slide-data.ts";
 import type { SlideDataHost } from "../src/presentation/slide-data.ts";
 import { CompanionDocument } from "../src/format/companion.ts";
 import { EditorState } from "@codemirror/state";
-import { history, historyField, isolateHistory, undo } from "@codemirror/commands";
+import { history, historyField, isolateHistory, undo, redo } from "@codemirror/commands";
 import { indexPresentation } from "../src/format/document.ts";
 import { planSlideDeletion } from "../src/format/delete.ts";
 import { processCompanion } from "../src/presentation/companion-file.ts";
+import { planSlideInsertion } from "../src/format/insert.ts";
+import { slideInsertionTransaction } from "../src/editor/insert.ts";
+import { slideEditTransactions } from "../src/editor/structural-history.ts";
 
 const path = "deck/slides.md";
 const document = "11111111-1111-4111-8111-111111111111";
@@ -96,6 +99,45 @@ void test("ordinary text changes and slide reordering perform no companion write
   for (let index = 0; index < 100; index++) data.observe(path, document, state.disk, new Set(index % 2 ? ["a", "b"] : ["b", "a"]));
   await data.settled(path, document);
   assert.equal(state.calls, 0);
+});
+
+void test("new slide records survive failed saving, recovery reopening and serialized insertion undo/redo", async () => {
+  const { state: disk, host } = device();
+  const markdown = '<!-- slide: a -->\n<!-- text: title -->\nFirst\n<!-- slide: b -->\n<!-- text: title -->\nSecond\n';
+  const record = '{"layout":"title","unknown":9007199254740993,"objects":[{"id":"photo","type":"image","src":"assets/picture.png"}]}';
+  const slide = { id: "new", markdown: '<!-- slide: new -->\n<!-- text: title -->\nNew thought\n<!-- notes -->\nKeep these notes.\n', record };
+  let editor = EditorState.create({ doc: markdown, extensions: [history()] });
+  const plan = planSlideInsertion(markdown, indexPresentation(markdown, 0)!, disk.disk, [slide], "a", 0)!;
+  let data = new SlideData(host);
+  assert.ok(await data.remember(path, document, plan.companion, [slide.id]));
+  editor = slideEditTransactions(editor, slideInsertionTransaction(editor, plan, slide.id, true)!).at(-1)!.state;
+  const inserted = editor.doc.toString();
+  const synchronize = async () => {
+    data.observe(path, document, disk.disk, new Set(indexPresentation(editor.doc.toString(), 0)!.slides.map(part => part.id)));
+    await data.settled(path, document);
+  };
+  disk.writeFails = true;
+  await synchronize();
+  assert.equal(CompanionDocument.read(disk.disk)!.records.has(slide.id), false);
+  assert.equal(disk.errors.length, 1);
+  data.stop();
+  data = new SlideData(host);
+  await data.ready;
+  assert.equal(data.remembered(path, document).get(slide.id), record);
+  disk.writeFails = false;
+  await synchronize();
+  assert.equal(CompanionDocument.read(disk.disk)!.records.get(slide.id), record);
+  for (let cycle = 0; cycle < 3; cycle++) {
+    editor = EditorState.fromJSON(editor.toJSON({ history: historyField }), { extensions: [history()] }, { history: historyField });
+    assert.ok(undo({ state: editor, dispatch: transaction => { editor = transaction.state; } }));
+    assert.equal(editor.doc.toString(), markdown);
+    await synchronize();
+    assert.equal(CompanionDocument.read(disk.disk)!.records.has(slide.id), false);
+    assert.ok(redo({ state: editor, dispatch: transaction => { editor = transaction.state; } }));
+    assert.equal(editor.doc.toString(), inserted);
+    await synchronize();
+    assert.equal(CompanionDocument.read(disk.disk)!.records.get(slide.id), record);
+  }
 });
 
 void test("undo while a deletion is saving follows with a restore even before a file event", async () => {

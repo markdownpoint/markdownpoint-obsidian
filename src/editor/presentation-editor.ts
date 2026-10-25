@@ -17,7 +17,7 @@
  */
 
 import { StateEffect, StateField, EditorState, Transaction } from "@codemirror/state";
-import type { Extension } from "@codemirror/state";
+import type { Extension, TransactionSpec } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
 import { Component, MarkdownView, editorInfoField, editorLivePreviewField } from "obsidian";
@@ -42,7 +42,10 @@ import { undo, redo } from "@codemirror/commands";
 import type { SlideData } from "../presentation/slide-data.ts";
 import { planSlideDeletion } from "../format/delete.ts";
 import { slideDeletionTransaction } from "./delete.ts";
-import { slideEditTransactions } from "./structural-history.ts";
+import { historyBoundarySelection, slideEditTransactions } from "./structural-history.ts";
+import { planSlideInsertion } from "../format/insert.ts";
+import type { PreparedSlide } from "../format/insert.ts";
+import { slideInsertionTransaction } from "./insert.ts";
 
 const refreshPresentation = StateEffect.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
@@ -211,24 +214,46 @@ export class PresentationEditor extends Component {
     return changed;
   }
 
-  async deleteSlides(editor: Editor, ids: Iterable<string>, canApply: () => boolean): Promise<boolean> {
+  deleteSlides(editor: Editor, ids: Iterable<string>, canApply: () => boolean): Promise<boolean> {
+    const selected = new Set(ids);
+    return this.editSlideRecords(editor, canApply, (state, snapshot, companion) => {
+      const plan = planSlideDeletion(state.doc.toString(), snapshot.document, companion, selected);
+      return plan && { companion, ids: selected,
+        transaction: (current, livePreview) => slideDeletionTransaction(current, snapshot.document, plan, livePreview) };
+    });
+  }
+
+  insertSlides(editor: Editor, slides: readonly PreparedSlide[], afterSlideId: string | null, canApply: () => boolean): Promise<boolean> {
+    const prepared = slides.map(slide => ({ ...slide }));
+    return this.editSlideRecords(editor, canApply, (state, snapshot, companion) => {
+      const plan = planSlideInsertion(state.doc.toString(), snapshot.document, companion, prepared, afterSlideId, snapshot.bodyStart);
+      if (!plan) return null;
+      return { companion: plan.companion, ids: prepared.map(slide => slide.id),
+        transaction: (current, livePreview) => slideInsertionTransaction(current, plan, prepared[0]!.id, livePreview, snapshot.bodyStart) };
+    });
+  }
+
+  private async editSlideRecords(editor: Editor, canApply: () => boolean,
+    prepare: (state: EditorState, snapshot: PresentationSnapshot, companion: string) =>
+      { readonly companion: string; readonly ids: Iterable<string>;
+        transaction(state: EditorState, livePreview: boolean): TransactionSpec | null } | null): Promise<boolean> {
     const view = [...this.views].find(view => view.state.field(editorInfoField, false)?.editor === editor);
     const owner = view?.state.field(editorInfoField, false);
     if (!this.running || !this.data || !view || !(owner instanceof MarkdownView) || !owner.file) return false;
     const file = owner.file;
-    const selected = new Set(ids);
     await this.reader.refreshView(owner);
     if (!this.running || !this.views.has(view) || owner.file !== file || owner.getMode() !== "source" || !canApply()) return false;
     const before = view.state.doc;
     const snapshot = this.reader.snapshot(file, before.toString());
     const companion = snapshot && this.reader.companionFor(file, snapshot);
     if (!snapshot || companion === null) return false;
-    const plan = planSlideDeletion(before.toString(), snapshot.document, companion, selected);
-    if (!plan || !await this.data.remember(file.path, snapshot.id, companion, selected)) return false;
+    const plan = prepare(view.state, snapshot, companion);
+    if (!plan || !await this.data.remember(file.path, snapshot.id, plan.companion, plan.ids)) return false;
     if (!this.running || !this.views.has(view) || owner.file !== file || owner.getMode() !== "source" ||
       view.state.doc !== before || !this.reader.matchesIdentity(file, before.toString()) || !canApply()) return false;
-    view.dispatch(slideEditTransactions(view.state,
-      slideDeletionTransaction(view.state, snapshot.document, plan, view.state.field(editorLivePreviewField, false) === true)));
+    const transaction = plan.transaction(view.state, view.state.field(editorLivePreviewField, false) === true);
+    if (!transaction) return false;
+    view.dispatch(slideEditTransactions(view.state, transaction));
     this.reader.syncEditor(owner);
     return true;
   }
@@ -261,7 +286,9 @@ export class PresentationEditor extends Component {
     const before = transaction.startState.field(this.field).snapshot ?? this.reader.snapshot(file, transaction.startState.doc.toString());
     const after = transaction.state.field(this.field).snapshot ?? this.reader.snapshot(file, transaction.newDoc.toString());
     if (!before || !after || before.id !== after.id) return;
-    const selection = historyReorderSelection(transaction, before.document, after.document);
+    const selection = historyReorderSelection(transaction, before.document, after.document) ??
+      (transaction.state.field(editorLivePreviewField, false) === true
+        ? historyBoundarySelection(transaction, before.document, after.document) : null);
     if (!selection) return;
     view.dom.ownerDocument.defaultView?.queueMicrotask(() => {
       if (this.running && this.views.has(view) && view.state.field(editorInfoField, false)?.file === file &&
