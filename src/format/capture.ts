@@ -32,6 +32,20 @@ export interface CapturedSlides {
   readonly compositions: readonly CapturedPart[];
 }
 
+/** Only own composition instances introduce definition dependencies. */
+export function compositionSources(record: unknown, inherits: boolean): readonly string[] | null {
+  if (!isRecord(record) || (record.objects !== undefined && !Array.isArray(record.objects))) return null;
+  const sources = new Set<string>();
+  for (const object of record.objects ?? []) {
+    if (typeof object === "string" && inherits && isStableId(object)) continue;
+    if (!isRecord(object)) return null;
+    if (object.type !== "composition") continue;
+    if (!isStableId(object.source)) return null;
+    sources.add(object.source);
+  }
+  return [...sources];
+}
+
 /** Capture whole slide source in document order, including every placed reusable definition. */
 export function captureSlides(markdown: string, document: PresentationDocument, companion: string, ids: Iterable<string>): CapturedSlides | null {
   const selected = new Set(ids);
@@ -52,16 +66,9 @@ export function captureSlides(markdown: string, document: PresentationDocument, 
   // Iteration avoids a call-stack dependency on authored composition depth.
   const pending = [...slides];
   for (let index = 0; index < pending.length; index++) {
-    const value: unknown = JSON.parse(pending[index]!.record);
-    if (!isRecord(value) || (value.objects !== undefined && !Array.isArray(value.objects))) return null;
-    for (const object of value.objects ?? []) {
-      // A slide can name inherited objects in its paint order. Definitions have
-      // no layout to inherit from, and those names introduce no dependencies.
-      if (typeof object === "string" && selected.has(pending[index]!.id) && isStableId(object)) continue;
-      if (!isRecord(object)) return null;
-      if (object.type !== "composition") continue;
-      if (!isStableId(object.source)) return null;
-      const id = object.source;
+    const sources = compositionSources(JSON.parse(pending[index]!.record), selected.has(pending[index]!.id));
+    if (!sources) return null;
+    for (const id of sources) {
       if (seen.has(id)) continue;
       const part = definitions.get(id), record = records?.records.get(id);
       if (!part || record === undefined) return null;
