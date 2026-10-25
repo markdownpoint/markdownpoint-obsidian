@@ -438,7 +438,8 @@ export class PresentationEditor extends Component {
     });
     const noteFields = notes.flatMap(slot => slot.field && openedNotes.has(slot.slideId) ? [slot.field] : []);
     const entryPoints = new Set([...fields, ...noteFields].filter(field => field.contentFrom === field.to && field.to < state.doc.length).map(field => field.contentFrom));
-    for (const slot of notes) if (!slot.field) entryPoints.add(slot.at);
+    // Missing notes are block widgets before the next marker, not editable entry
+    // points. Excluding that marker's start would create an empty cursor line.
     const ranges = markers.map(marker => Decoration.replace({
       block: true, inclusiveStart: !entryPoints.has(marker.from), ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label, marker.slideId) }),
     }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to));
