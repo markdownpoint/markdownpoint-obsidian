@@ -45,7 +45,7 @@ export class SlideMenus extends Component {
   constructor(
     private readonly app: App,
     private readonly reader: PresentationReader,
-    private readonly actions: { copy(target: SlideMenuTarget): void; paste(target: SlideMenuTarget): void; delete(target: SlideMenuTarget): void },
+    private readonly actions: { cut(target: SlideMenuTarget): void; copy(target: SlideMenuTarget): void; paste(target: SlideMenuTarget): void; delete(target: SlideMenuTarget): void },
   ) {
     super();
     this.extension = ViewPlugin.define(view => {
@@ -245,6 +245,8 @@ export class SlideMenus extends Component {
 
   private addItems(menu: Menu, target: SlideMenuTarget): void {
     if (!this.current(target)) return;
+    if (target.slide) menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.cut({ count: 1 }))
+      .setIcon("scissors").onClick(() => { if (this.current(target)) this.actions.cut(target); }));
     if (target.slide) menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.copy({ count: 1 }))
       .setIcon("copy").onClick(() => { if (this.current(target)) this.actions.copy(target); }));
     menu.addItem(item => item.setSection("markdownpoint-slides").setTitle(uiText.slides.paste)

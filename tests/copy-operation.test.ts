@@ -23,7 +23,7 @@ import type { CopySource, SlideCopyHost } from "../src/presentation/copy.ts";
 import { decodeSlideClipboard } from "../src/format/clipboard.ts";
 import { indexPresentation } from "../src/format/document.ts";
 import { embeddedThemePaths, themeDocument } from "../src/format/embedded-theme.ts";
-import { clipboardVaultId, CLIPBOARD_VAULT_KEY } from "../src/settings/clipboard.ts";
+import { clipboardVaultId, CLIPBOARD_VAULT_KEY, clipboardDigest, ownsClipboardCut, CLIPBOARD_CUT_KEY } from "../src/settings/clipboard.ts";
 
 const uuid = "11111111-1111-4111-8111-111111111111", path = "deck/slides.md";
 const companion = JSON.stringify({ markdownpoint: 1, kind: "presentation", document: uuid, design: uuid, slides: { one: { layout: "title" }, two: { layout: "title" } } });
@@ -149,4 +149,18 @@ void test("clipboard origin identity persists only in vault-local storage and su
   stored = "invalid";
   assert.equal(clipboardVaultId(host, () => uuid), uuid);
   assert.equal(writes, 2);
+});
+
+void test("local Cut authority survives reload but cannot authorize an altered packet", async () => {
+  const stored = new Map<string, unknown>();
+  const host = { loadLocalStorage: (key: string) => stored.get(key), saveLocalStorage: (key: string, value: unknown) => { stored.set(key, value); } };
+  const { copier } = setup();
+  const copied = await copier.copy("view", ["one"]);
+  assert.equal(copied.kind, "copied");
+  if (copied.kind !== "copied") return;
+  const digest = await clipboardDigest(copied.encoded);
+  assert.equal(ownsClipboardCut(host, digest), false);
+  host.saveLocalStorage(CLIPBOARD_CUT_KEY, digest);
+  assert.equal(ownsClipboardCut({ ...host }, await clipboardDigest(copied.encoded)), true);
+  assert.equal(ownsClipboardCut(host, await clipboardDigest(copied.encoded.replace("First", "Altered"))), false);
 });

@@ -19,7 +19,7 @@
 import { Component, MarkdownView, Notice } from "obsidian";
 import type { App, TFile } from "obsidian";
 import { decodeSlideClipboard, SLIDE_CLIPBOARD_MIME } from "../format/clipboard.ts";
-import { clipboardVaultId } from "../settings/clipboard.ts";
+import { clipboardVaultId, clipboardDigest, ownsClipboardCut, CLIPBOARD_CUT_KEY } from "../settings/clipboard.ts";
 import { uiText } from "../ui-text.ts";
 import { readJsonObject } from "../format/json.ts";
 import { prepareClipboardPaste, sameClipboardDestination } from "../format/paste.ts";
@@ -42,6 +42,7 @@ interface CopyContext {
 export class PresentationClipboard extends Component {
   private readonly copier: SlideCopy<CopyContext>;
   private running = false;
+  private intent = 0;
   private pastes: Promise<void> = Promise.resolve();
 
   constructor(private readonly app: App, private readonly reader: PresentationReader,
@@ -107,8 +108,9 @@ export class PresentationClipboard extends Component {
       if (!theme || !sameClipboardDestination(packet, { vault: clipboardVaultId(this.app), path: context.path, document: snapshot.id }, theme)) {
         new Notice(uiText.slides.pasteDestination); return;
       }
-      const remembered = [...(this.data?.remembered(context.path, snapshot.id).keys() ?? []), ...(this.data?.remembered(context.path, snapshot.id, "compositions").keys() ?? [])];
-      const prepared = prepareClipboardPaste(packet, markdown, snapshot.document, companion, remembered, () => `id-${crypto.randomUUID()}`);
+      const digest = await clipboardDigest(result.source!);
+      const remembered = new Map([...(this.data?.remembered(context.path, snapshot.id) ?? []), ...(this.data?.remembered(context.path, snapshot.id, "compositions") ?? [])]);
+      const prepared = prepareClipboardPaste(packet, markdown, snapshot.document, companion, remembered, () => `id-${crypto.randomUUID()}`, ownsClipboardCut(this.app, digest));
       const current = () => this.current(context) && view.getViewData() === markdown &&
         this.reader.companionFor(input.file, snapshot) === companion;
       if (!prepared || !current()) { new Notice(uiText.slides.pasteChanged); return; }
@@ -122,7 +124,36 @@ export class PresentationClipboard extends Component {
     return action;
   }
 
+  async cut(input: Omit<CopyContext, "path">, ids: Iterable<string>, editingView: () => Promise<MarkdownView | null>): Promise<void> {
+    const selected = [...ids], intent = this.intent + 1;
+    const copied = await this.copy(input, selected);
+    if (copied.kind !== "copied" || intent !== this.intent) return;
+    let digest: string | null = null;
+    try {
+      const view = await editingView();
+      if (!view) return;
+      const context = { ...input, path: copied.source.path, view };
+      const current = () => intent === this.intent && this.current(context) && view.getViewData() === copied.source.markdown &&
+        this.reader.snapshot(input.file, view.getViewData())?.id === copied.source.documentId &&
+        this.reader.companionFor(input.file, this.reader.snapshot(input.file, view.getViewData())!) === copied.source.companion;
+      if (!current()) return;
+      digest = await clipboardDigest(copied.encoded);
+      if (!current()) return;
+      this.app.saveLocalStorage(CLIPBOARD_CUT_KEY, digest);
+      const deleted = await this.editor.deleteSlides(view.editor, selected, current);
+      if (!deleted) {
+        if (ownsClipboardCut(this.app, digest)) this.app.saveLocalStorage(CLIPBOARD_CUT_KEY, null);
+        if (this.current(context)) new Notice(uiText.slides.cutChanged);
+      }
+    } catch (error) {
+      console.error(error);
+      if (digest && ownsClipboardCut(this.app, digest)) this.app.saveLocalStorage(CLIPBOARD_CUT_KEY, null);
+      if (this.running && input.canApply()) new Notice(uiText.slides.cutFailed);
+    }
+  }
+
   async copy(input: Omit<CopyContext, "path">, ids: Iterable<string>): Promise<SlideCopyResult> {
+    this.intent++;
     const context = { ...input, path: input.file.path };
     const result = await this.copier.copy(context, ids);
     if (result.kind === "failed") console.error(result.error);

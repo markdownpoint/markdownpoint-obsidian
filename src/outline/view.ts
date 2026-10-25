@@ -33,6 +33,7 @@ export interface OutlineDelegate {
   reorder(action: SlideReorder): void;
   history(direction: "undo" | "redo"): void;
   selectForMenu(id: string): boolean;
+  cutSlides(selection: ListSelection<string>, window: Window): void;
   copySlides(selection: ListSelection<string>, window: Window): void;
   pasteSlides(after: string | null, window: Window): void;
   deleteSlides(selection: ListSelection<string>): void;
@@ -67,6 +68,16 @@ export class MarkdownPointOutlineView extends ItemView {
       }
       const modifier = Platform.isMacOS ? event.metaKey : event.ctrlKey;
       const key = event.key.toLowerCase();
+      if (modifier && !event.shiftKey && ["c", "x", "v"].includes(key) && this.delegate.state().presentation) {
+        event.preventDefault(); event.stopPropagation();
+        const state = this.delegate.state(), window = this.contentEl.ownerDocument.defaultView!;
+        if (key === "v") this.delegate.pasteSlides(state.selection.cursor ?? state.activeSlideId, window);
+        else if (state.selection.selected.size) {
+          if (key === "c") this.delegate.copySlides(state.selection, window);
+          else this.delegate.cutSlides(state.selection, window);
+        }
+        return;
+      }
       if (modifier && this.delegate.state().presentation &&
         (key === "z" || (!Platform.isMacOS && !event.shiftKey && key === "y"))) {
         event.preventDefault();
@@ -183,6 +194,9 @@ export class MarkdownPointOutlineView extends ItemView {
     const current = () => this.delegate.state().presentation?.path === presentation?.path &&
       this.delegate.state().presentation?.documentId === presentation?.documentId;
     const menu = event ? Menu.forEvent(event) : new Menu();
+    if (id !== null) menu.addItem(entry => entry.setTitle(uiText.slides.cut({ count: selection.selected.size })).setIcon("scissors").onClick(() => {
+      if (current()) this.delegate.cutSlides(selection, this.contentEl.ownerDocument.defaultView!);
+    }));
     if (id !== null) menu.addItem(entry => entry.setTitle(uiText.slides.copy({ count: selection.selected.size })).setIcon("copy").onClick(() => {
       if (current()) this.delegate.copySlides(selection, this.contentEl.ownerDocument.defaultView!);
     }));

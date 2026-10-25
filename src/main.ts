@@ -71,6 +71,7 @@ export default class MarkdownPointPlugin extends Plugin {
         return true;
       },
       deleteSlides: selection => this.deleteOutlineSlides(selection),
+      cutSlides: (selection, window) => this.cutOutlineSlides(selection, window),
       copySlides: (selection, window) => this.copyOutlineSlides(selection, window),
       pasteSlides: (after, window) => this.pasteOutlineSlides(after, window),
     }));
@@ -126,7 +127,7 @@ export default class MarkdownPointPlugin extends Plugin {
     this.registerEditorExtension(this.presentationEditor.extension);
     this.clipboard = this.addChild(new PresentationClipboard(this.app, this.reader, this.presentationEditor, this.storage.data));
     this.slideMenus = this.addChild(new SlideMenus(this.app, this.reader, {
-      copy: target => this.copyDraftSlide(target), paste: target => this.pasteDraftSlides(target), delete: target => this.deleteDraftSlide(target),
+      cut: target => this.cutDraftSlide(target), copy: target => this.copyDraftSlide(target), paste: target => this.pasteDraftSlides(target), delete: target => this.deleteDraftSlide(target),
     }));
     this.registerEditorExtension(this.slideMenus.extension);
     this.registerMarkdownPostProcessor((element, context) => this.slideMenus?.readingSection(element, context));
@@ -258,6 +259,28 @@ export default class MarkdownPointPlugin extends Plugin {
     const owner = this.currentEditorLeaf()?.view;
     const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
     this.run(async () => { await this.clipboard?.copy({ view, file, window, canApply: current }, selection.selected); });
+  }
+
+  private cutOutlineSlides(selection: ListSelection<string>, window: Window): void {
+    const presentation = this.presentation;
+    const file = presentation && this.app.vault.getFileByPath(presentation.path);
+    if (!presentation || !file) return;
+    const current = () => this.running && this.presentation?.path === presentation.path &&
+      this.presentation.documentId === presentation.documentId && this.outline.state.selection === selection;
+    const owner = this.currentEditorLeaf()?.view;
+    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+    this.run(async () => { await this.clipboard?.cut({ view, file, window, canApply: current }, selection.selected, async () => {
+      const leaf = await this.ensureEditorLeaf();
+      return leaf && current() ? this.editingView(leaf) : null;
+    }); });
+  }
+
+  private cutDraftSlide(target: SlideMenuTarget): void {
+    if (!target.slide) return;
+    const current = () => this.running && this.slideMenus?.current(target) === true;
+    this.run(async () => { await this.clipboard?.cut({ view: target.owner, file: target.file,
+      window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current }, target.slide ? [target.slide] : [],
+    () => this.editingView(target.owner.leaf)); });
   }
 
   private pasteOutlineSlides(after: string | null, window: Window): void {

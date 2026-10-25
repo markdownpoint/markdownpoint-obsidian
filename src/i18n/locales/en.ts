@@ -36,6 +36,9 @@ export const en = {
   clipboard: { copyText: "Copy", copyFailed: "Could not copy text to the clipboard." },
   slides: {
     copy: ({ count }: { count: number }) => count === 1 ? "Copy slide" : "Copy slides",
+    cut: ({ count }: { count: number }) => count === 1 ? "Cut slide" : "Cut slides",
+    cutChanged: "The presentation changed before the slides could be cut. They were copied instead.",
+    cutFailed: "Could not cut the slides. A copy remains on the clipboard.",
     paste: "Paste slides",
     pasteEmpty: "Copy a slide in MarkdownPoint first.",
     pasteDestination: "Paste into the original presentation with its original theme.",

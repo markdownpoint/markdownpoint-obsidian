@@ -32,7 +32,7 @@ export function sameClipboardDestination(packet: SlideClipboard, origin: Clipboa
 
 /** Gather the destination's exact reusable definitions and every reserved identity. */
 export function prepareClipboardPaste(packet: SlideClipboard, markdown: string, document: PresentationDocument, companion: string,
-  remembered: Iterable<string>, mint: () => string): CapturedSlides | null {
+  remembered: ReadonlyMap<string, string>, mint: () => string, restoreCut = false): CapturedSlides | null {
   const slides = CompanionDocument.read(companion), definitions = CompanionDocument.ensure(companion, "compositions");
   if (!slides || !definitions) return null;
   const held: CapturedPart[] = [];
@@ -41,7 +41,12 @@ export function prepareClipboardPaste(packet: SlideClipboard, markdown: string, 
     if (record === undefined) return null;
     held.push({ id: part.id, markdown: markdown.slice(part.from, part.to), record });
   }
-  const occupied = new Set([...slides.records.keys(), ...definitions.records.keys(), ...remembered,
+  const occupied = new Set([...slides.records.keys(), ...definitions.records.keys(), ...remembered.keys(),
     ...document.slides.map(part => part.id), ...document.compositions.map(part => part.id)]);
-  return prepareSlideCopies(packet.captured, held, occupied, packet.schemas, mint);
+  const standing = new Set([...document.slides, ...document.compositions].map(part => part.id));
+  const preserve = restoreCut && packet.captured.slides.every(part => !standing.has(part.id) && !definitions.records.has(part.id) &&
+    (slides.records.get(part.id) === undefined || slides.records.get(part.id) === part.record) &&
+    (remembered.get(part.id) === undefined || remembered.get(part.id) === part.record));
+  if (preserve) for (const part of packet.captured.slides) occupied.delete(part.id);
+  return prepareSlideCopies(packet.captured, held, occupied, packet.schemas, mint, preserve);
 }

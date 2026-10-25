@@ -39,7 +39,7 @@ void test("same-presentation paste keeps raw fields, notes and metadata while cr
   let source = markdown, companion = '{"slides":{"first":' + record + '}}';
   for (let count = 0; count < 3; count++) {
     const document = indexPresentation(source, 0)!;
-    const prepared = prepareClipboardPaste(packet, source, document, companion, [], () => `new-${count}`)!;
+    const prepared = prepareClipboardPaste(packet, source, document, companion, new Map(), () => `new-${count}`)!;
     assert.equal(prepared.slides[0]!.record, record);
     assert.equal(prepared.slides[0]!.markdown, markdown.replace("slide: first", `slide: new-${count}`));
     const plan = planSlideInsertion(source, document, companion, prepared.slides, "first", 0, prepared.compositions)!;
@@ -51,14 +51,14 @@ void test("same-presentation paste keeps raw fields, notes and metadata while cr
 
 void test("an empty presentation accepts the first pasted slide", () => {
   const document = indexPresentation("", 0)!;
-  const prepared = prepareClipboardPaste(packet, "", document, '{"slides":{}}', [], () => "fresh")!;
+  const prepared = prepareClipboardPaste(packet, "", document, '{"slides":{}}', new Map(), () => "fresh")!;
   assert.ok(planSlideInsertion("", document, '{"slides":{}}', prepared.slides, null, 0));
 });
 
 void test("orphaned and recoverable identities are not recycled by a copied slide", () => {
   const document = indexPresentation(markdown, 0)!;
-  assert.equal(prepareClipboardPaste(packet, markdown, document, '{"slides":{"first":{},"orphan":{}}}', [], () => "orphan"), null);
-  assert.equal(prepareClipboardPaste(packet, markdown, document, '{"slides":{"first":{}}}', ["recoverable"], () => "recoverable"), null);
+  assert.equal(prepareClipboardPaste(packet, markdown, document, '{"slides":{"first":{},"orphan":{}}}', new Map(), () => "orphan"), null);
+  assert.equal(prepareClipboardPaste(packet, markdown, document, '{"slides":{"first":{}}}', new Map([["recoverable", "{}"]]), () => "recoverable"), null);
 });
 
 void test("same-origin asset references require the original vault, document, path and theme sources", () => {
@@ -66,4 +66,17 @@ void test("same-origin asset references require the original vault, document, pa
   for (const key of ["vault", "path", "document"] as const) assert.equal(sameClipboardDestination(packet, { ...origin, [key]: "different" }, theme), false);
   assert.equal(sameClipboardDestination(packet, origin, { ...theme, master: { ...theme.master, source: master + " " } }), false);
   assert.equal(sameClipboardDestination(packet, origin, { ...theme, layouts: new Map() }), false);
+});
+
+void test("a locally owned Cut restores identity once; repeated Paste and Undo Cut clone instead", () => {
+  const empty = indexPresentation("", 0)!, companion = '{"slides":{}}';
+  const restored = prepareClipboardPaste(packet, "", empty, companion, new Map([["first", record]]), () => "copy", true)!;
+  assert.equal(restored.slides[0]!.id, "first");
+  const standing = indexPresentation(markdown, 0)!;
+  const repeated = prepareClipboardPaste(packet, markdown, standing, '{"slides":{"first":' + record + '}}', new Map(), () => "copy", true)!;
+  assert.equal(repeated.slides[0]!.id, "copy");
+  const newer = prepareClipboardPaste(packet, "", empty, companion, new Map([["first", '{"newer":true}']]), () => "copy", true)!;
+  assert.equal(newer.slides[0]!.id, "copy");
+  const unauthenticated = prepareClipboardPaste(packet, "", empty, companion, new Map(), () => "copy")!;
+  assert.equal(unauthenticated.slides[0]!.id, "copy");
 });

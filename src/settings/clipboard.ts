@@ -30,3 +30,15 @@ export function clipboardVaultId(host: LocalStorageHost, mint: () => string = ()
   host.saveLocalStorage(CLIPBOARD_VAULT_KEY, id);
   return id;
 }
+
+export const CLIPBOARD_CUT_KEY = "markdownpoint:clipboard-cut";
+
+/** Authority is local and bound to the complete packet, not its transport token. */
+export async function clipboardDigest(encoded: string): Promise<string> {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(encoded));
+  return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export function ownsClipboardCut(host: LocalStorageHost, digest: string): boolean {
+  return host.loadLocalStorage(CLIPBOARD_CUT_KEY) === digest;
+}

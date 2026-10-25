@@ -39,7 +39,7 @@ function definitionKey(part: CapturedPart): string | null {
  * only identical definition source, conservatively retaining differing metadata.
  */
 export function prepareSlideCopies(captured: CapturedSlides, held: readonly CapturedPart[], occupied: ReadonlySet<string>,
-  schemas: ReadonlyMap<string, ReadonlyMap<string, "rich-text" | "table">>, mint: () => string): CapturedSlides | null {
+  schemas: ReadonlyMap<string, ReadonlyMap<string, "rich-text" | "table">>, mint: () => string, preserveSlideIds = false): CapturedSlides | null {
   const incoming = [...captured.slides, ...captured.compositions];
   if (!captured.slides.length || new Set(incoming.map(part => part.id)).size !== incoming.length ||
     new Set(held.map(part => part.id)).size !== held.length) return null;
@@ -74,7 +74,8 @@ export function prepareSlideCopies(captured: CapturedSlides, held: readonly Capt
   }
   const slideIds = new Map<string, string>(), compositionIds = new Map<string, string>();
   for (const part of captured.slides) {
-    const id = fresh();
+    if (preserveSlideIds && occupied.has(part.id)) return null;
+    const id = preserveSlideIds ? part.id : fresh();
     if (id === null) return null;
     slideIds.set(part.id, id);
   }
