@@ -18,8 +18,23 @@
 
 export function presentationCompanionPath(markdownPath: string): string | null {
   const slash = markdownPath.lastIndexOf("/");
-  if (markdownPath.slice(slash + 1) !== "slides.md") return null;
+  if (markdownPath.slice(slash + 1).toLowerCase() !== "slides.md") return null;
   return markdownPath.slice(0, slash + 1) + "presentation.mdpoint";
+}
+
+/** Candidate names include sync conflicts; unrelated notes and AppleDouble files are ignored. */
+export function presentationMember(name: string): "markdown" | "companion" | null {
+  const lower = name.toLowerCase();
+  if (!name.startsWith("._") && name.length > 8 && lower.endsWith(".mdpoint")) return "companion";
+  return /^slides(?![a-z])/i.test(name) && lower.endsWith(".md") ? "markdown" : null;
+}
+
+/** Discover one unambiguous fixed pair, preserving the spelling stored by the vault. */
+export function presentationPairNames(names: readonly string[]): { markdown: string; companion: string } | null {
+  const markdown = names.filter(name => presentationMember(name) === "markdown");
+  const companion = names.filter(name => presentationMember(name) === "companion");
+  if (markdown.length !== 1 || companion.length !== 1 || markdown[0]!.toLowerCase() !== "slides.md" || companion[0]!.toLowerCase() !== "presentation.mdpoint") return null;
+  return { markdown: markdown[0]!, companion: companion[0]! };
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

@@ -18,7 +18,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { presentationCompanionPath, presentationIdentity } from "../src/format/recognition.ts";
+import { presentationCompanionPath, presentationIdentity, presentationPairNames } from "../src/format/recognition.ts";
 
 const document = "12345678-1234-7234-9234-123456789abc";
 const frontmatter = { markdownpoint: 1, document };
@@ -27,8 +27,24 @@ const companion = { markdownpoint: 1, kind: "presentation", document, slides: {}
 void test("the fixed companion stays beside slides.md at the vault root or in a nested folder", () => {
   assert.equal(presentationCompanionPath("slides.md"), "presentation.mdpoint");
   assert.equal(presentationCompanionPath("Talks/Årets möte/slides.md"), "Talks/Årets möte/presentation.mdpoint");
+  assert.equal(presentationCompanionPath("Talks/Årets möte/Slides.MD"), "Talks/Årets möte/presentation.mdpoint");
   for (const path of ["slides.md.bak", "notes.md", "slides.md/notes.md", "slides.md/"]) {
     assert.equal(presentationCompanionPath(path), null);
+  }
+});
+
+void test("pair discovery keeps actual filename case and leaves unrelated notes alone", () => {
+  assert.deepEqual(presentationPairNames(["Slides.MD", "Presentation.MDPOINT", "README.md", "notes.md", "slideshow.md", "._presentation.mdpoint", "._slides.md", ".mdpoint"]),
+    { markdown: "Slides.MD", companion: "Presentation.MDPOINT" });
+  assert.equal(presentationPairNames(["slides.md", "old-name.mdpoint"]), null);
+  assert.equal(presentationPairNames(["slides copy.md", "presentation.mdpoint"]), null);
+  assert.equal(presentationPairNames(["slides.md"]), null);
+  assert.equal(presentationPairNames(["presentation.mdpoint"]), null);
+});
+
+void test("a conflicted copy of either member makes the pair unavailable", () => {
+  for (const copy of ["slides copy.md", "slides 2.md", "slides-laptop.md", "slides (1).md", "slides (conflicted copy).md", "SLIDES.MD", "Presentation.MDPOINT", "presentation copy.mdpoint", "another.mdpoint"]) {
+    assert.equal(presentationPairNames(["slides.md", "presentation.mdpoint", copy]), null, copy);
   }
 });
 

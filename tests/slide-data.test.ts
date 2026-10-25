@@ -281,8 +281,9 @@ void test("unloading during a pending backup cannot commit an earlier deletion a
   const save = host.saveRecovery.bind(host);
   host.saveRecovery = async value => { await save(value); began(); await gate; };
   const file = { path: "deck/presentation.mdpoint" };
+  const pair = { markdown: { path }, companion: file };
   const vault = {
-    getFileByPath: () => file,
+    getPair: () => pair,
     read: () => Promise.resolve(state.disk),
     process: (_file: typeof file, update: (source: string) => string) => { writes++; state.disk = update(state.disk); return Promise.resolve(state.disk); },
   };
@@ -306,8 +307,9 @@ void test("unloading while Vault.process is queued cancels at the actual commit 
   const gate = new Promise<void>(resolve => { release = resolve; });
   const started = new Promise<void>(resolve => { began = resolve; });
   const file = { path: "deck/presentation.mdpoint" };
+  const pair = { markdown: { path }, companion: file };
   const vault = {
-    getFileByPath: () => file,
+    getPair: () => pair,
     read: () => Promise.resolve(state.disk),
     process: async (_file: typeof file, update: (source: string) => string) => {
       began(); await gate;

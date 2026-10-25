@@ -17,18 +17,25 @@
  */
 
 interface CompanionVault<File> {
-  getFileByPath(path: string): File | null;
+  getPair(path: string): { readonly markdown: File; readonly companion: File } | null;
   read(file: File): Promise<string>;
   process(file: File, update: (source: string) => string): Promise<string>;
 }
 
 /** Prepare durable recovery data, then commit only against the source it was read from. */
 export async function processCompanion<File>(vault: CompanionVault<File>, path: string, update: (source: string) => Promise<string>, canCommit: () => boolean = () => true): Promise<void> {
-  const file = vault.getFileByPath(path);
-  if (!file) throw new Error("Presentation data file is missing");
+  const pair = vault.getPair(path);
+  if (!pair) throw new Error("Presentation files are missing or ambiguous");
+  const file = pair.companion;
+  const samePair = () => {
+    const current = vault.getPair(path);
+    return current !== null && current.markdown === pair.markdown && current.companion === file;
+  };
   const changed = new Error("Presentation data changed while preparing its update");
   const canceled = new Error("Presentation data update canceled");
+  const moved = new Error("Presentation files changed while preparing their update");
   for (;;) {
+    if (!samePair()) throw moved;
     const before = await vault.read(file);
     const after = await update(before);
     if (after === before) return;
@@ -37,6 +44,7 @@ export async function processCompanion<File>(vault: CompanionVault<File>, path: 
         // Vault.process may wait for other work and read the file asynchronously.
         // This is the last synchronous boundary before its actual write.
         if (!canCommit()) throw canceled;
+        if (!samePair()) throw moved;
         if (current !== before) throw changed;
         return after;
       });

@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Component, MarkdownView, TFile, getFrontMatterInfo, parseYaml } from "obsidian";
-import type { App, TAbstractFile } from "obsidian";
+import { Component, MarkdownView, getFrontMatterInfo, parseYaml } from "obsidian";
+import type { App, TAbstractFile, TFile } from "obsidian";
 import { indexPresentation } from "../format/document.ts";
 import type { PresentationDocument } from "../format/document.ts";
-import { isRecord, presentationCompanionPath, presentationIdentity } from "../format/recognition.ts";
+import { isRecord, presentationCompanionPath, presentationIdentity, presentationMember } from "../format/recognition.ts";
+import { presentationFiles } from "./presentation-files.ts";
 import { outlineSections, outlineSlides } from "../outline/model.ts";
 import type { OutlinePresentation } from "../outline/model.ts";
 import { uiText } from "../ui-text.ts";
@@ -116,7 +117,7 @@ export class PresentationReader extends Component {
       const companionPath = presentationCompanionPath(candidate.path);
       // Deleted entries no longer have a parent object; paths still identify
       // conflicts removed from the source folder and files renamed out of it.
-      const companionChange = [file.path, oldPath].some(path => path !== undefined && path.toLowerCase().endsWith(".mdpoint") &&
+      const companionChange = [file.path, oldPath].some(path => path !== undefined && presentationMember(path.slice(path.lastIndexOf("/") + 1)) !== null &&
         path.slice(0, path.lastIndexOf("/") + 1) === candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1));
       const themeRoot = source?.theme?.root ?? candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1) + "themes";
       const themeChange = [file.path, oldPath].some(path => path !== undefined && (path === themeRoot || path.startsWith(themeRoot + "/")));
@@ -164,12 +165,11 @@ export class PresentationReader extends Component {
     const request = { view };
     this.reads.set(file, request);
     const path = file.path;
-    const companionPath = presentationCompanionPath(path);
-    const companionFile = companionPath && this.app.vault.getAbstractFileByPath(companionPath);
-    const companions = file.parent?.children.filter(file => file instanceof TFile &&
-      file.extension.toLowerCase() === "mdpoint" && !file.name.startsWith("._"));
+    const pair = presentationCompanionPath(path) && presentationFiles(this.app.vault, path);
+    const companionFile = pair && pair.markdown === file ? pair.companion : null;
+    const companionPath = companionFile?.path;
     try {
-      if (!companionPath || !(companionFile instanceof TFile) || companions?.length !== 1) { this.forget(file); return; }
+      if (!companionPath || !companionFile) { this.forget(file); return; }
       await this.data?.ready.catch(() => undefined);
       const companionText = await this.app.vault.read(companionFile);
       const companion: unknown = JSON.parse(companionText);
@@ -177,7 +177,7 @@ export class PresentationReader extends Component {
       // The file's newest request owns its metadata. A reused editor is never a
       // source for that earlier file, and unloading invalidates every request.
       if (!this.running || this.reads.get(file) !== request || file.path !== path ||
-        this.app.vault.getAbstractFileByPath(path) !== file || (view && view.file !== file)) return;
+        this.app.vault.getAbstractFileByPath(path) !== file || presentationFiles(this.app.vault, path)?.companion !== companionFile || (view && view.file !== file)) return;
       const layouts = isRecord(companion) && isRecord(companion.slides) ? Object.values(companion.slides)
         .flatMap(record => isRecord(record) && typeof record.layout === "string" ? [record.layout] : []) : [];
       const previous = this.sources.get(file)?.theme;
@@ -185,7 +185,7 @@ export class PresentationReader extends Component {
       const theme = previous && previous.root === themePaths?.root && isRecord(companion) && companion.theme === previous.key && layouts.every(key => previous.layouts.has(key))
         ? previous : await readEmbeddedTheme(this.app.vault, path, companion, new Set(layouts));
       if (!this.running || this.reads.get(file) !== request || file.path !== path ||
-        this.app.vault.getAbstractFileByPath(path) !== file || (view && view.file !== file)) return;
+        this.app.vault.getAbstractFileByPath(path) !== file || presentationFiles(this.app.vault, path)?.companion !== companionFile || (view && view.file !== file)) return;
       const source: PresentationSource = { file, path, companionPath, companion, companionText, theme, markdown: null, snapshot: null };
       this.sources.set(file, source);
       this.update(source, view ? view.getViewData() : markdown, view);

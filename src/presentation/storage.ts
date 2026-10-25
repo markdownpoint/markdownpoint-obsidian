@@ -21,6 +21,7 @@ import type { App } from "obsidian";
 import { SlideData } from "./slide-data.ts";
 import { SlideRecovery } from "./slide-recovery.ts";
 import { processCompanion } from "./companion-file.ts";
+import { presentationFiles } from "./presentation-files.ts";
 import { uiText } from "../ui-text.ts";
 
 /** Own recovery storage, vault writes and actionable save failures for this plugin. */
@@ -39,7 +40,11 @@ export class PresentationStorage extends Component {
     const data = this.data = new SlideData({
       loadRecovery: () => recovery.read(),
       saveRecovery: value => recovery.write(value),
-      process: (path, update, canCommit) => processCompanion(app.vault, path, update, canCommit),
+      process: (path, update, canCommit) => processCompanion({
+        getPair: memberPath => presentationFiles(app.vault, memberPath),
+        read: file => app.vault.read(file),
+        process: (file, change) => app.vault.process(file, change),
+      }, path, update, canCommit),
       failed: (path, document, error) => this.saveFailed(path, document, error),
       saved: (path, document) => this.clearNotice(path, document),
     });

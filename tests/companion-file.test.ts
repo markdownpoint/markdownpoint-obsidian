@@ -22,11 +22,13 @@ import { processCompanion } from "../src/presentation/companion-file.ts";
 
 const path = "deck/presentation.mdpoint";
 const file = { path };
+const markdown = { path: "deck/slides.md" };
+const pair = { markdown, companion: file };
 
 void test("a companion change during recovery preparation is reread without overwriting it", async () => {
   let disk = "old", attempts = 0, preparations = 0;
   const vault = {
-    getFileByPath: () => file,
+    getPair: () => pair,
     read: () => Promise.resolve(disk),
     process: (_file: typeof file, update: (source: string) => string) => {
       if (++attempts === 1) disk = "external";
@@ -43,23 +45,54 @@ void test("a companion change during recovery preparation is reread without over
 void test("failed recovery preparation and unchanged contents never reach a vault write", async () => {
   let writes = 0;
   const vault = {
-    getFileByPath: () => file,
+    getPair: () => pair,
     read: () => Promise.resolve("original"),
     process: (_file: typeof file, _update: (source: string) => string) => { writes++; return Promise.resolve("unexpected"); },
   };
   await assert.rejects(processCompanion(vault, path, () => Promise.reject(new Error("Backup failed"))), /Backup failed/);
   await processCompanion(vault, path, value => Promise.resolve(value));
   assert.equal(writes, 0);
-  await assert.rejects(processCompanion({ ...vault, getFileByPath: () => null }, path, value => Promise.resolve(value)), /missing/);
+  await assert.rejects(processCompanion({ ...vault, getPair: () => null }, path, value => Promise.resolve(value)), /missing/);
 });
 
 void test("a real vault write failure is reported without retries", async () => {
   let attempts = 0;
   const vault = {
-    getFileByPath: () => file,
+    getPair: () => pair,
     read: () => Promise.resolve("original"),
     process: (_file: typeof file, _update: (source: string) => string): Promise<string> => { attempts++; throw new Error("Disk write failed"); },
   };
   await assert.rejects(processCompanion(vault, path, value => Promise.resolve(value + ":updated")), /Disk write failed/);
   assert.equal(attempts, 1);
+});
+
+void test("replacing either member or introducing a conflict during recovery preparation cannot receive the old write", async () => {
+  for (const replacement of [null, { ...pair, companion: { path } }, { ...pair, markdown: { path: markdown.path } }]) {
+    let current: typeof pair | null = pair, disk = "original";
+    const vault = {
+      getPair: () => current,
+      read: () => Promise.resolve(disk),
+      process: (_file: typeof file, update: (source: string) => string) => { disk = update(disk); return Promise.resolve(disk); },
+    };
+    await assert.rejects(processCompanion(vault, path, value => {
+      current = replacement;
+      return Promise.resolve(value + ":updated");
+    }), /files changed/);
+    assert.equal(disk, "original");
+  }
+});
+
+void test("replacing Markdown while Vault.process is queued cannot commit old slide membership", async () => {
+  let current: typeof pair | null = pair, disk = "original";
+  const vault = {
+    getPair: () => current,
+    read: () => Promise.resolve(disk),
+    process: (_file: typeof file, update: (source: string) => string) => {
+      current = { ...pair, markdown: { path: markdown.path } };
+      disk = update(disk);
+      return Promise.resolve(disk);
+    },
+  };
+  await assert.rejects(processCompanion(vault, path, value => Promise.resolve(value + ":updated")), /files changed/);
+  assert.equal(disk, "original");
 });
