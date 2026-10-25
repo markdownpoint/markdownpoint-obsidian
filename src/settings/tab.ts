@@ -22,10 +22,13 @@ import type { LocalUiState, OutlineSide } from './local-ui.ts';
 import type { SharedSettings } from './shared.ts';
 import { uiText } from '../ui-text.ts';
 import { MARKDOWNPOINT_ICON_ID } from '../markdownpoint-icon.ts';
+import { advanceMarkdownPointBanner, createMarkdownPointBannerDefinitions } from './markdownpoint-banner.ts';
 
 export class MarkdownPointSettingTab extends PluginSettingTab {
     icon = MARKDOWNPOINT_ICON_ID;
     private readonly version: string;
+    // The banner's position for this settings open; hide() clears it so the next open moves on
+    private bannerPosition: number | null = null;
 
     constructor(
         app: App,
@@ -42,6 +45,12 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
 
     getSettingDefinitions(): SettingDefinitionItem[] {
         return [
+            // This plugin always shows the banner at the top, the placement Notebook Navigator starts with
+            ...createMarkdownPointBannerDefinitions(
+                'top',
+                () => true,
+                () => (this.bannerPosition ??= advanceMarkdownPointBanner(this.app))
+            ),
             {
                 name: uiText.sidebar,
                 desc: uiText.sidebarDescription,
@@ -76,6 +85,11 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
                 ]
             }
         ];
+    }
+
+    hide(): void {
+        super.hide();
+        this.bannerPosition = null;
     }
 
     getControlValue(key: string): unknown {

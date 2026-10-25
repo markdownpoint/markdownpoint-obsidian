@@ -18,7 +18,10 @@
 
 import { getLanguage } from 'obsidian';
 import { getTranslations } from './i18n/index.ts';
+import { markdownPointBannerText } from './i18n/markdownpoint-banner.ts';
 
 export const uiText = getTranslations(getLanguage());
 export const uiNumber = new Intl.NumberFormat(getLanguage(), { useGrouping: false });
 export const uiDate = new Intl.DateTimeFormat(getLanguage(), { year: 'numeric', month: 'long', day: 'numeric' });
+// The banner's text is copied with the banner from Notebook Navigator, in the same languages
+export const uiBannerText = markdownPointBannerText[getLanguage()] ?? markdownPointBannerText.en!;

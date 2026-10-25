@@ -136,6 +136,8 @@ The plugin sets no hotkeys. Assign your own under **Settings → Hotkeys**:
 
 The move commands work while the outline has focus. Tab and Obsidian’s tab-switching shortcuts work as usual.
 
+The top of the settings shows a banner for the MarkdownPoint desktop app. Selecting it opens markdownpoint.com in your browser.
+
 After an update, MarkdownPoint shows the release notes once. To stop this, turn off **Settings → MarkdownPoint → Show release notes after updating**. To read them at any time, select **View recent updates** in the same settings.
 
 Sidebar placement and expanded notes are stored on each device. Layout shortcuts, **Show images** and **Show release notes after updating** are plugin settings. They sync when your vault syncs plugin settings. Obsidian manages sidebar visibility and width.

@@ -13,8 +13,9 @@ coverage/
 /data.json
 /test-vault/
 /.verification/
-# Ignore the local build script, which deploys into personal vaults
+# Ignore the local build script, which deploys into personal vaults, and other local scripts
 scripts/build-local.sh
+scripts/local
 .env
 .env.local
 .env.*.local
