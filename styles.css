@@ -16,6 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+.markdownpoint-outline,
+.markdownpoint-presentation {
+  --markdownpoint-thumbnail-width: 58px;
+}
+
 .markdownpoint-outline {
   --markdownpoint-muted: color-mix(in srgb, var(--text-normal) 70%, transparent);
   padding: var(--size-4-2);
@@ -315,8 +320,8 @@
 /* Structural previews show writing and media areas, independent of slide styling. */
 .markdownpoint-thumbnail {
   display: block;
-  flex: 0 0 58px;
-  width: 58px;
+  flex: 0 0 var(--markdownpoint-thumbnail-width, 58px);
+  width: var(--markdownpoint-thumbnail-width, 58px);
   border: 1px solid color-mix(in srgb, var(--text-muted) 24%, transparent);
   border-radius: 4px;
   color: var(--text-normal);
@@ -335,17 +340,12 @@
 }
 
 .markdownpoint-thumbnail-region {
-  fill: currentColor;
-  opacity: 0.38;
+  fill: color-mix(in srgb, currentColor 38%, var(--background-primary));
 }
 
-.markdownpoint-thumbnail-region.is-media {
-  opacity: 0.16;
-}
-
-.markdownpoint-outline-row:hover .markdownpoint-thumbnail-region.is-text,
-.markdownpoint-slide-tools:hover .markdownpoint-thumbnail-region.is-text {
-  opacity: 0.48;
+.markdownpoint-outline-row:hover .markdownpoint-thumbnail-region,
+.markdownpoint-slide-tools:hover .markdownpoint-thumbnail-region {
+  fill: color-mix(in srgb, currentColor 48%, var(--background-primary));
 }
 
 .markdownpoint-outline-row[aria-current="true"] .markdownpoint-thumbnail,
@@ -357,19 +357,19 @@
 }
 
 .markdownpoint-presentation .markdown-source-view.is-live-preview .cm-content {
-  padding-inline-end: 60px;
+  padding-inline-end: calc(var(--markdownpoint-thumbnail-width) + 16px);
 }
 
 .markdownpoint-presentation .markdown-source-view.mod-cm6 .cm-content > .markdownpoint-slide-boundary {
   position: relative;
-  width: calc(100% + 60px);
+  width: calc(100% + var(--markdownpoint-thumbnail-width) + 16px);
 }
 
 .markdownpoint-presentation .markdownpoint-slide-tools {
   position: absolute;
   inset-inline-end: var(--markdownpoint-thumbnail-right);
   top: var(--markdownpoint-thumbnail-top);
-  width: 44px;
+  width: var(--markdownpoint-thumbnail-width);
   height: auto;
   padding: 0;
   box-shadow: none;
@@ -490,7 +490,7 @@
   position: absolute;
   top: var(--markdownpoint-thumbnail-top);
   inset-inline-end: var(--markdownpoint-thumbnail-right);
-  width: 44px;
+  width: var(--markdownpoint-thumbnail-width);
   pointer-events: auto;
 }
 
@@ -522,6 +522,18 @@
   border: 1px solid var(--background-modifier-border);
   border-radius: 3px;
   background: var(--background-secondary);
+  transition: border-color 120ms ease, filter 120ms ease;
+}
+
+.markdownpoint-slide-image:hover {
+  border-color: var(--markdownpoint-muted);
+  filter: brightness(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdownpoint-slide-image {
+    transition: none;
+  }
 }
 
 .markdownpoint-slide-image-space {
