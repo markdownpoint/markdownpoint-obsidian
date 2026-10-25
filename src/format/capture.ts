@@ -40,8 +40,9 @@ export function compositionSources(record: unknown, inherits: boolean): readonly
         if (typeof object === 'string' && inherits && isStableId(object)) continue;
         if (!isRecord(object)) return null;
         if (object.type !== 'composition') continue;
-        if (!isStableId(object.source)) return null;
-        sources.add(object.source);
+        // An instance names the composition it shows in `composition`
+        if (!isStableId(object.composition)) return null;
+        sources.add(object.composition);
     }
     return [...sources];
 }

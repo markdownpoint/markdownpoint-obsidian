@@ -28,16 +28,16 @@ import { clipboardVaultId, CLIPBOARD_VAULT_KEY, clipboardDigest, ownsClipboardCu
 const uuid = '11111111-1111-4111-8111-111111111111';
 const path = 'deck/slides.md';
 const companion = JSON.stringify({
-    markdownpoint: 1,
+    markdownpoint: '1.0',
     kind: 'presentation',
-    document: uuid,
+    id: uuid,
     theme: 'basic',
     slides: { one: { layout: 'title' }, two: { layout: 'title' } }
 });
 const markdown = '<!-- slide: one -->\n<!-- text: body -->\nFirst words.\n<!-- slide: two -->\n<!-- text: body -->\nSecond words.\n';
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
-const master = '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
-const layout = '{"markdownpoint":1,"kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+const master = '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
+const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,
@@ -273,4 +273,11 @@ test('local Cut authority survives reload but cannot authorize an altered packet
     host.saveLocalStorage(CLIPBOARD_CUT_KEY, digest);
     assert.equal(ownsClipboardCut({ ...host }, await clipboardDigest(copied.encoded)), true);
     assert.equal(ownsClipboardCut(host, await clipboardDigest(copied.encoded.replace('First', 'Altered'))), false);
+});
+
+test('slides are not copied out of a presentation of a newer format minor', async () => {
+    const { state, copier } = setup();
+    state.companion = state.companion.replace('"markdownpoint":"1.0"', '"markdownpoint":"1.1"');
+    assert.equal((await copier.copy('view', ['one'])).kind, 'unavailable');
+    assert.deepEqual(state.writes, []);
 });

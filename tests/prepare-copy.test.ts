@@ -34,7 +34,7 @@ const schemas = new Map<string, 'rich-text' | 'table'>([
 test('complete slide preparation changes only identity and actual Markdown/JSON references', () => {
     const markdown =
         '<!--  slide: one  --> \r\n<!-- author comment -->\r\n<!-- text: body -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n\r\n<!-- text: card.caption -->\r\n[Back](slide:one).\r\n<!-- notes -->\r\n[Next](slide:two).\r\n\r\n \t';
-    const record = String.raw`{ "layout":"title", "future":9007199254740993, "escaped":"\u0061", "objects":["title",{"id":"card","type":"composition","source":"card","link":"slide:two"}] }`;
+    const record = String.raw`{ "layout":"title", "future":9007199254740993, "escaped":"\u0061", "objects":["title",{"id":"card","type":"composition","composition":"card","link":"slide:two"}] }`;
     const result = prepareCopiedPart({ id: 'one', markdown, record }, 'slide', slides, compositions, schemas)!;
     assert.ok(result);
     assert.equal(result.id, 'copy-one');
@@ -48,7 +48,7 @@ test('complete slide preparation changes only identity and actual Markdown/JSON 
     );
     assert.equal(
         result.record,
-        record.replace('"source":"card"', '"source":"copy-card"').replace('"link":"slide:two"', '"link":"slide:copy-two"')
+        record.replace('"composition":"card"', '"composition":"copy-card"').replace('"link":"slide:two"', '"link":"slide:copy-two"')
     );
 });
 

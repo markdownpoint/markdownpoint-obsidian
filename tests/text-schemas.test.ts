@@ -23,14 +23,14 @@ import { copyTextSchemas } from '../src/format/text-schemas.ts';
 import { prepareCopiedPart } from '../src/format/prepare-copy.ts';
 
 const master = {
-    markdownpoint: 1,
+    markdownpoint: '1.0',
     kind: 'master',
     objects: [
         { id: 'inherited-grid', type: 'table' },
         { id: 'caption', type: 'text' }
     ]
 };
-const layout = { markdownpoint: 1, kind: 'layout', objects: [{ id: 'title', type: 'text', placeholder: true }] };
+const layout = { markdownpoint: '1.0', kind: 'layout', objects: [{ id: 'title', type: 'text', placeholder: true }] };
 const theme = { master, layout, layoutKey: 'title' };
 const fields = (ids: string[], kind = 'slide', id = 'one') =>
     indexPresentation(`<!-- ${kind}: ${id} -->\n` + ids.map(id => `<!-- text: ${id} -->\n`).join(''), 0)![
@@ -105,7 +105,7 @@ test('definitions use their own types while instance controls and unbound text r
     const record = {
         objects: [
             { id: 'grid', type: 'table' },
-            { id: 'callout', type: 'composition', source: 'inner' }
+            { id: 'callout', type: 'composition', composition: 'inner' }
         ]
     };
     assert.deepEqual(

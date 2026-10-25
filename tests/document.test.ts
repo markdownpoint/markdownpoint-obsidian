@@ -45,7 +45,7 @@ test('slides and their field ranges follow source order and preserve every sourc
 });
 
 test('CRLF positions and frontmatter offsets still refer to the original document', () => {
-    const header = '---\r\nmarkdownpoint: 1\r\ndocument: 12345678-1234-1234-1234-123456789abc\r\n---\r\n\r\n';
+    const header = '---\r\nmarkdownpoint: "1.0"\r\nid: 12345678-1234-1234-1234-123456789abc\r\n---\r\n\r\n';
     const text = header + '<!-- slide: opening -->\r\n\r\n<!-- text: heading -->\r\nWords.\r\n';
     const slide = indexPresentation(text, header.length)!.slides[0]!;
     assert.equal(slide.from, header.length);
@@ -296,4 +296,17 @@ test('a line break tag starts a paragraph, so a fenced example after it keeps it
             opening
         );
     }
+});
+
+test('only the fence that took in a marker makes an unclosed code block refuse the file', () => {
+    const fence = '```';
+    const closedSwallow = `${fence}\n<!-- text: t -->\n${fence}\n`;
+    // The empty list item keeps the swallowing fence from opening the field, as in the shrunk fuzz case
+    const markdown = `<!-- slide: s0 -->\n<!-- text: t -->\n   - \n${closedSwallow}   ${fence}\n- ${fence}\n`;
+    assert.deepEqual(
+        indexPresentation(markdown, 0)?.slides.map(slide => slide.id),
+        ['s0']
+    );
+    const swallowing = `<!-- slide: s0 -->\n<!-- text: t -->\nIntro\n${fence}\n<!-- slide: s1 -->\n`;
+    assert.equal(indexPresentation(swallowing, 0), null);
 });

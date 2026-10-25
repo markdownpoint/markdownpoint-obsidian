@@ -29,11 +29,11 @@ const card =
 const badge = '<!-- composition: badge -->\r\n<!-- text: label -->\r\nA small detail.\r\n';
 const source = '<!-- section: intro -->\r\n# Introduction\r\n' + one + '<!-- section: end -->\r\n# Ending\r\n' + two + card + badge;
 const firstRecord =
-    '{"layout":"title","skipped":true,"future":9007199254740993,"escaped":"\\u0061","objects":[{"id":"photo","type":"image","asset":"assets/picture.png"}]}';
+    '{"layout":"title","skipped":true,"future":9007199254740993,"escaped":"\\u0061","objects":[{"id":"photo","type":"image","file":"assets/picture.png"}]}';
 const secondRecord =
-    '{"layout":"body","objects":[{"id":"card","type":"composition","source":"card"},{"id":"again","type":"composition","source":"card"}]}';
+    '{"layout":"body","objects":[{"id":"card","type":"composition","composition":"card"},{"id":"again","type":"composition","composition":"card"}]}';
 const cardRecord =
-    '{"size":{"width":320,"height":160},"controls":{"caption":{"type":"text"}},"objects":[{"id":"detail","type":"composition","source":"badge"}]}';
+    '{"size":{"width":320,"height":160},"controls":{"caption":{"type":"text"}},"objects":[{"id":"detail","type":"composition","composition":"badge"}]}';
 const badgeRecord = '{"size":{"width":20,"height":20},"objects":[]}';
 const companion = `{"slides":{"one":${firstRecord},"two":${secondRecord}},"compositions":{"card":${cardRecord},"badge":${badgeRecord}},"comments":{"unrelated":"keep private"}}`;
 const capture = (markdown = source, data = companion, ids = ['two', 'one']) =>
@@ -59,7 +59,7 @@ test('capture includes each transitive composition once with default controls an
         { id: 'badge', markdown: badge, record: badgeRecord }
     ]);
     assert.equal(result.slides[1]!.markdown, two);
-    const cycle = companion.replace('"objects":[]', '"objects":[{"type":"composition","source":"card"}]');
+    const cycle = companion.replace('"objects":[]', '"objects":[{"type":"composition","composition":"card"}]');
     assert.deepEqual(
         capture(source, cycle)!.compositions.map(part => part.id),
         ['card', 'badge']
@@ -92,7 +92,7 @@ test('incomplete selection or dependency source refuses capture instead of silen
     assert.equal(capture(source, companion.replace('"two":', '"other":')), null);
     assert.equal(capture(source.replace(badge, '')), null);
     assert.equal(capture(source, companion.replace('"badge":', '"missing":')), null);
-    assert.equal(capture(source, companion.replace('"source":"card"', '"source":12')), null);
+    assert.equal(capture(source, companion.replace('"composition":"card"', '"composition":12')), null);
     assert.equal(capture(source, companion.replace('"objects":[{"id":"card"', '"objects":[null,{"id":"card"')), null);
     assert.equal(capture(source, companion.replace('"slides":{', '"slides":{},"slides":{')), null);
     assert.equal(capture(source, companion.replace('"compositions":{', '"compositions":{},"compositions":{')), null);
@@ -122,15 +122,15 @@ test('deep shared composition graphs are captured iteratively without duplicatio
                 objects:
                     index + 1 < count
                         ? [
-                              { type: 'composition', source: `c${index + 1}` },
-                              { type: 'composition', source: `c${index + 1}` }
+                              { type: 'composition', composition: `c${index + 1}` },
+                              { type: 'composition', composition: `c${index + 1}` }
                           ]
                         : []
             }
         ])
     );
     const markdown = '<!-- slide: one -->\n' + parts.join('');
-    const data = JSON.stringify({ slides: { one: { objects: [{ type: 'composition', source: 'c0' }] } }, compositions: metadata });
+    const data = JSON.stringify({ slides: { one: { objects: [{ type: 'composition', composition: 'c0' }] } }, compositions: metadata });
     const result = capture(markdown, data, ['one'])!;
     assert.equal(result.compositions.length, count);
     assert.equal(result.compositions.at(-1)!.id, `c${count - 1}`);

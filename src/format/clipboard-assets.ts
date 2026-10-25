@@ -70,7 +70,7 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
         const nested = (value: unknown, name: string): unknown => (isRecord(value) ? value[name] : undefined);
         if (isRecord(record.background)) {
             add(record.background.image, ['background', 'image']);
-            add(nested(record.background['image-result'], 'source'), ['background', 'image-result', 'source']);
+            add(nested(record.background['image-result'], 'original'), ['background', 'image-result', 'original']);
         }
         if (definitions.has(part.id) && isRecord(record.controls))
             for (const [key, control] of Object.entries(record.controls)) {
@@ -84,12 +84,17 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
         if (isRecord(record.overrides))
             for (const [id, object] of Object.entries(record.overrides)) if (isRecord(object)) objects.push([object, ['overrides', id]]);
         for (const [object, base] of objects) {
-            add(object.asset, [...base, 'asset']);
+            add(object.file, [...base, 'file']);
             add(object['poster-frame'], [...base, 'poster-frame']);
-            add(nested(object['image-result'], 'source'), [...base, 'image-result', 'source']);
-            add(nested(object.model, 'asset'), [...base, 'model', 'asset']);
-            if (base[0] === 'objects' && object.type === 'composition' && typeof object.source === 'string' && isRecord(object.controls)) {
-                const controls = definitions.get(object.source)?.controls;
+            add(nested(object['image-result'], 'original'), [...base, 'image-result', 'original']);
+            add(nested(object.model, 'file'), [...base, 'model', 'file']);
+            if (
+                base[0] === 'objects' &&
+                object.type === 'composition' &&
+                typeof object.composition === 'string' &&
+                isRecord(object.controls)
+            ) {
+                const controls = definitions.get(object.composition)?.controls;
                 if (!isRecord(controls)) continue;
                 for (const [name, value] of Object.entries(object.controls)) {
                     const declaration = controls[name];

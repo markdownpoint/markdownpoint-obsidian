@@ -49,7 +49,7 @@ test("a leading composition and frontmatter do not borrow the first slide's acti
         '<!-- composition: shared -->\n<!-- control: title -->\nReusable words\n<!-- slide: actual -->\n<!-- text: body -->\nSlide words\n';
     const document = indexPresentation(source, 0)!;
     assert.equal(slideForMenu(document, source.indexOf('Reusable'), source), null);
-    const header = '---\nmarkdownpoint: 1\n---\n';
+    const header = '---\nmarkdownpoint: "1.0"\n---\n';
     const plain = header + '\n<!-- slide: actual -->\n<!-- text: body -->\nWords\n';
     const indexed = indexPresentation(plain, header.length)!;
     assert.equal(slideForMenu(indexed, 0, plain, header.length), null);

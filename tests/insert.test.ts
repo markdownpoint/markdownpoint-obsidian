@@ -31,7 +31,7 @@ const plan = (source: string, companion: string, slides: readonly PreparedPart[]
     planSlideInsertion(source, indexPresentation(source, bodyStart)!, companion, slides, after, bodyStart);
 
 test('insertion preserves independent source/JSON order and every surviving record byte', () => {
-    const header = '---\nmarkdownpoint: 1\nunknown: keep\n---\n\n';
+    const header = '---\nmarkdownpoint: "1.0"\nunknown: keep\n---\n\n';
     const section = '<!-- section: ending -->\n# Ending\n\n';
     const composition = '<!-- composition: shared -->\n<!-- control: caption -->\nReusable.\n';
     const source = header + block('a') + block('b') + section + block('c') + composition;
@@ -39,7 +39,7 @@ test('insertion preserves independent source/JSON order and every surviving reco
     const companion = `{ "before": true, "slides": { "c": {}, "a": ${raw}, "b": {} }, "compositions": {"shared":{}}, "comments": {"thread":{"slide":"a"}} }`;
     const added = {
         ...prepared('new'),
-        record: '{"layout":"title","objects":[{"id":"image","asset":"media/photo.png"}],"future":{"kept":true}}'
+        record: '{"layout":"title","objects":[{"id":"image","file":"media/photo.png"}],"future":{"kept":true}}'
     };
     const result = plan(source, companion, [added, prepared('another')], 'b', header.length)!;
     assert.ok(result);
@@ -61,7 +61,7 @@ test('insertion preserves independent source/JSON order and every surviving reco
 });
 
 test('an empty draft accepts slides after its final section and before its reusable definitions', () => {
-    const header = '---\r\nmarkdownpoint: 1\r\n---\r\n\r\n';
+    const header = '---\r\nmarkdownpoint: "1.0"\r\n---\r\n\r\n';
     const section = '<!-- section: empty -->\r\n# Empty\r\n';
     const composition = '<!-- composition: shared -->\r\n<!-- control: caption -->\r\nReusable.\r\n';
     const added = { ...prepared('first'), markdown: block('first').replaceAll('\n', '\r\n') };

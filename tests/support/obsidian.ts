@@ -69,7 +69,9 @@ export function parseYaml(source: string): unknown {
         source.split('\n').map(line => {
             const at = line.indexOf(':');
             const value = line.slice(at + 1).trim();
-            return [line.slice(0, at), /^\d+$/.test(value) ? Number(value) : value];
+            // Enough YAML for frontmatter fixtures: whole numbers, double-quoted strings and plain words
+            const quoted = /^"(.*)"$/.exec(value);
+            return [line.slice(0, at), quoted ? quoted[1] : /^\d+$/.test(value) ? Number(value) : value];
         })
     );
 }

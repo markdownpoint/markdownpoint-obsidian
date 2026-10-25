@@ -30,12 +30,12 @@ const path = 'Talks/Field notes/slides.md';
 const root = 'Talks/Field notes/';
 const master = {
     schemes: { evening: { appearance: 'dark' } },
-    objects: [{ id: 'logo', type: 'image', asset: { light: 'art/light.svg', dark: 'art/dark.svg' } }]
+    objects: [{ id: 'logo', type: 'image', file: { light: 'art/light.svg', dark: 'art/dark.svg' } }]
 };
 const layout = {
     scheme: 'evening',
     objects: [
-        { id: 'hero', type: 'image', placeholder: true, asset: 'art/sample.svg' },
+        { id: 'hero', type: 'image', placeholder: true, file: 'art/sample.svg' },
         { id: 'detail', type: 'image', placeholder: true }
     ]
 };
@@ -55,8 +55,8 @@ test('assigned images prioritize background, named layout slots, then other pict
         slides: {
             one: {
                 layout: 'title',
-                overrides: { hero: { asset: 'media/hero.svg' }, detail: { asset: 'generated/detail.png' } },
-                objects: [{ id: 'own', type: 'image', asset: 'media/own.jpg', 'image-result': { source: 'media/history.jpg' } }]
+                overrides: { hero: { file: 'media/hero.svg' }, detail: { file: 'generated/detail.png' } },
+                objects: [{ id: 'own', type: 'image', file: 'media/own.jpg', 'image-result': { original: 'media/history.jpg' } }]
             }
         }
     };
@@ -72,7 +72,7 @@ test('assigned images prioritize background, named layout slots, then other pict
 test('cleared backgrounds, removed objects and empty placeholders do not show samples or prior generations', () => {
     const companion = {
         background: { image: 'media/back.svg' },
-        slides: { one: { layout: 'title', background: { image: 'none' }, overrides: { logo: null, hero: { asset: '' } } } }
+        slides: { one: { layout: 'title', background: { image: 'none' }, overrides: { logo: null, hero: { file: '' } } } }
     };
     assert.deepEqual(paths(companion), []);
     assert.deepEqual(paths({ slides: { one: { background: { image: 'media/own.png' }, objects: [] } } }, null), [root + 'media/own.png']);
@@ -84,10 +84,10 @@ test('repeated assets are shown once and video assignments are not treated as im
         slides: {
             one: {
                 layout: 'title',
-                overrides: { logo: null, hero: { asset: 'media/same.png' }, detail: { asset: 'media/clip.mp4' } },
+                overrides: { logo: null, hero: { file: 'media/same.png' }, detail: { file: 'media/clip.mp4' } },
                 objects: [
-                    { id: 'again', type: 'image', asset: 'media/same.png' },
-                    { id: 'video-slot', type: 'video', asset: 'media/new.jpg' }
+                    { id: 'again', type: 'image', file: 'media/same.png' },
+                    { id: 'video-slot', type: 'video', file: 'media/new.jpg' }
                 ]
             }
         }
@@ -105,9 +105,9 @@ test('image references cannot escape their declared vault folder or load a remot
         'file:///tmp/image.png',
         'misc/image.png'
     ]) {
-        assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', asset }] } } }, null), []);
+        assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', file: asset }] } } }, null), []);
     }
-    assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', asset: 'media/Wait... what.PNG' }] } } }, null), [
+    assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', file: 'media/Wait... what.PNG' }] } } }, null), [
         root + 'media/Wait... what.PNG'
     ]);
 });
@@ -115,7 +115,7 @@ test('image references cannot escape their declared vault folder or load a remot
 test('placed compositions use assigned media controls without listing unused defaults or looping', () => {
     const companion = {
         slides: {
-            one: { objects: [{ id: 'instance', type: 'composition', source: 'card', controls: { picture: 'media/selected.svg' } }] }
+            one: { objects: [{ id: 'instance', type: 'composition', composition: 'card', controls: { picture: 'media/selected.svg' } }] }
         },
         compositions: {
             card: {
@@ -124,8 +124,8 @@ test('placed compositions use assigned media controls without listing unused def
                     unused: { type: 'media', default: 'media/unused.svg' }
                 },
                 objects: [
-                    { id: 'photo', type: 'image', asset: 'media/original.svg', bind: { asset: 'picture' } },
-                    { id: 'loop', type: 'composition', source: 'card' }
+                    { id: 'photo', type: 'image', file: 'media/original.svg', bind: { file: 'picture' } },
+                    { id: 'loop', type: 'composition', composition: 'card' }
                 ]
             }
         }

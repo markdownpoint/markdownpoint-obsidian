@@ -18,7 +18,7 @@
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { isThemeKey } from './embedded-theme.ts';
-import { isDocumentId } from './recognition.ts';
+import { FORMAT_VERSION, isDocumentId } from './recognition.ts';
 import { orderedLayouts, prepareNewSlide } from './new-slide.ts';
 import { readJsonObject } from './json.ts';
 
@@ -43,18 +43,21 @@ export function presentationFolderName(value: string): string | null {
 /** One empty slide and one matching pair, without copying the theme's sample words. */
 export function prepareNewPresentation(
     theme: EmbeddedTheme,
-    document: string,
+    id: string,
     slideId: string,
     layoutKey: string | undefined = orderedLayouts(theme)[0]
 ): NewPresentation | null {
-    if (!isDocumentId(document) || !isThemeKey(theme.key) || !layoutKey) return null;
+    if (!isDocumentId(id) || !isThemeKey(theme.key) || !layoutKey) return null;
     const slide = prepareNewSlide(theme, layoutKey, slideId);
     const record = slide && readJsonObject(slide.record);
     if (!slide || !record) return null;
     return {
-        markdown: `---\nmarkdownpoint: 1\ndocument: ${document}\n---\n\n${slide.markdown}`,
+        markdown: `---\nmarkdownpoint: "${FORMAT_VERSION}"\nid: ${id}\n---\n\n${slide.markdown}`,
         companion:
-            JSON.stringify({ markdownpoint: 1, kind: 'presentation', document, theme: theme.key, slides: { [slideId]: record } }, null, 2) +
-            '\n'
+            JSON.stringify(
+                { markdownpoint: FORMAT_VERSION, kind: 'presentation', id, theme: theme.key, slides: { [slideId]: record } },
+                null,
+                2
+            ) + '\n'
     };
 }

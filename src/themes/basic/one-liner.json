@@ -1,10 +1,11 @@
 {
-  "markdownpoint": 1,
+  "markdownpoint": "1.0",
   "kind": "layout",
   "name": "One-liner",
   "scheme": "lilac",
   "overrides": {
     "footer": null,
+
     "slide-number": null
   },
   "objects": [
@@ -12,12 +13,7 @@
       "id": "body",
       "type": "text",
       "placeholder": true,
-      "frame": {
-        "x": 120,
-        "y": 160,
-        "width": 1560,
-        "height": 760
-      },
+      "frame": {"x":120,"y":160,"width":1560,"height":760},
       "text-style": "display",
       "vertical-align": "center"
     }

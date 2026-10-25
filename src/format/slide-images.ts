@@ -25,12 +25,12 @@ export interface SlideImageReference {
     readonly category: 'background' | 'placeholder' | 'image';
 }
 interface Ancestor {
-    readonly source: string;
+    readonly composition: string;
     readonly parent: Ancestor | null;
 }
 interface ImageObject {
     raw: Record<string, unknown>;
-    asset: unknown;
+    file: unknown;
     scope: string;
     placeholder: boolean;
 }
@@ -77,12 +77,12 @@ export function assignedSlideImages(
                 if (!current) continue;
                 if (override === null) objects.delete(id);
                 else if (isRecord(override)) {
-                    const asset = picture(override.asset);
-                    const replacement = typeof asset === 'string';
+                    const file = picture(override.file);
+                    const replacement = typeof file === 'string';
                     objects.set(id, {
                         ...current,
                         raw: { ...current.raw, ...override, type: current.raw.type },
-                        ...(replacement ? { asset, scope } : {})
+                        ...(replacement ? { file, scope } : {})
                     });
                 }
             }
@@ -93,7 +93,7 @@ export function assignedSlideImages(
                     raw: object,
                     scope,
                     placeholder: inherited && object.placeholder === true,
-                    asset: inherited && object.placeholder === true ? undefined : picture(object.asset)
+                    file: inherited && object.placeholder === true ? undefined : picture(object.file)
                 });
             }
     };
@@ -114,7 +114,7 @@ export function assignedSlideImages(
         const { object, parent } = pending[index]!;
         const raw = object.raw;
         if (raw.type === 'image' || raw.type === 'video') {
-            const path = imagePath(object.asset, object.scope, object.scope === root);
+            const path = imagePath(object.file, object.scope, object.scope === root);
             if (path)
                 references.push({
                     path,
@@ -122,28 +122,31 @@ export function assignedSlideImages(
                     category: object.placeholder ? 'placeholder' : 'image'
                 });
         }
-        if (raw.type !== 'composition' || typeof raw.source !== 'string' || !isRecord(companion.compositions)) continue;
+        if (raw.type !== 'composition' || typeof raw.composition !== 'string' || !isRecord(companion.compositions)) continue;
         let cycle = false;
         for (let ancestor = parent; ancestor; ancestor = ancestor.parent)
-            if (ancestor.source === raw.source) {
+            if (ancestor.composition === raw.composition) {
                 cycle = true;
                 break;
             }
         if (cycle) continue;
-        const composition = companion.compositions[raw.source];
+        const composition = companion.compositions[raw.composition];
         if (!isRecord(composition) || !Array.isArray(composition.objects)) continue;
         const controls = isRecord(composition.controls) ? composition.controls : {};
         const values = isRecord(raw.controls) ? raw.controls : {};
-        const instance = JSON.stringify([raw.source, values]);
+        const instance = JSON.stringify([raw.composition, values]);
         if (expanded.has(instance)) continue;
         expanded.add(instance);
         for (const member of composition.objects) {
             if (!isRecord(member)) continue;
-            const binding = isRecord(member.bind) && typeof member.bind.asset === 'string' ? member.bind.asset : null;
+            const binding = isRecord(member.bind) && typeof member.bind.file === 'string' ? member.bind.file : null;
             const control = binding ? controls[binding] : undefined;
             const bound = binding !== null && isRecord(control) && control.type === 'media';
-            const asset = bound ? (values[binding] ?? control.default) : member.asset;
-            pending.push({ object: { raw: member, scope: root, asset, placeholder: bound }, parent: { source: raw.source, parent } });
+            const file = bound ? (values[binding] ?? control.default) : member.file;
+            pending.push({
+                object: { raw: member, scope: root, file, placeholder: bound },
+                parent: { composition: raw.composition, parent }
+            });
         }
     }
     const rank = { background: 0, placeholder: 1, image: 2 };

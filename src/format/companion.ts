@@ -57,7 +57,7 @@ export function remapRecordReferences(
     if (objects?.type === 'array')
         for (const object of objects.children ?? []) {
             replace(field(object, 'link'), slides, 'slide:');
-            if (field(object, 'type')?.value === 'composition') replace(field(object, 'source'), compositions);
+            if (field(object, 'type')?.value === 'composition') replace(field(object, 'composition'), compositions);
         }
     const overrides = field(root, 'overrides');
     if (overrides?.type === 'object') {

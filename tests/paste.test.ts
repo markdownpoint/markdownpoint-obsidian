@@ -28,8 +28,8 @@ const uuid = '11111111-1111-4111-8111-111111111111';
 const path = 'deck/slides.md';
 const origin = { vault: uuid, path, document: uuid };
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
-const master = '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
-const layout = '{"markdownpoint":1,"kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+const master = '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
+const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,
@@ -38,8 +38,7 @@ const theme = {
     layouts: new Map([['title', { path: paths.layouts.get('title')!, source: layout, value: themeDocument(layout, 'layout')! }]])
 };
 const markdown = '<!-- slide: first -->\n<!-- text: body -->\nFirst words.\n<!-- notes -->\nRemember this.\n';
-const record =
-    '{"layout":"title","unknown":{"value":9007199254740993},"objects":[{"id":"photo","type":"image","asset":"media/photo.jpg"}]}';
+const record = '{"layout":"title","unknown":{"value":9007199254740993},"objects":[{"id":"photo","type":"image","file":"media/photo.jpg"}]}';
 const packet = decodeSlideClipboard(
     encodeSlideClipboard(uuid, origin, { slides: [{ id: 'first', markdown, record }], compositions: [] }, theme)!
 )!;

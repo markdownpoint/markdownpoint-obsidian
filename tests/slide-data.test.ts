@@ -33,7 +33,7 @@ import { slideEditTransactions } from '../src/editor/structural-history.ts';
 const path = 'deck/slides.md';
 const document = '11111111-1111-4111-8111-111111111111';
 const source = (records = '"a":{"layout":"title"},"b":{"layout":"body"}', id = document) =>
-    `{"markdownpoint":1,"kind":"presentation","document":"${id}","slides":{${records}},"unrelated":true}`;
+    `{"markdownpoint":"1.0","kind":"presentation","id":"${id}","slides":{${records}},"unrelated":true}`;
 function device(initial?: unknown) {
     let stored: unknown = initial;
     const state = { disk: source(), calls: 0, backupFails: false, writeFails: false, errors: [] as unknown[] };
@@ -496,7 +496,7 @@ test('copied slides and definitions share recovery, one disk write and native un
     const before = '<!-- slide: a -->\n<!-- slide: b -->\n';
     const inserted =
         '<!-- slide: copy -->\n<!-- text: card.caption -->\nCopied words\n<!-- composition: card -->\n<!-- control: caption -->\nDefault words\n';
-    const slide = '{"objects":[{"id":"card","type":"composition","source":"card"}],"future":9007199254740993}';
+    const slide = '{"objects":[{"id":"card","type":"composition","composition":"card"}],"future":9007199254740993}';
     const definition = '{"controls":{"caption":{"type":"text"}},"future":9007199254740995}';
     let prepared = CompanionDocument.read(disk.disk)!.change(new Map([['copy', slide]]))!;
     prepared = CompanionDocument.ensure(prepared, 'compositions')!.change(new Map([['card', definition]]))!;
@@ -564,7 +564,7 @@ test('copied slides and definitions share recovery, one disk write and native un
 
 test('definition write failure preserves both recoveries and a retry restores the complete pair', async () => {
     const { state: disk, host } = device();
-    const prepared = source('"copy":{"objects":[{"type":"composition","source":"card"}]}').replace(
+    const prepared = source('"copy":{"objects":[{"type":"composition","composition":"card"}]}').replace(
         '"unrelated":true',
         '"unrelated":true,"compositions":{"card":{"name":"Kept"}}'
     );
@@ -604,4 +604,20 @@ test('definition membership is independent of slide IDs and newer external metad
     data.observe(path, document, disk.disk, new Set(['a', 'b']), new Set(['card', 'other']));
     await data.settled(path, document);
     assert.equal(CompanionDocument.read(disk.disk, 'compositions')!.records.get('card'), '{"name":"Newer"}');
+});
+
+test('recovery records remembered in the words before 1.0 are not restored into a presentation', async () => {
+    const current = '{"layout":"title","objects":[{"id":"photo","type":"image","file":"media/a.png"}]}';
+    const { host } = device([
+        {
+            path,
+            document,
+            records: { old: '{"layout":"title","objects":[{"id":"photo","type":"image","asset":"media/a.png"}]}', current },
+            compositions: { card: '{"objects":[{"id":"inner","type":"composition","source":"other"}]}' }
+        }
+    ]);
+    const data = new SlideData(host);
+    await data.ready;
+    assert.deepEqual([...data.remembered(path, document)], [['current', current]]);
+    assert.deepEqual([...data.remembered(path, document, 'compositions')], []);
 });

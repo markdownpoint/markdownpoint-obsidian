@@ -94,10 +94,10 @@ SOFTWARE.
 
 ## MarkdownPoint Basic theme
 
-The bundled Basic theme JSON comes from the public MarkdownPoint file-format examples at revision `afc7e2f76645890e84c810ae3acc5d834313d019`:
-https://github.com/markdownpoint/format/tree/afc7e2f76645890e84c810ae3acc5d834313d019/examples/first-deck/designs/c17f2a67-54b1-492b-8ab3-838711173ab2
+The bundled Basic theme JSON comes from the public MarkdownPoint file-format examples at revision `41d14274ce3fe8cc73c4aa8db80874419db87aee`:
+https://github.com/markdownpoint/format/tree/41d14274ce3fe8cc73c4aa8db80874419db87aee/examples/first-deck/themes/basic
 
-Adaptations add the explicit Theme identity required by the current format, map font weights to its supported values, and remove sample image assignments from empty placeholders. The source's license follows.
+The only adaptation removes the sample picture, `media/layout-preview.jpg`, from the image placeholders, so a new slide starts without one. The source's license follows.
 
 MIT License
 

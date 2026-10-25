@@ -26,8 +26,8 @@ const uuid = '11111111-1111-4111-8111-111111111111';
 const origin = { vault: uuid, document: uuid, path: 'Presentations/Å calm place/slides.md' };
 const paths = embeddedThemePaths(origin.path, { theme: 'basic' }, ['title'])!;
 const masterSource =
-    '\uFEFF{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","future":9007199254740993}';
-const layoutSource = '{"markdownpoint":1,"kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+    '\uFEFF{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","future":9007199254740993}';
+const layoutSource = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,
@@ -48,7 +48,7 @@ const captured = {
         {
             id: 'two',
             markdown: '<!-- slide: two -->\n<!-- text: instance.caption -->\nOwn words.\n',
-            record: '{"layout":"title","objects":[{"id":"instance","type":"composition","source":"card"}]}'
+            record: '{"layout":"title","objects":[{"id":"instance","type":"composition","composition":"card"}]}'
         }
     ],
     compositions: [
@@ -209,4 +209,18 @@ test('encoding carries only declared transport fields while raw presentation met
     assert.ok(source);
     assert.equal(source.includes('privateContext'), false);
     assert.deepEqual(decodeSlideClipboard(source)!.captured, captured);
+});
+
+test('a record that still holds the words before 1.0 is neither copied nor pasted, in any presentation', () => {
+    for (const record of [
+        '{"layout":"title","objects":[{"id":"photo","type":"image","asset":"media/photo.png"}]}',
+        '{"layout":"title","objects":[{"id":"instance","type":"composition","source":"card"}]}',
+        '{"layout":"title","objects":[{"id":"photo","type":"image","file":"media/a.png","image-result":{"source":"generated/b.png"}}]}',
+        '{"layout":"title","overrides":{"body":{"model":{"asset":"generated/letters.glb"}}}}',
+        '{"layout":"title","background":{"image":"media/back.png","image-result":{"source":"generated/b.png"}}}'
+    ]) {
+        const slides = [{ ...captured.slides[0]!, record }];
+        assert.equal(encodeSlideClipboard(uuid, origin, { slides, compositions: [] }, theme), null, record);
+        assert.equal(decodeSlideClipboard(mutate(value => (value.slides = [{ ...value.slides[0]!, record }]))), null, record);
+    }
 });

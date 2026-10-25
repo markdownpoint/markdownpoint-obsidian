@@ -28,7 +28,7 @@ const sourceId = '11111111-1111-4111-8111-111111111111';
 const targetId = '22222222-2222-4222-8222-222222222222';
 const themeId = '33333333-3333-4333-8333-333333333333';
 const token = '44444444-4444-4444-8444-444444444444';
-const header = (id: string) => `---\nmarkdownpoint: 1\ndocument: ${id}\n---\n\n`;
+const header = (id: string) => `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n`;
 
 async function fixture(media = ['media/photo.png'], artwork = false) {
     let clock = 0;
@@ -100,12 +100,12 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
         }
     } as unknown as Window;
     const master = JSON.stringify({
-        markdownpoint: 1,
+        markdownpoint: '1.0',
         kind: 'master',
         id: themeId,
-        objects: artwork ? [{ id: 'logo', type: 'image', asset: 'media/logo.svg' }] : []
+        objects: artwork ? [{ id: 'logo', type: 'image', file: 'media/logo.svg' }] : []
     });
-    const layout = '{"markdownpoint":1,"kind":"layout","objects":[]}';
+    const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[]}';
     for (const [root, id] of [
         ['source', sourceId],
         ['target', targetId]
@@ -113,7 +113,7 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
         add(root + '/slides.md', header(id) + '<!-- slide: one -->\n');
         add(
             root + '/presentation.mdpoint',
-            JSON.stringify({ markdownpoint: 1, kind: 'presentation', document: id, theme: 'basic', slides: { one: { layout: 'title' } } })
+            JSON.stringify({ markdownpoint: '1.0', kind: 'presentation', id, theme: 'basic', slides: { one: { layout: 'title' } } })
         );
         add(root + '/themes/basic/master.json', master);
         add(root + '/themes/basic/title.json', layout);
@@ -124,7 +124,7 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
     const theme = (await readEmbeddedTheme(vault, 'target/slides.md', { theme: 'basic' }, ['title']))!;
     const record = JSON.stringify({
         layout: 'title',
-        objects: media.map((asset, index) => ({ id: `image-${index}`, type: 'image', asset }))
+        objects: media.map((asset, index) => ({ id: `image-${index}`, type: 'image', file: asset }))
     });
     const packet = decodeSlideClipboard(
         encodeSlideClipboard(

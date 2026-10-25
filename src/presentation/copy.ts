@@ -21,6 +21,7 @@ import { encodeSlideClipboard } from '../format/clipboard.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 import { readJsonObject } from '../format/json.ts';
+import { readsFormatFully } from '../format/recognition.ts';
 
 export interface CopySource {
     readonly path: string;
@@ -67,7 +68,8 @@ export class SlideCopy<Context> {
             const source = await this.host.read(context);
             if (!current()) return { kind: 'canceled' };
             const metadata = source && readJsonObject(source.companion);
-            if (!source || !metadata) return { kind: 'unavailable' };
+            // A newer minor may hold keys the destination's version doesn't have, which the MarkdownPoint app would refuse there
+            if (!source || !metadata || !readsFormatFully(metadata.markdownpoint)) return { kind: 'unavailable' };
             const captured = captureSlides(source.markdown, source.index, source.companion, selected);
             if (!captured) return { kind: 'unavailable' };
             const layouts = new Set<string>();

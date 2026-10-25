@@ -51,7 +51,7 @@ test('a source step keeps split selections split and leaves slides at the edge i
 });
 
 test('only the changed span is replaced; notes, unknown bindings, comments and frontmatter stay byte-identical', () => {
-    const prefix = '---\nmarkdownpoint: 1\nx-extra: keep this\n---\n\n';
+    const prefix = '---\nmarkdownpoint: "1.0"\nx-extra: keep this\n---\n\n';
     const rich =
         '<!-- slide: bravo -->\n<!-- text: chart.caption -->\nÅ 東京 👩🏽‍💻\n\n\n<!-- Custom comment: keep -->\n<!-- notes -->\nRehearsal.\n\n\n';
     const markdown = prefix + slide('alpha') + rich + slide('charlie') + slide('delta');

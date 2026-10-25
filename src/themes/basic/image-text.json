@@ -1,15 +1,10 @@
 {
-  "markdownpoint": 1,
+  "markdownpoint": "1.0",
   "kind": "layout",
   "name": "Image & text",
   "overrides": {
     "footer": {
-      "frame": {
-        "x": 960,
-        "y": 1004.4,
-        "width": 600,
-        "height": 43.2
-      }
+      "frame": {"x":960,"y":1004.4,"width":600,"height":43.2}
     }
   },
   "objects": [
@@ -17,23 +12,14 @@
       "id": "image",
       "type": "image",
       "placeholder": true,
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "width": 840,
-        "height": 1080
-      }
+      "frame": {"x":0,"y":0,"width":840,"height":1080}
     },
+
     {
       "id": "body",
       "type": "text",
       "placeholder": true,
-      "frame": {
-        "x": 960,
-        "y": 0,
-        "width": 840,
-        "height": 1080
-      },
+      "frame": {"x":960,"y":0,"width":840,"height":1080},
       "text-style": "body",
       "vertical-align": "center"
     }

@@ -58,13 +58,13 @@ test('every selected subset removes its Markdown and JSON records in their indep
 });
 
 test('unknown metadata, surviving raw JSON values, sections, and compositions stay byte-identical', () => {
-    const header = '---\nmarkdownpoint: 1\ncustom: keep me\n---\n\n';
+    const header = '---\nmarkdownpoint: "1.0"\ncustom: keep me\n---\n\n';
     const opening = '<!-- section: opening -->\n# Opening\n\n';
     const ending = '<!-- section: ending -->\n# Ending\n\n';
     const composition = '<!-- composition: shared -->\n<!-- control: caption -->\nKeep this reusable text.\n';
     const markdown = header + opening + block('a') + block('b') + ending + block('c') + composition;
     const raw = String.raw`{ "layout" : "content", "future": { "number": 900719925474099312345, "escape": "\u00e9", "array": [ 1, 2 ] } }`;
-    const companion = `{\n  "document": "unchanged",\n  "slides" : {"a":{"layout":"title"}, "b":${raw}, "c":{"layout":"end"}},\n  "comments": {"thread":{"slide":"a","text":"Retain this thread"}},\n  "compositions": {"shared":{"controls":{}}}\n}\n`;
+    const companion = `{\n  "id": "unchanged",\n  "slides" : {"a":{"layout":"title"}, "b":${raw}, "c":{"layout":"end"}},\n  "comments": {"thread":{"slide":"a","text":"Retain this thread"}},\n  "compositions": {"shared":{"controls":{}}}\n}\n`;
     const plan = planSlideDeletion(markdown, indexPresentation(markdown, header.length)!, companion, ['a', 'c'])!;
     assert.equal(apply(markdown, plan.changes), header + opening + block('b') + ending + composition);
     assert.ok(plan.companion.includes(raw));

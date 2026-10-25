@@ -1,9 +1,10 @@
 {
-  "markdownpoint": 1,
+  "markdownpoint": "1.0",
   "kind": "layout",
   "scheme": "dark",
   "overrides": {
     "footer": null,
+
     "slide-number": null
   },
   "objects": [
@@ -11,53 +12,24 @@
       "id": "image",
       "type": "image",
       "placeholder": true,
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "width": 1920,
-        "height": 1080
-      }
+      "frame": {"x":0,"y":0,"width":1920,"height":1080}
     },
+
     {
       "id": "title-shade",
       "type": "shape",
       "shape": "rectangle",
       "locked": true,
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "width": 1920,
-        "height": 1080
-      },
-      "fill": {
-        "type": "linear",
-        "angle": 0,
-        "stops": [
-          {
-            "color": "#000000E0",
-            "position": 0
-          },
-          {
-            "color": "#000000B3",
-            "position": 0.26
-          },
-          {
-            "color": "#00000000",
-            "position": 0.75
-          }
-        ]
-      }
+      "frame": {"x":0,"y":0,"width":1920,"height":1080},
+      "fill": {"type":"linear","angle":0,"stops":[{"color":"#000000E0","position":0},{"color":"#000000B3","position":0.26},{"color":"#00000000","position":0.75}]}
     },
+
     {
       "id": "title",
       "type": "text",
       "placeholder": true,
-      "frame": {
-        "x": 120,
-        "y": 600,
-        "width": 1680,
-        "height": 360
-      },
+      "frame": {"x":120,"y":600,"width":1680,"height":360},
+      "drop-shadow": {"blur":6,"offset":{"x":0,"y":3},"color":"#000000","opacity":0.35},
       "text-style": "display",
       "color": "#FFFFFF",
       "vertical-align": "center"

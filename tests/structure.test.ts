@@ -23,8 +23,14 @@ import type { EmbeddedTheme } from '../src/format/embedded-theme.ts';
 
 const field = { id: 'title', type: 'text', placeholder: true, frame: { x: 100, y: 100, width: 800, height: 180 } };
 const staticText = { id: 'footer', type: 'text', frame: { x: 100, y: 800, width: 500, height: 60 } };
-const master = { markdownpoint: 1, kind: 'master', size: { width: 1600, height: 900 }, objects: [staticText], text: { footer: 'Fixed' } };
-const layout = { markdownpoint: 1, kind: 'layout', objects: [field] };
+const master = {
+    markdownpoint: '1.0',
+    kind: 'master',
+    size: { width: 1600, height: 900 },
+    objects: [staticText],
+    text: { footer: 'Fixed' }
+};
+const layout = { markdownpoint: '1.0', kind: 'layout', objects: [field] };
 const theme: EmbeddedTheme = {
     key: 'basic',
     id: 'id',
@@ -58,7 +64,7 @@ test('unknown geometry, hidden objects and hierarchy are omitted; framed media s
                 { ...field, id: 'nested', parent: 'group' },
                 { ...field, id: 'scaled', scale: { x: 2, y: 2 } },
                 { id: 'model', type: 'model', location: { x: 1, y: 2, z: 3 } },
-                { ...field, id: 'photo', type: 'image', rotation: 15, asset: 'media/private-name.jpg' }
+                { ...field, id: 'photo', type: 'image', rotation: 15, file: 'media/private-name.jpg' }
             ]
         },
         theme

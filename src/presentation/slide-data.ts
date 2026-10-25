@@ -18,7 +18,16 @@
 
 import { CompanionDocument, isSlideRecordSource, reconcileSlideRecords } from '../format/companion.ts';
 import type { CompanionMap } from '../format/companion.ts';
-import { isDocumentId, isRecord, isStableId, presentationCompanionPath, presentationIdentity } from '../format/recognition.ts';
+import { holdsOldWords } from '../format/file-words.ts';
+import { readJsonObject } from '../format/json.ts';
+import {
+    isDocumentId,
+    isRecord,
+    isStableId,
+    presentationCompanionPath,
+    FORMAT_VERSION,
+    presentationIdentity
+} from '../format/recognition.ts';
 export interface SlideDataHost {
     loadRecovery(): Promise<unknown>;
     saveRecovery(data: unknown): Promise<void>;
@@ -53,7 +62,10 @@ function recoveryRecords(value: unknown): ReadonlyMap<string, string> {
     const records = new Map<string, string>();
     if (isRecord(value))
         for (const [id, raw] of Object.entries(value)) {
-            if (isStableId(id) && typeof raw === 'string' && isSlideRecordSource(raw)) records.set(id, raw);
+            if (!isStableId(id) || typeof raw !== 'string' || !isSlideRecordSource(raw)) continue;
+            // A record remembered before format 1.0 holds words the MarkdownPoint app refuses; restoring it would break the file
+            const record = readJsonObject(raw);
+            if (record && !holdsOldWords(record)) records.set(id, raw);
         }
     return records;
 }
@@ -278,7 +290,8 @@ export class SlideData {
 
     private matches(source: string, document: string): boolean {
         try {
-            return presentationIdentity({ markdownpoint: 1, document }, JSON.parse(source)) === document;
+            // The companion alone must belong to the presentation; the frontmatter half restates the remembered id
+            return presentationIdentity({ markdownpoint: FORMAT_VERSION, id: document }, JSON.parse(source)) === document;
         } catch {
             return false;
         }

@@ -21,8 +21,8 @@ import { test } from 'vitest';
 import { presentationCompanionPath, presentationIdentity, presentationPairNames } from '../src/format/recognition.ts';
 
 const document = '12345678-1234-7234-9234-123456789abc';
-const frontmatter = { markdownpoint: 1, document };
-const companion = { markdownpoint: 1, kind: 'presentation', document, slides: {} };
+const frontmatter = { markdownpoint: '1.0', id: document };
+const companion = { markdownpoint: '1.0', kind: 'presentation', id: document, slides: {} };
 
 test('the fixed companion stays beside slides.md at the vault root or in a nested folder', () => {
     assert.equal(presentationCompanionPath('slides.md'), 'presentation.mdpoint');
@@ -81,17 +81,26 @@ test('a missing or unrelated companion and ordinary frontmatter do not recognize
     assert.equal(presentationIdentity(frontmatter, { ...companion, kind: 'theme' }), null);
 });
 
-test('each file must declare the supported numeric format version', () => {
-    for (const markdownpoint of [undefined, '1', 0, 2, 1.5]) {
-        assert.equal(presentationIdentity({ ...frontmatter, markdownpoint }, companion), null);
-        assert.equal(presentationIdentity(frontmatter, { ...companion, markdownpoint }), null);
+test('each file must declare a version 1 format as a quoted major and minor', () => {
+    for (const markdownpoint of [undefined, 1, 1.5, '1', '01.0', '1.01', '2.0', '0.9', ' 1.0']) {
+        assert.equal(presentationIdentity({ ...frontmatter, markdownpoint }, companion), null, String(markdownpoint));
+        assert.equal(presentationIdentity(frontmatter, { ...companion, markdownpoint }), null, String(markdownpoint));
+    }
+    for (const markdownpoint of ['1.0', '1.3', '1.10']) {
+        assert.equal(presentationIdentity({ ...frontmatter, markdownpoint }, { ...companion, markdownpoint }), document, markdownpoint);
     }
 });
 
+test('the format before 1.0, with a numeric version and a document key, stays an ordinary note', () => {
+    const before = { markdownpoint: 1, document };
+    assert.equal(presentationIdentity(before, { markdownpoint: 1, kind: 'presentation', document }), null);
+    assert.equal(presentationIdentity({ markdownpoint: '1.0', document }, { ...companion, id: undefined, document }), null);
+});
+
 test('a mismatched, missing, or noncanonical identity does not activate presentation behavior', () => {
-    assert.equal(presentationIdentity(frontmatter, { ...companion, document: '87654321-1234-7234-9234-123456789abc' }), null);
+    assert.equal(presentationIdentity(frontmatter, { ...companion, id: '87654321-1234-7234-9234-123456789abc' }), null);
     for (const value of [undefined, '', 'not-a-uuid', document.toUpperCase(), ` ${document}`]) {
-        assert.equal(presentationIdentity({ ...frontmatter, document: value }, { ...companion, document: value }), null);
+        assert.equal(presentationIdentity({ ...frontmatter, id: value }, { ...companion, id: value }), null);
     }
 });
 

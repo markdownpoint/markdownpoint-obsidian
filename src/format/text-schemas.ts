@@ -17,7 +17,7 @@
  */
 
 import type { DocumentSlide } from './document.ts';
-import { isRecord, isStableId } from './recognition.ts';
+import { isRecord, isStableId, opensFormatVersion } from './recognition.ts';
 
 export interface TextSchemaTheme {
     readonly master: unknown;
@@ -70,9 +70,9 @@ export function copyTextSchemas(
             !theme ||
             !isRecord(theme.master) ||
             !isRecord(theme.layout) ||
-            theme.master.markdownpoint !== 1 ||
+            !opensFormatVersion(theme.master.markdownpoint) ||
             theme.master.kind !== 'master' ||
-            theme.layout.markdownpoint !== 1 ||
+            !opensFormatVersion(theme.layout.markdownpoint) ||
             theme.layout.kind !== 'layout' ||
             typeof record.layout !== 'string' ||
             record.layout !== theme.layoutKey ||

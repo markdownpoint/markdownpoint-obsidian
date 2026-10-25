@@ -59,13 +59,16 @@ export function slideAtPosition(document: PresentationDocument, position: number
 const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*([^\s]+))?\s*-->[ \t]*$/;
 const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[:\s]|-->|$)(?:\s*:?\s*[^\s<>]*)?\s*(?:-->|$)/i;
 
-/** A candidate directive consumed by a code token is content, not a slide boundary. */
+/**
+ * A candidate directive consumed by a code token is content, not a slide boundary. `start` is where that code block
+ * begins in the field's normalized text.
+ */
 function containingCode(markdown: string, line: string) {
     const source = markdown.replace(/\r\n?/g, '\n');
     const last = blockTokens(source).at(-1);
-    return last?.type === 'code' && last.raw.trimEnd().endsWith(line.trimEnd())
-        ? { raw: last.raw, leading: source.slice(0, source.length - last.raw.length).trim().length === 0 }
-        : undefined;
+    if (last?.type !== 'code' || !last.raw.trimEnd().endsWith(line.trimEnd())) return undefined;
+    const start = source.length - last.raw.length;
+    return { raw: last.raw, start, leading: source.slice(0, start).trim().length === 0 };
 }
 
 /** Ask the same grammar using a bounded probe, not the growing document prefix. */
@@ -92,7 +95,8 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     let container: 'slide' | 'composition' | null = null;
     let payloadFrom = bodyStart;
     let hasFence = false;
-    let swallowedMarker = false;
+    // Where, in the current field's normalized text, the code block that last took in a marker begins
+    let swallowedFrom: number | null = null;
     let openFence: string | null = null;
     // Bare CR can introduce lexer lines inside one source line. Keep full context there.
     const scanFences = !/\r(?!\n)/.test(markdown);
@@ -111,7 +115,7 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
                 openFence = null;
                 payloadFrom = end;
                 hasFence = false;
-                swallowedMarker = false;
+                swallowedFrom = null;
             }
             offset = end;
             lineNumber++;
@@ -124,7 +128,7 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
         if (match || markerLike.test(line)) {
             const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), line) : undefined;
             if (code) {
-                swallowedMarker = true;
+                swallowedFrom = code.start;
                 const fence = /^ {0,3}(`{3,}|~{3,})/.exec(code.raw)?.[1];
                 if (fence && code.leading && scanFences) openFence = fence;
                 offset = end;
@@ -166,15 +170,18 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
             }
             payloadFrom = end;
             hasFence = false;
-            swallowedMarker = false;
+            swallowedFrom = null;
         }
         offset = end;
         lineNumber++;
     }
     if (openFence) return null;
-    if (swallowedMarker) {
-        const last = blockTokens(markdown.slice(payloadFrom).replace(/\r\n?/g, '\n')).at(-1);
-        if (last?.type === 'code') {
+    // A code block that takes in a marker and never closes holds the rest of the file, so its slides would go missing.
+    // Another fence left open at the end only holds that field's words, as the MarkdownPoint app reads it.
+    if (swallowedFrom !== null) {
+        const source = markdown.slice(payloadFrom).replace(/\r\n?/g, '\n');
+        const last = blockTokens(source).at(-1);
+        if (last?.type === 'code' && source.length - last.raw.length === swallowedFrom) {
             const fence = /^ {0,3}(`{3,}|~{3,})/.exec(last.raw)?.[1];
             const closing = last.raw.replace(/\n+$/, '').split('\n').at(-1) ?? '';
             if (fence && !closesFence(fence, closing)) return null;

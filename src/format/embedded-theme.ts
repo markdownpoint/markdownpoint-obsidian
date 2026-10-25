@@ -16,8 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { holdsOldWords } from './file-words.ts';
 import { readJsonObject } from './json.ts';
-import { isDocumentId, isRecord, isStableId, presentationCompanionPath } from './recognition.ts';
+import { isDocumentId, isRecord, isStableId, opensFormatVersion, presentationCompanionPath } from './recognition.ts';
 
 export interface EmbeddedThemeDocument {
     readonly path: string;
@@ -71,7 +72,10 @@ export function embeddedThemePaths(markdownPath: string, companion: unknown, lay
 /** Validate the supported Theme envelope while keeping its original source separately. */
 export function themeDocument(source: string, kind: 'master' | 'layout'): Record<string, unknown> | null {
     const value = readJsonObject(source);
-    return value?.markdownpoint === 1 && value.kind === kind && (kind !== 'master' || isDocumentId(value.id)) ? value : null;
+    if (!value || !opensFormatVersion(value.markdownpoint) || value.kind !== kind || (kind === 'master' && !isDocumentId(value.id)))
+        return null;
+    // Every theme path reads its documents here, so none can carry a key the MarkdownPoint app refuses into a presentation
+    return holdsOldWords(value) ? null : value;
 }
 
 /** Files declared by a theme's media objects, overrides, and embedded fonts. */
@@ -97,8 +101,8 @@ export function themeAssetPaths(theme: EmbeddedTheme): readonly string[] | null 
         const objects = [...own, ...(isRecord(level.overrides) ? Object.values(level.overrides) : [])];
         for (const object of objects) {
             if (!isRecord(object)) continue;
-            const assets = isRecord(object.asset) ? Object.values(object.asset) : [object.asset];
-            if (!assets.every(add)) return null;
+            const files = isRecord(object.file) ? Object.values(object.file) : [object.file];
+            if (!files.every(add)) return null;
             if (typeof object['poster-frame'] === 'string' && !add(object['poster-frame'])) return null;
         }
     }

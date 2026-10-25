@@ -41,7 +41,7 @@ test('the bundled licensed theme has a valid master and every ordered layout', (
 test('a new presentation has matching identity, the chosen theme, and empty title fields', () => {
     const made = prepareNewPresentation(basicTheme, document, 'opening')!;
     const companion = readJsonObject(made.companion)!;
-    assert.equal(presentationIdentity({ markdownpoint: 1, document }, companion), document);
+    assert.equal(presentationIdentity({ markdownpoint: '1.0', id: document }, companion), document);
     assert.equal(companion.theme, 'basic');
     assert.deepEqual(companion.slides, { opening: { layout: 'title' } });
     const body = made.markdown.indexOf('<!-- slide:');
@@ -78,7 +78,7 @@ test('theme creation inventories media variants, overrides and embedded fonts wi
             ...basicTheme.master,
             value: {
                 ...basicTheme.master.value,
-                objects: [{ asset }],
+                objects: [{ file: asset }],
                 'font-files': { Custom: ['fonts/custom.eot'] }
             }
         }
@@ -114,4 +114,19 @@ test('theme creation inventories media variants, overrides and embedded fonts wi
     ]) {
         assert.equal(themeAssetPaths(make(path)), null, path);
     }
+});
+
+test('a theme master or layout that still holds the words before 1.0 is not read, so no path copies it', () => {
+    const master = '"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"';
+    const layout = '"markdownpoint":"1.0","kind":"layout"';
+    for (const old of [
+        '"objects":[{"id":"logo","type":"image","asset":"media/logo.svg"}]',
+        '"objects":[{"id":"card","type":"composition","source":"card"}]',
+        '"overrides":{"words":{"model":{"asset":"models/a.glb"}}}',
+        '"background":{"image":"media/back.png","image-result":{"source":"generated/first.png"}}'
+    ]) {
+        assert.equal(themeDocument(`{${master},${old}}`, 'master'), null, old);
+        assert.equal(themeDocument(`{${layout},${old}}`, 'layout'), null, old);
+    }
+    assert.notEqual(themeDocument(`{${master},"objects":[{"id":"logo","type":"image","file":"media/logo.svg"}]}`, 'master'), null);
 });

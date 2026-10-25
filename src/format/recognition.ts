@@ -55,15 +55,39 @@ export function isStableId(value: unknown): value is string {
     return typeof value === 'string' && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value);
 }
 
+/** The format version the plugin writes: a major and a minor, always a string, since 1.10 and 1.1 are one number. */
+export const FORMAT_VERSION = '1.0';
+
+/** A stated version's major and minor: whole numbers without leading zeros, as the MarkdownPoint app reads them. */
+function versionParts(value: unknown): { major: number; minor: number } | null {
+    const parts = typeof value === 'string' ? /^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$/.exec(value) : null;
+    return parts ? { major: Number(parts[1]), minor: Number(parts[2]) } : null;
+}
+
+/** Whether a stated format version opens: any minor of major 1. A later minor only adds what an earlier reader passes over. */
+export function opensFormatVersion(value: unknown): boolean {
+    return versionParts(value)?.major === 1;
+}
+
+/**
+ * Whether the plugin knows every key of a stated version: version 1.0 or earlier. A newer minor may hold keys a 1.0
+ * file must not receive, so slides are only copied out of a presentation of this version.
+ */
+export function readsFormatFully(value: unknown): boolean {
+    const parts = versionParts(value);
+    return parts?.major === 1 && parts.minor <= 0;
+}
+
 /**
  * Recognizes the pair's identity only, not its layouts or full format conformance.
- * Both files must explicitly declare format 1 and the same lowercase UUID;
+ * Both files must declare a version 1 format and the same lowercase UUID as `id`;
  * a similarly named ordinary note or a mismatched companion stays ordinary Markdown.
  */
 export function presentationIdentity(frontmatter: unknown, companion: unknown): string | null {
     if (!isRecord(frontmatter) || !isRecord(companion)) return null;
-    if (frontmatter.markdownpoint !== 1 || companion.markdownpoint !== 1 || companion.kind !== 'presentation') return null;
-    const document = frontmatter.document;
-    if (!isDocumentId(document)) return null;
-    return companion.document === document ? document : null;
+    if (!opensFormatVersion(frontmatter.markdownpoint) || !opensFormatVersion(companion.markdownpoint) || companion.kind !== 'presentation')
+        return null;
+    const id = frontmatter.id;
+    if (!isDocumentId(id)) return null;
+    return companion.id === id ? id : null;
 }

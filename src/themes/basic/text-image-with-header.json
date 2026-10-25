@@ -1,5 +1,5 @@
 {
-  "markdownpoint": 1,
+  "markdownpoint": "1.0",
   "kind": "layout",
   "name": "Text & image with header",
   "objects": [
@@ -7,37 +7,24 @@
       "id": "title",
       "type": "text",
       "placeholder": true,
-      "frame": {
-        "x": 120,
-        "y": 112,
-        "width": 1680,
-        "height": 176
-      },
+      "frame": {"x":120,"y":112,"width":1680,"height":176},
       "text-style": "title"
     },
+
     {
       "id": "body",
       "type": "text",
       "placeholder": true,
-      "frame": {
-        "x": 120,
-        "y": 320,
-        "width": 800,
-        "height": 620
-      },
+      "frame": {"x":120,"y":320,"width":800,"height":620},
       "text-style": "body",
       "vertical-align": "center"
     },
+
     {
       "id": "image",
       "type": "image",
       "placeholder": true,
-      "frame": {
-        "x": 1000,
-        "y": 320,
-        "width": 800,
-        "height": 620
-      }
+      "frame": {"x":1000,"y":320,"width":800,"height":620}
     }
   ],
   "text": {

@@ -26,8 +26,8 @@ const companion = { theme: 'basic' };
 const markdownPath = 'Presentations/Å calm place/slides.md';
 const paths = embeddedThemePaths(markdownPath, companion, ['title'])!;
 const master =
-    '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","unknown":9007199254740993}';
-const layout = '{"markdownpoint":1,"kind":"layout","objects":[{"id":"title","type":"text"}]}';
+    '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","unknown":9007199254740993}';
+const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"title","type":"text"}]}';
 function vault() {
     const files = new Map([
         [paths.master, { path: paths.master, source: master }],
@@ -79,11 +79,11 @@ test('malformed or ambiguous JSON and wrong document envelopes refuse the snapsh
         'null',
         '{}',
         '{"markdownpoint":2,"kind":"master","id":"11111111-1111-4111-8111-111111111111"}',
-        '{"markdownpoint":1,"kind":"layout"}',
-        '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111",}',
-        '{/* comment */"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111"}',
-        '{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111","unknown":1e999}',
-        String.raw`{"markdownpoint":1,"kind":"master","id":"11111111-1111-4111-8111-111111111111","nested":{"name":1,"na\u006de":2}}`
+        '{"markdownpoint":"1.0","kind":"layout"}',
+        '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111",}',
+        '{/* comment */"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"}',
+        '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111","unknown":1e999}',
+        String.raw`{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111","nested":{"name":1,"na\u006de":2}}`
     ])
         assert.equal(themeDocument(source, 'master'), null, source);
     const { files, host } = vault();
@@ -142,5 +142,5 @@ test('Theme keys and UUID identities are independent; legacy folders are not gue
     for (const theme of ['con', 'nul', 'com1', 'lpt9', 'Company profile', '../basic', id])
         assert.equal(embeddedThemePaths(markdownPath, { theme }, []), null);
     assert.equal(embeddedThemePaths(markdownPath, { design: id }, []), null);
-    assert.equal(themeDocument('{"markdownpoint":1,"kind":"master"}', 'master'), null);
+    assert.equal(themeDocument('{"markdownpoint":"1.0","kind":"master"}', 'master'), null);
 });

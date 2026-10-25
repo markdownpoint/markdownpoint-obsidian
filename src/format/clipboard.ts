@@ -20,6 +20,7 @@ import { compositionSources } from './capture.ts';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { indexPresentation } from './document.ts';
 import { embeddedThemePaths, isThemeKey, themeDocument } from './embedded-theme.ts';
+import { holdsOldWords } from './file-words.ts';
 import { readJsonObject } from './json.ts';
 import { isDocumentId, isRecord, isStableId } from './recognition.ts';
 import { copyTextSchemas } from './text-schemas.ts';
@@ -128,6 +129,8 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
             seen.add(part.id);
             const document = indexPresentation(part.markdown, 0);
             const record = readJsonObject(part.record);
+            // Every copy and paste passes here, so a record the MarkdownPoint app would refuse never reaches a destination
+            if (record && holdsOldWords(record)) return null;
             const parts = kind === 'slide' ? document?.slides : document?.compositions;
             const indexed = parts?.[0];
             if (
