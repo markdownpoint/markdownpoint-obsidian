@@ -43,7 +43,11 @@ export async function openPresentationInDesktop(app: App, input: Handoff, data: 
     try {
         if (!current()) return;
         if (input.view) await input.view.save();
-        if (data && !(await data.settled(path, input.documentId))) return;
+        if (data && !(await data.settled(path, input.documentId))) {
+            // The desktop app would open stale slide data; the save failure's own notice may already be dismissed
+            if (current()) new Notice(uiText.slides.saveFailed);
+            return;
+        }
         if (!current()) return;
         const pair = presentationFiles(app.vault, path);
         if (!pair || pair.markdown !== input.file) {

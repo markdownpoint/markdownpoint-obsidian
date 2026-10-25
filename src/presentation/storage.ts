@@ -70,7 +70,8 @@ export class PresentationStorage extends Component {
                     this.clearNotice(failure.path, failure.document);
                     this.notices.set(JSON.stringify([failure.path, failure.document]), failure);
                 }
-                void data.rename(oldPath, file.path).catch((error: unknown) => this.preparationFailed(error));
+                // Nothing to act on: the store keeps its entries in memory and rewrites all of them on the next save
+                void data.rename(oldPath, file.path).catch((error: unknown) => console.error(error));
             })
         );
         this.register(() => {
@@ -90,7 +91,7 @@ export class PresentationStorage extends Component {
         this.recoveryNotice = null;
     }
 
-    preparationFailed(error: unknown): void {
+    deleteFailed(error: unknown): void {
         console.error(error);
         if (this.running) new Notice(uiText.slides.deleteFailed);
     }

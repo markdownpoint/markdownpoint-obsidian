@@ -99,6 +99,11 @@ class SlideBoundary extends WidgetType {
 }
 
 class EmptyDraft extends WidgetType {
+    // Every empty draft looks the same, so a rebuild can keep the existing element
+    eq(): boolean {
+        return true;
+    }
+
     toDOM(view: EditorView): HTMLElement {
         return view.dom.ownerDocument.defaultView!.createDiv({ cls: 'markdownpoint-empty-draft', text: uiText.slides.empty });
     }
@@ -615,7 +620,12 @@ export class PresentationEditor extends Component {
         let notes = snapshot ? slideNotes(markdown, snapshot.document, uiText.notes.placeholder) : [];
         if (!snapshot && markers.length && previous)
             notes = previous.notes.flatMap(slot => {
-                const field = slot.field && mapField(slot.field);
+                if (!slot.field) {
+                    // A slide without notes keeps its empty row at the next marker or the end of the document
+                    const at = transaction?.docChanged ? transaction.changes.mapPos(slot.at, 1) : slot.at;
+                    return at === state.doc.length || state.doc.lineAt(at).from === at ? [{ ...slot, at }] : [];
+                }
+                const field = mapField(slot.field);
                 return field ? [{ ...slot, at: field.from, field }] : [];
             });
         const noteFields = notes.flatMap(slot => (slot.field && openedNotes.has(slot.slideId) ? [slot.field] : []));

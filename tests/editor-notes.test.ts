@@ -19,10 +19,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { EditorState } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
+import { editorInfoField, editorLivePreviewField } from './support/obsidian.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { isRecord } from '../src/format/recognition.ts';
 import { slideNotes } from '../src/editor/notes.ts';
 import { notesDecorations } from '../src/editor/notes-widgets.ts';
+import { PresentationEditor } from '../src/editor/presentation-editor.ts';
+import { NotesUi } from '../src/settings/notes-ui.ts';
+import type { PresentationReader } from '../src/presentation/reader.ts';
 
 /** Where the notes decorations let a line take the direction of its own text. */
 function autoDirectionLines(markdown: string, open: boolean): number[] {
@@ -43,4 +48,43 @@ test("an open note's first line takes its own text direction beside the hidden n
     assert.deepEqual(autoDirectionLines(markdown, true), [markdown.indexOf('Pause here.')]);
     assert.deepEqual(autoDirectionLines(markdown, false), []);
     assert.deepEqual(autoDirectionLines('<!-- slide: first -->\n<!-- notes -->\n<!-- slide: second -->\n', true), []);
+});
+
+/** The draft's presenter notes rows; the widget class is internal to the editor. */
+function notesRows(state: EditorState): number {
+    let rows = 0;
+    for (const decorations of state.facet(EditorView.decorations)) {
+        if (typeof decorations === 'function') continue;
+        for (const cursor = decorations.iter(); cursor.value; cursor.next()) {
+            const spec: unknown = cursor.value.spec;
+            if (isRecord(spec) && spec.widget?.constructor.name === 'NotesDisclosure') rows++;
+        }
+    }
+    return rows;
+}
+
+test('slides without notes keep their notes row while an unclosed fence stops parsing', () => {
+    const source = '<!-- slide: first -->\n<!-- text: body -->\nWords.\n\n<!-- slide: second -->\n<!-- text: body -->\nMore.\n';
+    const reader = {
+        snapshot(_file: unknown, markdown: string) {
+            const document = indexPresentation(markdown, 0);
+            return (
+                document && {
+                    id: 'document',
+                    bodyStart: 0,
+                    document,
+                    images: new Map(),
+                    outline: { slides: document.slides.map(slide => ({ id: slide.id, skipped: false })), sections: [] }
+                }
+            );
+        },
+        matchesIdentity: () => true
+    } as unknown as PresentationReader;
+    const notes = new NotesUi({ loadLocalStorage: () => null, saveLocalStorage: () => undefined });
+    const owner = new PresentationEditor(reader, notes, () => undefined);
+    let state = EditorState.create({ doc: source, extensions: [editorInfoField, editorLivePreviewField, owner.extension] });
+    assert.equal(notesRows(state), 2);
+    state = state.update({ changes: { from: source.indexOf('Words.'), insert: '~~~js\n' } }).state;
+    assert.equal(indexPresentation(state.doc.toString(), 0), null);
+    assert.equal(notesRows(state), 2);
 });

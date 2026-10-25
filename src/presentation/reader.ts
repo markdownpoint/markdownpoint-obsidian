@@ -93,12 +93,14 @@ export class PresentationReader extends Component {
                 if (!view || view.getMode() === 'preview') this.update(source, markdown, view);
             })
         );
-        this.registerEvent(this.app.vault.on('create', file => this.onFileChange(file)));
         this.registerEvent(this.app.vault.on('modify', file => this.onFileChange(file)));
         this.registerEvent(this.app.vault.on('delete', file => this.onFileChange(file)));
         this.registerEvent(this.app.vault.on('rename', (file, oldPath) => this.onFileChange(file, oldPath)));
         this.app.workspace.onLayoutReady(() => {
-            if (this.running) this.refreshActive();
+            if (!this.running) return;
+            // Obsidian reports every existing file as created while the vault loads
+            this.registerEvent(this.app.vault.on('create', file => this.onFileChange(file)));
+            this.refreshActive();
         });
     }
 
@@ -267,13 +269,14 @@ export class PresentationReader extends Component {
     }
 
     private forget(file: TFile): void {
-        this.sources.delete(file);
+        const known = this.sources.delete(file);
         this.reads.delete(file);
         if (this.followed === file) {
             this.followed = null;
             this.publish(null, null);
         }
-        this.changed(file);
+        // An editor only decorates a known source, so an ordinary note named slides.md has nothing to clear
+        if (known) this.changed(file);
     }
 
     private update(source: PresentationSource, markdown: string, view: MarkdownView | null): void {

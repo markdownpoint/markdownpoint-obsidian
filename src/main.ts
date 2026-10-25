@@ -401,7 +401,7 @@ export default class MarkdownPointPlugin extends Plugin {
                     await this.presentationEditor?.deleteSlides(editor.editor, selection.selected, current);
                 });
             } catch (error) {
-                this.storage?.preparationFailed(error);
+                this.storage?.deleteFailed(error);
             }
         });
     }
@@ -501,7 +501,7 @@ export default class MarkdownPointPlugin extends Plugin {
                     if (deleted && current() && this.app.workspace.getMostRecentLeaf() === editor.leaf) editor.editor.focus();
                 }
             } catch (error) {
-                this.storage?.preparationFailed(error);
+                this.storage?.deleteFailed(error);
             }
         });
     }
@@ -584,6 +584,9 @@ export default class MarkdownPointPlugin extends Plugin {
             return;
         const slide = this.presentation.slides.find(item => item.id === id);
         if (!slide) return;
+        // The outline keeps following a presentation in a background tab; bring that tab forward without taking focus
+        if (!leaf.view.containerEl.isShown()) await this.app.workspace.revealLeaf(leaf);
+        if (!this.running || this.activeSlideId !== id || !(leaf.view instanceof MarkdownView)) return;
         const cursor = { line: slide.line, ch: 0 };
         if (leaf.view.getMode() === 'preview') leaf.view.setEphemeralState({ line: slide.line });
         else {
