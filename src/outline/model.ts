@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { SlideStructure } from "../format/structure.ts";
 import { Lexer } from "marked";
 import { decodeHTMLStrict } from "entities";
 import { isRecord } from "../format/recognition.ts";
@@ -28,6 +29,7 @@ export interface OutlineSlide {
   readonly title: string;
   readonly line: number;
   readonly skipped: boolean;
+  readonly structure?: SlideStructure | null;
 }
 
 export interface OutlineSection {

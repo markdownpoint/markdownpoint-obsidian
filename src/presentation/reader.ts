@@ -25,6 +25,10 @@ import { outlineSections, outlineSlides } from "../outline/model.ts";
 import type { OutlinePresentation } from "../outline/model.ts";
 import { uiText } from "../ui-text.ts";
 import type { SlideData } from "./slide-data.ts";
+import { readEmbeddedTheme } from "./theme-reader.ts";
+import { embeddedThemePaths } from "../format/embedded-theme.ts";
+import type { EmbeddedTheme } from "../format/embedded-theme.ts";
+import { slideStructure } from "../format/structure.ts";
 import { CompanionDocument } from "../format/companion.ts";
 
 interface PresentationSource {
@@ -33,6 +37,7 @@ interface PresentationSource {
   readonly companionPath: string;
   readonly companion: unknown;
   readonly companionText: string;
+  theme: EmbeddedTheme | null;
   markdown: string | null;
   snapshot: PresentationSnapshot | null;
 }
@@ -109,7 +114,10 @@ export class PresentationReader extends Component {
       // conflicts removed from the source folder and files renamed out of it.
       const companionChange = [file.path, oldPath].some(path => path !== undefined && path.toLowerCase().endsWith(".mdpoint") &&
         path.slice(0, path.lastIndexOf("/") + 1) === candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1));
-      const affected = file === candidate || file.path === companionPath || companionChange ||
+      const themeRoot = source?.theme?.root ?? candidate.path.slice(0, candidate.path.lastIndexOf("/") + 1) + "designs";
+      const themeChange = [file.path, oldPath].some(path => path !== undefined && (path === themeRoot || path.startsWith(themeRoot + "/")));
+      if (themeChange && source) source.theme = null;
+      const affected = themeChange || file === candidate || file.path === companionPath || companionChange ||
         [file.path, oldPath].some(path => path !== undefined &&
           [candidate.path, source?.path, source?.companionPath].some(owned => owned === path || owned?.startsWith(path + "/")));
       if (!affected) continue;
@@ -124,6 +132,10 @@ export class PresentationReader extends Component {
 
   async refreshView(view: MarkdownView): Promise<void> {
     if (!view.file || !presentationCompanionPath(view.file.path)) return;
+    if (this.requested !== view.file) {
+      const source = this.sources.get(view.file);
+      if (source) source.theme = null;
+    }
     this.requested = view.file;
     await this.read(view.file, view);
   }
@@ -160,9 +172,17 @@ export class PresentationReader extends Component {
       // source for that earlier file, and unloading invalidates every request.
       if (!this.running || this.reads.get(file) !== request || file.path !== path ||
         this.app.vault.getAbstractFileByPath(path) !== file || (view && view.file !== file)) return;
-      const source: PresentationSource = { file, path, companionPath, companion, companionText, markdown: null, snapshot: null };
+      const layouts = isRecord(companion) && isRecord(companion.slides) ? Object.values(companion.slides)
+        .flatMap(record => isRecord(record) && typeof record.layout === "string" ? [record.layout] : []) : [];
+      const previous = this.sources.get(file)?.theme;
+      const themePaths = embeddedThemePaths(path, companion, new Set(layouts));
+      const theme = previous && previous.root === themePaths?.root && isRecord(companion) && companion.design === previous.id && layouts.every(key => previous.layouts.has(key))
+        ? previous : await readEmbeddedTheme(this.app.vault, path, companion, new Set(layouts));
+      if (!this.running || this.reads.get(file) !== request || file.path !== path ||
+        this.app.vault.getAbstractFileByPath(path) !== file || (view && view.file !== file)) return;
+      const source: PresentationSource = { file, path, companionPath, companion, companionText, theme, markdown: null, snapshot: null };
       this.sources.set(file, source);
-      this.update(source, markdown, view);
+      this.update(source, view ? view.getViewData() : markdown, view);
     } catch {
       if (this.running && this.reads.get(file) === request) this.forget(file);
     } finally {
@@ -253,6 +273,7 @@ export class PresentationReader extends Component {
     const slides = source.companion.slides;
     if (!document) return null;
     const skipped = new Set<string>();
+    const structures = new Map<string, ReturnType<typeof slideStructure>>();
     for (const slide of document.slides) {
       let metadata: unknown = slides[slide.id];
       if (!Object.hasOwn(slides, slide.id)) {
@@ -262,9 +283,10 @@ export class PresentationReader extends Component {
       }
       if (!isRecord(metadata) || (metadata.skipped !== undefined && typeof metadata.skipped !== "boolean")) return null;
       if (metadata.skipped === true) skipped.add(slide.id);
+      structures.set(slide.id, slideStructure(metadata, source.theme));
     }
     const sections = outlineSections(markdown, document);
     if (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from)) return null;
-    return { id: identity.id, bodyStart: identity.bodyStart, document, outline: { documentId: identity.id, path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped), sections } };
+    return { id: identity.id, bodyStart: identity.bodyStart, document, outline: { documentId: identity.id, path: source.path, slides: outlineSlides(markdown, document, uiText.emptySlide, skipped).map(slide => ({ ...slide, structure: structures.get(slide.id) })), sections } };
   }
 }

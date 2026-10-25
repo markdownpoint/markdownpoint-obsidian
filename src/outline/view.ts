@@ -22,6 +22,7 @@ import { outlineRows } from "./model.ts";
 import type { OutlineState } from "./model.ts";
 import type { ListSelection, ListSelectionAction } from "../selection/list-selection.ts";
 import type { SlideReorder } from "../format/reorder.ts";
+import { renderThumbnail } from "./thumbnail.ts";
 import { OutlineDrag } from "./drag.ts";
 import { uiNumber, uiText } from "../ui-text.ts";
 
@@ -128,6 +129,7 @@ export class MarkdownPointOutlineView extends ItemView {
     list.tabIndex = presentation?.slides.length ? -1 : 0;
     // Preserve unchanged rows while the author types; rebuilding the entire list
     // discards focused controls and makes large-deck edits pay for every DOM node.
+    const slidesById = new Map(presentation?.slides.map(slide => [slide.id, slide]));
     const previous = new Map([...list.children].map(row => [row.getAttribute("data-outline-key"), row]));
     const rows = presentation ? outlineRows(presentation, number => uiNumber.format(number)) : [];
     const orderChanged = rows.length !== list.children.length || rows.some((item, index) =>
@@ -145,6 +147,7 @@ export class MarkdownPointOutlineView extends ItemView {
             cls: "markdownpoint-outline-row",
             attr: { type: "button", "data-slide-id": item.id, draggable: "true" },
           });
+          button.createSpan({ cls: "markdownpoint-thumbnail" });
           button.createSpan({ cls: "markdownpoint-outline-title" });
           button.addEventListener("click", event => {
             const modifier = Platform.isMacOS ? event.metaKey : event.ctrlKey;
@@ -160,9 +163,11 @@ export class MarkdownPointOutlineView extends ItemView {
         if (control?.textContent !== item.label) control?.setText(item.label);
       } else if (control) {
         if (control.getAttribute("aria-label") !== item.label) {
-          control.firstElementChild?.setText(item.label);
+          control.querySelector(".markdownpoint-outline-title")?.setText(item.label);
           setTooltip(control, item.label);
         }
+        const thumbnail = control.querySelector<HTMLElement>(".markdownpoint-thumbnail");
+        if (thumbnail) renderThumbnail(thumbnail, slidesById.get(item.id)?.structure);
         const active = item.id === activeSlideId;
         if (control.getAttribute("aria-current") !== String(active)) control.setAttribute("aria-current", String(active));
         control.setAttribute("aria-pressed", String(selection.selected.has(item.id)));

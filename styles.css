@@ -57,11 +57,14 @@
 }
 
 .markdownpoint-outline .markdownpoint-outline-row {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--size-4-3);
   width: 100%;
   height: auto;
   min-height: var(--input-height);
-  padding: var(--size-4-2);
+  padding: 11px var(--size-4-2);
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -77,10 +80,14 @@
 }
 
 .markdownpoint-outline .markdownpoint-outline-row[aria-current="true"] .markdownpoint-outline-title {
+  min-width: 0;
+  flex: 1;
   font-weight: var(--font-semibold);
 }
 
 .markdownpoint-outline-title {
+  min-width: 0;
+  flex: 1;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -303,4 +310,78 @@
   .markdownpoint-field-header.is-revealing {
     animation: none;
   }
+}
+
+/* Structural previews show authored regions and text density, independent of slide styling. */
+.markdownpoint-thumbnail {
+  display: block;
+  flex: 0 0 66px;
+  width: 66px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  color: var(--text-muted);
+  background: var(--background-primary);
+  overflow: hidden;
+}
+
+.markdownpoint-thumbnail.is-unavailable {
+  display: none;
+}
+
+.markdownpoint-thumbnail svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.markdownpoint-thumbnail-region {
+  fill: currentColor;
+  opacity: 0.38;
+}
+
+.markdownpoint-thumbnail-region.is-media {
+  opacity: 0.16;
+}
+
+.markdownpoint-outline-row[aria-current="true"] .markdownpoint-thumbnail,
+.markdownpoint-outline-row:hover .markdownpoint-thumbnail,
+.markdownpoint-slide-tools:hover,
+.markdownpoint-slide-tools:focus-visible {
+  border-color: var(--markdownpoint-muted);
+  color: var(--text-normal);
+}
+
+.markdownpoint-presentation .markdown-source-view.is-live-preview .cm-content {
+  padding-inline-end: 68px;
+}
+
+.markdownpoint-presentation .markdown-source-view.mod-cm6 .cm-content > .markdownpoint-slide-boundary {
+  position: relative;
+  width: calc(100% + 68px);
+}
+
+.markdownpoint-presentation .markdownpoint-slide-tools {
+  position: absolute;
+  inset-inline-end: var(--markdownpoint-thumbnail-right);
+  top: var(--markdownpoint-thumbnail-top);
+  width: 52px;
+  height: auto;
+  padding: 0;
+  box-shadow: none;
+  outline: none;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.markdownpoint-slide-tools-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.markdownpoint-slide-tools-layer .markdownpoint-slide-tools {
+  pointer-events: auto;
+  background: var(--background-primary);
 }

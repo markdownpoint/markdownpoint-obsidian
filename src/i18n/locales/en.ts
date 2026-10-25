@@ -35,6 +35,7 @@ export const en = {
   notes: { label: "Speaker notes", placeholder: "Notes" },
   clipboard: { copyText: "Copy", copyFailed: "Could not copy text to the clipboard." },
   slides: {
+    actions: "Slide actions",
     copy: ({ count }: { count: number }) => count === 1 ? "Copy slide" : "Copy slides",
     cut: ({ count }: { count: number }) => count === 1 ? "Cut slide" : "Cut slides",
     cutChanged: "The presentation changed before the slides could be cut. They were copied instead.",

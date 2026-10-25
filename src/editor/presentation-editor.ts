@@ -23,6 +23,8 @@ import type { DecorationSet } from "@codemirror/view";
 import { Component, MarkdownView, editorInfoField, editorLivePreviewField } from "obsidian";
 import type { Editor, TFile } from "obsidian";
 import type { PresentationReader, PresentationSnapshot } from "../presentation/reader.ts";
+import { slideThumbnails } from "./thumbnail-widgets.ts";
+import type { SlideStructure } from "../format/structure.ts";
 import { outlineSlideNumbers } from "../outline/model.ts";
 import { uiNumber, uiText } from "../ui-text.ts";
 import { boundaryChangesAllowed, slideStructureChange } from "./boundary-protection.ts";
@@ -67,13 +69,16 @@ interface DraftMarker {
   readonly markerTo: number;
   readonly text: string;
   readonly label: string | null;
+  readonly slideId?: string;
+  readonly structure?: SlideStructure | null;
 }
 
 class SlideBoundary extends WidgetType {
-  constructor(private readonly label: string) { super(); }
-  eq(other: SlideBoundary): boolean { return this.label === other.label; }
+  constructor(private readonly label: string, private readonly slideId?: string) { super(); }
+  eq(other: SlideBoundary): boolean { return this.label === other.label && this.slideId === other.slideId; }
   toDOM(view: EditorView): HTMLElement {
     const element = view.dom.ownerDocument.defaultView!.createDiv({ cls: "markdownpoint-slide-boundary" });
+    if (this.slideId) element.dataset.slide = this.slideId;
     element.createSpan({ text: this.label, cls: "markdownpoint-slide-number" });
     return element;
   }
@@ -131,6 +136,8 @@ export class PresentationEditor extends Component {
     const views = this.views;
     this.extension = [
       field,
+      slideThumbnails(view => new Map(view.state.field(field).markers.flatMap(marker =>
+        marker.slideId && marker.structure ? [[marker.slideId, marker.structure] as const] : []))),
       ViewPlugin.define(view => {
         views.add(view);
         let container: HTMLElement | null = null;
@@ -377,8 +384,9 @@ export class PresentationEditor extends Component {
     let markers: readonly DraftMarker[] = [];
     if (snapshot) {
       const numbers = outlineSlideNumbers(snapshot.outline.slides, number => uiNumber.format(number));
+      const structures = new Map(snapshot.outline.slides.map(slide => [slide.id, slide.structure]));
       markers = [
-        ...snapshot.document.slides.map(slide => ({ from: slide.from, markerTo: slide.markerTo, text: state.doc.sliceString(slide.from, slide.markerTo), label: numbers.get(slide.id) ?? "" })),
+        ...snapshot.document.slides.map(slide => ({ from: slide.from, markerTo: slide.markerTo, text: state.doc.sliceString(slide.from, slide.markerTo), label: numbers.get(slide.id) ?? "", slideId: slide.id, structure: structures.get(slide.id) })),
         ...snapshot.document.sections.map(section => ({ from: section.from, markerTo: section.markerTo, text: state.doc.sliceString(section.from, section.markerTo), label: null })),
       ];
     } else if (file && preview && previous?.markers.length && this.reader.matchesIdentity(file, markdown)) {
@@ -410,7 +418,7 @@ export class PresentationEditor extends Component {
     const entryPoints = new Set([...fields, ...noteFields].filter(field => field.contentFrom === field.to && field.to < state.doc.length).map(field => field.contentFrom));
     for (const slot of notes) if (!slot.field) entryPoints.add(slot.at);
     const ranges = markers.map(marker => Decoration.replace({
-      block: true, inclusiveStart: !entryPoints.has(marker.from), ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label) }),
+      block: true, inclusiveStart: !entryPoints.has(marker.from), ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label, marker.slideId) }),
     }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to));
     ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
     ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions));
