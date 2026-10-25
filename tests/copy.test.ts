@@ -20,6 +20,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { prepareSlideCopies } from "../src/format/copy.ts";
 import type { CapturedPart, CapturedSlides } from "../src/format/capture.ts";
+import { indexPresentation } from "../src/format/document.ts";
+import { CompanionDocument } from "../src/format/companion.ts";
+import { planSlideInsertion } from "../src/format/insert.ts";
 
 const part = (kind: "slide" | "composition", id: string, record = '{}', words = 'Shared words.'): CapturedPart => ({
   id, record, markdown: `<!-- ${kind}: ${id} -->\n<!-- ${kind === "slide" ? "text: body" : "control: caption"} -->\n${words}\n`,
@@ -62,6 +65,35 @@ void test("repeated paste reuses unchanged imported definitions instead of appen
   assert.deepEqual(second.slides.map(part => part.id), ["new-5", "new-6"]);
   assert.deepEqual(second.compositions, []);
   assert.equal(second.slides[1]!.record, placement("new-4"));
+});
+
+void test("actual repeated insertion reuses nested definitions after an original definition changes", () => {
+  for (const tail of ["\n", "", "  ", "\t", "\n\n", "\n\n\n", "\n \t", "\n\n \t"]) {
+    const copiedInner = { ...inner, markdown: inner.markdown.slice(0, -1) + tail };
+    const clipboard = { ...captured, compositions: [outer, copiedInner] };
+    let source = captured.slides.map(part => part.markdown).join("") + outer.markdown + copiedInner.markdown.replace("Shared words.", "Changed inner.");
+    let companion = JSON.stringify({ slides: Object.fromEntries(captured.slides.map(part => [part.id, JSON.parse(part.record) as unknown])),
+      compositions: { outer: JSON.parse(outer.record) as unknown, inner: {} } });
+    const mint = allocator();
+    for (let cycle = 0; cycle < 3; cycle++) {
+      const document = indexPresentation(source, 0)!, records = CompanionDocument.read(companion, "compositions")!.records;
+      const held = document.compositions.map(part => ({ id: part.id, markdown: source.slice(part.from, part.to), record: records.get(part.id)! }));
+      const occupied = new Set([...document.slides, ...document.compositions].map(part => part.id));
+      const copied = prepareSlideCopies(clipboard, held, occupied, fields(clipboard), mint)!;
+      assert.equal(copied.compositions.length, cycle === 0 ? 2 : 0, JSON.stringify({ tail, cycle }));
+      const insertion = planSlideInsertion(source, document, companion, copied.slides, "b", 0, copied.compositions)!;
+      source = [...insertion.changes].reverse().reduce((text, change) => text.slice(0, change.from) + change.insert + text.slice(change.to), source);
+      companion = insertion.companion;
+      assert.equal(insertion.document.compositions.length, 4);
+      assert.ok(source.includes("Changed inner."));
+    }
+  }
+});
+
+void test("an authored trailing empty paragraph keeps a definition distinct from a structural gap", () => {
+  const value = { ...captured, compositions: [outer, { ...inner, markdown: inner.markdown + "\n\n" }] };
+  const held = [outer, { ...inner, markdown: inner.markdown + "\n" }];
+  assert.equal(prepare(held, value)!.compositions.length, 2);
 });
 
 void test("definitions whose links follow copied slides are cloned while their originals stay untouched", () => {

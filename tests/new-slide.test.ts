@@ -40,18 +40,20 @@ void test("a new slide exposes empty writing slots in reading order without pers
   const part = prepareNewSlide(layouts, "title", "new-slide")!;
   assert.deepEqual(JSON.parse(part.record), { layout: "title" });
   const document = indexPresentation(part.markdown, 0)!;
-  assert.deepEqual(document.slides[0]!.blocks.map(block => [block.kind, block.id]), [["text", "eyebrow"], ["text", "title"], ["text", "body"], ["notes", null]]);
+  assert.deepEqual(document.slides[0]!.blocks.map(block => [block.kind, block.id]), [["text", "eyebrow"], ["text", "title"], ["text", "body"]]);
+  assert.equal(part.markdown, "<!-- slide: new-slide -->\n\n<!-- text: eyebrow -->\n\n<!-- text: title -->\n\n<!-- text: body -->\n");
   assert.equal(part.markdown.includes("sample"), false);
   assert.equal(part.markdown.includes("picture"), false);
   assert.equal(part.markdown.includes("footer"), false);
   for (const block of document.slides[0]!.blocks) assert.equal(part.markdown.slice(block.contentFrom, block.to).trim(), "");
 });
 
-void test("a blank layout still creates a valid slide with an empty notes field", () => {
+void test("a blank layout creates a valid slide without persisting an empty notes marker", () => {
   const part = prepareNewSlide(layouts, "blank", "blank-slide")!;
   const document = indexPresentation(part.markdown, 0)!;
   assert.equal(document.slides.length, 1);
-  assert.deepEqual(document.slides[0]!.blocks.map(block => block.kind), ["notes"]);
+  assert.deepEqual(document.slides[0]!.blocks, []);
+  assert.equal(part.markdown, "<!-- slide: blank-slide -->\n");
   assert.ok(planSlideInsertion("", indexPresentation("", 0)!, '{"slides":{}}', [part], null, 0));
 });
 

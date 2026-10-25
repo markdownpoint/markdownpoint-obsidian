@@ -62,3 +62,27 @@ export function themeDocument(source: string, kind: "master" | "layout"): Record
   const value = readJsonObject(source);
   return value?.markdownpoint === 1 && value.kind === kind && (kind !== "master" || isDocumentId(value.id)) ? value : null;
 }
+
+/** Files declared by a theme's media objects, overrides, and embedded fonts. */
+export function themeAssetPaths(theme: EmbeddedTheme): readonly string[] | null {
+  const paths = new Set<string>();
+  const add = (value: unknown): boolean => {
+    if (value === undefined || value === null) return true;
+    if (typeof value !== "string" || !value || value.includes("\\") || value.includes(":") ||
+      value.split("/").some(part => !part || part.startsWith(".")) || ["manifest.json", "previews", "example"].includes(value.split("/")[0]!)) return false;
+    paths.add(value); return true;
+  };
+  for (const document of [theme.master, ...theme.layouts.values()]) {
+    const level = document.value;
+    const own: readonly unknown[] = Array.isArray(level.objects) ? level.objects : [];
+    const objects = [...own, ...isRecord(level.overrides) ? Object.values(level.overrides) : []];
+    for (const object of objects) {
+      if (!isRecord(object)) continue;
+      const assets = isRecord(object.asset) ? Object.values(object.asset) : [object.asset];
+      if (!assets.every(add)) return null;
+    }
+  }
+  const fonts = theme.master.value["font-files"];
+  if (isRecord(fonts)) for (const files of Object.values(fonts)) if (!Array.isArray(files) || !files.every(add)) return null;
+  return [...paths];
+}

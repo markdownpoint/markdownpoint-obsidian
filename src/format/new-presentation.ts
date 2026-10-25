@@ -24,6 +24,13 @@ import { readJsonObject } from "./json.ts";
 
 export interface NewPresentation { readonly markdown: string; readonly companion: string }
 
+/** A presentation folder keeps its human name on both desktop platforms. */
+export function presentationFolderName(value: string): string | null {
+  const name = value.trim().normalize("NFC");
+  return !name || name.startsWith(".") || name.endsWith(".") || /[\\/<>:"|?*]/.test(name) || /\p{Cc}/u.test(name) ||
+    /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(name) ? null : name;
+}
+
 /** One empty slide and one matching pair, without copying the theme's sample words. */
 export function prepareNewPresentation(theme: EmbeddedTheme, document: string, slideId: string,
   layoutKey: string | undefined = orderedLayouts(theme)[0]): NewPresentation | null {

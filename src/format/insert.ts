@@ -36,14 +36,18 @@ export interface SlideInsertion {
 }
 
 function sourceInsertion(markdown: string, at: number, parts: readonly PreparedPart[], newline: string) {
-  const prefix = markdown.slice(0, at), closed = terminateSourceBlock(prefix, newline);
+  const separated = (source: string) => {
+    const closed = terminateSourceBlock(source, newline);
+    return !closed || /\n[ \t]*\r?\n$/.test(closed) ? closed : closed + newline;
+  };
+  const prefix = markdown.slice(0, at), closed = separated(prefix);
   let from = at;
   if (closed !== prefix) {
     from = 0;
     while (from < at && closed[from] === prefix[from]) from++;
   }
   const insert = closed.slice(from) + parts.map((part, index) => index < parts.length - 1 || at < markdown.length
-    ? terminateSourceBlock(part.markdown, newline) : part.markdown).join("");
+    ? separated(part.markdown) : part.markdown).join("");
   return { from, to: at, insert };
 }
 

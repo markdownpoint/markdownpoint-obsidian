@@ -20,17 +20,18 @@ import { compositionSources } from "./capture.ts";
 import type { CapturedPart, CapturedSlides } from "./capture.ts";
 import { isSlideRecordSource } from "./companion.ts";
 import { indexPresentation } from "./document.ts";
-import { terminateSourceBlock } from "./payload.ts";
+import { payloadContentEnd, terminateSourceBlock } from "./payload.ts";
 import { prepareCopiedPart } from "./prepare-copy.ts";
 import { isStableId } from "./recognition.ts";
 
-/** Exact contents can be reused despite a different structural ID or native line endings. */
+/** Reuse exact contents apart from structural identity, line endings and the terminal organizational gap. */
 function definitionKey(part: CapturedPart): string | null {
   const document = indexPresentation(part.markdown, 0), definition = document?.compositions[0];
   if (!document || document.slides.length || document.sections.length || document.compositions.length !== 1 ||
     !definition || definition.from !== 0 || definition.id !== part.id || !isSlideRecordSource(part.record)) return null;
-  const words = part.markdown.slice(definition.markerTo).replace(/\r\n?/g, "\n");
-  return JSON.stringify([part.record.replace(/\r\n?/g, "\n"), terminateSourceBlock(words, "\n")]);
+  const words = terminateSourceBlock(part.markdown.slice(definition.markerTo).replace(/\r\n?/g, "\n"), "\n");
+  const content = words.slice(0, payloadContentEnd(words, 0, words.length));
+  return JSON.stringify([part.record.replace(/\r\n?/g, "\n"), content]);
 }
 
 /**

@@ -23,7 +23,7 @@ import { prepareNewPresentation } from "../src/format/new-presentation.ts";
 import { indexPresentation } from "../src/format/document.ts";
 import { readJsonObject } from "../src/format/json.ts";
 import { presentationIdentity } from "../src/format/recognition.ts";
-import { themeDocument } from "../src/format/embedded-theme.ts";
+import { themeDocument, themeAssetPaths } from "../src/format/embedded-theme.ts";
 
 const document = "12345678-1234-4234-8234-123456789abc";
 
@@ -47,7 +47,7 @@ void test("a new presentation has matching identity, the chosen theme, and empty
   const body = made.markdown.indexOf("<!-- slide:");
   const indexed = indexPresentation(made.markdown, body)!;
   assert.equal(indexed.slides.length, 1);
-  assert.match(made.markdown, /<!-- text: eyebrow -->\n\n<!-- text: title -->\n\n<!-- text: body -->\n\n<!-- notes -->\n$/);
+  assert.match(made.markdown, /<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n\n<!-- text: title -->\n\n<!-- text: body -->\n$/);
   assert.doesNotMatch(made.markdown, /Presentation title|Presentation subtitle|Author and date/);
 });
 
@@ -68,4 +68,15 @@ void test("creation refuses invalid identities, keys and missing layouts before 
   assert.equal(prepareNewPresentation(basicTheme, document, "opening", "missing"), null);
   assert.equal(prepareNewPresentation({ ...basicTheme, key: "../outside" }, document, "opening"), null);
   assert.equal(prepareNewPresentation({ ...basicTheme, layouts: new Map() }, document, "opening"), null);
+});
+
+void test("theme creation inventories media variants, overrides and embedded fonts without sample packages", () => {
+  assert.deepEqual(themeAssetPaths(basicTheme), []);
+  const make = (asset: unknown) => ({ ...basicTheme, master: { ...basicTheme.master, value: {
+    ...basicTheme.master.value, objects: [{ asset }], "font-files": { Custom: ["fonts/custom.eot"] },
+  } } });
+  assert.deepEqual(themeAssetPaths(make({ light: "media/light.svg", dark: "media/dark.svg" })), ["media/light.svg", "media/dark.svg", "fonts/custom.eot"]);
+  for (const path of ["../outside.svg", "/absolute.svg", "media/../outside.svg", "https://example.com/file.svg", "previews/cover.jpg", "example/media/file.jpg"]) {
+    assert.equal(themeAssetPaths(make(path)), null, path);
+  }
 });

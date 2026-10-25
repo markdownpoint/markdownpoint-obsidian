@@ -58,7 +58,7 @@ void test("an empty draft accepts slides after its final section and before its 
   for (const [source, expected] of [
     [header, header + added.markdown],
     [header + composition, header + added.markdown + composition],
-    [header + section + composition, header + section + added.markdown + composition],
+    [header + section + composition, header + section + "\r\n" + added.markdown + composition],
   ]) {
     const result = plan(source!, '{"slides":{},"compositions":{"shared":{}}}', [added], null, header.length)!;
     assert.ok(result);
@@ -71,7 +71,7 @@ void test("an empty draft accepts slides after its final section and before its 
 void test("EOF separation preserves authored blank-line counts on both sides of the insertion", () => {
   const first = '<!-- slide: a -->\n<!-- text: body -->\nLast words.';
   const incoming = '<!-- slide: b -->\n<!-- notes -->\nNew notes.';
-  for (const [tail, closed] of [["", "\n"], ["\n \t ", "\n \t \n"], ["\n\n \t ", "\n \t \n"], ["\n\n\n \t ", "\n\n \t \n"]]) {
+  for (const [tail, closed] of [["", "\n\n"], ["\n \t ", "\n \t \n"], ["\n\n \t ", "\n \t \n"], ["\n\n\n \t ", "\n\n \t \n"]]) {
     const source = first + tail;
     const result = plan(source, '{"slides":{"a":{}}}', [{ id: "b", markdown: incoming, record: '{}' }], "a")!;
     assert.ok(result);
@@ -83,7 +83,7 @@ void test("EOF separation preserves authored blank-line counts on both sides of 
   }
   const source = first.replaceAll("\n", "\r\n");
   const result = plan(source, '{"slides":{"a":{}}}', [prepared("b")], "a")!;
-  assert.equal(apply(source, result), source + "\r\n" + block("b"));
+  assert.equal(apply(source, result), source + "\r\n\r\n" + block("b"));
 });
 
 void test("a cut's pending identical record can regain its text without overwriting external metadata", () => {
@@ -133,7 +133,7 @@ void test("a group and its new definitions enter different source positions with
   assert.equal(result.changes.length, 2);
   assert.equal(result.changes[0]!.from, block("a").length);
   assert.equal(result.changes[1]!.from, source.length);
-  assert.equal(apply(source, result), block("a") + block("copy") + block("b") + held.markdown + incoming.markdown);
+  assert.equal(apply(source, result), block("a") + block("copy") + block("b") + held.markdown + "\n" + incoming.markdown);
   assert.equal(CompanionDocument.read(result.companion, "compositions")!.records.get("held"), '{"keep":true}');
   assert.equal(CompanionDocument.read(result.companion, "compositions")!.records.get("card"), incoming.record);
   assert.ok(result.companion.includes('"future":9007199254740995'));
@@ -147,7 +147,7 @@ void test("EOF and empty-draft insertion combine the slide and definition withou
     const result = planSlideInsertion(source, indexPresentation(source, 0)!, companion, [incoming], source ? "a" : null, 0, [added])!;
     assert.ok(result);
     assert.equal(result.changes.length, 1);
-    assert.equal(apply(source, result), (source ? '<!-- slide: a -->\n<!-- text: body -->\nOriginal.\n \t\n' : '') + incoming.markdown + '\n' + added.markdown);
+    assert.equal(apply(source, result), (source ? '<!-- slide: a -->\n<!-- text: body -->\nOriginal.\n \t\n' : '') + incoming.markdown + '\n\n' + added.markdown);
     assert.deepEqual(result.document.compositions.map(part => part.id), ["card"]);
   }
 });

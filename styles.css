@@ -537,3 +537,108 @@
   width: 14px;
   height: 14px;
 }
+
+.markdownpoint-creation-modal {
+  width: 600px;
+  max-width: 90vw;
+}
+
+.markdownpoint-creation-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-4);
+}
+
+.markdownpoint-creation-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.markdownpoint-creation-field > span,
+.markdownpoint-creation-label {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.markdownpoint-creation-field input,
+.markdownpoint-creation-field select {
+  width: 100%;
+}
+
+.markdownpoint-creation-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--size-4-2);
+  margin-top: calc(-1 * var(--size-4-2));
+  max-height: 280px;
+  overflow-y: auto;
+  padding: var(--size-2-2);
+}
+
+.markdownpoint-creation-modal .markdownpoint-creation-theme {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: var(--size-4-3);
+  height: auto;
+  padding: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: none;
+  text-align: start;
+}
+
+.markdownpoint-creation-modal .markdownpoint-creation-theme[aria-checked="true"] {
+  border-color: var(--text-muted);
+  background: var(--background-modifier-hover);
+}
+
+.markdownpoint-creation-modal .markdownpoint-creation-theme:focus-visible {
+  outline: 1px solid var(--text-muted);
+  outline-offset: 2px;
+}
+
+.markdownpoint-creation-preview {
+  width: 72px;
+  flex: 0 0 72px;
+  overflow: hidden;
+}
+
+.markdownpoint-creation-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.markdownpoint-creation-caption {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  min-width: 0;
+}
+
+.markdownpoint-creation-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+.markdownpoint-creation-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+}
+
+.markdownpoint-creation-error:empty {
+  display: none;
+}
+
+.markdownpoint-creation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-2);
+}

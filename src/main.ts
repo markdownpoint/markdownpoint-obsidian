@@ -36,6 +36,7 @@ import type { SlideMenuTarget } from "./editor/slide-menus.ts";
 import { SharedSettings } from "./settings/shared.ts";
 import { SlideCreation } from "./presentation/new-slide.ts";
 import { PresentationClipboard } from "./presentation/clipboard.ts";
+import { PresentationCreation } from "./presentation/create-presentation.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -58,6 +59,8 @@ export default class MarkdownPointPlugin extends Plugin {
     this.running = true;
     this.sharedSettings = new SharedSettings(this);
     this.storage = this.addChild(new PresentationStorage(this.app));
+    const creation = this.addChild(new PresentationCreation(this.app));
+    this.addCommand({ id: "new-presentation", name: uiText.commands.newPresentation, callback: () => creation.open() });
     this.localUi = loadLocalUi(this.app);
     this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
       state: () => this.outline.state,

@@ -106,7 +106,7 @@ void test("CRLF fragments use native normalized offsets without splitting compac
       assert.ok(indexed);
       const slide = indexed.slides.find(slide => slide.id === "windows")!;
       assert.deepEqual(slide.blocks.map(block => block.id), ["title", "body"]);
-      assert.equal(state.doc.sliceString(slide.blocks[1]!.contentFrom, slide.blocks[1]!.to), "Words\n");
+      assert.equal(state.doc.sliceString(slide.blocks[1]!.contentFrom, slide.blocks[1]!.to), "Words\n\n");
       assert.equal(state.doc.lineAt(state.selection.main.head).text,
         compact ? livePreview ? "" : "<!-- text: title -->" : "A Windows title");
       assert.equal(state.selection.main.head, compact && !livePreview ? slide.blocks[0]!.from : slide.blocks[0]!.contentFrom);

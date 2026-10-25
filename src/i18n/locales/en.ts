@@ -35,6 +35,15 @@ export const en = {
   images: { show: "Show slide images", description: "Show up to five images below each slide thumbnail.", preview: "Slide image" },
   notes: { label: "Speaker notes", placeholder: "Notes" },
   clipboard: { copyText: "Copy", copyFailed: "Could not copy text to the clipboard." },
+  presentations: {
+    new: "New presentation", name: "Name", folder: "Folder", theme: "Theme", included: "Included", root: "Vault root",
+    untitled: "Untitled presentation", create: "Create", creating: "Creating…", cancel: "Cancel",
+    invalidName: "Enter a folder name without slashes or reserved characters.",
+    exists: "A file or folder with this name already exists.",
+    failed: "Could not create the presentation. Check the folder and try again.",
+    openFailed: "The presentation was created, but its draft could not be opened.",
+    themeChanged: "The theme changed or is unavailable. Reopen this dialog and choose it again.",
+  },
   slides: {
     new: "New slide",
     shortcut: "Shortcut",
@@ -66,6 +75,7 @@ export const en = {
     empty: "No slides",
   },
   commands: {
+    newPresentation: "New presentation",
     newSlide: "New slide",
     focusOutline: "Focus outline",
     focusEditor: "Focus editor",

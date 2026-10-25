@@ -77,5 +77,5 @@ export function prepareNewSlide(theme: EmbeddedTheme, layoutKey: string, id: str
     fields.push({ id: object.id, frame: box });
   }
   return { id, record: JSON.stringify({ layout: layoutKey }),
-    markdown: `<!-- slide: ${id} -->\n` + writingOrder(fields).map(field => `<!-- text: ${field.id} -->\n\n`).join("") + "<!-- notes -->\n" };
+    markdown: [`<!-- slide: ${id} -->`, ...writingOrder(fields).map(field => `<!-- text: ${field.id} -->`)].join("\n\n") + "\n" };
 }
