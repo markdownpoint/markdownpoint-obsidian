@@ -198,7 +198,7 @@ void test("failed disk writes retain recovery data and retry without a backgroun
   await data.remember(path, document, initial, ["a"]);
   state.writeFails = true;
   data.observe(path, document, initial, new Set(["b"]));
-  await data.settled(path, document);
+  assert.equal(await data.settled(path, document), false);
   assert.equal(state.disk, initial);
   assert.equal(state.calls, 1);
   assert.equal(state.errors.length, 1);
@@ -207,7 +207,7 @@ void test("failed disk writes retain recovery data and retry without a backgroun
   assert.equal(restored.remembered(path, document).get("a"), '{"layout":"title"}');
   state.writeFails = false;
   data.retry(path, document);
-  await data.settled(path, document);
+  assert.equal(await data.settled(path, document), true);
   assert.equal(state.calls, 2);
   assert.equal(CompanionDocument.read(state.disk)!.records.has("a"), false);
 });

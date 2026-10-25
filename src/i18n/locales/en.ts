@@ -42,6 +42,8 @@ export const en = {
     exists: "A file or folder with this name already exists.",
     failed: "Could not create the presentation. Check the folder and try again.",
     openFailed: "The presentation was created, but its draft could not be opened.",
+    openChanged: "The presentation changed or could not be read. Save your changes and try again.",
+    handoffFailed: "Could not save and open the presentation.",
     themeChanged: "The theme changed or is unavailable. Reopen this dialog and choose it again.",
   },
   slides: {
@@ -76,6 +78,7 @@ export const en = {
   },
   commands: {
     newPresentation: "New presentation",
+    openInMarkdownPoint: "Open in MarkdownPoint",
     newSlide: "New slide",
     focusOutline: "Focus outline",
     focusEditor: "Focus editor",

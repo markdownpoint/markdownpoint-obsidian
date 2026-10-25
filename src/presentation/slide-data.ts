@@ -148,9 +148,10 @@ export class SlideData {
     return true;
   }
 
-  async settled(path: string, document: string): Promise<void> {
+  async settled(path: string, document: string): Promise<boolean> {
     const entry = this.entries.get(this.key(path, document));
     while (entry?.saving) await entry.saving;
+    return entry?.dirty !== true;
   }
 
   async rename(from: string, to: string): Promise<void> {

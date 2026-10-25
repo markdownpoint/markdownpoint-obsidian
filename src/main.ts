@@ -37,6 +37,7 @@ import { SharedSettings } from "./settings/shared.ts";
 import { SlideCreation } from "./presentation/new-slide.ts";
 import { PresentationClipboard } from "./presentation/clipboard.ts";
 import { PresentationCreation } from "./presentation/create-presentation.ts";
+import { openPresentationInDesktop } from "./presentation/handoff.ts";
 
 export default class MarkdownPointPlugin extends Plugin {
   localUi: LocalUiState = { outlineSide: "right" };
@@ -61,6 +62,11 @@ export default class MarkdownPointPlugin extends Plugin {
     this.storage = this.addChild(new PresentationStorage(this.app));
     const creation = this.addChild(new PresentationCreation(this.app));
     this.addCommand({ id: "new-presentation", name: uiText.commands.newPresentation, callback: () => creation.open() });
+    this.addCommand({ id: "open-in-desktop", name: uiText.commands.openInMarkdownPoint, checkCallback: checking => {
+      if (!this.presentation) return false;
+      if (!checking) this.openInMarkdownPoint();
+      return true;
+    } });
     this.localUi = loadLocalUi(this.app);
     this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
       state: () => this.outline.state,
@@ -261,6 +267,17 @@ export default class MarkdownPointPlugin extends Plugin {
     if (!this.running || this.presentation?.path !== path || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
     const editor = await this.editingView(leaf);
     if (editor && this.presentation?.path === path && editor.file?.path === path) await edit(editor);
+  }
+
+  private openInMarkdownPoint(): void {
+    const presentation = this.presentation;
+    const file = presentation && this.app.vault.getFileByPath(presentation.path);
+    if (!presentation || !file) return;
+    const owner = this.currentEditorLeaf()?.view;
+    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+    this.run(() => openPresentationInDesktop(this.app, { file, documentId: presentation.documentId, view,
+      current: () => this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId,
+    }, this.storage?.data ?? null));
   }
 
   private newSlide(): void {
