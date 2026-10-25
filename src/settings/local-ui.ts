@@ -16,30 +16,32 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export const LOCAL_UI_KEY = "markdownpoint:ui";
+export const LOCAL_UI_KEY = 'markdownpoint:ui';
 
-export type OutlineSide = "left" | "right";
+export type OutlineSide = 'left' | 'right';
 
 export interface LocalUiState {
-  outlineSide: OutlineSide;
+    outlineSide: OutlineSide;
 }
 
 export interface LocalStorageHost {
-  loadLocalStorage(key: string): unknown;
-  saveLocalStorage(key: string, data: unknown): void;
+    loadLocalStorage(key: string): unknown;
+    saveLocalStorage(key: string, data: unknown): void;
 }
 
 export function loadLocalUi(host: LocalStorageHost): LocalUiState {
-  const stored = host.loadLocalStorage(LOCAL_UI_KEY);
-  if (
-    typeof stored === "object" && stored !== null &&
-    "outlineSide" in stored && (stored.outlineSide === "left" || stored.outlineSide === "right")
-  ) {
-    return { outlineSide: stored.outlineSide };
-  }
-  return { outlineSide: "right" };
+    const stored = host.loadLocalStorage(LOCAL_UI_KEY);
+    if (
+        typeof stored === 'object' &&
+        stored !== null &&
+        'outlineSide' in stored &&
+        (stored.outlineSide === 'left' || stored.outlineSide === 'right')
+    ) {
+        return { outlineSide: stored.outlineSide };
+    }
+    return { outlineSide: 'right' };
 }
 
 export function saveLocalUi(host: LocalStorageHost, state: LocalUiState): void {
-  host.saveLocalStorage(LOCAL_UI_KEY, { outlineSide: state.outlineSide });
+    host.saveLocalStorage(LOCAL_UI_KEY, { outlineSide: state.outlineSide });
 }

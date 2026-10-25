@@ -16,449 +16,583 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { addIcon, MarkdownView, Plugin, removeIcon, TFile } from "obsidian";
-import type { WorkspaceLeaf } from "obsidian";
-import type { OutlinePresentation } from "./outline/model.ts";
-import { OutlineSession } from "./outline/session.ts";
-import { MarkdownPointOutlineView, OUTLINE_VIEW_TYPE } from "./outline/view.ts";
-import { loadLocalUi, saveLocalUi } from "./settings/local-ui.ts";
-import type { LocalUiState, OutlineSide } from "./settings/local-ui.ts";
-import { MarkdownPointSettingTab } from "./settings/tab.ts";
-import { uiText } from "./ui-text.ts";
-import { PresentationEditor } from "./editor/presentation-editor.ts";
-import { PresentationReader } from "./presentation/reader.ts";
-import { NotesUi } from "./settings/notes-ui.ts";
-import type { SlideReorder } from "./format/reorder.ts";
-import { PresentationStorage } from "./presentation/storage.ts";
-import type { ListSelection } from "./selection/list-selection.ts";
-import { SlideMenus } from "./editor/slide-menus.ts";
-import type { SlideMenuTarget } from "./editor/slide-menus.ts";
-import { SharedSettings } from "./settings/shared.ts";
-import { SlideCreation } from "./presentation/new-slide.ts";
-import { PresentationClipboard } from "./presentation/clipboard.ts";
-import { PresentationCreation } from "./presentation/create-presentation.ts";
-import { openPresentationInDesktop } from "./presentation/handoff.ts";
-import { MARKDOWNPOINT_ICON_ID, MARKDOWNPOINT_ICON_SVG } from "./markdownpoint-icon.ts";
+import { addIcon, MarkdownView, Plugin, removeIcon, TFile } from 'obsidian';
+import type { WorkspaceLeaf } from 'obsidian';
+import type { OutlinePresentation } from './outline/model.ts';
+import { OutlineSession } from './outline/session.ts';
+import { MarkdownPointOutlineView, OUTLINE_VIEW_TYPE } from './outline/view.ts';
+import { loadLocalUi, saveLocalUi } from './settings/local-ui.ts';
+import type { LocalUiState, OutlineSide } from './settings/local-ui.ts';
+import { MarkdownPointSettingTab } from './settings/tab.ts';
+import { uiText } from './ui-text.ts';
+import { PresentationEditor } from './editor/presentation-editor.ts';
+import { PresentationReader } from './presentation/reader.ts';
+import { NotesUi } from './settings/notes-ui.ts';
+import type { SlideReorder } from './format/reorder.ts';
+import { PresentationStorage } from './presentation/storage.ts';
+import type { ListSelection } from './selection/list-selection.ts';
+import { SlideMenus } from './editor/slide-menus.ts';
+import type { SlideMenuTarget } from './editor/slide-menus.ts';
+import { SharedSettings } from './settings/shared.ts';
+import { SlideCreation } from './presentation/new-slide.ts';
+import { PresentationClipboard } from './presentation/clipboard.ts';
+import { PresentationCreation } from './presentation/create-presentation.ts';
+import { openPresentationInDesktop } from './presentation/handoff.ts';
+import { MARKDOWNPOINT_ICON_ID, MARKDOWNPOINT_ICON_SVG } from './markdownpoint-icon.ts';
 
 export default class MarkdownPointPlugin extends Plugin {
-  localUi: LocalUiState = { outlineSide: "right" };
-  private readonly outline = new OutlineSession();
-  private editorLeaf: WorkspaceLeaf | null = null;
-  private placingOutline: Promise<WorkspaceLeaf | null> | null = null;
-  private running = false;
-  private reader: PresentationReader | null = null;
-  private presentationEditor: PresentationEditor | null = null;
-  private storage: PresentationStorage | null = null;
-  private slideMenus: SlideMenus | null = null;
-  private sharedSettings: SharedSettings | null = null;
-  private slideCreation: SlideCreation | null = null;
-  private clipboard: PresentationClipboard | null = null;
+    localUi: LocalUiState = { outlineSide: 'right' };
+    private readonly outline = new OutlineSession();
+    private editorLeaf: WorkspaceLeaf | null = null;
+    private placingOutline: Promise<WorkspaceLeaf | null> | null = null;
+    private running = false;
+    private reader: PresentationReader | null = null;
+    private presentationEditor: PresentationEditor | null = null;
+    private storage: PresentationStorage | null = null;
+    private slideMenus: SlideMenus | null = null;
+    private sharedSettings: SharedSettings | null = null;
+    private slideCreation: SlideCreation | null = null;
+    private clipboard: PresentationClipboard | null = null;
 
-  private get presentation(): OutlinePresentation | null { return this.outline.state.presentation; }
-  private get activeSlideId(): string | null { return this.outline.state.activeSlideId; }
-
-  onload(): void {
-    addIcon(MARKDOWNPOINT_ICON_ID, MARKDOWNPOINT_ICON_SVG);
-    this.register(() => removeIcon(MARKDOWNPOINT_ICON_ID));
-    this.running = true;
-    this.sharedSettings = new SharedSettings(this);
-    this.storage = this.addChild(new PresentationStorage(this.app));
-    const creation = this.addChild(new PresentationCreation(this.app));
-    this.addCommand({ id: "new-presentation", name: uiText.commands.newPresentation, callback: () => creation.open() });
-    this.addCommand({ id: "open-in-desktop", name: uiText.commands.openInMarkdownPoint, checkCallback: checking => {
-      if (!this.presentation) return false;
-      if (!checking) this.openInMarkdownPoint();
-      return true;
-    } });
-    this.localUi = loadLocalUi(this.app);
-    this.registerView(OUTLINE_VIEW_TYPE, leaf => new MarkdownPointOutlineView(leaf, {
-      state: () => this.outline.state,
-      newSlide: () => this.newSlide(),
-      select: action => {
-        if (!this.outline.select(action)) return;
-        if (action.kind === "select") this.run(() => this.selectSlide(action.id));
-        else this.refreshOutline();
-      },
-      reorder: action => this.reorderSlides(action),
-      history: direction => this.run(() => this.editPresentation(editor => {
-        this.presentationEditor?.history(editor.editor, direction);
-      })),
-      selectForMenu: id => {
-        if (!this.outline.selectForMenu(id)) return false;
-        this.refreshOutline();
-        return true;
-      },
-      deleteSlides: selection => this.deleteOutlineSlides(selection),
-      cutSlides: (selection, window) => this.cutOutlineSlides(selection, window),
-      copySlides: (selection, window) => this.copyOutlineSlides(selection, window),
-      pasteSlides: (after, window) => this.pasteOutlineSlides(after, window),
-    }));
-    this.addSettingTab(new MarkdownPointSettingTab(this.app, this, this.localUi,
-      side => this.setOutlineSide(side), this.sharedSettings, () => this.presentationEditor?.refreshAll()));
-    this.addCommand({
-      id: "focus-outline",
-      name: uiText.commands.focusOutline,
-      callback: () => this.run(() => this.showOutline(true)),
-    });
-    this.addCommand({
-      id: "focus-editor",
-      name: uiText.commands.focusEditor,
-      checkCallback: checking => {
-        if (!this.presentation && !this.currentEditorLeaf()) return false;
-        if (!checking) this.run(() => this.focusEditor());
-        return true;
-      },
-    });
-    this.addCommand({ id: "new-slide", name: uiText.commands.newSlide, checkCallback: checking => {
-      if (!this.presentation) return false;
-      if (!checking) this.newSlide();
-      return true;
-    } });
-    for (const direction of ["up", "down"] as const) {
-      this.addCommand({
-        id: `move-slides-${direction}`,
-        name: direction === "up" ? uiText.commands.moveSlidesUp : uiText.commands.moveSlidesDown,
-        checkCallback: checking => {
-          if (!this.outlineCommandContext()) return false;
-          if (!checking) this.reorderSlides({ kind: "step", direction });
-          return true;
-        },
-      });
+    private get presentation(): OutlinePresentation | null {
+        return this.outline.state.presentation;
+    }
+    private get activeSlideId(): string | null {
+        return this.outline.state.activeSlideId;
     }
 
-    this.registerEvent(this.app.workspace.on("active-leaf-change", leaf => {
-      if (leaf?.view instanceof MarkdownView &&
-        (!this.presentation || leaf.view.file?.path === this.presentation.path)) {
-        this.editorLeaf = leaf;
-      }
-    }));
-    this.app.workspace.onLayoutReady(() => {
-      if (!this.running) return;
-      this.run(() => this.showOutline(false));
-    });
-    this.reader = new PresentationReader(this.app, (presentation, editor) => {
-      if (presentation) this.followPresentation(presentation, editor);
-      else {
-        this.outline.follow(null);
-        this.refreshOutline();
-      }
-    }, file => this.presentationEditor?.refresh(file), this.storage.data);
-    this.addChild(this.reader);
-    this.presentationEditor = new PresentationEditor(this.reader, new NotesUi(this.app),
-      (editor, slideId) => this.followCaret(editor, slideId), this.storage.data, () => this.sharedSettings?.showSlideImages ?? true);
-    this.addChild(this.presentationEditor);
-    void this.sharedSettings.ready.then(() => { if (this.running) this.presentationEditor?.refreshAll(); }).catch(() => undefined);
-    this.registerEditorExtension(this.presentationEditor.extension);
-    this.slideCreation = this.addChild(new SlideCreation(this.app, this.reader, this.presentationEditor, this.sharedSettings, id => {
-      this.outline.select({ kind: "select", id });
-      this.outline.activate(id);
-      this.refreshOutline();
-    }));
-    this.clipboard = this.addChild(new PresentationClipboard(this.app, this.reader, this.presentationEditor, this.storage.data));
-    this.slideMenus = this.addChild(new SlideMenus(this.app, this.reader, {
-      cut: target => this.cutDraftSlide(target), copy: target => this.copyDraftSlide(target), paste: target => this.pasteDraftSlides(target), delete: target => this.deleteDraftSlide(target),
-    }));
-    this.registerEditorExtension(this.slideMenus.extension);
-    this.registerMarkdownPostProcessor((element, context) => this.slideMenus?.readingSection(element, context));
-  }
-
-  onunload(): void {
-    this.running = false;
-    this.outline.follow(null);
-    this.editorLeaf = null;
-    this.reader = null;
-    this.presentationEditor = null;
-    this.storage = null;
-    this.slideMenus = null;
-    this.clipboard = null;
-    this.slideCreation = null;
-    this.sharedSettings = null;
-    // Registered views and events are released by Obsidian; retain its saved workspace layout.
-  }
-
-  async onExternalSettingsChange(): Promise<void> {
-    try { await this.sharedSettings?.reload(); if (this.running) this.presentationEditor?.refreshAll(); } catch (error) { console.error(error); }
-  }
-
-  /** The format adapter must verify the presentation before publishing it through this handoff. */
-  followPresentation(presentation: OutlinePresentation, editor: MarkdownView | null): void {
-    if (!this.running || (editor && editor.file?.path !== presentation.path)) return;
-    this.outline.follow(presentation);
-    this.editorLeaf = editor?.leaf ?? null;
-    // Content updates do not reopen a tab the author closed. Placement belongs
-    // to initialization, the side setting, and the explicit focus command.
-    this.refreshOutline();
-  }
-
-  async setOutlineSide(side: OutlineSide): Promise<void> {
-    this.localUi.outlineSide = side;
-    saveLocalUi(this.app, this.localUi);
-    if (this.outlineLeaves().length > 0) await this.showOutline(false);
-  }
-
-  private followCaret(editor: MarkdownView, slideId: string): void {
-    if (!this.running || editor.file?.path !== this.presentation?.path ||
-      !this.presentation?.slides.some(slide => slide.id === slideId)) return;
-    this.editorLeaf = editor.leaf;
-    if (!this.outline.activate(slideId)) return;
-    this.refreshOutline();
-  }
-
-  private outlineLeaves(): WorkspaceLeaf[] {
-    return this.app.workspace.getLeavesOfType(OUTLINE_VIEW_TYPE);
-  }
-
-  private refreshOutline(): void {
-    for (const leaf of this.outlineLeaves()) {
-      if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.render();
-    }
-  }
-
-  private currentEditorLeaf(): WorkspaceLeaf | null {
-    const leaves = this.app.workspace.getLeavesOfType("markdown");
-    const recent = this.app.workspace.getMostRecentLeaf();
-    if (!this.presentation && recent?.view instanceof MarkdownView && leaves.includes(recent)) return recent;
-    if (this.editorLeaf && leaves.includes(this.editorLeaf) &&
-      this.editorLeaf.view instanceof MarkdownView &&
-      (!this.presentation || this.editorLeaf.view.file?.path === this.presentation.path)) return this.editorLeaf;
-    return leaves.find(leaf => leaf.view instanceof MarkdownView &&
-      (!this.presentation || leaf.view.file?.path === this.presentation.path)) ?? null;
-  }
-
-  private async ensureEditorLeaf(): Promise<WorkspaceLeaf | null> {
-    const existing = this.currentEditorLeaf();
-    if (existing) return existing;
-    const file = this.presentation && this.app.vault.getAbstractFileByPath(this.presentation.path);
-    if (!(file instanceof TFile)) return null;
-    const leaf = this.app.workspace.getLeaf("tab");
-    await leaf.openFile(file);
-    if (!this.running) return null;
-    this.editorLeaf = leaf;
-    return leaf;
-  }
-
-  private async focusEditor(): Promise<void> {
-    const leaf = await this.ensureEditorLeaf();
-    if (!leaf || !this.running) return;
-    await leaf.loadIfDeferred();
-    if (!this.running || leaf !== this.currentEditorLeaf()) return;
-    const editor = await this.editingView(leaf);
-    if (!editor || leaf !== this.currentEditorLeaf()) return;
-    this.app.workspace.setActiveLeaf(leaf, { focus: true });
-    if (!this.presentationEditor?.focus(editor.editor)) editor.editor.focus();
-  }
-
-  /** Enter Obsidian's editor without changing its Live Preview/Source preference. */
-  private async editingView(leaf: WorkspaceLeaf): Promise<MarkdownView | null> {
-    const view = leaf.view;
-    if (!this.running || !(view instanceof MarkdownView) || !view.file) return null;
-    const file = view.file;
-    if (view.getMode() === "preview") {
-      await leaf.setViewState({ ...leaf.getViewState(), state: { ...view.getState(), mode: "source" } });
-    }
-    return this.running && leaf.view === view && view.file === file && view.getMode() === "source" &&
-      this.app.workspace.getLeavesOfType("markdown").includes(leaf) ? view : null;
-  }
-
-  private async editPresentation(edit: (editor: MarkdownView) => void | Promise<void>): Promise<void> {
-    const path = this.presentation?.path;
-    if (!path) return;
-    const existing = this.currentEditorLeaf();
-    const leaf = existing ?? await this.ensureEditorLeaf();
-    if (!this.running || !(leaf?.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
-    if (!existing) await this.reader?.refreshView(leaf.view);
-    if (!this.running || this.presentation?.path !== path || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
-    const editor = await this.editingView(leaf);
-    if (editor && this.presentation?.path === path && editor.file?.path === path) await edit(editor);
-  }
-
-  private openInMarkdownPoint(): void {
-    const presentation = this.presentation;
-    const file = presentation && this.app.vault.getFileByPath(presentation.path);
-    if (!presentation || !file) return;
-    const owner = this.currentEditorLeaf()?.view;
-    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
-    this.run(() => openPresentationInDesktop(this.app, { file, documentId: presentation.documentId, view,
-      current: () => this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId,
-    }, this.storage?.data ?? null));
-  }
-
-  private newSlide(): void {
-    const presentation = this.presentation;
-    const file = presentation && this.app.vault.getFileByPath(presentation.path);
-    if (!presentation || !file) return;
-    const after = this.activeSlideId;
-    const current = () => this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
-    const owner = this.currentEditorLeaf()?.view;
-    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
-    this.run(async () => { await this.slideCreation?.choose({ file, view, canApply: current, editingView: async () => {
-      const leaf = await this.ensureEditorLeaf();
-      return leaf && current() ? this.editingView(leaf) : null;
-    } }, after); });
-  }
-
-  private deleteOutlineSlides(selection: ListSelection<string>): void {
-    const path = this.presentation?.path;
-    const current = () => this.running && this.presentation?.path === path && this.outline.state.selection === selection;
-    if (!path || !current()) return;
-    this.run(async () => {
-      try {
-        await this.editPresentation(async editor => {
-          await this.presentationEditor?.deleteSlides(editor.editor, selection.selected, current);
+    onload(): void {
+        addIcon(MARKDOWNPOINT_ICON_ID, MARKDOWNPOINT_ICON_SVG);
+        this.register(() => removeIcon(MARKDOWNPOINT_ICON_ID));
+        this.running = true;
+        this.sharedSettings = new SharedSettings(this);
+        this.storage = this.addChild(new PresentationStorage(this.app));
+        const creation = this.addChild(new PresentationCreation(this.app));
+        this.addCommand({ id: 'new-presentation', name: uiText.commands.newPresentation, callback: () => creation.open() });
+        this.addCommand({
+            id: 'open-in-desktop',
+            name: uiText.commands.openInMarkdownPoint,
+            checkCallback: checking => {
+                if (!this.presentation) return false;
+                if (!checking) this.openInMarkdownPoint();
+                return true;
+            }
         });
-      } catch (error) { this.storage?.preparationFailed(error); }
-    });
-  }
-
-  private copyOutlineSlides(selection: ListSelection<string>, window: Window): void {
-    const presentation = this.presentation;
-    const file = presentation && this.app.vault.getFileByPath(presentation.path);
-    if (!presentation || !file) return;
-    const current = () => this.running && this.presentation?.path === presentation.path &&
-      this.presentation.documentId === presentation.documentId && this.outline.state.selection === selection;
-    const owner = this.currentEditorLeaf()?.view;
-    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
-    this.run(async () => { await this.clipboard?.copy({ view, file, window, canApply: current }, selection.selected); });
-  }
-
-  private cutOutlineSlides(selection: ListSelection<string>, window: Window): void {
-    const presentation = this.presentation;
-    const file = presentation && this.app.vault.getFileByPath(presentation.path);
-    if (!presentation || !file) return;
-    const current = () => this.running && this.presentation?.path === presentation.path &&
-      this.presentation.documentId === presentation.documentId && this.outline.state.selection === selection;
-    const owner = this.currentEditorLeaf()?.view;
-    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
-    this.run(async () => { await this.clipboard?.cut({ view, file, window, canApply: current }, selection.selected, async () => {
-      const leaf = await this.ensureEditorLeaf();
-      return leaf && current() ? this.editingView(leaf) : null;
-    }); });
-  }
-
-  private cutDraftSlide(target: SlideMenuTarget): void {
-    if (!target.slide) return;
-    const current = () => this.running && this.slideMenus?.current(target) === true;
-    this.run(async () => { await this.clipboard?.cut({ view: target.owner, file: target.file,
-      window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current }, target.slide ? [target.slide] : [],
-    () => this.editingView(target.owner.leaf)); });
-  }
-
-  private pasteOutlineSlides(after: string | null, window: Window): void {
-    const presentation = this.presentation;
-    const file = presentation && this.app.vault.getFileByPath(presentation.path);
-    if (!presentation || !file) return;
-    const current = () => this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
-    const owner = this.currentEditorLeaf()?.view;
-    const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
-    this.run(async () => { await this.clipboard?.paste({ view, file, window, canApply: current }, after, async () => {
-      const leaf = await this.ensureEditorLeaf();
-      return leaf && current() ? this.editingView(leaf) : null;
-    }); });
-  }
-
-  private pasteDraftSlides(target: SlideMenuTarget): void {
-    const current = () => this.running && this.slideMenus?.current(target) === true;
-    this.run(async () => { await this.clipboard?.paste({ view: target.owner, file: target.file,
-      window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current }, target.slide,
-    () => this.editingView(target.owner.leaf)); });
-  }
-
-  private copyDraftSlide(target: SlideMenuTarget): void {
-    const current = () => this.running && this.slideMenus?.current(target) === true;
-    this.run(async () => {
-      await this.clipboard?.copy({ view: target.owner, file: target.file,
-        window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current }, target.slide ? [target.slide] : []);
-    });
-  }
-
-  private deleteDraftSlide(target: SlideMenuTarget): void {
-    const current = () => this.running && this.slideMenus?.current(target) === true;
-    this.run(async () => {
-      try {
-        if (!current()) return;
-        const editor = await this.editingView(target.owner.leaf);
-        if (editor && current()) {
-          const deleted = await this.presentationEditor?.deleteSlides(editor.editor, target.slide ? [target.slide] : [], current);
-          if (deleted && current() && this.app.workspace.getMostRecentLeaf() === editor.leaf) editor.editor.focus();
+        this.localUi = loadLocalUi(this.app);
+        this.registerView(
+            OUTLINE_VIEW_TYPE,
+            leaf =>
+                new MarkdownPointOutlineView(leaf, {
+                    state: () => this.outline.state,
+                    newSlide: () => this.newSlide(),
+                    select: action => {
+                        if (!this.outline.select(action)) return;
+                        if (action.kind === 'select') this.run(() => this.selectSlide(action.id));
+                        else this.refreshOutline();
+                    },
+                    reorder: action => this.reorderSlides(action),
+                    history: direction =>
+                        this.run(() =>
+                            this.editPresentation(editor => {
+                                this.presentationEditor?.history(editor.editor, direction);
+                            })
+                        ),
+                    selectForMenu: id => {
+                        if (!this.outline.selectForMenu(id)) return false;
+                        this.refreshOutline();
+                        return true;
+                    },
+                    deleteSlides: selection => this.deleteOutlineSlides(selection),
+                    cutSlides: (selection, window) => this.cutOutlineSlides(selection, window),
+                    copySlides: (selection, window) => this.copyOutlineSlides(selection, window),
+                    pasteSlides: (after, window) => this.pasteOutlineSlides(after, window)
+                })
+        );
+        this.addSettingTab(
+            new MarkdownPointSettingTab(
+                this.app,
+                this,
+                this.localUi,
+                side => this.setOutlineSide(side),
+                this.sharedSettings,
+                () => this.presentationEditor?.refreshAll()
+            )
+        );
+        this.addCommand({
+            id: 'focus-outline',
+            name: uiText.commands.focusOutline,
+            callback: () => this.run(() => this.showOutline(true))
+        });
+        this.addCommand({
+            id: 'focus-editor',
+            name: uiText.commands.focusEditor,
+            checkCallback: checking => {
+                if (!this.presentation && !this.currentEditorLeaf()) return false;
+                if (!checking) this.run(() => this.focusEditor());
+                return true;
+            }
+        });
+        this.addCommand({
+            id: 'new-slide',
+            name: uiText.commands.newSlide,
+            checkCallback: checking => {
+                if (!this.presentation) return false;
+                if (!checking) this.newSlide();
+                return true;
+            }
+        });
+        for (const direction of ['up', 'down'] as const) {
+            this.addCommand({
+                id: `move-slides-${direction}`,
+                name: direction === 'up' ? uiText.commands.moveSlidesUp : uiText.commands.moveSlidesDown,
+                checkCallback: checking => {
+                    if (!this.outlineCommandContext()) return false;
+                    if (!checking) this.reorderSlides({ kind: 'step', direction });
+                    return true;
+                }
+            });
         }
-      } catch (error) { this.storage?.preparationFailed(error); }
-    });
-  }
 
-  private reorderSlides(action: SlideReorder): void {
-    const selection = this.outline.state.selection;
-    this.run(() => this.editPresentation(editor => {
-      if (this.outline.state.selection === selection) this.presentationEditor?.reorder(editor.editor, selection.selected, action);
-    }));
-  }
-
-  private outlineCommandContext(): boolean {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownPointOutlineView);
-    if (!view || !this.presentation || !this.outline.state.selection.selected.size) return false;
-    const root = view.leaf.getRoot();
-    if ((root === this.app.workspace.leftSplit && this.app.workspace.leftSplit.collapsed) ||
-      (root === this.app.workspace.rightSplit && this.app.workspace.rightSplit.collapsed)) return false;
-    // A palette retains the active workspace view and restores its focus before
-    // invoking the command. Structural actions enter native editing when needed.
-    return true;
-  }
-
-  private async showOutline(focus: boolean): Promise<void> {
-    if (!this.running) return;
-    this.placingOutline ??= this.placeOutline().finally(() => { this.placingOutline = null; });
-    const leaf = await this.placingOutline;
-    if (!leaf || !this.running) return;
-    await leaf.loadIfDeferred();
-    if (!this.running) return;
-    if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.render();
-    if (focus) {
-      await this.app.workspace.revealLeaf(leaf);
-      if (!this.running) return;
-      this.app.workspace.setActiveLeaf(leaf, { focus: true });
-      if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.focusSelection();
+        this.registerEvent(
+            this.app.workspace.on('active-leaf-change', leaf => {
+                if (leaf?.view instanceof MarkdownView && (!this.presentation || leaf.view.file?.path === this.presentation.path)) {
+                    this.editorLeaf = leaf;
+                }
+            })
+        );
+        this.app.workspace.onLayoutReady(() => {
+            if (!this.running) return;
+            this.run(() => this.showOutline(false));
+        });
+        this.reader = new PresentationReader(
+            this.app,
+            (presentation, editor) => {
+                if (presentation) this.followPresentation(presentation, editor);
+                else {
+                    this.outline.follow(null);
+                    this.refreshOutline();
+                }
+            },
+            file => this.presentationEditor?.refresh(file),
+            this.storage.data
+        );
+        this.addChild(this.reader);
+        this.presentationEditor = new PresentationEditor(
+            this.reader,
+            new NotesUi(this.app),
+            (editor, slideId) => this.followCaret(editor, slideId),
+            this.storage.data,
+            () => this.sharedSettings?.showSlideImages ?? true
+        );
+        this.addChild(this.presentationEditor);
+        void this.sharedSettings.ready
+            .then(() => {
+                if (this.running) this.presentationEditor?.refreshAll();
+            })
+            .catch(() => undefined);
+        this.registerEditorExtension(this.presentationEditor.extension);
+        this.slideCreation = this.addChild(
+            new SlideCreation(this.app, this.reader, this.presentationEditor, this.sharedSettings, id => {
+                this.outline.select({ kind: 'select', id });
+                this.outline.activate(id);
+                this.refreshOutline();
+            })
+        );
+        this.clipboard = this.addChild(new PresentationClipboard(this.app, this.reader, this.presentationEditor, this.storage.data));
+        this.slideMenus = this.addChild(
+            new SlideMenus(this.app, this.reader, {
+                cut: target => this.cutDraftSlide(target),
+                copy: target => this.copyDraftSlide(target),
+                paste: target => this.pasteDraftSlides(target),
+                delete: target => this.deleteDraftSlide(target)
+            })
+        );
+        this.registerEditorExtension(this.slideMenus.extension);
+        this.registerMarkdownPostProcessor((element, context) => this.slideMenus?.readingSection(element, context));
     }
-  }
 
-  private async placeOutline(): Promise<WorkspaceLeaf | null> {
-    const side = this.localUi.outlineSide;
-    const target = side === "left" ? this.app.workspace.leftSplit : this.app.workspace.rightSplit;
-    const existing = this.outlineLeaves().find(leaf => leaf.getRoot() === target);
-    if (existing) {
-      for (const leaf of this.outlineLeaves()) if (leaf !== existing) leaf.detach();
-      return existing;
+    onunload(): void {
+        this.running = false;
+        this.outline.follow(null);
+        this.editorLeaf = null;
+        this.reader = null;
+        this.presentationEditor = null;
+        this.storage = null;
+        this.slideMenus = null;
+        this.clipboard = null;
+        this.slideCreation = null;
+        this.sharedSettings = null;
+        // Registered views and events are released by Obsidian; retain its saved workspace layout.
     }
-    for (const leaf of this.outlineLeaves()) leaf.detach();
-    const leaf = await this.app.workspace.ensureSideLeaf(OUTLINE_VIEW_TYPE, side, { active: false, reveal: false });
-    if (!this.running) return null;
-    // A later settings choice owns placement, including one made while the view was opening.
-    if (side !== this.localUi.outlineSide) return this.placeOutline();
-    return leaf;
-  }
 
-  private async selectSlide(id: string): Promise<void> {
-    const path = this.presentation?.path;
-    if (!path || !this.presentation?.slides.some(slide => slide.id === id)) return;
-    this.outline.activate(id);
-    this.refreshOutline();
-    const existing = this.currentEditorLeaf();
-    const leaf = existing ?? await this.ensureEditorLeaf();
-    if (!this.running || !(leaf?.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
-    // A closed pane may have missed external edits. Resolve fresh positions before
-    // navigating the reopened document rather than applying the old line number.
-    if (!existing) await this.reader?.refreshView(leaf.view);
-    if (!this.running || this.presentation?.path !== path || this.activeSlideId !== id ||
-      !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
-    const slide = this.presentation.slides.find(item => item.id === id);
-    if (!slide) return;
-    const cursor = { line: slide.line, ch: 0 };
-    if (leaf.view.getMode() === "preview") leaf.view.setEphemeralState({ line: slide.line });
-    else {
-      leaf.view.editor.setCursor(cursor);
-      leaf.view.editor.scrollIntoView({ from: cursor, to: cursor }, true);
+    async onExternalSettingsChange(): Promise<void> {
+        try {
+            await this.sharedSettings?.reload();
+            if (this.running) this.presentationEditor?.refreshAll();
+        } catch (error) {
+            console.error(error);
+        }
     }
-  }
 
-  private run(action: () => Promise<void>): void {
-    void action().catch((error: unknown) => console.error(error));
-  }
+    /** The format adapter must verify the presentation before publishing it through this handoff. */
+    followPresentation(presentation: OutlinePresentation, editor: MarkdownView | null): void {
+        if (!this.running || (editor && editor.file?.path !== presentation.path)) return;
+        this.outline.follow(presentation);
+        this.editorLeaf = editor?.leaf ?? null;
+        // Content updates do not reopen a tab the author closed. Placement belongs
+        // to initialization, the side setting, and the explicit focus command.
+        this.refreshOutline();
+    }
+
+    async setOutlineSide(side: OutlineSide): Promise<void> {
+        this.localUi.outlineSide = side;
+        saveLocalUi(this.app, this.localUi);
+        if (this.outlineLeaves().length > 0) await this.showOutline(false);
+    }
+
+    private followCaret(editor: MarkdownView, slideId: string): void {
+        if (
+            !this.running ||
+            editor.file?.path !== this.presentation?.path ||
+            !this.presentation?.slides.some(slide => slide.id === slideId)
+        )
+            return;
+        this.editorLeaf = editor.leaf;
+        if (!this.outline.activate(slideId)) return;
+        this.refreshOutline();
+    }
+
+    private outlineLeaves(): WorkspaceLeaf[] {
+        return this.app.workspace.getLeavesOfType(OUTLINE_VIEW_TYPE);
+    }
+
+    private refreshOutline(): void {
+        for (const leaf of this.outlineLeaves()) {
+            if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.render();
+        }
+    }
+
+    private currentEditorLeaf(): WorkspaceLeaf | null {
+        const leaves = this.app.workspace.getLeavesOfType('markdown');
+        const recent = this.app.workspace.getMostRecentLeaf();
+        if (!this.presentation && recent?.view instanceof MarkdownView && leaves.includes(recent)) return recent;
+        if (
+            this.editorLeaf &&
+            leaves.includes(this.editorLeaf) &&
+            this.editorLeaf.view instanceof MarkdownView &&
+            (!this.presentation || this.editorLeaf.view.file?.path === this.presentation.path)
+        )
+            return this.editorLeaf;
+        return (
+            leaves.find(
+                leaf => leaf.view instanceof MarkdownView && (!this.presentation || leaf.view.file?.path === this.presentation.path)
+            ) ?? null
+        );
+    }
+
+    private async ensureEditorLeaf(): Promise<WorkspaceLeaf | null> {
+        const existing = this.currentEditorLeaf();
+        if (existing) return existing;
+        const file = this.presentation && this.app.vault.getAbstractFileByPath(this.presentation.path);
+        if (!(file instanceof TFile)) return null;
+        const leaf = this.app.workspace.getLeaf('tab');
+        await leaf.openFile(file);
+        if (!this.running) return null;
+        this.editorLeaf = leaf;
+        return leaf;
+    }
+
+    private async focusEditor(): Promise<void> {
+        const leaf = await this.ensureEditorLeaf();
+        if (!leaf || !this.running) return;
+        await leaf.loadIfDeferred();
+        if (!this.running || leaf !== this.currentEditorLeaf()) return;
+        const editor = await this.editingView(leaf);
+        if (!editor || leaf !== this.currentEditorLeaf()) return;
+        this.app.workspace.setActiveLeaf(leaf, { focus: true });
+        if (!this.presentationEditor?.focus(editor.editor)) editor.editor.focus();
+    }
+
+    /** Enter Obsidian's editor without changing its Live Preview/Source preference. */
+    private async editingView(leaf: WorkspaceLeaf): Promise<MarkdownView | null> {
+        const view = leaf.view;
+        if (!this.running || !(view instanceof MarkdownView) || !view.file) return null;
+        const file = view.file;
+        if (view.getMode() === 'preview') {
+            await leaf.setViewState({ ...leaf.getViewState(), state: { ...view.getState(), mode: 'source' } });
+        }
+        return this.running &&
+            leaf.view === view &&
+            view.file === file &&
+            view.getMode() === 'source' &&
+            this.app.workspace.getLeavesOfType('markdown').includes(leaf)
+            ? view
+            : null;
+    }
+
+    private async editPresentation(edit: (editor: MarkdownView) => void | Promise<void>): Promise<void> {
+        const path = this.presentation?.path;
+        if (!path) return;
+        const existing = this.currentEditorLeaf();
+        const leaf = existing ?? (await this.ensureEditorLeaf());
+        if (!this.running || !(leaf?.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
+        if (!existing) await this.reader?.refreshView(leaf.view);
+        if (!this.running || this.presentation?.path !== path || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== path)
+            return;
+        const editor = await this.editingView(leaf);
+        if (editor && this.presentation?.path === path && editor.file?.path === path) await edit(editor);
+    }
+
+    private openInMarkdownPoint(): void {
+        const presentation = this.presentation;
+        const file = presentation && this.app.vault.getFileByPath(presentation.path);
+        if (!presentation || !file) return;
+        const owner = this.currentEditorLeaf()?.view;
+        const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+        this.run(() =>
+            openPresentationInDesktop(
+                this.app,
+                {
+                    file,
+                    documentId: presentation.documentId,
+                    view,
+                    current: () =>
+                        this.running &&
+                        this.presentation?.path === presentation.path &&
+                        this.presentation.documentId === presentation.documentId
+                },
+                this.storage?.data ?? null
+            )
+        );
+    }
+
+    private newSlide(): void {
+        const presentation = this.presentation;
+        const file = presentation && this.app.vault.getFileByPath(presentation.path);
+        if (!presentation || !file) return;
+        const after = this.activeSlideId;
+        const current = () =>
+            this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
+        const owner = this.currentEditorLeaf()?.view;
+        const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+        this.run(async () => {
+            await this.slideCreation?.choose(
+                {
+                    file,
+                    view,
+                    canApply: current,
+                    editingView: async () => {
+                        const leaf = await this.ensureEditorLeaf();
+                        return leaf && current() ? this.editingView(leaf) : null;
+                    }
+                },
+                after
+            );
+        });
+    }
+
+    private deleteOutlineSlides(selection: ListSelection<string>): void {
+        const path = this.presentation?.path;
+        const current = () => this.running && this.presentation?.path === path && this.outline.state.selection === selection;
+        if (!path || !current()) return;
+        this.run(async () => {
+            try {
+                await this.editPresentation(async editor => {
+                    await this.presentationEditor?.deleteSlides(editor.editor, selection.selected, current);
+                });
+            } catch (error) {
+                this.storage?.preparationFailed(error);
+            }
+        });
+    }
+
+    private copyOutlineSlides(selection: ListSelection<string>, window: Window): void {
+        const presentation = this.presentation;
+        const file = presentation && this.app.vault.getFileByPath(presentation.path);
+        if (!presentation || !file) return;
+        const current = () =>
+            this.running &&
+            this.presentation?.path === presentation.path &&
+            this.presentation.documentId === presentation.documentId &&
+            this.outline.state.selection === selection;
+        const owner = this.currentEditorLeaf()?.view;
+        const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+        this.run(async () => {
+            await this.clipboard?.copy({ view, file, window, canApply: current }, selection.selected);
+        });
+    }
+
+    private cutOutlineSlides(selection: ListSelection<string>, window: Window): void {
+        const presentation = this.presentation;
+        const file = presentation && this.app.vault.getFileByPath(presentation.path);
+        if (!presentation || !file) return;
+        const current = () =>
+            this.running &&
+            this.presentation?.path === presentation.path &&
+            this.presentation.documentId === presentation.documentId &&
+            this.outline.state.selection === selection;
+        const owner = this.currentEditorLeaf()?.view;
+        const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+        this.run(async () => {
+            await this.clipboard?.cut({ view, file, window, canApply: current }, selection.selected, async () => {
+                const leaf = await this.ensureEditorLeaf();
+                return leaf && current() ? this.editingView(leaf) : null;
+            });
+        });
+    }
+
+    private cutDraftSlide(target: SlideMenuTarget): void {
+        if (!target.slide) return;
+        const current = () => this.running && this.slideMenus?.current(target) === true;
+        this.run(async () => {
+            await this.clipboard?.cut(
+                { view: target.owner, file: target.file, window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current },
+                target.slide ? [target.slide] : [],
+                () => this.editingView(target.owner.leaf)
+            );
+        });
+    }
+
+    private pasteOutlineSlides(after: string | null, window: Window): void {
+        const presentation = this.presentation;
+        const file = presentation && this.app.vault.getFileByPath(presentation.path);
+        if (!presentation || !file) return;
+        const current = () =>
+            this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
+        const owner = this.currentEditorLeaf()?.view;
+        const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
+        this.run(async () => {
+            await this.clipboard?.paste({ view, file, window, canApply: current }, after, async () => {
+                const leaf = await this.ensureEditorLeaf();
+                return leaf && current() ? this.editingView(leaf) : null;
+            });
+        });
+    }
+
+    private pasteDraftSlides(target: SlideMenuTarget): void {
+        const current = () => this.running && this.slideMenus?.current(target) === true;
+        this.run(async () => {
+            await this.clipboard?.paste(
+                { view: target.owner, file: target.file, window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current },
+                target.slide,
+                () => this.editingView(target.owner.leaf)
+            );
+        });
+    }
+
+    private copyDraftSlide(target: SlideMenuTarget): void {
+        const current = () => this.running && this.slideMenus?.current(target) === true;
+        this.run(async () => {
+            await this.clipboard?.copy(
+                { view: target.owner, file: target.file, window: target.owner.containerEl.ownerDocument.defaultView!, canApply: current },
+                target.slide ? [target.slide] : []
+            );
+        });
+    }
+
+    private deleteDraftSlide(target: SlideMenuTarget): void {
+        const current = () => this.running && this.slideMenus?.current(target) === true;
+        this.run(async () => {
+            try {
+                if (!current()) return;
+                const editor = await this.editingView(target.owner.leaf);
+                if (editor && current()) {
+                    const deleted = await this.presentationEditor?.deleteSlides(editor.editor, target.slide ? [target.slide] : [], current);
+                    if (deleted && current() && this.app.workspace.getMostRecentLeaf() === editor.leaf) editor.editor.focus();
+                }
+            } catch (error) {
+                this.storage?.preparationFailed(error);
+            }
+        });
+    }
+
+    private reorderSlides(action: SlideReorder): void {
+        const selection = this.outline.state.selection;
+        this.run(() =>
+            this.editPresentation(editor => {
+                if (this.outline.state.selection === selection) this.presentationEditor?.reorder(editor.editor, selection.selected, action);
+            })
+        );
+    }
+
+    private outlineCommandContext(): boolean {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownPointOutlineView);
+        if (!view || !this.presentation || !this.outline.state.selection.selected.size) return false;
+        const root = view.leaf.getRoot();
+        if (
+            (root === this.app.workspace.leftSplit && this.app.workspace.leftSplit.collapsed) ||
+            (root === this.app.workspace.rightSplit && this.app.workspace.rightSplit.collapsed)
+        )
+            return false;
+        // A palette retains the active workspace view and restores its focus before
+        // invoking the command. Structural actions enter native editing when needed.
+        return true;
+    }
+
+    private async showOutline(focus: boolean): Promise<void> {
+        if (!this.running) return;
+        this.placingOutline ??= this.placeOutline().finally(() => {
+            this.placingOutline = null;
+        });
+        const leaf = await this.placingOutline;
+        if (!leaf || !this.running) return;
+        await leaf.loadIfDeferred();
+        if (!this.running) return;
+        if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.render();
+        if (focus) {
+            await this.app.workspace.revealLeaf(leaf);
+            if (!this.running) return;
+            this.app.workspace.setActiveLeaf(leaf, { focus: true });
+            if (leaf.view instanceof MarkdownPointOutlineView) leaf.view.focusSelection();
+        }
+    }
+
+    private async placeOutline(): Promise<WorkspaceLeaf | null> {
+        const side = this.localUi.outlineSide;
+        const target = side === 'left' ? this.app.workspace.leftSplit : this.app.workspace.rightSplit;
+        const existing = this.outlineLeaves().find(leaf => leaf.getRoot() === target);
+        if (existing) {
+            for (const leaf of this.outlineLeaves()) if (leaf !== existing) leaf.detach();
+            return existing;
+        }
+        for (const leaf of this.outlineLeaves()) leaf.detach();
+        const leaf = await this.app.workspace.ensureSideLeaf(OUTLINE_VIEW_TYPE, side, { active: false, reveal: false });
+        if (!this.running) return null;
+        // A later settings choice owns placement, including one made while the view was opening.
+        if (side !== this.localUi.outlineSide) return this.placeOutline();
+        return leaf;
+    }
+
+    private async selectSlide(id: string): Promise<void> {
+        const path = this.presentation?.path;
+        if (!path || !this.presentation?.slides.some(slide => slide.id === id)) return;
+        this.outline.activate(id);
+        this.refreshOutline();
+        const existing = this.currentEditorLeaf();
+        const leaf = existing ?? (await this.ensureEditorLeaf());
+        if (!this.running || !(leaf?.view instanceof MarkdownView) || leaf.view.file?.path !== path) return;
+        // A closed pane may have missed external edits. Resolve fresh positions before
+        // navigating the reopened document rather than applying the old line number.
+        if (!existing) await this.reader?.refreshView(leaf.view);
+        if (
+            !this.running ||
+            this.presentation?.path !== path ||
+            this.activeSlideId !== id ||
+            !(leaf.view instanceof MarkdownView) ||
+            leaf.view.file?.path !== path
+        )
+            return;
+        const slide = this.presentation.slides.find(item => item.id === id);
+        if (!slide) return;
+        const cursor = { line: slide.line, ch: 0 };
+        if (leaf.view.getMode() === 'preview') leaf.view.setEphemeralState({ line: slide.line });
+        else {
+            leaf.view.editor.setCursor(cursor);
+            leaf.view.editor.scrollIntoView({ from: cursor, to: cursor }, true);
+        }
+    }
+
+    private run(action: () => Promise<void>): void {
+        void action().catch((error: unknown) => console.error(error));
+    }
 }

@@ -16,13 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { StateField } from "@codemirror/state";
+import { StateField } from '@codemirror/state';
 
 // Minimal host values for headless editor-state tests. No DOM or Obsidian app is created.
 export class Component {}
 export class MarkdownView {}
-export const editorInfoField = StateField.define({ create: () => ({ file: { path: "Talk/slides.md" } }), update: value => value });
+export const editorInfoField = StateField.define({ create: () => ({ file: { path: 'Talk/slides.md' } }), update: value => value });
 export const editorLivePreviewField = StateField.define({ create: () => true, update: value => value });
-export const getLanguage = () => "en";
+export const getLanguage = () => 'en';
 export const setIcon = () => undefined;
 export const setTooltip = () => undefined;

@@ -16,45 +16,53 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { EmbeddedTheme } from "../format/embedded-theme.ts";
-import blank from "./basic/blank.json" with { type: "json" };
-import contentWithHeader from "./basic/content-with-header.json" with { type: "json" };
-import content from "./basic/content.json" with { type: "json" };
-import imageTextWithHeader from "./basic/image-text-with-header.json" with { type: "json" };
-import imageText from "./basic/image-text.json" with { type: "json" };
-import imageWithHeader from "./basic/image-with-header.json" with { type: "json" };
-import image from "./basic/image.json" with { type: "json" };
-import master from "./basic/master.json" with { type: "json" };
-import oneLiner from "./basic/one-liner.json" with { type: "json" };
-import section from "./basic/section.json" with { type: "json" };
-import solidColor from "./basic/solid-color.json" with { type: "json" };
-import textImageWithHeader from "./basic/text-image-with-header.json" with { type: "json" };
-import textImage from "./basic/text-image.json" with { type: "json" };
-import title from "./basic/title.json" with { type: "json" };
+import type { EmbeddedTheme } from '../format/embedded-theme.ts';
+import blank from './basic/blank.json' with { type: 'json' };
+import contentWithHeader from './basic/content-with-header.json' with { type: 'json' };
+import content from './basic/content.json' with { type: 'json' };
+import imageTextWithHeader from './basic/image-text-with-header.json' with { type: 'json' };
+import imageText from './basic/image-text.json' with { type: 'json' };
+import imageWithHeader from './basic/image-with-header.json' with { type: 'json' };
+import image from './basic/image.json' with { type: 'json' };
+import master from './basic/master.json' with { type: 'json' };
+import oneLiner from './basic/one-liner.json' with { type: 'json' };
+import section from './basic/section.json' with { type: 'json' };
+import solidColor from './basic/solid-color.json' with { type: 'json' };
+import textImageWithHeader from './basic/text-image-with-header.json' with { type: 'json' };
+import textImage from './basic/text-image.json' with { type: 'json' };
+import title from './basic/title.json' with { type: 'json' };
 
 const layouts = {
-  "blank": blank,
-  "content-with-header": contentWithHeader,
-  "content": content,
-  "image-text-with-header": imageTextWithHeader,
-  "image-text": imageText,
-  "image-with-header": imageWithHeader,
-  "image": image,
-  "one-liner": oneLiner,
-  "section": section,
-  "solid-color": solidColor,
-  "text-image-with-header": textImageWithHeader,
-  "text-image": textImage,
-  "title": title,
+    blank: blank,
+    'content-with-header': contentWithHeader,
+    content: content,
+    'image-text-with-header': imageTextWithHeader,
+    'image-text': imageText,
+    'image-with-header': imageWithHeader,
+    image: image,
+    'one-liner': oneLiner,
+    section: section,
+    'solid-color': solidColor,
+    'text-image-with-header': textImageWithHeader,
+    'text-image': textImage,
+    title: title
 };
 
 /** Published Basic theme, adapted to the current format; provenance is in THIRD_PARTY_NOTICES.md. */
-export const basicThemeFiles: ReadonlyMap<string, string> = new Map(Object.entries({ master, ...layouts })
-  .map(([key, value]) => [`${key}.json`, JSON.stringify(value, null, 2) + "\n"]));
+export const basicThemeFiles: ReadonlyMap<string, string> = new Map(
+    Object.entries({ master, ...layouts }).map(([key, value]) => [`${key}.json`, JSON.stringify(value, null, 2) + '\n'])
+);
 
-const root = "themes/basic";
-const embeddedDocument = (key: string, value: Record<string, unknown>) => ({ path: `${root}/${key}.json`, source: basicThemeFiles.get(`${key}.json`)!, value });
+const root = 'themes/basic';
+const embeddedDocument = (key: string, value: Record<string, unknown>) => ({
+    path: `${root}/${key}.json`,
+    source: basicThemeFiles.get(`${key}.json`)!,
+    value
+});
 export const basicTheme: EmbeddedTheme = {
-  key: "basic", id: master.id, root, master: embeddedDocument("master", master),
-  layouts: new Map(Object.entries(layouts).map(([key, value]) => [key, embeddedDocument(key, value)])),
+    key: 'basic',
+    id: master.id,
+    root,
+    master: embeddedDocument('master', master),
+    layouts: new Map(Object.entries(layouts).map(([key, value]) => [key, embeddedDocument(key, value)]))
 };

@@ -16,29 +16,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { LocalStorageHost } from "./local-ui.ts";
-import { isDocumentId } from "../format/recognition.ts";
+import type { LocalStorageHost } from './local-ui.ts';
+import { isDocumentId } from '../format/recognition.ts';
 
-export const CLIPBOARD_VAULT_KEY = "markdownpoint:clipboard-vault";
+export const CLIPBOARD_VAULT_KEY = 'markdownpoint:clipboard-vault';
 
 /** A local origin identity is stable across reloads and never enters synced settings. */
 export function clipboardVaultId(host: LocalStorageHost, mint: () => string = () => crypto.randomUUID()): string {
-  const stored = host.loadLocalStorage(CLIPBOARD_VAULT_KEY);
-  if (isDocumentId(stored)) return stored;
-  const id = mint();
-  if (!isDocumentId(id)) throw new Error("Invalid clipboard vault identity");
-  host.saveLocalStorage(CLIPBOARD_VAULT_KEY, id);
-  return id;
+    const stored = host.loadLocalStorage(CLIPBOARD_VAULT_KEY);
+    if (isDocumentId(stored)) return stored;
+    const id = mint();
+    if (!isDocumentId(id)) throw new Error('Invalid clipboard vault identity');
+    host.saveLocalStorage(CLIPBOARD_VAULT_KEY, id);
+    return id;
 }
 
-export const CLIPBOARD_CUT_KEY = "markdownpoint:clipboard-cut";
+export const CLIPBOARD_CUT_KEY = 'markdownpoint:clipboard-cut';
 
 /** Authority is local and bound to the complete packet, not its transport token. */
 export async function clipboardDigest(encoded: string): Promise<string> {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(encoded));
-  return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(encoded));
+    return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function ownsClipboardCut(host: LocalStorageHost, digest: string): boolean {
-  return host.loadLocalStorage(CLIPBOARD_CUT_KEY) === digest;
+    return host.loadLocalStorage(CLIPBOARD_CUT_KEY) === digest;
 }

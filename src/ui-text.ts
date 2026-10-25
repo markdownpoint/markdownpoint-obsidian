@@ -16,8 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { getLanguage } from "obsidian";
-import { getTranslations } from "./i18n/index.ts";
+import { getLanguage } from 'obsidian';
+import { getTranslations } from './i18n/index.ts';
 
 export const uiText = getTranslations(getLanguage());
 export const uiNumber = new Intl.NumberFormat(getLanguage(), { useGrouping: false });

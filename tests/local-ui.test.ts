@@ -16,38 +16,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import assert from "node:assert/strict";
-import test from "node:test";
-import { loadLocalUi, saveLocalUi, LOCAL_UI_KEY } from "../src/settings/local-ui.ts";
-import type { LocalStorageHost } from "../src/settings/local-ui.ts";
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { loadLocalUi, saveLocalUi, LOCAL_UI_KEY } from '../src/settings/local-ui.ts';
+import type { LocalStorageHost } from '../src/settings/local-ui.ts';
 
 function device(initial?: unknown): LocalStorageHost {
-  const values = new Map<string, unknown>([[LOCAL_UI_KEY, initial]]);
-  return {
-    loadLocalStorage: key => values.get(key),
-    saveLocalStorage: (key, value) => { values.set(key, value); },
-  };
+    const values = new Map<string, unknown>([[LOCAL_UI_KEY, initial]]);
+    return {
+        loadLocalStorage: key => values.get(key),
+        saveLocalStorage: (key, value) => {
+            values.set(key, value);
+        }
+    };
 }
 
 void test("choosing the left sidebar survives reloading the same device's local state", () => {
-  const host = device();
-  assert.equal(loadLocalUi(host).outlineSide, "right");
-  saveLocalUi(host, { outlineSide: "left" });
-  assert.equal(loadLocalUi(host).outlineSide, "left");
-  saveLocalUi(host, { outlineSide: "right" });
-  assert.equal(loadLocalUi(host).outlineSide, "right");
+    const host = device();
+    assert.equal(loadLocalUi(host).outlineSide, 'right');
+    saveLocalUi(host, { outlineSide: 'left' });
+    assert.equal(loadLocalUi(host).outlineSide, 'left');
+    saveLocalUi(host, { outlineSide: 'right' });
+    assert.equal(loadLocalUi(host).outlineSide, 'right');
 });
 
-void test("an unset or invalid local value uses the right sidebar", () => {
-  for (const value of [undefined, null, false, 1, "left", {}, { outlineSide: "bottom" }]) {
-    assert.equal(loadLocalUi(device(value)).outlineSide, "right");
-  }
+void test('an unset or invalid local value uses the right sidebar', () => {
+    for (const value of [undefined, null, false, 1, 'left', {}, { outlineSide: 'bottom' }]) {
+        assert.equal(loadLocalUi(device(value)).outlineSide, 'right');
+    }
 });
 
-void test("sidebar placement belongs to one device and vault storage host", () => {
-  const first = device();
-  const second = device();
-  saveLocalUi(first, { outlineSide: "left" });
-  assert.equal(loadLocalUi(first).outlineSide, "left");
-  assert.equal(loadLocalUi(second).outlineSide, "right");
+void test('sidebar placement belongs to one device and vault storage host', () => {
+    const first = device();
+    const second = device();
+    saveLocalUi(first, { outlineSide: 'left' });
+    assert.equal(loadLocalUi(first).outlineSide, 'left');
+    assert.equal(loadLocalUi(second).outlineSide, 'right');
 });

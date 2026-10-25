@@ -16,44 +16,44 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Lexer } from "marked";
-import { isStableId } from "./recognition.ts";
+import { Lexer } from 'marked';
+import { isStableId } from './recognition.ts';
 
 export interface DocumentBlock {
-  readonly kind: "text" | "notes" | "control";
-  readonly id: string | null;
-  readonly from: number;
-  readonly contentFrom: number;
-  to: number;
+    readonly kind: 'text' | 'notes' | 'control';
+    readonly id: string | null;
+    readonly from: number;
+    readonly contentFrom: number;
+    to: number;
 }
 
 export interface DocumentSlide {
-  readonly id: string;
-  readonly from: number;
-  readonly markerTo: number;
-  readonly line: number;
-  to: number;
-  readonly blocks: DocumentBlock[];
+    readonly id: string;
+    readonly from: number;
+    readonly markerTo: number;
+    readonly line: number;
+    to: number;
+    readonly blocks: DocumentBlock[];
 }
 
 export interface PresentationDocument {
-  readonly slides: readonly DocumentSlide[];
-  /** Reusable definitions share the source shape, but never enter slide navigation. */
-  readonly compositions: readonly DocumentSlide[];
-  readonly sections: readonly DocumentSection[];
+    readonly slides: readonly DocumentSlide[];
+    /** Reusable definitions share the source shape, but never enter slide navigation. */
+    readonly compositions: readonly DocumentSlide[];
+    readonly sections: readonly DocumentSection[];
 }
 
 export interface DocumentSection {
-  readonly id: string;
-  readonly from: number;
-  readonly markerTo: number;
-  readonly line: number;
-  to: number;
+    readonly id: string;
+    readonly from: number;
+    readonly markerTo: number;
+    readonly line: number;
+    to: number;
 }
 
 /** Section headings and reusable compositions are outside slide ranges. */
 export function slideAtPosition(document: PresentationDocument, position: number): DocumentSlide | null {
-  return document.slides.find(slide => position >= slide.from && position < slide.to) ?? null;
+    return document.slides.find(slide => position >= slide.from && position < slide.to) ?? null;
 }
 
 const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*([^\s]+))?\s*-->[ \t]*$/;
@@ -61,17 +61,18 @@ const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[
 
 /** A candidate directive consumed by a code token is content, not a slide boundary. */
 function containingCode(markdown: string, line: string) {
-  const source = markdown.replace(/\r\n?/g, "\n");
-  const last = new Lexer().blockTokens(source).at(-1);
-  return last?.type === "code" && last.raw.trimEnd().endsWith(line.trimEnd())
-    ? { raw: last.raw, leading: source.slice(0, source.length - last.raw.length).trim().length === 0 } : undefined;
+    const source = markdown.replace(/\r\n?/g, '\n');
+    const last = new Lexer().blockTokens(source).at(-1);
+    return last?.type === 'code' && last.raw.trimEnd().endsWith(line.trimEnd())
+        ? { raw: last.raw, leading: source.slice(0, source.length - last.raw.length).trim().length === 0 }
+        : undefined;
 }
 
 /** Ask the same grammar using a bounded probe, not the growing document prefix. */
 function closesFence(fence: string, line: string): boolean {
-  if (!line.trimStart().startsWith(fence[0]!)) return false;
-  const token = new Lexer().blockTokens(`${fence}\n${line}\n`)[0];
-  return token?.type === "code" && token.text === "";
+    if (!line.trimStart().startsWith(fence[0]!)) return false;
+    const token = new Lexer().blockTokens(`${fence}\n${line}\n`)[0];
+    return token?.type === 'code' && token.text === '';
 }
 
 /**
@@ -80,104 +81,104 @@ function closesFence(fence: string, line: string): boolean {
  * directives return null so consumers cannot navigate or decorate stale ranges.
  */
 export function indexPresentation(markdown: string, bodyStart: number): PresentationDocument | null {
-  const slides: DocumentSlide[] = [];
-  const compositions: DocumentSlide[] = [];
-  const sections: DocumentSection[] = [];
-  const seen = new Set<string>();
-  const sectionIds = new Set<string>();
-  let part: DocumentSlide | null = null;
-  let section: DocumentSection | null = null;
-  let block: DocumentBlock | null = null;
-  let container: "slide" | "composition" | null = null;
-  let payloadFrom = bodyStart;
-  let hasFence = false;
-  let swallowedMarker = false;
-  let openFence: string | null = null;
-  // Bare CR can introduce lexer lines inside one source line. Keep full context there.
-  const scanFences = !/\r(?!\n)/.test(markdown);
-  let offset = bodyStart;
-  let lineNumber = markdown.slice(0, bodyStart).split("\n").length - 1;
+    const slides: DocumentSlide[] = [];
+    const compositions: DocumentSlide[] = [];
+    const sections: DocumentSection[] = [];
+    const seen = new Set<string>();
+    const sectionIds = new Set<string>();
+    let part: DocumentSlide | null = null;
+    let section: DocumentSection | null = null;
+    let block: DocumentBlock | null = null;
+    let container: 'slide' | 'composition' | null = null;
+    let payloadFrom = bodyStart;
+    let hasFence = false;
+    let swallowedMarker = false;
+    let openFence: string | null = null;
+    // Bare CR can introduce lexer lines inside one source line. Keep full context there.
+    const scanFences = !/\r(?!\n)/.test(markdown);
+    let offset = bodyStart;
+    let lineNumber = markdown.slice(0, bodyStart).split('\n').length - 1;
 
-  while (offset < markdown.length) {
-    const newline = markdown.indexOf("\n", offset);
-    const end = newline < 0 ? markdown.length : newline + 1;
-    const line = markdown.slice(offset, newline < 0 ? end : newline).replace(/\r$/, "");
-    // A leading fence cannot later become part of a preceding link definition.
-    // Once Marked identifies it, scan to its closing line once.
-    // Retokenizing its growing payload at every example marker is quadratic.
-    if (openFence) {
-      if (closesFence(openFence, line)) {
-        openFence = null;
-        payloadFrom = end;
-        hasFence = false;
-        swallowedMarker = false;
-      }
-      offset = end;
-      lineNumber++;
-      continue;
-    }
-    hasFence ||= line.includes("```") || line.includes("~~~");
-    // Each field is its own Markdown block. HTML or a fence-like line in one
-    // field must not change how the next field is interpreted.
-    const match = marker.exec(line);
-    if (match || markerLike.test(line)) {
-      const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), line) : undefined;
-      if (code) {
-        swallowedMarker = true;
-        const fence = /^ {0,3}(`{3,}|~{3,})/.exec(code.raw)?.[1];
-        if (fence && code.leading && scanFences) openFence = fence;
+    while (offset < markdown.length) {
+        const newline = markdown.indexOf('\n', offset);
+        const end = newline < 0 ? markdown.length : newline + 1;
+        const line = markdown.slice(offset, newline < 0 ? end : newline).replace(/\r$/, '');
+        // A leading fence cannot later become part of a preceding link definition.
+        // Once Marked identifies it, scan to its closing line once.
+        // Retokenizing its growing payload at every example marker is quadratic.
+        if (openFence) {
+            if (closesFence(openFence, line)) {
+                openFence = null;
+                payloadFrom = end;
+                hasFence = false;
+                swallowedMarker = false;
+            }
+            offset = end;
+            lineNumber++;
+            continue;
+        }
+        hasFence ||= line.includes('```') || line.includes('~~~');
+        // Each field is its own Markdown block. HTML or a fence-like line in one
+        // field must not change how the next field is interpreted.
+        const match = marker.exec(line);
+        if (match || markerLike.test(line)) {
+            const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), line) : undefined;
+            if (code) {
+                swallowedMarker = true;
+                const fence = /^ {0,3}(`{3,}|~{3,})/.exec(code.raw)?.[1];
+                if (fence && code.leading && scanFences) openFence = fence;
+                offset = end;
+                lineNumber++;
+                continue;
+            }
+            if (!match || newline < 0) return null;
+            const kind = match[1];
+            const id = match[2];
+            if (kind === 'notes' ? id !== undefined : !id || !id.split('.').every(isStableId)) return null;
+            if (kind !== 'text' && id?.includes('.')) return null;
+
+            if (block) block.to = offset;
+            block = null;
+            if (section) section.to = offset;
+            section = null;
+            if (kind === 'slide' || kind === 'composition' || kind === 'section') {
+                if (part) part.to = offset;
+                part = null;
+                container = kind === 'section' ? null : kind;
+                if (kind === 'section' && id) {
+                    if (sectionIds.has(id)) return null;
+                    sectionIds.add(id);
+                    section = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length };
+                    sections.push(section);
+                }
+                if ((kind === 'slide' || kind === 'composition') && id) {
+                    if (seen.has(id)) return null;
+                    seen.add(id);
+                    part = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length, blocks: [] };
+                    (kind === 'slide' ? slides : compositions).push(part);
+                }
+            } else {
+                if (!container || (kind === 'control' && container !== 'composition')) return null;
+                if (part && (kind === 'text' || kind === 'notes' || kind === 'control')) {
+                    block = { kind, id: id ?? null, from: offset, contentFrom: end, to: markdown.length };
+                    part.blocks.push(block);
+                }
+            }
+            payloadFrom = end;
+            hasFence = false;
+            swallowedMarker = false;
+        }
         offset = end;
         lineNumber++;
-        continue;
-      }
-      if (!match || newline < 0) return null;
-      const kind = match[1];
-      const id = match[2];
-      if (kind === "notes" ? id !== undefined : !id || !id.split(".").every(isStableId)) return null;
-      if (kind !== "text" && id?.includes(".")) return null;
-
-      if (block) block.to = offset;
-      block = null;
-      if (section) section.to = offset;
-      section = null;
-      if (kind === "slide" || kind === "composition" || kind === "section") {
-        if (part) part.to = offset;
-        part = null;
-        container = kind === "section" ? null : kind;
-        if (kind === "section" && id) {
-          if (sectionIds.has(id)) return null;
-          sectionIds.add(id);
-          section = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length };
-          sections.push(section);
-        }
-        if ((kind === "slide" || kind === "composition") && id) {
-          if (seen.has(id)) return null;
-          seen.add(id);
-          part = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length, blocks: [] };
-          (kind === "slide" ? slides : compositions).push(part);
-        }
-      } else {
-        if (!container || (kind === "control" && container !== "composition")) return null;
-        if (part && (kind === "text" || kind === "notes" || kind === "control")) {
-          block = { kind, id: id ?? null, from: offset, contentFrom: end, to: markdown.length };
-          part.blocks.push(block);
-        }
-      }
-      payloadFrom = end;
-      hasFence = false;
-      swallowedMarker = false;
     }
-    offset = end;
-    lineNumber++;
-  }
-  if (openFence) return null;
-  if (swallowedMarker) {
-    const last = new Lexer().blockTokens(markdown.slice(payloadFrom).replace(/\r\n?/g, "\n")).at(-1);
-    if (last?.type === "code") {
-      const fence = /^ {0,3}(`{3,}|~{3,})/.exec(last.raw)?.[1];
-      const closing = last.raw.replace(/\n+$/, "").split("\n").at(-1) ?? "";
-      if (fence && !closesFence(fence, closing)) return null;
+    if (openFence) return null;
+    if (swallowedMarker) {
+        const last = new Lexer().blockTokens(markdown.slice(payloadFrom).replace(/\r\n?/g, '\n')).at(-1);
+        if (last?.type === 'code') {
+            const fence = /^ {0,3}(`{3,}|~{3,})/.exec(last.raw)?.[1];
+            const closing = last.raw.replace(/\n+$/, '').split('\n').at(-1) ?? '';
+            if (fence && !closesFence(fence, closing)) return null;
+        }
     }
-  }
-  return { slides, compositions, sections };
+    return { slides, compositions, sections };
 }

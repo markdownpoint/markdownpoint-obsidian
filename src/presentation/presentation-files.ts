@@ -16,17 +16,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { TFile } from "obsidian";
-import type { Vault } from "obsidian";
-import { presentationPairNames } from "../format/recognition.ts";
+import { TFile } from 'obsidian';
+import type { Vault } from 'obsidian';
+import { presentationPairNames } from '../format/recognition.ts';
 
 /** Resolve both files from the live folder inventory for readers and the last write guard. */
 export function presentationFiles(vault: Vault, memberPath: string): { markdown: TFile; companion: TFile } | null {
-  const slash = memberPath.lastIndexOf("/");
-  const folder = slash < 0 ? vault.getRoot() : vault.getFolderByPath(memberPath.slice(0, slash));
-  if (!folder) return null;
-  const files = folder.children.filter((entry): entry is TFile => entry instanceof TFile);
-  const names = presentationPairNames(files.map(file => file.name));
-  if (!names) return null;
-  return { markdown: files.find(file => file.name === names.markdown)!, companion: files.find(file => file.name === names.companion)! };
+    const slash = memberPath.lastIndexOf('/');
+    const folder = slash < 0 ? vault.getRoot() : vault.getFolderByPath(memberPath.slice(0, slash));
+    if (!folder) return null;
+    const files = folder.children.filter((entry): entry is TFile => entry instanceof TFile);
+    const names = presentationPairNames(files.map(file => file.name));
+    if (!names) return null;
+    return { markdown: files.find(file => file.name === names.markdown)!, companion: files.find(file => file.name === names.companion)! };
 }

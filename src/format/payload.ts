@@ -18,22 +18,22 @@
 
 /** Source before the one organizational blank line at a MarkdownPoint block boundary. */
 export function payloadContentEnd(markdown: string, from: number, to: number): number {
-  let end = to;
-  // An unterminated tail of horizontal whitespace is not another empty line.
-  while (end > from && (markdown[end - 1] === " " || markdown[end - 1] === "\t")) end--;
-  if (end === from || markdown[end - 1] !== "\n") return end;
-  let start = end - 1;
-  if (start > from && markdown[start - 1] === "\r") start--;
-  while (start > from && (markdown[start - 1] === " " || markdown[start - 1] === "\t")) start--;
-  // Only that final wholly blank, terminated line is organizational. All
-  // earlier lines, including leading/interior/trailing empty paragraphs, stay.
-  return start === from || markdown[start - 1] === "\n" ? start : end;
+    let end = to;
+    // An unterminated tail of horizontal whitespace is not another empty line.
+    while (end > from && (markdown[end - 1] === ' ' || markdown[end - 1] === '\t')) end--;
+    if (end === from || markdown[end - 1] !== '\n') return end;
+    let start = end - 1;
+    if (start > from && markdown[start - 1] === '\r') start--;
+    while (start > from && (markdown[start - 1] === ' ' || markdown[start - 1] === '\t')) start--;
+    // Only that final wholly blank, terminated line is organizational. All
+    // earlier lines, including leading/interior/trailing empty paragraphs, stay.
+    return start === from || markdown[start - 1] === '\n' ? start : end;
 }
 
 /** Close a block before its next neighbor without creating another authored blank line. */
 export function terminateSourceBlock(source: string, newline: string): string {
-  if (!source || source.endsWith("\n")) return source;
-  // Fold an unterminated whitespace tail into the existing organizational line.
-  const closed = source.replace(/(^|\n)([ \t]*)(\r?\n)([ \t]+)$/, "$1$2$4$3");
-  return closed.endsWith("\n") ? closed : closed + newline;
+    if (!source || source.endsWith('\n')) return source;
+    // Fold an unterminated whitespace tail into the existing organizational line.
+    const closed = source.replace(/(^|\n)([ \t]*)(\r?\n)([ \t]+)$/, '$1$2$4$3');
+    return closed.endsWith('\n') ? closed : closed + newline;
 }

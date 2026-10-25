@@ -16,36 +16,42 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import assert from "node:assert/strict";
-import test from "node:test";
-import { NotesUi, NOTES_UI_KEY } from "../src/settings/notes-ui.ts";
-import type { LocalStorageHost } from "../src/settings/local-ui.ts";
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { NotesUi, NOTES_UI_KEY } from '../src/settings/notes-ui.ts';
+import type { LocalStorageHost } from '../src/settings/local-ui.ts';
 
 function device(initial?: unknown): LocalStorageHost {
-  const values = new Map<string, unknown>([[NOTES_UI_KEY, initial]]);
-  return { loadLocalStorage: key => values.get(key), saveLocalStorage: (key, value) => { values.set(key, value); } };
+    const values = new Map<string, unknown>([[NOTES_UI_KEY, initial]]);
+    return {
+        loadLocalStorage: key => values.get(key),
+        saveLocalStorage: (key, value) => {
+            values.set(key, value);
+        }
+    };
 }
 
-void test("notes disclosure follows stable document/slide identities and survives a local reload", () => {
-  const host = device();
-  const notes = new NotesUi(host);
-  const closed = notes.opened("document-a");
-  notes.setOpen("document-a", "first", true);
-  assert.equal(closed.has("first"), false);
-  assert.equal(notes.opened("document-a").has("first"), true);
-  assert.equal(new NotesUi(host).opened("document-a").has("first"), true);
-  assert.equal(notes.opened("document-b").has("first"), false);
-  notes.setOpen("document-a", "first", false);
-  assert.deepEqual(host.loadLocalStorage(NOTES_UI_KEY), {});
+void test('notes disclosure follows stable document/slide identities and survives a local reload', () => {
+    const host = device();
+    const notes = new NotesUi(host);
+    const closed = notes.opened('document-a');
+    notes.setOpen('document-a', 'first', true);
+    assert.equal(closed.has('first'), false);
+    assert.equal(notes.opened('document-a').has('first'), true);
+    assert.equal(new NotesUi(host).opened('document-a').has('first'), true);
+    assert.equal(notes.opened('document-b').has('first'), false);
+    notes.setOpen('document-a', 'first', false);
+    assert.deepEqual(host.loadLocalStorage(NOTES_UI_KEY), {});
 });
 
 void test("notes disclosure is not shared with another device's local storage", () => {
-  const first = new NotesUi(device());
-  const second = new NotesUi(device());
-  first.setOpen("document-a", "first", true);
-  assert.equal(second.opened("document-a").size, 0);
+    const first = new NotesUi(device());
+    const second = new NotesUi(device());
+    first.setOpen('document-a', 'first', true);
+    assert.equal(second.opened('document-a').size, 0);
 });
 
-void test("malformed persisted notes values are ignored", () => {
-  for (const value of [undefined, null, 1, [], { a: "first" }, { a: [1, null] }]) assert.equal(new NotesUi(device(value)).opened("a").size, 0);
+void test('malformed persisted notes values are ignored', () => {
+    for (const value of [undefined, null, 1, [], { a: 'first' }, { a: [1, null] }])
+        assert.equal(new NotesUi(device(value)).opened('a').size, 0);
 });

@@ -17,23 +17,39 @@
  */
 
 /** Compare local file responses without retaining entire videos, models, or font files in memory. */
-export async function equalByteStreams(first: ReadableStream<Uint8Array>, second: ReadableStream<Uint8Array>, current: () => boolean): Promise<boolean> {
-  const left = first.getReader(), right = second.getReader();
-  let a: ReadableStreamReadResult<Uint8Array> = { done: false, value: new Uint8Array() };
-  let b: ReadableStreamReadResult<Uint8Array> = { done: false, value: new Uint8Array() };
-  let ai = 0, bi = 0;
-  try {
-    for (;;) {
-      if (!current()) throw new Error("File comparison canceled");
-      while (!a.done && ai === a.value.length) { if (!current()) throw new Error("File comparison canceled"); a = await left.read(); ai = 0; }
-      while (!b.done && bi === b.value.length) { if (!current()) throw new Error("File comparison canceled"); b = await right.read(); bi = 0; }
-      if (a.done || b.done) return a.done === b.done;
-      const count = Math.min(a.value.length - ai, b.value.length - bi);
-      for (let i = 0; i < count; i++) if (a.value[ai + i] !== b.value[bi + i]) return false;
-      ai += count; bi += count;
+export async function equalByteStreams(
+    first: ReadableStream<Uint8Array>,
+    second: ReadableStream<Uint8Array>,
+    current: () => boolean
+): Promise<boolean> {
+    const left = first.getReader(),
+        right = second.getReader();
+    let a: ReadableStreamReadResult<Uint8Array> = { done: false, value: new Uint8Array() };
+    let b: ReadableStreamReadResult<Uint8Array> = { done: false, value: new Uint8Array() };
+    let ai = 0,
+        bi = 0;
+    try {
+        for (;;) {
+            if (!current()) throw new Error('File comparison canceled');
+            while (!a.done && ai === a.value.length) {
+                if (!current()) throw new Error('File comparison canceled');
+                a = await left.read();
+                ai = 0;
+            }
+            while (!b.done && bi === b.value.length) {
+                if (!current()) throw new Error('File comparison canceled');
+                b = await right.read();
+                bi = 0;
+            }
+            if (a.done || b.done) return a.done === b.done;
+            const count = Math.min(a.value.length - ai, b.value.length - bi);
+            for (let i = 0; i < count; i++) if (a.value[ai + i] !== b.value[bi + i]) return false;
+            ai += count;
+            bi += count;
+        }
+    } finally {
+        await Promise.allSettled([left.cancel(), right.cancel()]);
+        left.releaseLock();
+        right.releaseLock();
     }
-  } finally {
-    await Promise.allSettled([left.cancel(), right.cancel()]);
-    left.releaseLock(); right.releaseLock();
-  }
 }

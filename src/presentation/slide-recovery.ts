@@ -18,46 +18,74 @@
 
 /** Device-local recovery records, scoped to the desktop vault's absolute path. */
 export class SlideRecovery {
-  private readonly database: Promise<IDBDatabase>;
+    private readonly database: Promise<IDBDatabase>;
 
-  constructor(factory: IDBFactory, vaultPath: string) {
-    this.database = new Promise((resolve, reject) => {
-      const request = factory.open(`markdownpoint-slide-recovery:${vaultPath}`, 1);
-      let blocked = false;
-      request.onupgradeneeded = () => { request.result.createObjectStore("recovery"); };
-      request.onerror = () => { reject(request.error ?? new Error("Cannot open slide recovery data")); };
-      request.onblocked = () => { blocked = true; reject(new Error("Slide recovery data is open in another version")); };
-      request.onsuccess = () => {
-        const database = request.result;
-        if (blocked) { database.close(); return; }
-        database.onversionchange = () => { database.close(); };
-        resolve(database);
-      };
-    });
-  }
+    constructor(factory: IDBFactory, vaultPath: string) {
+        this.database = new Promise((resolve, reject) => {
+            const request = factory.open(`markdownpoint-slide-recovery:${vaultPath}`, 1);
+            let blocked = false;
+            request.onupgradeneeded = () => {
+                request.result.createObjectStore('recovery');
+            };
+            request.onerror = () => {
+                reject(request.error ?? new Error('Cannot open slide recovery data'));
+            };
+            request.onblocked = () => {
+                blocked = true;
+                reject(new Error('Slide recovery data is open in another version'));
+            };
+            request.onsuccess = () => {
+                const database = request.result;
+                if (blocked) {
+                    database.close();
+                    return;
+                }
+                database.onversionchange = () => {
+                    database.close();
+                };
+                resolve(database);
+            };
+        });
+    }
 
-  async read(): Promise<unknown> {
-    const database = await this.database;
-    return new Promise((resolve, reject) => {
-      const transaction = database.transaction("recovery", "readonly");
-      const request = transaction.objectStore("recovery").get("slides");
-      let value: unknown;
-      request.onsuccess = () => { value = request.result; };
-      transaction.oncomplete = () => { resolve(value); };
-      transaction.onerror = transaction.onabort = () => { reject(transaction.error ?? new Error("Cannot read slide recovery data")); };
-    });
-  }
+    async read(): Promise<unknown> {
+        const database = await this.database;
+        return new Promise((resolve, reject) => {
+            const transaction = database.transaction('recovery', 'readonly');
+            const request = transaction.objectStore('recovery').get('slides');
+            let value: unknown;
+            request.onsuccess = () => {
+                value = request.result;
+            };
+            transaction.oncomplete = () => {
+                resolve(value);
+            };
+            transaction.onerror = transaction.onabort = () => {
+                reject(transaction.error ?? new Error('Cannot read slide recovery data'));
+            };
+        });
+    }
 
-  /** Resolve only after IndexedDB commits, before a companion record is removed. */
-  async write(value: unknown): Promise<void> {
-    const database = await this.database;
-    return new Promise((resolve, reject) => {
-      const transaction = database.transaction("recovery", "readwrite", { durability: "strict" });
-      transaction.objectStore("recovery").put(value, "slides");
-      transaction.oncomplete = () => { resolve(); };
-      transaction.onerror = transaction.onabort = () => { reject(transaction.error ?? new Error("Cannot save slide recovery data")); };
-    });
-  }
+    /** Resolve only after IndexedDB commits, before a companion record is removed. */
+    async write(value: unknown): Promise<void> {
+        const database = await this.database;
+        return new Promise((resolve, reject) => {
+            const transaction = database.transaction('recovery', 'readwrite', { durability: 'strict' });
+            transaction.objectStore('recovery').put(value, 'slides');
+            transaction.oncomplete = () => {
+                resolve();
+            };
+            transaction.onerror = transaction.onabort = () => {
+                reject(transaction.error ?? new Error('Cannot save slide recovery data'));
+            };
+        });
+    }
 
-  close(): void { void this.database.then(database => { database.close(); }).catch(() => undefined); }
+    close(): void {
+        void this.database
+            .then(database => {
+                database.close();
+            })
+            .catch(() => undefined);
+    }
 }

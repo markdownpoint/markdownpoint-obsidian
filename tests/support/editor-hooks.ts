@@ -16,19 +16,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { registerHooks } from "node:module";
-import { transformSync } from "esbuild";
+import { registerHooks } from 'node:module';
+import { transformSync } from 'esbuild';
 
 // Editor modules import Obsidian and use parameter properties: resolve Obsidian to headless stubs and transform
 // TypeScript with esbuild, as the production bundle does. Import editor modules dynamically after this module.
 registerHooks({
-  resolve(specifier, context, next) {
-    return specifier === "obsidian" ? { url: new URL("./obsidian-fields.ts", import.meta.url).href, shortCircuit: true } : next(specifier, context);
-  },
-  load(url, context, next) {
-    const result = next(url, context);
-    if (!url.endsWith(".ts") || result.source == null) return result;
-    const source = typeof result.source === "string" ? result.source : new TextDecoder().decode(result.source);
-    return { ...result, format: "module", source: transformSync(source, { loader: "ts", target: "esnext", format: "esm" }).code };
-  },
+    resolve(specifier, context, next) {
+        return specifier === 'obsidian'
+            ? { url: new URL('./obsidian-fields.ts', import.meta.url).href, shortCircuit: true }
+            : next(specifier, context);
+    },
+    load(url, context, next) {
+        const result = next(url, context);
+        if (!url.endsWith('.ts') || result.source == null) return result;
+        const source = typeof result.source === 'string' ? result.source : new TextDecoder().decode(result.source);
+        return { ...result, format: 'module', source: transformSync(source, { loader: 'ts', target: 'esnext', format: 'esm' }).code };
+    }
 });

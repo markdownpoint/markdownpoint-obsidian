@@ -17,30 +17,34 @@
  */
 
 export interface TextBindingName {
-  readonly name: string;
-  readonly number: string | null;
+    readonly name: string;
+    readonly number: string | null;
 }
 
 /** A text object's readable name, or a composition instance's control name. */
 export function textBindingName(binding: string): TextBindingName {
-  const parts = binding.slice(binding.lastIndexOf(".") + 1).split("-");
-  // Only MDP's explicit allocation spelling is technical: id- plus a letter
-  // and five letters/digits. A similarly sized authored word stays intact.
-  if (parts.at(-2) === "id" && /^[a-z][a-z0-9]{5}$/.test(parts.at(-1) ?? "")) parts.splice(-2);
-  const number = parts.length > 1 && /^\d+$/.test(parts.at(-1)!) ? parts.pop()! : null;
-  return { name: parts.join("-") || "text", number };
+    const parts = binding.slice(binding.lastIndexOf('.') + 1).split('-');
+    // Only MDP's explicit allocation spelling is technical: id- plus a letter
+    // and five letters/digits. A similarly sized authored word stays intact.
+    if (parts.at(-2) === 'id' && /^[a-z][a-z0-9]{5}$/.test(parts.at(-1) ?? '')) parts.splice(-2);
+    const number = parts.length > 1 && /^\d+$/.test(parts.at(-1)!) ? parts.pop()! : null;
+    return { name: parts.join('-') || 'text', number };
 }
 
 export interface TextFieldLabels {
-  readonly names: Readonly<Record<string, string>>;
-  readonly text: string;
-  readonly numbered: (values: { name: string; number: string }) => string;
+    readonly names: Readonly<Record<string, string>>;
+    readonly text: string;
+    readonly numbered: (values: { name: string; number: string }) => string;
 }
 
 /** Known field types are translated; custom authored names keep their own words. */
 export function textBindingLabel(binding: TextBindingName, labels: TextFieldLabels): string {
-  const authored = binding.name.replaceAll("-", " ");
-  const name = binding.name === "text" ? labels.text : Object.hasOwn(labels.names, binding.name)
-    ? labels.names[binding.name]! : authored.charAt(0).toUpperCase() + authored.slice(1);
-  return binding.number === null ? name : labels.numbered({ name, number: binding.number });
+    const authored = binding.name.replaceAll('-', ' ');
+    const name =
+        binding.name === 'text'
+            ? labels.text
+            : Object.hasOwn(labels.names, binding.name)
+              ? labels.names[binding.name]!
+              : authored.charAt(0).toUpperCase() + authored.slice(1);
+    return binding.number === null ? name : labels.numbered({ name, number: binding.number });
 }

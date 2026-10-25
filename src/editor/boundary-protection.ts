@@ -16,33 +16,34 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Annotation } from "@codemirror/state";
-import type { Transaction } from "@codemirror/state";
+import { Annotation } from '@codemirror/state';
+import type { Transaction } from '@codemirror/state';
 
 /** Only explicit, validated slide operations use this annotation. */
 export const slideStructureChange = Annotation.define<boolean>();
 
 export interface BoundaryRange {
-  readonly from: number;
-  readonly markerTo: number;
+    readonly from: number;
+    readonly markerTo: number;
 }
 
 /** Reject the whole edit when any change crosses or enters a structural marker. */
 export function boundaryChangesAllowed(transaction: Transaction, markers: readonly BoundaryRange[]): boolean {
-  if (transaction.annotation(slideStructureChange) === true) return true;
-  // Obsidian reloads files through unannotated editor transactions. Protect
-  // user input, deletion and movement while allowing those native reloads.
-  if (!["input", "delete", "move"].some(event => transaction.isUserEvent(event))) return true;
-  let allowed = true;
-  transaction.changes.iterChangedRanges((from, to) => {
-    for (const marker of markers) {
-      const start = Math.max(0, marker.from - 1);
-      if (from === to ? (from > start && from < marker.markerTo) || (start === 0 && from === 0)
-        : from < marker.markerTo && to > start) {
-        allowed = false;
-        break;
-      }
-    }
-  });
-  return allowed;
+    if (transaction.annotation(slideStructureChange) === true) return true;
+    // Obsidian reloads files through unannotated editor transactions. Protect
+    // user input, deletion and movement while allowing those native reloads.
+    if (!['input', 'delete', 'move'].some(event => transaction.isUserEvent(event))) return true;
+    let allowed = true;
+    transaction.changes.iterChangedRanges((from, to) => {
+        for (const marker of markers) {
+            const start = Math.max(0, marker.from - 1);
+            if (
+                from === to ? (from > start && from < marker.markerTo) || (start === 0 && from === 0) : from < marker.markerTo && to > start
+            ) {
+                allowed = false;
+                break;
+            }
+        }
+    });
+    return allowed;
 }

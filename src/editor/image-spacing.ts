@@ -16,33 +16,47 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { StateEffect, StateField } from "@codemirror/state";
-import { WidgetType } from "@codemirror/view";
-import type { EditorView } from "@codemirror/view";
+import { StateEffect, StateField } from '@codemirror/state';
+import { WidgetType } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 
-export interface ImageSpacing { readonly id: string | null; readonly heights: ReadonlyMap<string, number> }
+export interface ImageSpacing {
+    readonly id: string | null;
+    readonly heights: ReadonlyMap<string, number>;
+}
 export const setImageSpacing = StateEffect.define<ImageSpacing>();
 export const imageSpacing = StateField.define<ImageSpacing>({
-  create: () => ({ id: null, heights: new Map() }),
-  update: (value, transaction) => {
-    for (const effect of transaction.effects) if (effect.is(setImageSpacing)) return effect.value;
-    return value;
-  },
+    create: () => ({ id: null, heights: new Map() }),
+    update: (value, transaction) => {
+        for (const effect of transaction.effects) if (effect.is(setImageSpacing)) return effect.value;
+        return value;
+    }
 });
 
 export function imageSpaceNeeded(columnBottom: number, contentEnd: number): number {
-  return Math.max(0, Math.ceil(columnBottom - contentEnd));
+    return Math.max(0, Math.ceil(columnBottom - contentEnd));
 }
 
 export class ImageSpace extends WidgetType {
-  private readonly id: string;
-  private readonly height: number;
-  constructor(id: string, height: number) { super(); this.id = id; this.height = height; }
-  eq(other: ImageSpace): boolean { return this.id === other.id && this.height === other.height; }
-  get estimatedHeight(): number { return this.height; }
-  toDOM(view: EditorView): HTMLElement {
-    const element = view.dom.ownerDocument.defaultView!.createDiv({ cls: "markdownpoint-slide-image-space", attr: { "data-slide-end": this.id, "aria-hidden": "true" } });
-    element.style.setProperty("--markdownpoint-image-space", `${this.height}px`);
-    return element;
-  }
+    private readonly id: string;
+    private readonly height: number;
+    constructor(id: string, height: number) {
+        super();
+        this.id = id;
+        this.height = height;
+    }
+    eq(other: ImageSpace): boolean {
+        return this.id === other.id && this.height === other.height;
+    }
+    get estimatedHeight(): number {
+        return this.height;
+    }
+    toDOM(view: EditorView): HTMLElement {
+        const element = view.dom.ownerDocument.defaultView!.createDiv({
+            cls: 'markdownpoint-slide-image-space',
+            attr: { 'data-slide-end': this.id, 'aria-hidden': 'true' }
+        });
+        element.style.setProperty('--markdownpoint-image-space', `${this.height}px`);
+        return element;
+    }
 }

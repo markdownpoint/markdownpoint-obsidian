@@ -124,14 +124,14 @@ Use **Settings → MarkdownPoint → Sidebar** to put the outline on the left or
 
 The plugin sets no hotkeys. Assign your own under **Settings → Hotkeys**:
 
-| Command | What it does |
-| --- | --- |
-| New presentation | Create a presentation in the vault. |
-| New slide | Open the layout picker. |
-| Focus outline | Reveal and focus the slide outline. |
-| Focus editor | Return to the writing area. |
-| Move slides up | Move the outline selection up. |
-| Move slides down | Move the outline selection down. |
+| Command               | What it does                                       |
+| --------------------- | -------------------------------------------------- |
+| New presentation      | Create a presentation in the vault.                |
+| New slide             | Open the layout picker.                            |
+| Focus outline         | Reveal and focus the slide outline.                |
+| Focus editor          | Return to the writing area.                        |
+| Move slides up        | Move the outline selection up.                     |
+| Move slides down      | Move the outline selection down.                   |
 | Open in MarkdownPoint | Save and open the presentation in the desktop app. |
 
 The move commands work while the outline has focus. Tab and Obsidian’s tab-switching shortcuts work as usual.

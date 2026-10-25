@@ -16,19 +16,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { SlideImageReference } from "../format/slide-images.ts";
+import type { SlideImageReference } from '../format/slide-images.ts';
 
-export interface SlideImagePreview { readonly path: string; readonly src: string; readonly name: string | null }
-interface ImageVault<File> { getFileByPath(path: string): File | null; getResourcePath(file: File): string }
+export interface SlideImagePreview {
+    readonly path: string;
+    readonly src: string;
+    readonly name: string | null;
+}
+interface ImageVault<File> {
+    getFileByPath(path: string): File | null;
+    getResourcePath(file: File): string;
+}
 
 /** Resolve only existing vault files, then cap the visible column at five images. */
 export function readSlideImages<File>(vault: ImageVault<File>, references: readonly SlideImageReference[]): readonly SlideImagePreview[] {
-  const images: SlideImagePreview[] = [];
-  for (const reference of references) {
-    const file = vault.getFileByPath(reference.path);
-    if (!file) continue;
-    images.push({ path: reference.path, src: vault.getResourcePath(file), name: reference.name });
-    if (images.length === 5) break;
-  }
-  return images;
+    const images: SlideImagePreview[] = [];
+    for (const reference of references) {
+        const file = vault.getFileByPath(reference.path);
+        if (!file) continue;
+        images.push({ path: reference.path, src: vault.getResourcePath(file), name: reference.name });
+        if (images.length === 5) break;
+    }
+    return images;
 }

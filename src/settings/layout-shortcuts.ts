@@ -16,28 +16,35 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { isRecord, isStableId } from "../format/recognition.ts";
+import { isRecord, isStableId } from '../format/recognition.ts';
 
-export const LAYOUT_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+export const LAYOUT_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 export type LayoutAssignments = Readonly<Record<string, string>>;
-const defaults: LayoutAssignments = Object.fromEntries(["section", "one-liner", "content", "content-with-header", "text-image", "image-text", "image", "solid-color", "blank"]
-  .map((key, index) => [String(index + 1), key]));
+const defaults: LayoutAssignments = Object.fromEntries(
+    ['section', 'one-liner', 'content', 'content-with-header', 'text-image', 'image-text', 'image', 'solid-color', 'blank'].map(
+        (key, index) => [String(index + 1), key]
+    )
+);
 
 export function readLayoutAssignments(value: unknown): LayoutAssignments {
-  if (!isRecord(value)) return { ...defaults };
-  const entries = Object.entries(value);
-  if (entries.some(([digit, key]) => !/^[1-9]$/.test(digit) || !isStableId(key)) || new Set(entries.map(([, key]) => key)).size !== entries.length) return { ...defaults };
-  return Object.fromEntries(entries) as Record<string, string>;
+    if (!isRecord(value)) return { ...defaults };
+    const entries = Object.entries(value);
+    if (
+        entries.some(([digit, key]) => !/^[1-9]$/.test(digit) || !isStableId(key)) ||
+        new Set(entries.map(([, key]) => key)).size !== entries.length
+    )
+        return { ...defaults };
+    return Object.fromEntries(entries) as Record<string, string>;
 }
 
 export function assignLayoutDigit(value: LayoutAssignments, layout: string, digit: string | null): LayoutAssignments {
-  if (!isStableId(layout) || (digit !== null && !/^[1-9]$/.test(digit))) return value;
-  const next: Record<string, string> = {};
-  for (const key of LAYOUT_DIGITS) if (key !== digit && value[key] && value[key] !== layout) next[key] = value[key];
-  if (digit) next[digit] = layout;
-  return next;
+    if (!isStableId(layout) || (digit !== null && !/^[1-9]$/.test(digit))) return value;
+    const next: Record<string, string> = {};
+    for (const key of LAYOUT_DIGITS) if (key !== digit && value[key] && value[key] !== layout) next[key] = value[key];
+    if (digit) next[digit] = layout;
+    return next;
 }
 
 export function layoutDigit(value: LayoutAssignments, layout: string): string | null {
-  return LAYOUT_DIGITS.find(digit => value[digit] === layout) ?? null;
+    return LAYOUT_DIGITS.find(digit => value[digit] === layout) ?? null;
 }

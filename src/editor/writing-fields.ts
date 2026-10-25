@@ -16,40 +16,48 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { PresentationDocument } from "../format/document.ts";
-import { payloadContentEnd } from "../format/payload.ts";
-import { textBindingLabel, textBindingName } from "../format/text-binding.ts";
-import type { TextFieldLabels } from "../format/text-binding.ts";
+import type { PresentationDocument } from '../format/document.ts';
+import { payloadContentEnd } from '../format/payload.ts';
+import { textBindingLabel, textBindingName } from '../format/text-binding.ts';
+import type { TextFieldLabels } from '../format/text-binding.ts';
 
 export interface WritingField {
-  readonly key: string;
-  readonly opening: boolean;
-  readonly role: "title" | "body" | "eyebrow";
-  readonly label: string;
-  readonly from: number;
-  readonly contentFrom: number;
-  readonly contentTo: number;
-  readonly to: number;
-  readonly markerText: string;
-  readonly populated: boolean;
+    readonly key: string;
+    readonly opening: boolean;
+    readonly role: 'title' | 'body' | 'eyebrow';
+    readonly label: string;
+    readonly from: number;
+    readonly contentFrom: number;
+    readonly contentTo: number;
+    readonly to: number;
+    readonly markerText: string;
+    readonly populated: boolean;
 }
 
 export function compactFieldAt(fields: readonly WritingField[], position: number, length: number): WritingField | undefined {
-  return fields.find(field => field.contentFrom === position && field.contentFrom === field.to && position < length);
+    return fields.find(field => field.contentFrom === position && field.contentFrom === field.to && position < length);
 }
 
 /** Every authored text block keeps its identity and source order in the draft. */
 export function writingFields(markdown: string, document: PresentationDocument, labels: TextFieldLabels): WritingField[] {
-  const fields: WritingField[] = [];
-  for (const slide of document.slides) for (const block of slide.blocks) {
-    if (block.kind !== "text" || !block.id) continue;
-    const name = textBindingName(block.id);
-    const role = name.name === "title" || name.name === "eyebrow" ? name.name : "body";
-    fields.push({
-      key: `${slide.id}:text:${block.id}`, opening: block === slide.blocks[0], role, label: textBindingLabel(name, labels), from: block.from, contentFrom: block.contentFrom, to: block.to,
-      contentTo: payloadContentEnd(markdown, block.contentFrom, block.to),
-      markerText: markdown.slice(block.from, block.contentFrom), populated: markdown.slice(block.contentFrom, block.to).trim().length > 0,
-    });
-  }
-  return fields;
+    const fields: WritingField[] = [];
+    for (const slide of document.slides)
+        for (const block of slide.blocks) {
+            if (block.kind !== 'text' || !block.id) continue;
+            const name = textBindingName(block.id);
+            const role = name.name === 'title' || name.name === 'eyebrow' ? name.name : 'body';
+            fields.push({
+                key: `${slide.id}:text:${block.id}`,
+                opening: block === slide.blocks[0],
+                role,
+                label: textBindingLabel(name, labels),
+                from: block.from,
+                contentFrom: block.contentFrom,
+                to: block.to,
+                contentTo: payloadContentEnd(markdown, block.contentFrom, block.to),
+                markerText: markdown.slice(block.from, block.contentFrom),
+                populated: markdown.slice(block.contentFrom, block.to).trim().length > 0
+            });
+        }
+    return fields;
 }
