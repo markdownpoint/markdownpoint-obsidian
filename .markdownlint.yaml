@@ -15,3 +15,9 @@ MD032: false
 
 # MD036 - Emphasis used instead of a heading
 MD036: false
+
+# MD033 - Inline HTML
+# <br/> spaces the README's sections, as in Better Paste and Notebook Navigator
+MD033:
+  allowed_elements:
+    - br

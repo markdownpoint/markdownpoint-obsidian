@@ -1,128 +1,104 @@
-# MarkdownPoint for Obsidian
+# ![MarkdownPoint for Obsidian](https://raw.githubusercontent.com/markdownpoint/markdownpoint-obsidian/main/images/continuous-draft-light.png)
 
-Write your slides where you keep your ideas.
+MarkdownPoint and its companion plugin for Obsidian are the best combination for modern presentations. Build the structure and write every word in Obsidian, then switch to the [MarkdownPoint](https://markdownpoint.com) desktop app for design, 3D, animation, rendering and much more.
 
-MarkdownPoint shows a presentation in Obsidian as one continuous draft. Write the words and presenter notes, and arrange the slides in an outline. Open the same presentation in [MarkdownPoint](https://markdownpoint.com) to design and present it.
+Your whole talk becomes **one continuous draft**: titles, text and presenter notes flow down the page like a note, with an outline of every slide beside it. Drag slides into a new order, add a slide in one keystroke, and copy slides between presentations. There’s nothing to import or export between the two: both apps edit the same files in your vault.
 
-![A continuous presentation draft with presenter notes and the slide outline](images/continuous-draft-light.png)
+Continuous draft. Drag-and-drop outline. Presenter notes. Layout shortcuts. 21 languages.
 
-Each presentation is a folder in your vault. Both apps edit the same files.
+<br/>
 
-The screenshots use the Minimal theme and Notebook Navigator. Both are optional.
+## 1 Installation
 
-## Install
+1. **Install Obsidian 1.13 or newer** on your desktop from [obsidian.md](https://obsidian.md/).
+2. **Turn on community plugins** under **Settings → Community plugins**.
+3. **Install MarkdownPoint**: select **Browse**, search for **MarkdownPoint**, then select **Install** and **Enable**.
+4. **Get the desktop app** from [markdownpoint.com](https://markdownpoint.com) to design, present and export your slides.
 
-MarkdownPoint requires **Obsidian 1.13 or newer** on desktop. You design, present and export in the MarkdownPoint desktop app.
+<br/>
 
-1. Open **Settings → Community plugins**. If community plugins are turned off, turn them on.
-2. Select **Browse** and search for **MarkdownPoint**.
-3. Select **Install**, then **Enable**.
+## 2 Your first presentation
 
-## Start a presentation
+Open the command palette and run **MarkdownPoint: New presentation**. Enter a name, choose a folder, and pick **Basic** or a theme from another presentation in your vault. Select **Create**, and the presentation opens with one empty slide and the cursor ready in its first text area.
 
-Open the command palette and run **MarkdownPoint: New presentation**.
-
-1. Enter a name and choose the folder to put the presentation in.
-2. Under **Theme**, choose **Basic** or a theme from another presentation in your vault.
-3. Select **Create** and start writing.
-
-The presentation opens in the current tab with one empty slide. The cursor starts in its first text area. The theme supplies the layouts. You write what each slide says.
-
-### Open an existing presentation
-
-Put the whole presentation folder in your vault, then open its `slides.md`. Keep `presentation.mdpoint`, `themes/` and any media folders beside it.
+Already have a presentation? Put its whole folder in your vault and open `slides.md`:
 
 ```text
 My presentation/
-├── slides.md
-├── presentation.mdpoint
+├── slides.md              your writing, notes and slide order
+├── presentation.mdpoint   the presentation data
 ├── themes/
 └── media/
 ```
 
-`slides.md` holds the writing, notes and slide order. `presentation.mdpoint` holds the presentation data. Move and sync the folder as a whole.
+Move and sync the folder as a whole, and both apps keep working on it.
 
-## Write without styling
+<br/>
 
-Each slide starts with a numbered divider. Its text areas follow in writing order. Each one takes its name from the layout: Title, Body, Eyebrow or a custom name.
+## 3 Write the whole talk in one draft
 
-An empty area shows a faint placeholder with its name. Click it to write. Once the area has text, its name appears as a small label above it. Placeholders and labels appear only in the editor and are never saved.
+Every slide starts with a numbered divider, followed by its text areas in writing order. Each area takes its name from the layout: Title, Body, Eyebrow or a name the theme gives it. An empty area shows its name as a faint placeholder. Start typing and the name moves up as a small label above your words. Placeholders and labels live only in the editor and are never saved.
 
-Write in **Live Preview** to see the continuous draft. Live Preview protects the slide dividers from ordinary edits. Move and delete slides from the outline or the right-click menu. **Source mode** shows the plain Markdown. Everything is editable there, slide dividers included.
+Write in **Live Preview** to see the draft. It protects the slide dividers from stray edits, so you rearrange slides in the outline or from the right-click menu. Switch to **Source mode** whenever you want the plain Markdown, dividers included.
 
-The draft hides the one blank line that separates text areas in `slides.md`. Extra blank lines are part of your text. They stay visible and carry over to MarkdownPoint.
+Blank lines are yours to use. The draft hides the single blank line that separates text areas, and any extra blank lines stay visible and carry over to MarkdownPoint.
 
 ### Presenter notes
 
-Click anywhere on the **Presenter notes** row to expand it. An empty note shows **Notes**. Write reminders, transitions or a full script. Collapse the row again to focus on the slide.
-
-Notes stay with their slide when you move, copy or delete it. Each device remembers which notes are expanded.
+Click the **Presenter notes** row under a slide to open it, and write reminders, transitions or a full script. Notes travel with their slide when you move, copy or delete it, and each device remembers which notes you keep open.
 
 ### Images beside the draft
 
-![An assigned image beside the writing area](images/image-previews-light.png)
+![A slide’s image preview beside the writing area](https://raw.githubusercontent.com/markdownpoint/markdownpoint-obsidian/main/images/image-previews-light.png)
 
-Up to five of a slide’s images appear below its thumbnail in the margin. The background comes first, then images in the layout’s image areas, then any other images on the slide.
+Up to five of a slide’s images appear under its thumbnail in the margin: the background first, then the layout’s image areas, then any other images on the slide. Add and change images in MarkdownPoint. To hide the previews, turn off **Settings → MarkdownPoint → Show images**.
 
-Add and change images in MarkdownPoint. To hide the previews, turn off **Settings → MarkdownPoint → Show images**.
+<br/>
 
-## Arrange slides in the outline
+## 4 Shape the story in the outline
 
-The **Outline** has its own sidebar tab, marked with the MarkdownPoint icon. The tab sits in the right sidebar by default. Obsidian’s own Outline and Notebook Navigator stay where they are.
+The **Outline** has its own sidebar tab, marked with the MarkdownPoint icon, and opens in the right sidebar. Each row shows a slide’s title and a small map of its layout. Section headings divide the list without taking a slide number, and skipped slides show a dash instead of a number.
 
-Each row shows a slide’s title and a small thumbnail of its structure. Filled areas mark where text and media go. MarkdownPoint shows the finished slide.
-
-Section headings divide the outline and don’t take a slide number. Skipped slides stay in the list. They show a dash in place of a number.
-
-### Select and rearrange
-
-- **Click** to select one slide and go to it.
+- **Click** a slide to select it and jump to it.
 - **Cmd-click** on Mac or **Ctrl-click** on Windows and Linux to add or remove a slide.
-- **Shift-click** to select a range.
-- **Shift+Up/Down** to extend the selection with the keyboard.
-- **Cmd/Ctrl+A** to select all slides while the outline has focus.
+- **Shift-click** to select a range, or **Shift+Up/Down** to extend it.
+- **Cmd/Ctrl+A** selects every slide while the outline has focus.
 
-Drag a selected row to move all selected slides. A line shows where they will land. Drop them on a section heading to place them at the start of that section.
-
-To move the selection one row at a time, press **Cmd+Up/Down** on Mac or **Ctrl+Up/Down** on Windows and Linux while the outline has focus. You can undo each move. In the editor, text-editing shortcuts work as usual.
+**Drag** the selection anywhere in the list. A line shows where it lands, and dropping on a section heading puts the slides at the start of that section. Prefer the keyboard? While the outline has focus, **Cmd+Up/Down** on Mac or **Ctrl+Up/Down** on Windows and Linux moves the selection one row at a time.
 
 ### Copy, cut and delete slides
 
-Right-click a slide in the outline or in the editor to choose **Cut slide**, **Copy slide**, **Paste slides** or **Delete slide**. Click a slide’s thumbnail in the editor margin to open the same menu.
+Right-click a slide in the outline or the editor for **Cut slide**, **Copy slide**, **Paste slides** and **Delete slide**. A slide’s thumbnail in the editor margin opens the same menu. In the outline, the menu acts on every selected slide, and **Cmd/Ctrl+C**, **X** and **V** copy, cut and paste whole slides. In the editor they stay ordinary text shortcuts. Pasted slides land below the slide whose menu you opened.
 
-In the outline, the menu acts on every selected slide. In the editor, it acts on the slide you clicked. Pasted slides go below the slide whose menu you opened.
+A copied slide brings its text, notes and presentation data with it. Paste it into another presentation in the same vault that uses the same theme, and its media comes along too. Between different themes or vaults, copy and paste the slides in the MarkdownPoint desktop app.
 
-A copied slide carries its text, notes and presentation data. In the outline, **Cmd/Ctrl+C**, **Cmd/Ctrl+X** and **Cmd/Ctrl+V** copy, cut and paste whole slides. In the editor, they stay ordinary text shortcuts.
+Obsidian’s **Undo** and **Redo** cover slide actions too, also while the outline has focus.
 
-You can paste slides into another presentation in the same vault when both use the same theme and theme artwork. The media the slides use is copied into the destination folder. Between different themes or vaults, copy and paste the slides in the MarkdownPoint desktop app.
+<br/>
 
-Obsidian’s **Undo** and **Redo** cover slide actions too. They also work while the outline has focus.
+## 5 Add a slide in one keystroke
 
-## Add a slide in a keystroke
+![The layout picker with number shortcuts](https://raw.githubusercontent.com/markdownpoint/markdownpoint-obsidian/main/images/layout-picker-light.png)
 
-![The layout picker with filled text areas and assigned number shortcuts](images/layout-picker-light.png)
+Click **+** above the outline or run **MarkdownPoint: New slide**, then choose a layout. The new slide goes below the current one.
 
-Click **+** above the outline or run **MarkdownPoint: New slide**. Choose a layout to insert a slide below the current one.
+Give your favorite layouts a number: right-click a layout in the picker and choose **Shortcut**, then a number from 1 to 9. Next time, open the picker and press that number. The number shows next to the layout’s name, and giving it to another layout moves it there. **None** removes it.
 
-Some layouts start with a number. To give a layout a number:
+<br/>
 
-1. Right-click a layout in the picker.
-2. Choose **Shortcut**, then a number from 1 to 9.
-3. In the picker, press that number to insert the layout.
+## 6 Design and present in MarkdownPoint
 
-The number appears below the layout’s thumbnail, next to its name. Giving the number to another layout moves it there. Choose **None** to remove a layout’s number.
+Run **MarkdownPoint: Open in MarkdownPoint** to save the presentation and open it in the desktop app. That’s where layout, images, 3D, animation and presenting happen. Come back to `slides.md` for another writing pass whenever you like, since both apps work on the same folder.
 
-## Continue in MarkdownPoint
+For the command to reach the app, your computer has to open `.mdpoint` files with MarkdownPoint.
 
-Run **MarkdownPoint: Open in MarkdownPoint** to save the presentation and open `presentation.mdpoint` in the desktop app.
+<br/>
 
-Work on layout, images, animation and presenting there. Return to `slides.md` for another writing pass. Keep using the same folder. For the command to reach the app, your computer must open `.mdpoint` files with MarkdownPoint.
+## 7 Settings and hotkeys
 
-## Settings and hotkeys
+**Settings → MarkdownPoint → Sidebar** puts the outline on the left or right. If you use Notebook Navigator, keep the outline on the right. Obsidian’s own controls show and hide the sidebar.
 
-Use **Settings → MarkdownPoint → Sidebar** to put the outline on the left or right. If you use Notebook Navigator, keep the outline on the right. Show and hide that sidebar with Obsidian’s own controls.
-
-The plugin sets no hotkeys. Assign your own under **Settings → Hotkeys**:
+The plugin sets no hotkeys, so assign your own under **Settings → Hotkeys**:
 
 | Command               | What it does                                       |
 | --------------------- | -------------------------------------------------- |
@@ -134,34 +110,36 @@ The plugin sets no hotkeys. Assign your own under **Settings → Hotkeys**:
 | Move slides down      | Move the outline selection down.                   |
 | Open in MarkdownPoint | Save and open the presentation in the desktop app. |
 
-The move commands work while the outline has focus. Tab and Obsidian’s tab-switching shortcuts work as usual.
+The move commands work while the outline has focus.
 
-The top of the settings shows a banner for the MarkdownPoint desktop app. Selecting it opens markdownpoint.com in your browser.
+After an update, MarkdownPoint shows its release notes once. Turn this off with **Show release notes after updating**, or read them any time with **View recent updates**. The banner at the top of the settings links to the MarkdownPoint desktop app.
 
-After an update, MarkdownPoint shows the release notes once. To stop this, turn off **Settings → MarkdownPoint → Show release notes after updating**. To read them at any time, select **View recent updates** in the same settings.
+Sidebar placement and open notes are stored on each device. Layout shortcuts, **Show images** and **Show release notes after updating** are plugin settings, and they sync when your vault syncs plugin settings.
 
-Sidebar placement and expanded notes are stored on each device. Layout shortcuts, **Show images** and **Show release notes after updating** are plugin settings. They sync when your vault syncs plugin settings. Obsidian manages sidebar visibility and width.
+<br/>
 
-## Languages
+## 8 Languages
 
-MarkdownPoint uses the language you choose in **Settings → General → Language**. It supports 21 languages, with a right-to-left layout for Arabic and Persian:
+MarkdownPoint follows **Settings → General → Language** in 21 languages, with a right-to-left layout for Arabic and Persian:
 
 English · العربية · Deutsch · Español · فارسی · Français · Bahasa Indonesia · Italiano · 日本語 · 한국어 · Nederlands · Polski · Português · Português do Brasil · Русский · ไทย · Türkçe · Українська · Tiếng Việt · 简体中文 · 繁體中文
 
-In any other language, the plugin appears in English. The language setting never changes the words in your presentation.
+Any other language shows the plugin in English. The words in your presentation never change with the language setting.
 
-## Questions and troubleshooting
+<br/>
 
-**Can I use Obsidian links and embeds?** They stay in the Markdown as you wrote them. The plugin doesn’t turn wikilinks, note embeds or other plugins’ output into slide content. For links that work outside Obsidian, use standard Markdown links. Add slide images in MarkdownPoint.
+## 9 Questions
 
-**The file looks like ordinary Markdown.** Open `slides.md` in **Live Preview** and check that its own `presentation.mdpoint` is in the same folder. An unrelated note named `slides.md` stays an ordinary note. An extra `.mdpoint` file or a conflicted copy in the folder makes the pair ambiguous. The plugin then leaves both files alone. If a notice says the presentation uses a newer MarkdownPoint format, update the plugin in **Settings → Community plugins**.
+**Can I use Obsidian links and embeds?** They stay in the Markdown as you wrote them, but wikilinks, note embeds and other plugins’ output don’t become slide content. Use standard Markdown links for links that work outside Obsidian, and add slide images in MarkdownPoint.
 
-**The outline still shows another presentation.** The outline keeps the last presentation you worked in, even while an ordinary note is active. Select the tab of the presentation you want.
+**My presentation looks like an ordinary note.** Open `slides.md` in **Live Preview** and check that its `presentation.mdpoint` sits in the same folder. An unrelated note named `slides.md` stays an ordinary note, and an extra `.mdpoint` file or a conflicted copy in the folder makes the plugin leave both files alone. If a notice says the presentation uses a newer MarkdownPoint format, update the plugin in **Settings → Community plugins**.
 
-**Some images are missing.** Keep the whole presentation folder together, media included. The editor shows at most five images per slide, and only files it can find. It doesn’t add images to `slides.md`.
+**The outline shows another presentation.** The outline keeps the last presentation you worked in, even while an ordinary note is open. Select the tab of the presentation you want.
 
-**A slide action asks me to try again.** The presentation changed before the action finished. Wait for the latest changes to appear, then repeat the action.
+**Some images are missing.** Keep the whole presentation folder together, media included. The editor shows up to five images per slide, and only files it can find.
 
-**Couldn’t save the presentation data.** Keep the vault open. Fix the file or storage problem, then select **Retry** in the notice. A recovery copy is kept on this device.
+**A slide action asks me to try again.** The presentation changed before the action finished. Wait for the latest changes to appear, then try again.
 
-For questions or a problem you can reproduce, [open an issue](https://github.com/markdownpoint/markdownpoint-obsidian/issues).
+**Couldn’t save the presentation data.** Keep the vault open, fix the file or storage problem, then select **Retry** in the notice. Until then, a recovery copy is kept on this device.
+
+Questions, or a problem you can reproduce? [Open an issue](https://github.com/markdownpoint/markdownpoint-obsidian/issues).
