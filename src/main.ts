@@ -167,6 +167,8 @@ export default class MarkdownPointPlugin extends Plugin {
             if (!this.running) return;
             this.run(() => this.showOutline(false));
         });
+        // Obsidian puts the outline of an updated or re-enabled plugin back after the plugin has placed one
+        this.registerEvent(this.app.workspace.on('layout-change', () => this.keepOneOutline()));
         this.reader = new PresentationReader(
             this.app,
             (presentation, editor) => {
@@ -549,6 +551,13 @@ export default class MarkdownPointPlugin extends Plugin {
         }
     }
 
+    private keepOneOutline(): void {
+        const leaves = this.outlineLeaves();
+        if (leaves.length < 2) return;
+        const target = this.localUi.outlineSide === 'left' ? this.app.workspace.leftSplit : this.app.workspace.rightSplit;
+        const kept = leaves.find(leaf => leaf.getRoot() === target) ?? leaves[0];
+        for (const leaf of leaves) if (leaf !== kept) leaf.detach();
+    }
     private async placeOutline(): Promise<WorkspaceLeaf | null> {
         const side = this.localUi.outlineSide;
         const target = side === 'left' ? this.app.workspace.leftSplit : this.app.workspace.rightSplit;
