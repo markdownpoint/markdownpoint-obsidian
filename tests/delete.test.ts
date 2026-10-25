@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { planSlideDeletion } from '../src/format/delete.ts';
 import { indexPresentation } from '../src/format/document.ts';
 
@@ -25,7 +25,7 @@ const block = (id: string) => `<!-- slide: ${id} -->\n<!-- text: title -->\nWord
 const apply = (source: string, changes: readonly { from: number; to: number; insert: string }[]) =>
     [...changes].reverse().reduce((text, change) => text.slice(0, change.from) + change.insert + text.slice(change.to), source);
 
-void test('every selected subset removes its Markdown and JSON records in their independent orders', () => {
+test('every selected subset removes its Markdown and JSON records in their independent orders', () => {
     const ids = ['a', 'b', 'c', 'd'];
     const markdown = ids.map(block).join('');
     const companion =
@@ -57,7 +57,7 @@ void test('every selected subset removes its Markdown and JSON records in their 
     }
 });
 
-void test('unknown metadata, surviving raw JSON values, sections, and compositions stay byte-identical', () => {
+test('unknown metadata, surviving raw JSON values, sections, and compositions stay byte-identical', () => {
     const header = '---\nmarkdownpoint: 1\ncustom: keep me\n---\n\n';
     const opening = '<!-- section: opening -->\n# Opening\n\n';
     const ending = '<!-- section: ending -->\n# Ending\n\n';
@@ -72,7 +72,7 @@ void test('unknown metadata, surviving raw JSON values, sections, and compositio
     assert.equal(plan.companion.slice(0, plan.companion.indexOf('"slides"')), companion.slice(0, companion.indexOf('"slides"')));
 });
 
-void test('deleting all slides retains empty sections and reusable compositions', () => {
+test('deleting all slides retains empty sections and reusable compositions', () => {
     const section = '<!-- section: empty -->\n# A section\n\n';
     const composition = '<!-- composition: shared -->\n<!-- text: caption -->\nReusable words\n';
     const markdown = section + block('a') + block('b') + composition;
@@ -86,7 +86,7 @@ void test('deleting all slides retains empty sections and reusable compositions'
     assert.equal(plan.document.sections[0]!.id, 'empty');
 });
 
-void test('literal marker examples, CRLF and an unterminated surviving EOF stay untouched', () => {
+test('literal marker examples, CRLF and an unterminated surviving EOF stay untouched', () => {
     const a = block('a').replaceAll('\n', '\r\n');
     const b = '<!-- slide: b -->\r\n<!-- text: body -->\r\n```html\r\n<!-- slide: literal -->\r\n```\r\nLast words';
     const markdown = a + b;
@@ -95,7 +95,7 @@ void test('literal marker examples, CRLF and an unterminated surviving EOF stay 
     assert.ok(plan.companion.includes('\r\n'));
 });
 
-void test('ambiguous or incomplete JSON and missing targets refuse the entire pair', () => {
+test('ambiguous or incomplete JSON and missing targets refuse the entire pair', () => {
     const markdown = block('a') + block('b');
     const document = indexPresentation(markdown, 0)!;
     for (const companion of [
@@ -120,7 +120,7 @@ void test('ambiguous or incomplete JSON and missing targets refuse the entire pa
     assert.deepEqual(JSON.parse(escaped.companion), { slides: { b: {} } });
 });
 
-void test('a large selection is planned without rewriting surviving records', () => {
+test('a large selection is planned without rewriting surviving records', () => {
     const ids = Array.from({ length: 1000 }, (_, index) => `slide-${index}`);
     const markdown = ids.map(block).join('');
     const companion = JSON.stringify({ slides: Object.fromEntries(ids.map(id => [id, { layout: 'content' }])) });

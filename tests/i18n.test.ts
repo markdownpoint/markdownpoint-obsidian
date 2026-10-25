@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
-import test from 'node:test';
+import { test } from 'vitest';
 import { getTranslations } from '../src/i18n/index.ts';
 import { en } from '../src/i18n/locales/en.ts';
 
@@ -39,26 +39,26 @@ function strings(value: unknown): string[] {
     return typeof value === 'object' && value !== null ? Object.values(value).flatMap(strings) : [];
 }
 
-void test('English uses the complete catalog with the existing command wording', () => {
+test('English uses the complete catalog with the existing command wording', () => {
     const text = getTranslations('en');
     assert.equal(text, en);
     assert.equal(text.commands.focusOutline, 'Focus outline');
     assert.equal(text.commands.focusEditor, 'Focus editor');
 });
 
-void test('an unavailable Obsidian language falls back to the complete English catalog', () => {
+test('an unavailable Obsidian language falls back to the complete English catalog', () => {
     for (const language of ['sv', 'en-GB', 'he', '']) {
         assert.equal(getTranslations(language), en);
     }
 });
 
-void test("each locale file serves its own Obsidian code with English's messages in the same order", () => {
+test("each locale file serves its own Obsidian code with English's messages in the same order", () => {
     const catalogs = languages.map(getTranslations);
     assert.equal(new Set(catalogs).size, languages.length);
     for (const [index, language] of languages.entries()) assert.deepEqual(shape(catalogs[index]), shape(en), language);
 });
 
-void test('every translation writes each message and keeps the values it is given', () => {
+test('every translation writes each message and keeps the values it is given', () => {
     for (const language of languages) {
         const text = getTranslations(language);
         for (const message of strings(text)) assert.notEqual(message.trim(), '', language);

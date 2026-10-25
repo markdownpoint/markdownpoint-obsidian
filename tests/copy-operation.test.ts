@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { SlideCopy } from '../src/presentation/copy.ts';
 import type { CopySource, SlideCopyHost } from '../src/presentation/copy.ts';
 import { decodeSlideClipboard } from '../src/format/clipboard.ts';
@@ -80,7 +80,7 @@ function setup() {
     return { state, host, copier: new SlideCopy(host), source };
 }
 
-void test('Copy captures a complete group in source order and leaves its source untouched', async () => {
+test('Copy captures a complete group in source order and leaves its source untouched', async () => {
     const { state, copier } = setup();
     const result = await copier.copy('view', ['two', 'one']);
     assert.equal(result.kind, 'copied');
@@ -94,7 +94,7 @@ void test('Copy captures a complete group in source order and leaves its source 
     assert.equal(state.reads, 2);
 });
 
-void test('newer words or companion edits during preparation leave the clipboard untouched', async () => {
+test('newer words or companion edits during preparation leave the clipboard untouched', async () => {
     for (const edit of ['markdown', 'companion'] as const) {
         const { state, host, copier } = setup(),
             entered = deferred(),
@@ -113,7 +113,7 @@ void test('newer words or companion edits during preparation leave the clipboard
     }
 });
 
-void test('a later copy intent supersedes slow earlier preparation', async () => {
+test('a later copy intent supersedes slow earlier preparation', async () => {
     const { state, host, copier } = setup(),
         entered = deferred(),
         resume = deferred();
@@ -134,7 +134,7 @@ void test('a later copy intent supersedes slow earlier preparation', async () =>
     assert.equal(decodeSlideClipboard(state.writes[0]!)!.captured.slides[0]!.id, 'two');
 });
 
-void test('an in-flight clipboard write finishes before the newer copy writes its result', async () => {
+test('an in-flight clipboard write finishes before the newer copy writes its result', async () => {
     const { state, host, copier } = setup(),
         writing = deferred(),
         resume = deferred(),
@@ -165,7 +165,7 @@ void test('an in-flight clipboard write finishes before the newer copy writes it
     );
 });
 
-void test('unload or loss of the captured context cancels pending Copy without a write', async () => {
+test('unload or loss of the captured context cancels pending Copy without a write', async () => {
     for (const stop of [false, true]) {
         const { state, host, copier } = setup(),
             entered = deferred(),
@@ -185,7 +185,7 @@ void test('unload or loss of the captured context cancels pending Copy without a
     }
 });
 
-void test('newer typing while Copy waits for an earlier write is checked when its turn arrives', async () => {
+test('newer typing while Copy waits for an earlier write is checked when its turn arrives', async () => {
     const { state, host, copier } = setup(),
         writing = deferred(),
         resume = deferred(),
@@ -211,7 +211,7 @@ void test('newer typing while Copy waits for an earlier write is checked when it
     assert.equal(state.writes.length, 1);
 });
 
-void test('failed or unavailable reads/writes do not poison a later Copy', async () => {
+test('failed or unavailable reads/writes do not poison a later Copy', async () => {
     const { state, host, copier } = setup(),
         write = host.write.bind(host);
     host.write = () => Promise.reject(new Error('Clipboard unavailable'));
@@ -223,7 +223,7 @@ void test('failed or unavailable reads/writes do not poison a later Copy', async
     assert.equal(state.writes.length, 1);
 });
 
-void test('clipboard origin identity persists only in vault-local storage and survives reload', () => {
+test('clipboard origin identity persists only in vault-local storage and survives reload', () => {
     let stored: unknown = null,
         writes = 0;
     const host = {
@@ -256,7 +256,7 @@ void test('clipboard origin identity persists only in vault-local storage and su
     assert.equal(writes, 2);
 });
 
-void test('local Cut authority survives reload but cannot authorize an altered packet', async () => {
+test('local Cut authority survives reload but cannot authorize an altered packet', async () => {
     const stored = new Map<string, unknown>();
     const host = {
         loadLocalStorage: (key: string) => stored.get(key),

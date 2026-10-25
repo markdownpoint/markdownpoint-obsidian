@@ -17,18 +17,16 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
-import './support/editor-hooks.ts';
+import { test } from 'vitest';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { editorInfoField, editorLivePreviewField } from './support/obsidian-fields.ts';
+import { editorInfoField, editorLivePreviewField } from './support/obsidian.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { isRecord } from '../src/format/recognition.ts';
 import { ImageSpace, setImageSpacing } from '../src/editor/image-spacing.ts';
 import { NotesUi } from '../src/settings/notes-ui.ts';
 import type { PresentationReader } from '../src/presentation/reader.ts';
-
-const { PresentationEditor } = await import('../src/editor/presentation-editor.ts');
+import { PresentationEditor } from '../src/editor/presentation-editor.ts';
 
 function spacers(state: EditorState): { at: number; height: number }[] {
     const found: { at: number; height: number }[] = [];
@@ -43,7 +41,7 @@ function spacers(state: EditorState): { at: number; height: number }[] {
     return found;
 }
 
-void test('unfinished code fences retain image clearance at mapped slide ends until parsing recovers', () => {
+test('unfinished code fences retain image clearance at mapped slide ends until parsing recovers', () => {
     const source = '<!-- slide: first -->\n<!-- text: body -->\nWords.\n\n<!-- slide: second -->\n<!-- text: body -->\nMore.\n';
     const images = [{ path: 'Talk/media/a.png', src: 'app://a', name: null }];
     let matchesIdentity = true;

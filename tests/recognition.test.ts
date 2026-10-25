@@ -17,14 +17,14 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { presentationCompanionPath, presentationIdentity, presentationPairNames } from '../src/format/recognition.ts';
 
 const document = '12345678-1234-7234-9234-123456789abc';
 const frontmatter = { markdownpoint: 1, document };
 const companion = { markdownpoint: 1, kind: 'presentation', document, slides: {} };
 
-void test('the fixed companion stays beside slides.md at the vault root or in a nested folder', () => {
+test('the fixed companion stays beside slides.md at the vault root or in a nested folder', () => {
     assert.equal(presentationCompanionPath('slides.md'), 'presentation.mdpoint');
     assert.equal(presentationCompanionPath('Talks/Årets möte/slides.md'), 'Talks/Årets möte/presentation.mdpoint');
     assert.equal(presentationCompanionPath('Talks/Årets möte/Slides.MD'), 'Talks/Årets möte/presentation.mdpoint');
@@ -33,7 +33,7 @@ void test('the fixed companion stays beside slides.md at the vault root or in a 
     }
 });
 
-void test('pair discovery keeps actual filename case and leaves unrelated notes alone', () => {
+test('pair discovery keeps actual filename case and leaves unrelated notes alone', () => {
     assert.deepEqual(
         presentationPairNames([
             'Slides.MD',
@@ -53,7 +53,7 @@ void test('pair discovery keeps actual filename case and leaves unrelated notes 
     assert.equal(presentationPairNames(['presentation.mdpoint']), null);
 });
 
-void test('a conflicted copy of either member makes the pair unavailable', () => {
+test('a conflicted copy of either member makes the pair unavailable', () => {
     for (const copy of [
         'slides copy.md',
         'slides 2.md',
@@ -69,11 +69,11 @@ void test('a conflicted copy of either member makes the pair unavailable', () =>
     }
 });
 
-void test('format-1 metadata with the same canonical document identity recognizes the pair', () => {
+test('format-1 metadata with the same canonical document identity recognizes the pair', () => {
     assert.equal(presentationIdentity(frontmatter, companion), document);
 });
 
-void test('a missing or unrelated companion and ordinary frontmatter do not recognize a presentation', () => {
+test('a missing or unrelated companion and ordinary frontmatter do not recognize a presentation', () => {
     for (const value of [null, undefined, false, [], 'presentation', {}, { document }]) {
         assert.equal(presentationIdentity(frontmatter, value), null);
         assert.equal(presentationIdentity(value, companion), null);
@@ -81,21 +81,21 @@ void test('a missing or unrelated companion and ordinary frontmatter do not reco
     assert.equal(presentationIdentity(frontmatter, { ...companion, kind: 'theme' }), null);
 });
 
-void test('each file must declare the supported numeric format version', () => {
+test('each file must declare the supported numeric format version', () => {
     for (const markdownpoint of [undefined, '1', 0, 2, 1.5]) {
         assert.equal(presentationIdentity({ ...frontmatter, markdownpoint }, companion), null);
         assert.equal(presentationIdentity(frontmatter, { ...companion, markdownpoint }), null);
     }
 });
 
-void test('a mismatched, missing, or noncanonical identity does not activate presentation behavior', () => {
+test('a mismatched, missing, or noncanonical identity does not activate presentation behavior', () => {
     assert.equal(presentationIdentity(frontmatter, { ...companion, document: '87654321-1234-7234-9234-123456789abc' }), null);
     for (const value of [undefined, '', 'not-a-uuid', document.toUpperCase(), ` ${document}`]) {
         assert.equal(presentationIdentity({ ...frontmatter, document: value }, { ...companion, document: value }), null);
     }
 });
 
-void test('recognition leaves unrelated frontmatter and presentation data untouched', () => {
+test('recognition leaves unrelated frontmatter and presentation data untouched', () => {
     const markdown = { ...frontmatter, tags: ['writing'], nested: { author: 'A writer' } };
     const data = { ...companion, extra: { future: true }, slides: { opening: { layout: 'title' } } };
     const before = structuredClone({ markdown, data });

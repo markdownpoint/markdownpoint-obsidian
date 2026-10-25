@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { SlideData } from '../src/presentation/slide-data.ts';
 import type { SlideDataHost } from '../src/presentation/slide-data.ts';
 import { CompanionDocument } from '../src/format/companion.ts';
@@ -58,7 +58,7 @@ function device(initial?: unknown) {
     return { state, host, stored: () => stored };
 }
 
-void test('delete, undo, redo and reopening use complete local records with native marker membership', async () => {
+test('delete, undo, redo and reopening use complete local records with native marker membership', async () => {
     const { state, host } = device();
     const data = new SlideData(host);
     assert.ok(await data.remember(path, document, state.disk, ['a']));
@@ -76,7 +76,7 @@ void test('delete, undo, redo and reopening use complete local records with nati
     assert.deepEqual(state.errors, []);
 });
 
-void test('native undo after history serialization restores both the words and their companion record', async () => {
+test('native undo after history serialization restores both the words and their companion record', async () => {
     const { state: disk, host } = device();
     const markdown = '<!-- slide: a -->\n<!-- text: title -->\nFirst thought\n<!-- slide: b -->\n<!-- text: body -->\nAnother thought\n';
     let editor = EditorState.create({ doc: markdown, extensions: [history()] });
@@ -101,7 +101,7 @@ void test('native undo after history serialization restores both the words and t
     assert.equal(CompanionDocument.read(disk.disk)!.records.get('a'), '{"layout":"title"}');
 });
 
-void test('ordinary text changes and slide reordering perform no companion writes', async () => {
+test('ordinary text changes and slide reordering perform no companion writes', async () => {
     const { state, host } = device();
     const data = new SlideData(host);
     await data.remember(path, document, state.disk, ['a']);
@@ -110,7 +110,7 @@ void test('ordinary text changes and slide reordering perform no companion write
     assert.equal(state.calls, 0);
 });
 
-void test('new slide records survive failed saving, recovery reopening and serialized insertion undo/redo', async () => {
+test('new slide records survive failed saving, recovery reopening and serialized insertion undo/redo', async () => {
     const { state: disk, host } = device();
     const markdown = '<!-- slide: a -->\n<!-- text: title -->\nFirst\n<!-- slide: b -->\n<!-- text: title -->\nSecond\n';
     const record = '{"layout":"title","unknown":9007199254740993,"objects":[{"id":"photo","type":"image","src":"assets/picture.png"}]}';
@@ -167,7 +167,7 @@ void test('new slide records survive failed saving, recovery reopening and seria
     }
 });
 
-void test('undo while a deletion is saving follows with a restore even before a file event', async () => {
+test('undo while a deletion is saving follows with a restore even before a file event', async () => {
     const { state, host } = device();
     const initial = state.disk;
     let release!: () => void, began!: () => void;
@@ -197,7 +197,7 @@ void test('undo while a deletion is saving follows with a restore even before a 
     assert.equal(state.calls, 2);
 });
 
-void test('atomic save captures newer external metadata, and a stale observation cannot replace its recovery copy', async () => {
+test('atomic save captures newer external metadata, and a stale observation cannot replace its recovery copy', async () => {
     const { state, host } = device();
     const initial = state.disk;
     const data = new SlideData(host);
@@ -232,7 +232,7 @@ void test('atomic save captures newer external metadata, and a stale observation
     assert.ok(state.disk.endsWith('"unrelated":true}'));
 });
 
-void test('failed disk writes retain recovery data and retry without a background loop', async () => {
+test('failed disk writes retain recovery data and retry without a background loop', async () => {
     const { state, host } = device();
     const initial = state.disk;
     const data = new SlideData(host);
@@ -253,7 +253,7 @@ void test('failed disk writes retain recovery data and retry without a backgroun
     assert.equal(CompanionDocument.read(state.disk)!.records.has('a'), false);
 });
 
-void test('undo after a failed save clears a now-satisfied change without another write', async () => {
+test('undo after a failed save clears a now-satisfied change without another write', async () => {
     const { state, host } = device();
     let saved = 0;
     host.saved = () => {
@@ -272,7 +272,7 @@ void test('undo after a failed save clears a now-satisfied change without anothe
     assert.equal(state.calls, 1);
 });
 
-void test('a failed recovery backup prevents deletion and retry durably preserves the newest record', async () => {
+test('a failed recovery backup prevents deletion and retry durably preserves the newest record', async () => {
     const { state, host } = device();
     const data = new SlideData(host);
     await data.remember(path, document, state.disk, ['a']);
@@ -294,7 +294,7 @@ void test('a failed recovery backup prevents deletion and retry durably preserve
     assert.equal(CompanionDocument.read(state.disk)!.records.get('a'), '{"external":true}');
 });
 
-void test('a replaced presentation identity and unloading prevent stale writes', async () => {
+test('a replaced presentation identity and unloading prevent stale writes', async () => {
     const { state, host } = device();
     const initial = state.disk;
     const data = new SlideData(host);
@@ -313,7 +313,7 @@ void test('a replaced presentation identity and unloading prevent stale writes',
     assert.equal(state.calls, 1);
 });
 
-void test('unloading during a pending backup cannot commit an earlier deletion after undo', async () => {
+test('unloading during a pending backup cannot commit an earlier deletion after undo', async () => {
     const { state, host } = device();
     const initial = state.disk;
     const data = new SlideData(host);
@@ -355,7 +355,7 @@ void test('unloading during a pending backup cannot commit an earlier deletion a
     assert.equal(writes, 0);
 });
 
-void test('unloading while Vault.process is queued cancels at the actual commit callback', async () => {
+test('unloading while Vault.process is queued cancels at the actual commit callback', async () => {
     const { state, host } = device();
     const initial = state.disk;
     const data = new SlideData(host);
@@ -395,7 +395,7 @@ void test('unloading while Vault.process is queued cancels at the actual commit 
     assert.deepEqual(state.errors, []);
 });
 
-void test('folder renames carry recovery data while copies with the same document identity stay separate', async () => {
+test('folder renames carry recovery data while copies with the same document identity stay separate', async () => {
     const { state, host } = device();
     const data = new SlideData(host);
     await data.remember(path, document, state.disk, ['a']);
@@ -417,7 +417,7 @@ void test('folder renames carry recovery data while copies with the same documen
     assert.equal(writtenPath, 'renamed/presentation.mdpoint');
 });
 
-void test('recovery survives a temporary file rename and plugin reload before the name is restored', async () => {
+test('recovery survives a temporary file rename and plugin reload before the name is restored', async () => {
     const { state, host } = device();
     const data = new SlideData(host);
     await data.remember(path, document, state.disk, ['a']);
@@ -428,7 +428,7 @@ void test('recovery survives a temporary file rename and plugin reload before th
     assert.equal(reopened.remembered(path, document).get('a'), '{"layout":"title"}');
 });
 
-void test('retry after a folder rename saves and reports completion at the new path', async () => {
+test('retry after a folder rename saves and reports completion at the new path', async () => {
     const { state, host } = device();
     const writes: string[] = [],
         saved: string[] = [];
@@ -455,7 +455,7 @@ void test('retry after a folder rename saves and reports completion at the new p
     assert.deepEqual(saved, ['renamed/slides.md']);
 });
 
-void test('retry refuses a temporary non-presentation name and remains available after renaming back', async () => {
+test('retry refuses a temporary non-presentation name and remains available after renaming back', async () => {
     const { state, host } = device();
     const data = new SlideData(host);
     await data.remember(path, document, state.disk, ['a']);
@@ -474,7 +474,7 @@ void test('retry refuses a temporary non-presentation name and remains available
     assert.equal(state.calls, 2);
 });
 
-void test('malformed stored data cannot introduce arbitrary records', async () => {
+test('malformed stored data cannot introduce arbitrary records', async () => {
     for (const value of [
         null,
         {},
@@ -489,7 +489,7 @@ void test('malformed stored data cannot introduce arbitrary records', async () =
     }
 });
 
-void test('copied slides and definitions share recovery, one disk write and native undo after reopening', async () => {
+test('copied slides and definitions share recovery, one disk write and native undo after reopening', async () => {
     const { state: disk, host } = device();
     const before = '<!-- slide: a -->\n<!-- slide: b -->\n';
     const inserted =
@@ -560,7 +560,7 @@ void test('copied slides and definitions share recovery, one disk write and nati
     assert.deepEqual(disk.errors, []);
 });
 
-void test('definition write failure preserves both recoveries and a retry restores the complete pair', async () => {
+test('definition write failure preserves both recoveries and a retry restores the complete pair', async () => {
     const { state: disk, host } = device();
     const prepared = source('"copy":{"objects":[{"type":"composition","source":"card"}]}').replace(
         '"unrelated":true',
@@ -583,7 +583,7 @@ void test('definition write failure preserves both recoveries and a retry restor
     assert.equal(CompanionDocument.read(disk.disk, 'compositions')!.records.get('card'), '{"name":"Kept"}');
 });
 
-void test('definition membership is independent of slide IDs and newer external metadata survives removal', async () => {
+test('definition membership is independent of slide IDs and newer external metadata survives removal', async () => {
     const { state: disk, host } = device();
     disk.disk = source().replace(
         '"unrelated":true',

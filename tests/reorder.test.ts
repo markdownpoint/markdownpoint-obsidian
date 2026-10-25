@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
 import type { PresentationDocument } from '../src/format/document.ts';
 import { reorderSlideSource } from '../src/format/reorder.ts';
@@ -42,7 +42,7 @@ function dropped(markdown: string, ids: readonly string[], target: SlideDropTarg
     return markdown.slice(0, change.from) + change.insert + markdown.slice(change.to);
 }
 
-void test('a source step keeps split selections split and leaves slides at the edge in place', () => {
+test('a source step keeps split selections split and leaves slides at the edge in place', () => {
     const markdown = ['alpha', 'bravo', 'charlie', 'delta', 'echo'].map(slide).join('');
     assert.deepEqual(order(moved(markdown, ['bravo', 'delta'], 'up')), ['bravo', 'alpha', 'delta', 'charlie', 'echo']);
     assert.deepEqual(order(moved(markdown, ['bravo', 'delta'], 'down')), ['alpha', 'charlie', 'bravo', 'echo', 'delta']);
@@ -50,7 +50,7 @@ void test('a source step keeps split selections split and leaves slides at the e
     assert.deepEqual(order(moved(markdown, ['charlie', 'bravo'], 'up')), ['bravo', 'charlie', 'alpha', 'delta', 'echo']);
 });
 
-void test('only the changed span is replaced; notes, unknown bindings, comments and frontmatter stay byte-identical', () => {
+test('only the changed span is replaced; notes, unknown bindings, comments and frontmatter stay byte-identical', () => {
     const prefix = '---\nmarkdownpoint: 1\nx-extra: keep this\n---\n\n';
     const rich =
         '<!-- slide: bravo -->\n<!-- text: chart.caption -->\nÅ 東京 👩🏽‍💻\n\n\n<!-- Custom comment: keep -->\n<!-- notes -->\nRehearsal.\n\n\n';
@@ -64,7 +64,7 @@ void test('only the changed span is replaced; notes, unknown bindings, comments 
     assert.equal(result, prefix + slide('alpha') + slide('charlie') + rich + slide('delta'));
 });
 
-void test('crossing a section start takes one step and never places a slide before the first section', () => {
+test('crossing a section start takes one step and never places a slide before the first section', () => {
     const markdown = section('opening') + slide('alpha') + slide('bravo') + section('empty') + section('ending') + slide('charlie');
     assert.equal(
         moved(markdown, ['bravo'], 'down'),
@@ -77,7 +77,7 @@ void test('crossing a section start takes one step and never places a slide befo
     assert.equal(stepSlideSource(markdown, indexPresentation(markdown, 0)!, ['alpha', 'bravo'], 'up'), null);
 });
 
-void test('several selected slides can cross different section starts in one replacement', () => {
+test('several selected slides can cross different section starts in one replacement', () => {
     const markdown = section('opening') + slide('alpha') + section('middle') + slide('bravo') + section('ending') + slide('charlie');
     assert.equal(
         moved(markdown, ['bravo', 'charlie'], 'up'),
@@ -85,7 +85,7 @@ void test('several selected slides can cross different section starts in one rep
     );
 });
 
-void test('CRLF and literal code markers survive a move, and reusable compositions stay outside it', () => {
+test('CRLF and literal code markers survive a move, and reusable compositions stay outside it', () => {
     const first = '<!-- slide: alpha -->\n<!-- text: body -->\n```md\n<!-- slide: example -->\n```\n\n';
     const tail = '<!-- composition: shared -->\n<!-- control: caption -->\nReusable words.\n';
     const markdown = (first + slide('bravo') + tail).replace(/\n/g, '\r\n');
@@ -93,7 +93,7 @@ void test('CRLF and literal code markers survive a move, and reusable compositio
     assert.equal(stepSlideSource(markdown, indexPresentation(markdown, 0)!, ['bravo'], 'down'), null);
 });
 
-void test('a final text without a line feed gets only the newline needed before its new neighbor', () => {
+test('a final text without a line feed gets only the newline needed before its new neighbor', () => {
     const last = '<!-- slide: bravo -->\n<!-- text: body -->\nFinal words.';
     assert.equal(moved(slide('alpha') + last, ['bravo'], 'up'), last + '\n' + slide('alpha'));
     assert.equal(
@@ -102,7 +102,7 @@ void test('a final text without a line feed gets only the newline needed before 
     );
 });
 
-void test('an unterminated whitespace-only EOF tail stays organizational when moved before another block', () => {
+test('an unterminated whitespace-only EOF tail stays organizational when moved before another block', () => {
     for (const [ending, closed] of [
         ['\n \t ', '\n \t \n'],
         ['\n\n \t ', '\n \t \n'],
@@ -116,14 +116,14 @@ void test('an unterminated whitespace-only EOF tail stays organizational when mo
     assert.equal(moved(first + last, ['bravo'], 'up'), '<!-- slide: bravo -->\r\n<!-- notes -->\r\nRemember.\r\n \t\t \r\n' + first);
 });
 
-void test('a final unfinished fence cannot swallow another slide when moved earlier', () => {
+test('a final unfinished fence cannot swallow another slide when moved earlier', () => {
     const last = '<!-- slide: bravo -->\n<!-- text: body -->\n```md\nUnfinished example.\n';
     const markdown = slide('alpha') + last;
     assert.equal(stepSlideSource(markdown, indexPresentation(markdown, 0)!, ['bravo'], 'up'), null);
     assert.ok(stepSlideSource(markdown + '```\n', indexPresentation(markdown + '```\n', 0)!, ['bravo'], 'up'));
 });
 
-void test('section and slide IDs can match, while missing targets and interleaved compositions cannot move', () => {
+test('section and slide IDs can match, while missing targets and interleaved compositions cannot move', () => {
     const markdown = section('same') + slide('same') + slide('bravo');
     assert.equal(moved(markdown, ['same'], 'down'), section('same') + slide('bravo') + slide('same'));
     const document = indexPresentation(markdown, 0)!;
@@ -134,7 +134,7 @@ void test('section and slide IDs can match, while missing targets and interleave
     assert.equal(stepSlideSource(interleaved, indexPresentation(interleaved, 0)!, ['bravo'], 'up'), null);
 });
 
-void test('a drop gathers split selections in source order before or after the target slide', () => {
+test('a drop gathers split selections in source order before or after the target slide', () => {
     const markdown = ['alpha', 'bravo', 'charlie', 'delta', 'echo'].map(slide).join('');
     assert.equal(
         dropped(markdown, ['delta', 'bravo'], { kind: 'slide', id: 'alpha', edge: 'before' }),
@@ -150,7 +150,7 @@ void test('a drop gathers split selections in source order before or after the t
     );
 });
 
-void test('dropping on a section places the whole group at its start, retaining empty sections and compositions', () => {
+test('dropping on a section places the whole group at its start, retaining empty sections and compositions', () => {
     const tail = '<!-- composition: shared -->\n<!-- control: caption -->\nReusable.\n';
     const markdown = section('opening') + slide('alpha') + section('empty') + section('ending') + slide('bravo') + slide('charlie') + tail;
     assert.equal(
@@ -163,7 +163,7 @@ void test('dropping on a section places the whole group at its start, retaining 
     );
 });
 
-void test('no-op and missing drop targets leave the source untouched', () => {
+test('no-op and missing drop targets leave the source untouched', () => {
     const markdown = section('opening') + slide('alpha') + slide('bravo');
     const document = indexPresentation(markdown, 0)!;
     for (const target of [
@@ -175,7 +175,7 @@ void test('no-op and missing drop targets leave the source untouched', () => {
         assert.equal(reorderSlideSource(markdown, document, ['alpha'], { kind: 'drop', target }), null);
 });
 
-void test('a drop preserves notes and unknown text bytes, and validates an unfinished final fence', () => {
+test('a drop preserves notes and unknown text bytes, and validates an unfinished final fence', () => {
     const rich = '<!-- slide: bravo -->\n<!-- text: custom.caption -->\nAuthored words.\n\n\n<!-- notes -->\nA reminder.\n\n';
     const markdown = slide('alpha') + rich + slide('charlie');
     assert.equal(dropped(markdown, ['bravo'], { kind: 'slide', id: 'charlie', edge: 'after' }), slide('alpha') + slide('charlie') + rich);

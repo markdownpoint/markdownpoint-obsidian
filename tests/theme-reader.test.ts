@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.ts';
 import { readEmbeddedTheme } from '../src/presentation/theme-reader.ts';
 
@@ -44,7 +44,7 @@ function vault() {
     return { files, reads, host };
 }
 
-void test('embedded Theme paths are exact vault-relative references, including spaces and Unicode', () => {
+test('embedded Theme paths are exact vault-relative references, including spaces and Unicode', () => {
     assert.equal(paths.root, `Presentations/Å calm place/themes/basic`);
     assert.equal(paths.master, paths.root + '/master.json');
     assert.deepEqual([...embeddedThemePaths('slides.md', companion, ['title', 'body', 'title'])!.layouts.keys()], ['title', 'body']);
@@ -59,7 +59,7 @@ void test('embedded Theme paths are exact vault-relative references, including s
     }
 });
 
-void test('a Theme snapshot retains full source bytes and reads only required files', async () => {
+test('a Theme snapshot retains full source bytes and reads only required files', async () => {
     const { files, reads, host } = vault();
     files.get(paths.master)!.source = '\uFEFF' + master;
     files.set(paths.root + '/unused.json', { path: paths.root + '/unused.json', source: 'unreadable' });
@@ -74,7 +74,7 @@ void test('a Theme snapshot retains full source bytes and reads only required fi
     assert.deepEqual(reads, [paths.master, paths.layouts.get('title'), paths.master, paths.layouts.get('title')]);
 });
 
-void test('malformed or ambiguous JSON and wrong document envelopes refuse the snapshot', async () => {
+test('malformed or ambiguous JSON and wrong document envelopes refuse the snapshot', async () => {
     for (const source of [
         'null',
         '{}',
@@ -91,7 +91,7 @@ void test('malformed or ambiguous JSON and wrong document envelopes refuse the s
     assert.equal(await readEmbeddedTheme(host, markdownPath, companion, ['title']), null);
 });
 
-void test('missing files and read failures return no partial Theme', async () => {
+test('missing files and read failures return no partial Theme', async () => {
     const missing = vault();
     missing.files.delete(paths.layouts.get('title')!);
     assert.equal(await readEmbeddedTheme(missing.host, markdownPath, companion, ['title']), null);
@@ -103,7 +103,7 @@ void test('missing files and read failures return no partial Theme', async () =>
     assert.equal(invalid.reads.length, 0);
 });
 
-void test('a Theme edited while its documents are read is refused without polling or retry', async () => {
+test('a Theme edited while its documents are read is refused without polling or retry', async () => {
     const { files, reads, host } = vault();
     const read = host.read;
     host.read = async file => {
@@ -116,7 +116,7 @@ void test('a Theme edited while its documents are read is refused without pollin
     assert.equal(reads.length, 4);
 });
 
-void test('replacement or rename of a file cannot validate an earlier file object', async () => {
+test('replacement or rename of a file cannot validate an earlier file object', async () => {
     for (const replacement of [true, false]) {
         const { files, host } = vault(),
             read = host.read;
@@ -134,7 +134,7 @@ void test('replacement or rename of a file cannot validate an earlier file objec
     }
 });
 
-void test('Theme keys and UUID identities are independent; legacy folders are not guessed', () => {
+test('Theme keys and UUID identities are independent; legacy folders are not guessed', () => {
     assert.equal(
         embeddedThemePaths(markdownPath, { theme: 'company-profile' }, [])!.root,
         'Presentations/Å calm place/themes/company-profile'

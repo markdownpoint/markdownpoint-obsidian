@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
 import { copyTextSchemas } from '../src/format/text-schemas.ts';
 import { prepareCopiedPart } from '../src/format/prepare-copy.ts';
@@ -37,7 +37,7 @@ const fields = (ids: string[], kind = 'slide', id = 'one') =>
         kind === 'slide' ? 'slides' : 'compositions'
     ][0]!;
 
-void test('field schemas come from actual own and inherited object types, never their writing labels', () => {
+test('field schemas come from actual own and inherited object types, never their writing labels', () => {
     const record = {
         layout: 'title',
         objects: [
@@ -69,7 +69,7 @@ void test('field schemas come from actual own and inherited object types, never 
     assert.deepEqual(record.objects[0], 'title');
 });
 
-void test('removed objects and same-level collisions follow the effective inherited types', () => {
+test('removed objects and same-level collisions follow the effective inherited types', () => {
     const part = fields(['inherited-grid', 'title', 'caption']);
     const collision = {
         layout: 'title',
@@ -100,7 +100,7 @@ void test('removed objects and same-level collisions follow the effective inheri
     }
 });
 
-void test('definitions use their own types while instance controls and unbound text remain rich text', () => {
+test('definitions use their own types while instance controls and unbound text remain rich text', () => {
     const part = fields(['grid', 'inherited-grid', 'callout.caption', 'unbound'], 'composition', 'card');
     const record = {
         objects: [
@@ -119,7 +119,7 @@ void test('definitions use their own types while instance controls and unbound t
     );
 });
 
-void test('missing or mismatched Theme data and malformed object structures refuse schema resolution', () => {
+test('missing or mismatched Theme data and malformed object structures refuse schema resolution', () => {
     const part = fields(['title']),
         record = { layout: 'title' };
     assert.equal(copyTextSchemas(part, 'slide', record, null), null);
@@ -144,7 +144,7 @@ void test('missing or mismatched Theme data and malformed object structures refu
     assert.equal(copyTextSchemas(part, 'composition', { objects: ['title'] }, null), null);
 });
 
-void test('resolved schemas drive complete-copy preparation for visually identical table-shaped fields', () => {
+test('resolved schemas drive complete-copy preparation for visually identical table-shaped fields', () => {
     const table = '| Heading |\n| --- |\n| [Go](slide:two) |\n';
     const markdown = '<!-- slide: one -->\n<!-- text: body -->\n' + table + '\n<!-- text: data -->\n' + table;
     const record = {

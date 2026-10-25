@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
 import { compactFieldAt, writingFields } from '../src/editor/writing-fields.ts';
 import { en } from '../src/i18n/locales/en.ts';
@@ -25,7 +25,7 @@ import { slideNotes } from '../src/editor/notes.ts';
 
 const labels = en.fields;
 
-void test('writing fields keep empty roles, original marker bytes, and native content ranges', () => {
+test('writing fields keep empty roles, original marker bytes, and native content ranges', () => {
     const markdown =
         '<!-- slide: first -->\r\n<!-- text: eyebrow -->\r\n\r\n<!-- text: title -->\r\nA clear idea.\r\n\r\n<!-- text: body -->\r\n';
     const fields = writingFields(markdown, indexPresentation(markdown, 0)!, labels);
@@ -46,7 +46,7 @@ void test('writing fields keep empty roles, original marker bytes, and native co
     assert.equal(fields[2]!.contentFrom, markdown.length);
 });
 
-void test('custom writing areas receive labels while presenter notes retain their own disclosure', () => {
+test('custom writing areas receive labels while presenter notes retain their own disclosure', () => {
     const markdown =
         '<!-- slide: first -->\n<!-- text: data-table -->\nRaw table content.\n<!-- notes -->\nA private reminder.\n<!-- text: body -->\nBody words.\n';
     const fields = writingFields(markdown, indexPresentation(markdown, 0)!, labels);
@@ -59,14 +59,14 @@ void test('custom writing areas receive labels while presenter notes retain thei
     );
 });
 
-void test('compact empty fields preserve a zero-length payload before the following marker', () => {
+test('compact empty fields preserve a zero-length payload before the following marker', () => {
     const markdown = '<!-- slide: first -->\n<!-- text: title -->\n<!-- text: body -->\n<!-- slide: second -->\n';
     const fields = writingFields(markdown, indexPresentation(markdown, 0)!, labels);
     assert.equal(fields.length, 2);
     assert.ok(fields.every(field => !field.populated && field.contentFrom === field.to));
 });
 
-void test('a shared marker position belongs to the preceding compact writing field', () => {
+test('a shared marker position belongs to the preceding compact writing field', () => {
     const markdown = '<!-- slide: first -->\n<!-- text: title -->\n<!-- text: body -->\n<!-- slide: second -->\n<!-- text: eyebrow -->\n';
     const document = indexPresentation(markdown, 0)!;
     const fields = writingFields(markdown, document, labels);
@@ -75,7 +75,7 @@ void test('a shared marker position belongs to the preceding compact writing fie
     assert.equal(compactFieldAt(fields, markdown.length, markdown.length), undefined);
 });
 
-void test('numbered fields, allocated copies and composition controls retain independent identities', () => {
+test('numbered fields, allocated copies and composition controls retain independent identities', () => {
     const ids = ['title-2', 'title-id-b7d9e1', 'body-2', 'body-3', 'card-id-f9h2k4.caption', 'id-m4n6p8', 'notes'];
     const markdown = '<!-- slide: first -->\n' + ids.map(id => `<!-- text: ${id} -->\n\n`).join('') + '<!-- notes -->\n\n';
     const document = indexPresentation(markdown, 0)!;

@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { loadLocalUi, saveLocalUi, LOCAL_UI_KEY } from '../src/settings/local-ui.ts';
 import type { LocalStorageHost } from '../src/settings/local-ui.ts';
 
@@ -31,7 +31,7 @@ function device(initial?: unknown): LocalStorageHost {
     };
 }
 
-void test("choosing the left sidebar survives reloading the same device's local state", () => {
+test("choosing the left sidebar survives reloading the same device's local state", () => {
     const host = device();
     assert.equal(loadLocalUi(host).outlineSide, 'right');
     saveLocalUi(host, { outlineSide: 'left' });
@@ -40,13 +40,13 @@ void test("choosing the left sidebar survives reloading the same device's local 
     assert.equal(loadLocalUi(host).outlineSide, 'right');
 });
 
-void test('an unset or invalid local value uses the right sidebar', () => {
+test('an unset or invalid local value uses the right sidebar', () => {
     for (const value of [undefined, null, false, 1, 'left', {}, { outlineSide: 'bottom' }]) {
         assert.equal(loadLocalUi(device(value)).outlineSide, 'right');
     }
 });
 
-void test('sidebar placement belongs to one device and vault storage host', () => {
+test('sidebar placement belongs to one device and vault storage host', () => {
     const first = device();
     const second = device();
     saveLocalUi(first, { outlineSide: 'left' });

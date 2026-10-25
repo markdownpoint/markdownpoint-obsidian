@@ -17,11 +17,11 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { SharedSettings } from '../src/settings/shared.ts';
 import { assignLayoutDigit, layoutDigit, readLayoutAssignments } from '../src/settings/layout-shortcuts.ts';
 
-void test('default digits follow MDP layout keys across themes; an empty map means no shortcuts', () => {
+test('default digits follow MDP layout keys across themes; an empty map means no shortcuts', () => {
     const defaults = readLayoutAssignments(undefined);
     assert.equal(defaults['1'], 'section');
     assert.equal(defaults['4'], 'content-with-header');
@@ -31,7 +31,7 @@ void test('default digits follow MDP layout keys across themes; an empty map mea
         assert.deepEqual(readLayoutAssignments(value), defaults);
 });
 
-void test('assigning or removing a digit keeps layout and digit assignments exclusive', () => {
+test('assigning or removing a digit keeps layout and digit assignments exclusive', () => {
     const initial = { '1': 'section', '2': 'body', '3': 'title' };
     const reassigned = assignLayoutDigit(initial, 'title', '1');
     assert.deepEqual(reassigned, { '1': 'title', '2': 'body' });
@@ -40,7 +40,7 @@ void test('assigning or removing a digit keeps layout and digit assignments excl
     assert.deepEqual(initial, { '1': 'section', '2': 'body', '3': 'title' });
 });
 
-void test('shared settings preserve unrelated data, serialize assignments, and survive reload', async () => {
+test('shared settings preserve unrelated data, serialize assignments, and survive reload', async () => {
     let disk: unknown = { untouched: { mode: 'keep' }, layoutShortcuts: {} };
     const writes: unknown[] = [];
     const host = {
@@ -65,7 +65,7 @@ void test('shared settings preserve unrelated data, serialize assignments, and s
     assert.deepEqual(reopened.layoutShortcuts, { '9': 'title' });
 });
 
-void test('a failed settings save does not publish the assignment or block a later change', async () => {
+test('a failed settings save does not publish the assignment or block a later change', async () => {
     let fail = true;
     const settings = new SharedSettings({
         loadData: () => Promise.resolve({ layoutShortcuts: {} }),
@@ -79,7 +79,7 @@ void test('a failed settings save does not publish the assignment or block a lat
     assert.deepEqual(settings.layoutShortcuts, { '2': 'title' });
 });
 
-void test('an external settings reload waits for pending writes without deadlocking subsequent assignments', async () => {
+test('an external settings reload waits for pending writes without deadlocking subsequent assignments', async () => {
     let finish!: () => void,
         signal!: () => void,
         disk: unknown = { layoutShortcuts: {} };

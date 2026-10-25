@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { slideStructure } from '../src/format/structure.ts';
 import type { EmbeddedTheme } from '../src/format/embedded-theme.ts';
 
@@ -32,14 +32,14 @@ const theme: EmbeddedTheme = {
     master: { path: 'master.json', source: JSON.stringify(master), value: master },
     layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(layout), value: layout }]])
 };
-void test('structural preview resolves actual frame dimensions and partial inherited overrides', () => {
+test('structural preview resolves actual frame dimensions and partial inherited overrides', () => {
     const preview = slideStructure({ layout: 'title', overrides: { title: { frame: { x: 300 } }, footer: null } }, theme)!;
     assert.equal(preview.width, 1600);
     assert.equal(preview.height, 900);
     assert.deepEqual(preview.regions, [{ x: 300, y: 100, width: 800, height: 180, rotation: 0, kind: 'text', columns: 1, gutter: 48 }]);
 });
 
-void test('text areas retain their whole frame and column divisions', () => {
+test('text areas retain their whole frame and column divisions', () => {
     const preview = slideStructure(
         { layout: 'title', overrides: { footer: null, title: { 'column-count': 2, 'column-gutter': 40 } } },
         theme
@@ -49,7 +49,7 @@ void test('text areas retain their whole frame and column divisions', () => {
     assert.equal(preview.regions[0]!.height, 180);
 });
 
-void test('unknown geometry, hidden objects and hierarchy are omitted; framed media stays neutral', () => {
+test('unknown geometry, hidden objects and hierarchy are omitted; framed media stays neutral', () => {
     const preview = slideStructure(
         {
             layout: 'title',
@@ -71,12 +71,12 @@ void test('unknown geometry, hidden objects and hierarchy are omitted; framed me
     assert.equal(slideStructure({ layout: 'title' }, null), null);
 });
 
-void test('an own object cannot replace an inherited frame by colliding with its identity', () => {
+test('an own object cannot replace an inherited frame by colliding with its identity', () => {
     const preview = slideStructure({ layout: 'title', objects: [{ ...field, frame: { x: 0, y: 0, width: 10, height: 10 } }] }, theme)!;
     assert.equal(preview.regions[0]!.width, 800);
 });
 
-void test('writing previews omit fixed theme labels and decorative backdrops while retaining slide-owned fields', () => {
+test('writing previews omit fixed theme labels and decorative backdrops while retaining slide-owned fields', () => {
     const preview = slideStructure(
         {
             layout: 'title',
@@ -100,7 +100,7 @@ void test('writing previews omit fixed theme labels and decorative backdrops whi
     );
 });
 
-void test('null rotation and scale overrides reset to flat defaults without removing the region', () => {
+test('null rotation and scale overrides reset to flat defaults without removing the region', () => {
     for (const reset of [{ rotation: null }, { scale: null }, { rotation: null, scale: null }]) {
         const preview = slideStructure({ layout: 'title', overrides: { title: reset, footer: null } }, theme)!;
         assert.equal(preview.regions.length, 1);
@@ -108,7 +108,7 @@ void test('null rotation and scale overrides reset to flat defaults without remo
     }
 });
 
-void test('partial scale overrides merge inherited components before testing flat geometry', () => {
+test('partial scale overrides merge inherited components before testing flat geometry', () => {
     const scaledLayout = { ...layout, objects: [{ ...field, scale: { x: 2, y: 1 } }] };
     const scaled = {
         ...theme,

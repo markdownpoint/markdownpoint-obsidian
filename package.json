@@ -18,7 +18,8 @@
     "lint:fix": "eslint . --max-warnings=0 --fix",
     "lint:styles": "stylelint styles.css --max-warnings=0",
     "lint:docs": "markdownlint-cli2 README.md CONTRIBUTING.md SECURITY.md \"docs/*.md\"",
-    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -41,13 +42,14 @@
     "eslint-plugin-obsidianmd": "0.4.2",
     "globals": "17.12.0",
     "knip": "6.37.0",
-    "markdownlint-cli2": "0.23.3",
+    "markdownlint-cli2": "0.24.0",
     "obsidian": "1.13.0",
     "prettier": "3.9.9",
     "stylelint": "17.15.0",
     "stylelint-no-unsupported-browser-features": "8.1.2",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.70.1"
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.5"
   },
   "dependencies": {
     "entities": "8.1.0",

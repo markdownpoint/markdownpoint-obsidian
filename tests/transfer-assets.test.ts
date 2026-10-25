@@ -17,21 +17,13 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
-import { registerHooks } from 'node:module';
+import { test } from 'vitest';
 import type { App, TFile as ObsidianFile } from 'obsidian';
-import { TFile, TFolder } from './support/obsidian-files.ts';
+import { TFile, TFolder } from './support/obsidian.ts';
 import { readEmbeddedTheme } from '../src/presentation/theme-reader.ts';
 import { decodeSlideClipboard, encodeSlideClipboard } from '../src/format/clipboard.ts';
+import { ThemeArtworkMismatch, transferSlideAssets } from '../src/presentation/transfer-assets.ts';
 
-registerHooks({
-    resolve(specifier, context, next) {
-        return specifier === 'obsidian'
-            ? { url: new URL('./support/obsidian-files.ts', import.meta.url).href, shortCircuit: true }
-            : next(specifier, context);
-    }
-});
-const { transferSlideAssets, ThemeArtworkMismatch } = await import('../src/presentation/transfer-assets.ts');
 const sourceId = '11111111-1111-4111-8111-111111111111',
     targetId = '22222222-2222-4222-8222-222222222222';
 const themeId = '33333333-3333-4333-8333-333333333333',
@@ -158,7 +150,7 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
     };
 }
 
-void test('transfer copies media independently and repeated paste reuses its unchanged files', async () => {
+test('transfer copies media independently and repeated paste reuses its unchanged files', async () => {
     const f = await fixture(['media/photo.png', 'generated/original.png']);
     const first = await f.transfer(),
         second = await f.transfer();
@@ -172,7 +164,7 @@ void test('transfer copies media independently and repeated paste reuses its unc
     assert.deepEqual(copied.bytes, new Uint8Array([4, 5, 6]));
 });
 
-void test('an edited destination image is preserved and a new copy is reused on later pastes', async () => {
+test('an edited destination image is preserved and a new copy is reused on later pastes', async () => {
     const f = await fixture();
     await f.transfer();
     const edited = f.nodes.get(f.copies[0]!);
@@ -186,7 +178,7 @@ void test('an edited destination image is preserved and a new copy is reused on 
     assert.deepEqual(edited.bytes, new Uint8Array([9, 9, 9]));
 });
 
-void test('failed copying removes only its own unused imports', async () => {
+test('failed copying removes only its own unused imports', async () => {
     const f = await fixture(['media/photo.png', 'generated/original.png']);
     f.state.beforeCopy = () => {
         if (f.copies.length === 1) throw new Error('Disk full');
@@ -197,7 +189,7 @@ void test('failed copying removes only its own unused imports', async () => {
     assert.ok(f.vault.getFileByPath('source/media/photo.png'));
 });
 
-void test('successful imports can be rolled back before insertion while newer companion edits keep them', async () => {
+test('successful imports can be rolled back before insertion while newer companion edits keep them', async () => {
     const first = await fixture(),
         receipt = await first.transfer();
     await receipt.cleanup();
@@ -211,7 +203,7 @@ void test('successful imports can be rolled back before insertion while newer co
     assert.ok(second.vault.getFileByPath(second.copies[0]!));
 });
 
-void test('theme artwork with different bytes refuses the transfer without changing either presentation', async () => {
+test('theme artwork with different bytes refuses the transfer without changing either presentation', async () => {
     const f = await fixture([], true),
         logo = f.vault.getFileByPath('target/themes/basic/media/logo.svg')!;
     logo.bytes = new Uint8Array([9, 9, 9]);
@@ -221,14 +213,14 @@ void test('theme artwork with different bytes refuses the transfer without chang
     assert.deepEqual(logo.bytes, new Uint8Array([9, 9, 9]));
 });
 
-void test('a later source or theme edit invalidates the returned insertion guard', async () => {
+test('a later source or theme edit invalidates the returned insertion guard', async () => {
     const f = await fixture(),
         receipt = await f.transfer();
     f.vault.getFileByPath('target/themes/basic/title.json')!.stat.mtime++;
     assert.equal(receipt.current(), false);
 });
 
-void test('an aborted transfer cannot return an insertable text-only packet', async () => {
+test('an aborted transfer cannot return an insertable text-only packet', async () => {
     const f = await fixture([]),
         controller = new AbortController();
     const receipt = await f.transfer(() => true, controller.signal);
@@ -241,7 +233,7 @@ void test('an aborted transfer cannot return an insertable text-only packet', as
     assert.equal(f.copies.length, 0);
 });
 
-void test('cleanup stops if ownership changes during the companion read or a deletion', async () => {
+test('cleanup stops if ownership changes during the companion read or a deletion', async () => {
     const first = await fixture();
     let current = true;
     const receipt = await first.transfer(() => current),
@@ -265,7 +257,7 @@ void test('cleanup stops if ownership changes during the companion read or a del
     assert.ok(second.vault.getFileByPath(second.copies[0]!));
 });
 
-void test('newly copied media remains in the insertion guard through deletion, replacement or editing', async () => {
+test('newly copied media remains in the insertion guard through deletion, replacement or editing', async () => {
     for (const change of ['delete', 'replace', 'edit'] as const) {
         const f = await fixture(),
             receipt = await f.transfer(),

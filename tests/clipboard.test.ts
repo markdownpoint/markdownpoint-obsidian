@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { decodeSlideClipboard, encodeSlideClipboard, SLIDE_CLIPBOARD_MIME } from '../src/format/clipboard.ts';
 import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.ts';
 import { prepareSlideCopies } from '../src/format/copy.ts';
@@ -74,7 +74,7 @@ const mutate = (change: (value: ReturnType<typeof transport> & { schemas?: unkno
     return JSON.stringify(value);
 };
 
-void test('whole-slide clipboard round trips keep complete raw fields, records, Theme documents and origin', () => {
+test('whole-slide clipboard round trips keep complete raw fields, records, Theme documents and origin', () => {
     const result = decodeSlideClipboard(encoded())!;
     assert.ok(result);
     assert.equal(result.token, uuid);
@@ -88,7 +88,7 @@ void test('whole-slide clipboard round trips keep complete raw fields, records, 
     assert.notEqual(SLIDE_CLIPBOARD_MIME, 'web application/x-markdownpoint-slides');
 });
 
-void test('text and incompatible, malformed or ambiguous transport data are never treated as slides', () => {
+test('text and incompatible, malformed or ambiguous transport data are never treated as slides', () => {
     for (const source of [
         '# Plain Markdown',
         '{',
@@ -120,7 +120,7 @@ void test('text and incompatible, malformed or ambiguous transport data are neve
         assert.equal(decodeSlideClipboard(source), null);
 });
 
-void test('missing layouts, definitions and duplicate identities refuse incomplete clipboard groups', () => {
+test('missing layouts, definitions and duplicate identities refuse incomplete clipboard groups', () => {
     for (const source of [
         mutate(value => {
             value.theme.layouts = [];
@@ -159,7 +159,7 @@ void test('missing layouts, definitions and duplicate identities refuse incomple
         assert.equal(decodeSlideClipboard(source), null);
 });
 
-void test('source identities, kinds and field boundaries must match the supplied records', () => {
+test('source identities, kinds and field boundaries must match the supplied records', () => {
     for (const source of [
         mutate(value => {
             value.slides[0]!.id = 'mismatch';
@@ -183,7 +183,7 @@ void test('source identities, kinds and field boundaries must match the supplied
         assert.equal(decodeSlideClipboard(source), null);
 });
 
-void test('supplied schema claims cannot change the grammar derived from the copied Theme', () => {
+test('supplied schema claims cannot change the grammar derived from the copied Theme', () => {
     const source = mutate(value => {
         value.schemas = { one: { body: 'table' } };
     });
@@ -202,7 +202,7 @@ void test('supplied schema claims cannot change the grammar derived from the cop
     assert.ok(copies.slides[0]!.markdown.includes('[Go](slide:new-2) and `[No](slide:two)`'));
 });
 
-void test('encoding carries only declared transport fields while raw presentation metadata stays complete', () => {
+test('encoding carries only declared transport fields while raw presentation metadata stays complete', () => {
     const extra = { ...captured, slides: captured.slides.map(part => ({ ...part, privateContext: 'not clipboard data' })) };
     const context = { ...origin, privateContext: 'not clipboard data' };
     const source = encodeSlideClipboard(uuid, context, extra, theme);

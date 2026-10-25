@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { history, historyField, undo, redo, undoDepth } from '@codemirror/commands';
 import { EditorState, EditorSelection } from '@codemirror/state';
 import type { Transaction } from '@codemirror/state';
@@ -54,7 +54,7 @@ function editor(selection = EditorSelection.single(markdown.indexOf('Beta') + 2)
     });
 }
 
-void test('each slide step is one native undo event, separate from typing before and after it', () => {
+test('each slide step is one native undo event, separate from typing before and after it', () => {
     let state = editor();
     const target = {
         get state() {
@@ -94,7 +94,7 @@ void test('each slide step is one native undo event, separate from typing before
     assert.equal(state.doc.toString(), finished);
 });
 
-void test('repeated slide steps stay separate in native undo and redo', () => {
+test('repeated slide steps stay separate in native undo and redo', () => {
     let state = editor();
     const target = {
         get state() {
@@ -118,7 +118,7 @@ void test('repeated slide steps stay separate in native undo and redo', () => {
     assert.equal(state.selection.main.head, state.doc.toString().indexOf('Beta') + 2);
 });
 
-void test('multiple native text selections keep their words, directions and main range after moving', () => {
+test('multiple native text selections keep their words, directions and main range after moving', () => {
     const beta = markdown.indexOf('Beta'),
         gamma = markdown.indexOf('Gamma');
     const state = editor(EditorSelection.create([EditorSelection.range(beta + 4, beta), EditorSelection.range(gamma, gamma + 5)], 1));
@@ -131,14 +131,14 @@ void test('multiple native text selections keep their words, directions and main
     assert.equal(next.doc.sliceString(next.selection.main.from, next.selection.main.to), 'Gamma');
 });
 
-void test('a former EOF caret stays with its text when its slide moves earlier', () => {
+test('a former EOF caret stays with its text when its slide moves earlier', () => {
     const state = editor(EditorSelection.single(markdown.length));
     const next = state.update(slideStepTransaction(state, documentOf(state), ['charlie'], 'up')!).state;
     assert.equal(next.selection.main.head, next.doc.toString().indexOf('Gamma') + 5);
     assert.equal(slideAtPosition(documentOf(next), next.selection.main.head)?.id, 'charlie');
 });
 
-void test('ordinary native text moves remain protected while the validated slide operation is allowed', () => {
+test('ordinary native text moves remain protected while the validated slide operation is allowed', () => {
     const state = editor();
     const from = markdown.indexOf('<!-- slide: bravo -->');
     const ordinary = state.update({ changes: { from, to: markdown.length, insert: 'Moved words' }, userEvent: 'move.drop' });
@@ -149,7 +149,7 @@ void test('ordinary native text moves remain protected while the validated slide
     assert.equal(slideStepTransaction(state, documentOf(state), ['alpha'], 'up'), null);
 });
 
-void test('a split-group drop is one native undo event and retains the independent writing caret', () => {
+test('a split-group drop is one native undo event and retains the independent writing caret', () => {
     let state = editor();
     const caret = state.selection.main.head;
     const target = {
@@ -177,7 +177,7 @@ void test('a split-group drop is one native undo event and retains the independe
     assert.equal(state.selection.main.head, state.doc.toString().indexOf('Beta') + 2);
 });
 
-void test('repeated native history cycles and serialization retain the writing slide and character', () => {
+test('repeated native history cycles and serialization retain the writing slide and character', () => {
     let state = editor();
     state = slideEditTransactions(state, slideStepTransaction(state, documentOf(state), ['bravo'], 'up')!).at(-1)!.state;
     const target = {
@@ -201,7 +201,7 @@ void test('repeated native history cycles and serialization retain the writing s
     }
 });
 
-void test('history recognizes section crossings even when the slide order stays the same', () => {
+test('history recognizes section crossings even when the slide order stays the same', () => {
     const source =
         '<!-- section: opening -->\n# Opening\n<!-- slide: alpha -->\n<!-- text: body -->\nAlpha\n<!-- section: ending -->\n# Ending\n<!-- slide: bravo -->\n<!-- text: body -->\nBeta\n';
     let state = EditorState.create({ doc: source, selection: { anchor: source.indexOf('Beta') + 2 }, extensions: [history()] });
@@ -225,7 +225,7 @@ void test('history recognizes section crossings even when the slide order stays 
     }
 });
 
-void test('history caret remapping leaves ordinary text undo and slide insertion/removal to their native selections', () => {
+test('history caret remapping leaves ordinary text undo and slide insertion/removal to their native selections', () => {
     for (const removeSlide of [false, true]) {
         let state = editor();
         const part = documentOf(state).slides[1]!;

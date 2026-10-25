@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { basicTheme, basicThemeFiles } from '../src/themes/basic.ts';
 import { prepareNewPresentation } from '../src/format/new-presentation.ts';
 import { indexPresentation } from '../src/format/document.ts';
@@ -27,7 +27,7 @@ import { themeDocument, themeAssetPaths } from '../src/format/embedded-theme.ts'
 
 const document = '12345678-1234-4234-8234-123456789abc';
 
-void test('the bundled licensed theme has a valid master and every ordered layout', () => {
+test('the bundled licensed theme has a valid master and every ordered layout', () => {
     assert.equal(basicThemeFiles.size, 14);
     assert.equal(themeDocument(basicThemeFiles.get('master.json')!, 'master')?.id, basicTheme.id);
     assert.equal(basicTheme.layouts.size, 13);
@@ -38,7 +38,7 @@ void test('the bundled licensed theme has a valid master and every ordered layou
     }
 });
 
-void test('a new presentation has matching identity, the chosen theme, and empty title fields', () => {
+test('a new presentation has matching identity, the chosen theme, and empty title fields', () => {
     const made = prepareNewPresentation(basicTheme, document, 'opening')!;
     const companion = readJsonObject(made.companion)!;
     assert.equal(presentationIdentity({ markdownpoint: 1, document }, companion), document);
@@ -51,7 +51,7 @@ void test('a new presentation has matching identity, the chosen theme, and empty
     assert.doesNotMatch(made.markdown, /Presentation title|Presentation subtitle|Author and date/);
 });
 
-void test('each bundled layout can start a presentation without altering the template', () => {
+test('each bundled layout can start a presentation without altering the template', () => {
     const before = JSON.stringify([...basicThemeFiles]);
     for (const key of basicTheme.layouts.keys()) {
         const made = prepareNewPresentation(basicTheme, document, 'opening', key)!;
@@ -62,7 +62,7 @@ void test('each bundled layout can start a presentation without altering the tem
     assert.equal(JSON.stringify([...basicThemeFiles]), before);
 });
 
-void test('creation refuses invalid identities, keys and missing layouts before returning file contents', () => {
+test('creation refuses invalid identities, keys and missing layouts before returning file contents', () => {
     assert.equal(prepareNewPresentation(basicTheme, 'invalid', 'opening'), null);
     assert.equal(prepareNewPresentation(basicTheme, document, '../outside'), null);
     assert.equal(prepareNewPresentation(basicTheme, document, 'opening', 'missing'), null);
@@ -70,7 +70,7 @@ void test('creation refuses invalid identities, keys and missing layouts before 
     assert.equal(prepareNewPresentation({ ...basicTheme, layouts: new Map() }, document, 'opening'), null);
 });
 
-void test('theme creation inventories media variants, overrides and embedded fonts without sample packages', () => {
+test('theme creation inventories media variants, overrides and embedded fonts without sample packages', () => {
     assert.deepEqual(themeAssetPaths(basicTheme), []);
     const make = (asset: unknown) => ({
         ...basicTheme,

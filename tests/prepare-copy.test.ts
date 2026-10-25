@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { prepareCopiedPart } from '../src/format/prepare-copy.ts';
 
 const slides = new Map([
@@ -31,7 +31,7 @@ const schemas = new Map<string, 'rich-text' | 'table'>([
     ['data', 'table']
 ]);
 
-void test('complete slide preparation changes only identity and actual Markdown/JSON references', () => {
+test('complete slide preparation changes only identity and actual Markdown/JSON references', () => {
     const markdown =
         '<!--  slide: one  --> \r\n<!-- author comment -->\r\n<!-- text: body -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n\r\n<!-- text: card.caption -->\r\n[Back](slide:one).\r\n<!-- notes -->\r\n[Next](slide:two).\r\n\r\n \t';
     const record = String.raw`{ "layout":"title", "future":9007199254740993, "escaped":"\u0061", "objects":["title",{"id":"card","type":"composition","source":"card","link":"slide:two"}] }`;
@@ -52,7 +52,7 @@ void test('complete slide preparation changes only identity and actual Markdown/
     );
 });
 
-void test('composition defaults and text use copied slide destinations without changing controls or bindings', () => {
+test('composition defaults and text use copied slide destinations without changing controls or bindings', () => {
     const markdown = '<!--composition:card-->\n<!-- control: caption -->\n[Default](slide:two)\n<!-- text: body -->\n[Words](slide:one)\n';
     const record =
         '{"controls":{"caption":{"type":"text"},"link":{"type":"color","default":"accent"}},"objects":[{"id":"label","type":"text","bind":{"text":"caption"},"link":"slide:two"}]}';
@@ -69,7 +69,7 @@ void test('composition defaults and text use copied slide destinations without c
     assert.equal(result.record, record.replace('"link":"slide:two"', '"link":"slide:copy-two"'));
 });
 
-void test('the caller supplies real field schemas while literal tables and code retain their source', () => {
+test('the caller supplies real field schemas while literal tables and code retain their source', () => {
     const table = '| Heading |\n| --- |\n| [Go](slide:two) |\n';
     const markdown =
         '<!-- slide: one -->\n<!-- text: body -->\n' + table + '\n<!-- text: data -->\n' + table + '\n<!-- notes -->\n' + table;
@@ -88,7 +88,7 @@ void test('the caller supplies real field schemas while literal tables and code 
     );
 });
 
-void test('preparation refuses mismatched or incomplete captured parts without producing partial copies', () => {
+test('preparation refuses mismatched or incomplete captured parts without producing partial copies', () => {
     const one = '<!-- slide: one -->\n';
     for (const markdown of [
         '',

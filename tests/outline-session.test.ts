@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { OutlineSession } from '../src/outline/session.ts';
 import type { OutlinePresentation } from '../src/outline/model.ts';
 
@@ -30,7 +30,7 @@ function deck(ids: readonly string[], path = 'presentation/slides.md'): OutlineP
     };
 }
 
-void test('modifier selection uses MDP rules while the writing slide stays in place', () => {
+test('modifier selection uses MDP rules while the writing slide stays in place', () => {
     const session = new OutlineSession();
     session.follow(deck(['one', 'two', 'three', 'four', 'five']));
     assert.equal(session.state.activeSlideId, 'one');
@@ -49,7 +49,7 @@ void test('modifier selection uses MDP rules while the writing slide stays in pl
     assert.equal(session.state.activeSlideId, 'four');
 });
 
-void test('caret movement and content updates preserve the selected group and selection cursor', () => {
+test('caret movement and content updates preserve the selected group and selection cursor', () => {
     const session = new OutlineSession();
     session.follow(deck(['one', 'two', 'three']));
     session.select({ kind: 'toggle', id: 'three' });
@@ -63,7 +63,7 @@ void test('caret movement and content updates preserve the selected group and se
     assert.equal(session.state.presentation?.slides[1]?.title, 'Edited words');
 });
 
-void test('external removal and reorder reconcile stable IDs without selecting section rows', () => {
+test('external removal and reorder reconcile stable IDs without selecting section rows', () => {
     const session = new OutlineSession();
     const presentation = deck(['one', 'two', 'three', 'four']);
     session.follow({ ...presentation, sections: [{ id: 'section', title: 'Section', line: 0 }] });
@@ -79,7 +79,7 @@ void test('external removal and reorder reconcile stable IDs without selecting s
     assert.equal(session.state.selection.cursor, 'new');
 });
 
-void test('another presentation starts a fresh selection even when slide IDs are shared', () => {
+test('another presentation starts a fresh selection even when slide IDs are shared', () => {
     const session = new OutlineSession();
     session.follow(deck(['one', 'two']));
     session.select({ kind: 'all' });
@@ -93,7 +93,7 @@ void test('another presentation starts a fresh selection even when slide IDs are
     assert.equal(session.state.activeSlideId, null);
 });
 
-void test('missing targets and an empty presentation cannot create stale selections', () => {
+test('missing targets and an empty presentation cannot create stale selections', () => {
     const session = new OutlineSession();
     session.follow(deck(['one']));
     const state = session.state;
@@ -107,7 +107,7 @@ void test('missing targets and an empty presentation cannot create stale selecti
     assert.equal(session.state.selection.cursor, null);
 });
 
-void test('a menu retains a selected group and selects another row without moving the writing location', () => {
+test('a menu retains a selected group and selects another row without moving the writing location', () => {
     const session = new OutlineSession();
     session.follow(deck(['one', 'two', 'three']));
     session.select({ kind: 'toggle', id: 'three' });
@@ -119,7 +119,7 @@ void test('a menu retains a selected group and selects another row without movin
     assert.equal(session.state.activeSlideId, 'one');
 });
 
-void test('replacing a presentation at the same path invalidates a captured action selection', () => {
+test('replacing a presentation at the same path invalidates a captured action selection', () => {
     const session = new OutlineSession();
     const original = deck(['one', 'two']);
     session.follow(original);
@@ -130,7 +130,7 @@ void test('replacing a presentation at the same path invalidates a captured acti
     assert.equal(session.state.selection.cursor, 'one');
 });
 
-void test('deletion selects the next surviving slide while preserving an independent writing slide', () => {
+test('deletion selects the next surviving slide while preserving an independent writing slide', () => {
     const session = new OutlineSession();
     session.follow(deck(['one', 'two', 'three', 'four']));
     session.selectForMenu('two');

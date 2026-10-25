@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { history, historyField, undo, redo, undoDepth } from '@codemirror/commands';
 import { indexPresentation } from '../src/format/document.ts';
@@ -29,7 +29,7 @@ const block = (id: string) => `<!-- slide: ${id} -->\n<!-- text: title -->\nThou
 const markdown = ['one', 'two', 'three'].map(block).join('');
 const companion = '{"slides":{"one":{},"two":{},"three":{}}}';
 
-void test('deletion preserves text selections in surviving slides', () => {
+test('deletion preserves text selections in surviving slides', () => {
     const anchor = markdown.indexOf('Thought three'),
         head = anchor + 'Thought three'.length;
     const state = EditorState.create({ doc: markdown, selection: EditorSelection.range(anchor, head) });
@@ -39,7 +39,7 @@ void test('deletion preserves text selections in surviving slides', () => {
     assert.equal(next.doc.sliceString(next.selection.main.from, next.selection.main.to), 'Thought three');
 });
 
-void test('a deleted writing position lands in the next slide and one native undo restores words and caret', () => {
+test('a deleted writing position lands in the next slide and one native undo restores words and caret', () => {
     const cursor = markdown.indexOf('Thought two') + 4;
     let state = EditorState.create({ doc: markdown, selection: { anchor: cursor }, extensions: [history()] });
     const document = indexPresentation(markdown, 0)!;
@@ -56,7 +56,7 @@ void test('a deleted writing position lands in the next slide and one native und
     assert.equal(state.doc.toString(), block('one') + block('three'));
 });
 
-void test('all-slide deletion leaves a valid caret and undo restores the complete draft', () => {
+test('all-slide deletion leaves a valid caret and undo restores the complete draft', () => {
     let state = EditorState.create({ doc: markdown, selection: { anchor: markdown.length }, extensions: [history()] });
     const document = indexPresentation(markdown, 0)!;
     const plan = planSlideDeletion(markdown, document, companion, ['one', 'two', 'three'])!;
@@ -74,7 +74,7 @@ void test('all-slide deletion leaves a valid caret and undo restores the complet
     assert.equal(state.doc.toString(), markdown);
 });
 
-void test('a compact surviving field retains a focusable marker before its empty payload', () => {
+test('a compact surviving field retains a focusable marker before its empty payload', () => {
     const source = block('one') + '<!-- slide: two -->\n<!-- text: title -->\n<!-- text: body -->\n';
     const state = EditorState.create({ doc: source, selection: { anchor: source.indexOf('Thought one') } });
     const document = indexPresentation(source, 0)!;
@@ -83,7 +83,7 @@ void test('a compact surviving field retains a focusable marker before its empty
     assert.equal(next.selection.main.head, next.doc.toString().indexOf('<!-- text: title -->'));
 });
 
-void test("Live Preview includes a compact caret line in deletion's single native history event", () => {
+test("Live Preview includes a compact caret line in deletion's single native history event", () => {
     const source = block('one') + '<!-- slide: two -->\n<!-- text: title -->\n<!-- text: body -->\nWords.\n';
     const document = indexPresentation(source, 0)!;
     const plan = planSlideDeletion(source, document, companion, ['one'])!;
@@ -117,7 +117,7 @@ void test("Live Preview includes a compact caret line in deletion's single nativ
     assert.equal(state.doc.toString(), source);
 });
 
-void test('deletion adds no caret line to an independent surviving writing selection', () => {
+test('deletion adds no caret line to an independent surviving writing selection', () => {
     const source = block('one') + '<!-- slide: two -->\n<!-- text: title -->\n<!-- text: body -->\nWords.\n';
     const document = indexPresentation(source, 0)!;
     const plan = planSlideDeletion(source, document, companion, ['one'])!;

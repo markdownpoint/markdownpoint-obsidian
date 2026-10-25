@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { assignedSlideImages } from '../src/format/slide-images.ts';
 import { readSlideImages } from '../src/presentation/image-reader.ts';
 import type { EmbeddedTheme } from '../src/format/embedded-theme.ts';
@@ -49,7 +49,7 @@ const theme: EmbeddedTheme = {
 const paths = (value: unknown, embedded: EmbeddedTheme | null = theme) =>
     assignedSlideImages(path, value, 'one', embedded).map(image => image.path);
 
-void test('assigned images prioritize background, named layout slots, then other pictures', () => {
+test('assigned images prioritize background, named layout slots, then other pictures', () => {
     const companion = {
         background: { image: 'media/back.svg' },
         slides: {
@@ -69,7 +69,7 @@ void test('assigned images prioritize background, named layout slots, then other
     ]);
 });
 
-void test('cleared backgrounds, removed objects and empty placeholders do not show samples or prior generations', () => {
+test('cleared backgrounds, removed objects and empty placeholders do not show samples or prior generations', () => {
     const companion = {
         background: { image: 'media/back.svg' },
         slides: { one: { layout: 'title', background: { image: 'none' }, overrides: { logo: null, hero: { asset: '' } } } }
@@ -78,7 +78,7 @@ void test('cleared backgrounds, removed objects and empty placeholders do not sh
     assert.deepEqual(paths({ slides: { one: { background: { image: 'media/own.png' }, objects: [] } } }, null), [root + 'media/own.png']);
 });
 
-void test('repeated assets are shown once and video assignments are not treated as images', () => {
+test('repeated assets are shown once and video assignments are not treated as images', () => {
     const companion = {
         background: { image: 'media/same.png' },
         slides: {
@@ -95,7 +95,7 @@ void test('repeated assets are shown once and video assignments are not treated 
     assert.deepEqual(paths(companion), [root + 'media/same.png', root + 'media/new.jpg']);
 });
 
-void test('image references cannot escape their declared vault folder or load a remote URL', () => {
+test('image references cannot escape their declared vault folder or load a remote URL', () => {
     for (const asset of [
         '../outside.png',
         '/outside.png',
@@ -112,7 +112,7 @@ void test('image references cannot escape their declared vault folder or load a 
     ]);
 });
 
-void test('placed compositions use assigned media controls without listing unused defaults or looping', () => {
+test('placed compositions use assigned media controls without listing unused defaults or looping', () => {
     const companion = {
         slides: {
             one: { objects: [{ id: 'instance', type: 'composition', source: 'card', controls: { picture: 'media/selected.svg' } }] }
@@ -133,7 +133,7 @@ void test('placed compositions use assigned media controls without listing unuse
     assert.deepEqual(paths(companion, null), [root + 'media/selected.svg']);
 });
 
-void test('only five existing vault resources are loaded, with the Vault API owning URLs', () => {
+test('only five existing vault resources are loaded, with the Vault API owning URLs', () => {
     const references = Array.from({ length: 8 }, (_, index) => ({ path: `media/${index}.png`, name: null, category: 'image' as const }));
     const vault = {
         getFileByPath: (path: string) => (path === 'media/0.png' ? null : { path }),
@@ -146,7 +146,7 @@ void test('only five existing vault resources are loaded, with the Vault API own
     assert.ok(images.every(image => image.src.startsWith('app://owned/')));
 });
 
-void test('image visibility defaults on and shares one serialized settings owner with layout shortcuts', async () => {
+test('image visibility defaults on and shares one serialized settings owner with layout shortcuts', async () => {
     let data: unknown = { unrelated: true, layoutShortcuts: { '1': 'title' } };
     const host = {
         loadData: () => Promise.resolve(data),
@@ -165,7 +165,7 @@ void test('image visibility defaults on and shares one serialized settings owner
     assert.equal(reloaded.showSlideImages, false);
 });
 
-void test('image clearance adds only the missing height and never enters source or undo history', () => {
+test('image clearance adds only the missing height and never enters source or undo history', () => {
     assert.equal(imageSpaceNeeded(200, 280), 0);
     assert.equal(imageSpaceNeeded(200.25, 100), 101);
     const state = EditorState.create({ doc: 'Words remain words.', extensions: [imageSpacing, history()] });

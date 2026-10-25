@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { equalByteStreams } from '../src/presentation/byte-streams.ts';
 
 const stream = (chunks: readonly number[][]) =>
@@ -28,14 +28,14 @@ const stream = (chunks: readonly number[][]) =>
         }
     });
 
-void test('byte comparison ignores chunk boundaries and empty chunks', async () => {
+test('byte comparison ignores chunk boundaries and empty chunks', async () => {
     for (const chunks of [[[1, 2, 3, 4]], [[1], [], [2, 3], [], [4]], [[], [1, 2], [3, 4], []]]) {
         assert.equal(await equalByteStreams(stream([[1, 2, 3, 4]]), stream(chunks), () => true), true);
     }
     assert.equal(await equalByteStreams(stream([]), stream([[], []]), () => true), true);
 });
 
-void test('different lengths and contents are not treated as the same media', async () => {
+test('different lengths and contents are not treated as the same media', async () => {
     for (const chunks of [[[1, 2, 3]], [[1, 2, 3, 4, 5]], [[1, 2, 0, 4]], []]) {
         assert.equal(
             await equalByteStreams(
@@ -51,7 +51,7 @@ void test('different lengths and contents are not treated as the same media', as
     }
 });
 
-void test('cancellation closes both streams and releases their readers', async () => {
+test('cancellation closes both streams and releases their readers', async () => {
     let canceled = 0,
         checks = 0;
     const endless = () =>
@@ -74,7 +74,7 @@ void test('cancellation closes both streams and releases their readers', async (
     assert.equal(second.locked, false);
 });
 
-void test('a read failure also closes the other stream', async () => {
+test('a read failure also closes the other stream', async () => {
     let canceled = false;
     const first = new ReadableStream<Uint8Array>({
         start(controller) {

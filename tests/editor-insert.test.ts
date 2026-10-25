@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { EditorState } from '@codemirror/state';
 import { history, historyField, undo, redo, undoDepth } from '@codemirror/commands';
 import { indexPresentation } from '../src/format/document.ts';
@@ -40,7 +40,7 @@ const insert = (state: EditorState, slides = [prepared('new')], after: string | 
     return slideEditTransactions(state, transaction).at(-1)!.state;
 };
 
-void test('slide group insertion is one native edit, separate from typing and repeatable after serialized history', () => {
+test('slide group insertion is one native edit, separate from typing and repeatable after serialized history', () => {
     const cursor = markdown.indexOf('Thought two') + 4;
     let state = EditorState.create({ doc: markdown, selection: { anchor: cursor }, extensions: [history()] });
     state = state.update({ changes: { from: cursor, insert: 'X' }, selection: { anchor: cursor + 1 }, userEvent: 'input.type' }).state;
@@ -84,7 +84,7 @@ void test('slide group insertion is one native edit, separate from typing and re
     assert.equal(state.doc.toString(), markdown);
 });
 
-void test("compact inserted fields get their editable line within insertion's single undo", () => {
+test("compact inserted fields get their editable line within insertion's single undo", () => {
     let state = EditorState.create({ doc: markdown, selection: { anchor: 0 }, extensions: [history()] });
     const source = '<!-- slide: compact -->\n<!-- text: eyebrow -->\n<!-- text: title -->\nTitle words\n';
     state = insert(state, [prepared('compact', source)]);
@@ -105,14 +105,14 @@ void test("compact inserted fields get their editable line within insertion's si
     assert.equal(state.doc.lineAt(state.selection.main.head).text, '');
 });
 
-void test('Source insertion leaves compact source untouched and selects its first marker', () => {
+test('Source insertion leaves compact source untouched and selects its first marker', () => {
     const source = '<!-- slide: compact -->\n<!-- text: title -->\n<!-- text: body -->\nWords\n';
     const state = insert(EditorState.create({ doc: markdown }), [prepared('compact', source)], 'one', false);
     assert.ok(state.doc.toString().includes(source));
     assert.equal(state.selection.main.head, state.doc.toString().indexOf('<!-- text: title -->', block('one').length));
 });
 
-void test('CRLF fragments use native normalized offsets without splitting compact markers or shifting populated carets', () => {
+test('CRLF fragments use native normalized offsets without splitting compact markers or shifting populated carets', () => {
     for (const compact of [false, true]) {
         const source = `<!-- slide: windows -->\r\n<!-- text: title -->\r\n${compact ? '' : 'A Windows title\r\n'}<!-- text: body -->\r\nWords\r\n`;
         for (const livePreview of [false, true]) {
@@ -134,7 +134,7 @@ void test('CRLF fragments use native normalized offsets without splitting compac
     }
 });
 
-void test('insertion into an empty draft and a textless slide has a valid native caret', () => {
+test('insertion into an empty draft and a textless slide has a valid native caret', () => {
     for (const source of [block('first'), '<!-- slide: first -->\n']) {
         const state = insert(EditorState.create({ doc: '' }), [prepared('first', source)], null);
         assert.deepEqual(idsOf(state), ['first']);
@@ -142,7 +142,7 @@ void test('insertion into an empty draft and a textless slide has a valid native
     }
 });
 
-void test('explicit slide insertion passes Live Preview boundary protection without weakening ordinary edits', () => {
+test('explicit slide insertion passes Live Preview boundary protection without weakening ordinary edits', () => {
     const state = EditorState.create({
         doc: markdown,
         extensions: [
@@ -156,7 +156,7 @@ void test('explicit slide insertion passes Live Preview boundary protection with
     assert.equal(state.update({ changes: { from: 0, to: 10 }, userEvent: 'delete' }).docChanged, false);
 });
 
-void test('middle insertion with a tail definition is one native undo and keeps CRLF caret positions', () => {
+test('middle insertion with a tail definition is one native undo and keeps CRLF caret positions', () => {
     const source = '<!-- slide: copy -->\r\n<!-- text: title -->\r\n<!-- text: body -->\r\nWords\r\n';
     const definition = { id: 'card', markdown: '<!-- composition: card -->\r\n<!-- control: caption -->\r\nDefault.\r\n', record: '{}' };
     for (const livePreview of [false, true]) {

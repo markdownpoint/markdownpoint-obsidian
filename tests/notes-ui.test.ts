@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { NotesUi, NOTES_UI_KEY } from '../src/settings/notes-ui.ts';
 import type { LocalStorageHost } from '../src/settings/local-ui.ts';
 
@@ -31,7 +31,7 @@ function device(initial?: unknown): LocalStorageHost {
     };
 }
 
-void test('notes disclosure follows stable document/slide identities and survives a local reload', () => {
+test('notes disclosure follows stable document/slide identities and survives a local reload', () => {
     const host = device();
     const notes = new NotesUi(host);
     const closed = notes.opened('document-a');
@@ -44,14 +44,14 @@ void test('notes disclosure follows stable document/slide identities and survive
     assert.deepEqual(host.loadLocalStorage(NOTES_UI_KEY), {});
 });
 
-void test("notes disclosure is not shared with another device's local storage", () => {
+test("notes disclosure is not shared with another device's local storage", () => {
     const first = new NotesUi(device());
     const second = new NotesUi(device());
     first.setOpen('document-a', 'first', true);
     assert.equal(second.opened('document-a').size, 0);
 });
 
-void test('malformed persisted notes values are ignored', () => {
+test('malformed persisted notes values are ignored', () => {
     for (const value of [undefined, null, 1, [], { a: 'first' }, { a: [1, null] }])
         assert.equal(new NotesUi(device(value)).opened('a').size, 0);
 });

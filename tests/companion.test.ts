@@ -17,10 +17,10 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { CompanionDocument, reconcileSlideRecords, remapRecordReferences } from '../src/format/companion.ts';
 
-void test('record changes combine removals, replacements and additions without damaging separators', () => {
+test('record changes combine removals, replacements and additions without damaging separators', () => {
     const source = '{"untouched":1,"slides":{"a":{"v":1},"b":{"v":2},"c":{"v":3}},"tail":2}';
     for (let mask = 0; mask < 8; mask++) {
         const changes = new Map<string, string | null>(
@@ -42,7 +42,7 @@ void test('record changes combine removals, replacements and additions without d
     assert.deepEqual(JSON.parse(CompanionDocument.read('{"slides":{}}')!.change(new Map([['a', '{}']]))!), { slides: { a: {} } });
 });
 
-void test('a remembered record returns when its native Markdown marker returns', () => {
+test('a remembered record returns when its native Markdown marker returns', () => {
     const raw = String.raw`{ "layout": "title", "unknown": 900719925474099312345, "escaped": "\u00e9" }`;
     const source = `{"slides":{"a":${raw},"b":{}},"keep":true}`;
     const saved = new Map([['a', raw]]);
@@ -54,7 +54,7 @@ void test('a remembered record returns when its native Markdown marker returns',
     assert.equal(reconcileSlideRecords(restored.companion, restored.remembered, new Set(['a', 'b']))!.companion, restored.companion);
 });
 
-void test('newer external record data is retained and unmanaged orphan records are not removed', () => {
+test('newer external record data is retained and unmanaged orphan records are not removed', () => {
     const saved = new Map([['a', '{"old":true}']]);
     const source = '{"slides":{"a":{"external":true},"orphan":{"preserve":true}},"externalSetting":3}';
     const result = reconcileSlideRecords(source, saved, new Set())!;
@@ -64,7 +64,7 @@ void test('newer external record data is retained and unmanaged orphan records a
     assert.equal(CompanionDocument.read(restored.companion)!.records.get('a'), '{"external":true}');
 });
 
-void test('malformed replacement records refuse without changing source', () => {
+test('malformed replacement records refuse without changing source', () => {
     const source = '{"slides":{"a":{}}}';
     for (const raw of ['null', '[]', '{', '{} , "injected": {}', '{"a":1,}', '{/*comment*/}']) {
         assert.equal(CompanionDocument.read(source)!.change(new Map([['a', raw]])), null, raw);
@@ -72,7 +72,7 @@ void test('malformed replacement records refuse without changing source', () => 
     assert.equal(CompanionDocument.read(source)!.change(new Map()), source);
 });
 
-void test('copy references change in own objects and overrides without rewriting other JSON', () => {
+test('copy references change in own objects and overrides without rewriting other JSON', () => {
     const source = String.raw`{ "layout":"title", "future":900719925474099312345, "escaped":"\u00e9",
     "objects":["title",{"id":"picture","type":"image","asset":"assets/one.png","link":"slide:one","extra":{"link":"slide:one"}},
       {"id":"card","type":"composition","source":"card","link":"slide:two","controls":{"label":"slide:one"}}],
@@ -96,7 +96,7 @@ void test('copy references change in own objects and overrides without rewriting
     assert.equal(remapRecordReferences(source, new Map(), new Map()), source);
 });
 
-void test('composition references change only for composition instances and only when mapped', () => {
+test('composition references change only for composition instances and only when mapped', () => {
     const source =
         '{"objects":[{"type":"composition","source":"card"},{"type":"composition","source":"other"},{"type":"video","source":"card"}],"overrides":{"card":{"source":"card"}}}';
     assert.equal(
@@ -106,7 +106,7 @@ void test('composition references change only for composition instances and only
     assert.equal(remapRecordReferences(source, new Map(), new Map([['card', 'card']])), source);
 });
 
-void test('reference edits respect escaped JSON spelling and last-value semantics', () => {
+test('reference edits respect escaped JSON spelling and last-value semantics', () => {
     const source = String.raw`{"objects":[{"link":"slide:one"}],"obje\u0063ts":[{"type":"image","link":"slide:one","li\u006ek":"slide\u003atwo"}]}`;
     assert.equal(
         remapRecordReferences(
@@ -136,7 +136,7 @@ void test('reference edits respect escaped JSON spelling and last-value semantic
     }
 });
 
-void test('restoring a definition creates only its absent map and preserves unrelated raw metadata', () => {
+test('restoring a definition creates only its absent map and preserves unrelated raw metadata', () => {
     const source = '{\n  "slides": {},\n  "unknown": 9007199254740993\n}\n';
     const raw = '{"objects":[],"future":9007199254740995}';
     const saved = new Map([['card', raw]]);

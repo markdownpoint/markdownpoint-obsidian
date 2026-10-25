@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { remapMarkdownSlideLinks } from '../src/format/slide-links.ts';
 
 const ids = new Map([
@@ -26,7 +26,7 @@ const ids = new Map([
 ]);
 const rewrite = (source: string) => remapMarkdownSlideLinks(source, ids);
 
-void test('copied slide links follow their new identities without rewriting labels, titles or unrelated links', () => {
+test('copied slide links follow their new identities without rewriting labels, titles or unrelated links', () => {
     const source =
         '  See [the *detail*](slide:two "slide:one title") and [back](slide:one).\n[Other](slide:elsewhere), [web](https://example.com/slide:two).  \n\n';
     const expected =
@@ -36,7 +36,7 @@ void test('copied slide links follow their new identities without rewriting labe
     assert.equal(remapMarkdownSlideLinks(source, new Map([['two', 'two']])), source);
 });
 
-void test('literal code, images, escaped links, reference syntax and autolinks remain unchanged', () => {
+test('literal code, images, escaped links, reference syntax and autolinks remain unchanged', () => {
     for (const source of [
         '`[code](slide:two)`',
         '```md\n[code](slide:two)\n```\n',
@@ -53,7 +53,7 @@ void test('literal code, images, escaped links, reference syntax and autolinks r
         assert.equal(rewrite(source), source, source);
 });
 
-void test('nested Markdown uses exact source offsets through lists, quotes, tables and CRLF', () => {
+test('nested Markdown uses exact source offsets through lists, quotes, tables and CRLF', () => {
     const sources = [
         '> [A\r\n> long label](slide:two)\r\n',
         '- First\n  - [Nested](slide:two)\n\n    `[literal](slide:two)`\n',
@@ -67,7 +67,7 @@ void test('nested Markdown uses exact source offsets through lists, quotes, tabl
     }
 });
 
-void test('identical table source stays literal in rich text and relinks only in a table field', () => {
+test('identical table source stays literal in rich text and relinks only in a table field', () => {
     const source = '| Header | Other |\r\n| --- | --- |\r\n| [Go](slide:two) | `[No](slide:two)` |\r\n';
     assert.equal(rewrite(source), source);
     assert.equal(remapMarkdownSlideLinks(source, ids, 'table'), source.replace('[Go](slide:two)', '[Go](slide:copy-two)'));
@@ -92,7 +92,7 @@ void test('identical table source stays literal in rich text and relinks only in
         assert.equal(remapMarkdownSlideLinks(source, ids, 'table'), source.replace('slide:two', 'slide:copy-two'));
 });
 
-void test('decoded destinations change while angle brackets, source encoding elsewhere and link titles survive', () => {
+test('decoded destinations change while angle brackets, source encoding elsewhere and link titles survive', () => {
     assert.equal(rewrite('[A](<slide:two> "Label")'), '[A](<slide:copy-two> "Label")');
     assert.equal(rewrite('[A](slide&#58;two "Keep &amp; here")'), '[A](slide:copy-two "Keep &amp; here")');
     assert.equal(rewrite('[A](sl&#105;de:two)'), '[A](slide:copy-two)');
@@ -102,12 +102,12 @@ void test('decoded destinations change while angle brackets, source encoding els
     assert.equal(rewrite('[Go](slide:two\r "Title")'), '[Go](slide:copy-two\r "Title")');
 });
 
-void test('repeated matching links preserve Unicode, visible link-like words and authored whitespace', () => {
+test('repeated matching links preserve Unicode, visible link-like words and authored whitespace', () => {
     const source = '🌲 [slide:two](slide:two)\r\n\r\n[Again](slide:two)  \r\n\r\n\t';
     assert.equal(rewrite(source), '🌲 [slide:two](slide:copy-two)\r\n\r\n[Again](slide:copy-two)  \r\n\r\n\t');
 });
 
-void test('MDP line breaks retain following inline links without opening opaque HTML blocks', () => {
+test('MDP line breaks retain following inline links without opening opaque HTML blocks', () => {
     for (const source of [
         '<br>\n[Next](slide:two)',
         '<BR/>\r\n[Next](slide:two)',
@@ -127,7 +127,7 @@ void test('MDP line breaks retain following inline links without opening opaque 
         assert.equal(rewrite(source), source, source);
 });
 
-void test('one contextual parse recognizes multiline destinations and titles inside quotes and lists', () => {
+test('one contextual parse recognizes multiline destinations and titles inside quotes and lists', () => {
     for (const source of [
         '> [Go](\n> slide:two)',
         '> [Go](slide:two\n> "Title")',
@@ -140,7 +140,7 @@ void test('one contextual parse recognizes multiline destinations and titles ins
     assert.equal(rewrite(code), code);
 });
 
-void test('MDP bare URL spans stay literal even when they contain link-shaped characters', () => {
+test('MDP bare URL spans stay literal even when they contain link-shaped characters', () => {
     for (const source of [
         'ftp://example.com/[Go](slide:two)',
         'https://example.com?q=[Go](slide:two)',
@@ -166,14 +166,14 @@ void test('MDP bare URL spans stay literal even when they contain link-shaped ch
     assert.equal(rewrite(fenced), fenced.replace('[real](slide:two)', '[real](slide:copy-two)'));
 });
 
-void test('a long field rewrites each real destination once and keeps its code examples', () => {
+test('a long field rewrites each real destination once and keeps its code examples', () => {
     const line = '[Go](slide:two) and `[Go](slide:two)`.\n\n';
     assert.equal(rewrite(line.repeat(1000)), '[Go](slide:copy-two) and `[Go](slide:two)`.\n\n'.repeat(1000));
     assert.equal(rewrite('==[Go](slide:two)== '.repeat(1000)), '==[Go](slide:copy-two)== '.repeat(1000));
     assert.equal(rewrite('**==[Go](slide:two)==** '.repeat(1000)), '**==[Go](slide:copy-two)==** '.repeat(1000));
 });
 
-void test("the format's block lexer distinguishes tab-indented quote code and single-column tables", () => {
+test("the format's block lexer distinguishes tab-indented quote code and single-column tables", () => {
     const code = '> \t[Go](slide:two)';
     assert.equal(rewrite(code), code);
     const table = '| Header\n| ---\n| [Go](slide:two)';
@@ -181,7 +181,7 @@ void test("the format's block lexer distinguishes tab-indented quote code and si
     assert.equal(remapMarkdownSlideLinks(table, ids, 'table'), table.replace('slide:two', 'slide:copy-two'));
 });
 
-void test('parse-only provenance cannot collide with authored URI spelling or leak into copied source', () => {
+test('parse-only provenance cannot collide with authored URI spelling or leak into copied source', () => {
     for (const existing of ['slide:mdp-copy-0-0', 'sl&#105;de:mdp-copy-0-0', String.raw`slide:mdp-copy-0\\-0`]) {
         const source = '`slide:two` and [independent](' + existing + ')';
         assert.equal(rewrite(source), source);
@@ -193,7 +193,7 @@ void test('parse-only provenance cannot collide with authored URI spelling or le
     assert.equal(rewrite(reference + '\n\n[real](slide:two)'), reference + '\n\n[real](slide:copy-two)');
 });
 
-void test('MDP formatting boundaries keep adjacent real links separate from literal URLs', () => {
+test('MDP formatting boundaries keep adjacent real links separate from literal URLs', () => {
     for (const source of [
         '==ftp://x==[Go](slide:two)',
         '~~ftp://x~~[Go](slide:two)',

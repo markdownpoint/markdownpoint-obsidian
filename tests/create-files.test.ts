@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { createPresentationFiles } from '../src/presentation/create-files.ts';
 import { presentationFolderName } from '../src/format/new-presentation.ts';
 
@@ -72,7 +72,7 @@ function vault() {
     };
 }
 
-void test('creation writes a complete theme before its fixed pair and returns the draft', async () => {
+test('creation writes a complete theme before its fixed pair and returns the draft', async () => {
     const { host, writes, nodes } = vault();
     const picture: File = { path: 'source/logo.jpg', source: 'binary-image', stat: { mtime: 1, size: 12 } };
     const files = new Map<string, string | File>([...contents, ['themes/basic/media/logo.jpg', picture]]);
@@ -83,7 +83,7 @@ void test('creation writes a complete theme before its fixed pair and returns th
     assert.equal(picture.path, 'source/logo.jpg');
 });
 
-void test('an existing destination and invalid relative paths cause no writes', async () => {
+test('an existing destination and invalid relative paths cause no writes', async () => {
     const { host, nodes, writes } = vault();
     await host.createFolder('Existing');
     await assert.rejects(
@@ -100,7 +100,7 @@ void test('an existing destination and invalid relative paths cause no writes', 
     assert.equal(nodes.size, 2);
 });
 
-void test("a write failure removes this operation's files and empty folders", async () => {
+test("a write failure removes this operation's files and empty folders", async () => {
     const { host, nodes, state } = vault();
     state.beforeWrite = path => {
         if (path.endsWith('slides.md')) throw new Error('Disk full');
@@ -112,7 +112,7 @@ void test("a write failure removes this operation's files and empty folders", as
     assert.deepEqual([...nodes.keys()], ['']);
 });
 
-void test('canceling before or during creation leaves no partial presentation', async () => {
+test('canceling before or during creation leaves no partial presentation', async () => {
     const { host, nodes, state } = vault();
     await assert.rejects(
         createPresentationFiles(host, 'New', contents, () => false),
@@ -130,7 +130,7 @@ void test('canceling before or during creation leaves no partial presentation', 
     assert.deepEqual([...nodes.keys()], ['']);
 });
 
-void test('rollback retains newer edits to a created file', async () => {
+test('rollback retains newer edits to a created file', async () => {
     const { host, nodes, state } = vault();
     state.beforeWrite = path => {
         if (!path.endsWith('slides.md')) return;
@@ -147,7 +147,7 @@ void test('rollback retains newer edits to a created file', async () => {
     assert.ok(!nodes.has('New/presentation.mdpoint'));
 });
 
-void test('folder names retain spaces and non-ASCII text while rejecting unsafe path components', () => {
+test('folder names retain spaces and non-ASCII text while rejecting unsafe path components', () => {
     assert.equal(presentationFolderName('  Årets möte  '), 'Årets möte');
     assert.equal(presentationFolderName('A\u030arets mo\u0308te'), 'Årets möte');
     for (const name of ['', '.hidden', '..', 'a/b', 'a\\b', 'CON', 'LPT1.txt', 'end.', 'a\nline', 'A:B'])

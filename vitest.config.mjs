@@ -16,13 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { StateField } from '@codemirror/state';
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vitest/config';
 
-// Minimal host values for headless editor-state tests. No DOM or Obsidian app is created.
-export class Component {}
-export class MarkdownView {}
-export const editorInfoField = StateField.define({ create: () => ({ file: { path: 'Talk/slides.md' } }), update: value => value });
-export const editorLivePreviewField = StateField.define({ create: () => true, update: value => value });
-export const getLanguage = () => 'en';
-export const setIcon = () => undefined;
-export const setTooltip = () => undefined;
+export default defineConfig({
+    resolve: {
+        alias: {
+            // The plugin's runtime imports of Obsidian resolve to headless stand-ins
+            obsidian: fileURLToPath(new URL('./tests/support/obsidian.ts', import.meta.url))
+        }
+    },
+    test: {
+        environment: 'node',
+        include: ['tests/**/*.test.ts']
+    }
+});

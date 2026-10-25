@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
 import { CompanionDocument } from '../src/format/companion.ts';
 import { planSlideInsertion } from '../src/format/insert.ts';
@@ -30,7 +30,7 @@ const apply = (source: string, plan: SlideInsertion) =>
 const plan = (source: string, companion: string, slides: readonly PreparedPart[], after: string | null, bodyStart = 0) =>
     planSlideInsertion(source, indexPresentation(source, bodyStart)!, companion, slides, after, bodyStart);
 
-void test('insertion preserves independent source/JSON order and every surviving record byte', () => {
+test('insertion preserves independent source/JSON order and every surviving record byte', () => {
     const header = '---\nmarkdownpoint: 1\nunknown: keep\n---\n\n';
     const section = '<!-- section: ending -->\n# Ending\n\n';
     const composition = '<!-- composition: shared -->\n<!-- control: caption -->\nReusable.\n';
@@ -60,7 +60,7 @@ void test('insertion preserves independent source/JSON order and every surviving
     assert.equal(result.document.compositions[0]!.id, 'shared');
 });
 
-void test('an empty draft accepts slides after its final section and before its reusable definitions', () => {
+test('an empty draft accepts slides after its final section and before its reusable definitions', () => {
     const header = '---\r\nmarkdownpoint: 1\r\n---\r\n\r\n';
     const section = '<!-- section: empty -->\r\n# Empty\r\n';
     const composition = '<!-- composition: shared -->\r\n<!-- control: caption -->\r\nReusable.\r\n';
@@ -78,7 +78,7 @@ void test('an empty draft accepts slides after its final section and before its 
     assert.equal(apply('', result), block('first'));
 });
 
-void test('EOF separation preserves authored blank-line counts on both sides of the insertion', () => {
+test('EOF separation preserves authored blank-line counts on both sides of the insertion', () => {
     const first = '<!-- slide: a -->\n<!-- text: body -->\nLast words.';
     const incoming = '<!-- slide: b -->\n<!-- notes -->\nNew notes.';
     for (const [tail, closed] of [
@@ -106,7 +106,7 @@ void test('EOF separation preserves authored blank-line counts on both sides of 
     assert.equal(apply(source, result), source + '\r\n\r\n' + block('b'));
 });
 
-void test("a cut's pending identical record can regain its text without overwriting external metadata", () => {
+test("a cut's pending identical record can regain its text without overwriting external metadata", () => {
     const companion = '{"slides":{"a":{},"returning":{"layout":"title"}}}';
     const result = plan(block('a'), companion, [prepared('returning')], 'a')!;
     assert.ok(result);
@@ -115,7 +115,7 @@ void test("a cut's pending identical record can regain its text without overwrit
     assert.equal(plan(block('a'), companion, [{ ...prepared('returning'), record: '{"layout":"different"}' }], 'a'), null);
 });
 
-void test('collisions, missing anchors, malformed fragments and swallowed boundaries refuse the insertion', () => {
+test('collisions, missing anchors, malformed fragments and swallowed boundaries refuse the insertion', () => {
     const source = block('a') + '<!-- composition: shared -->\n<!-- control: caption -->\nReusable.\n';
     const companion = '{"slides":{"a":{}},"compositions":{"shared":{},"other":{}}}';
     for (const slides of [
@@ -142,7 +142,7 @@ void test('collisions, missing anchors, malformed fragments and swallowed bounda
     assert.ok(plan(section, '{"slides":{}}', [prepared('same')], null));
 });
 
-void test('one large insertion retains the selected order and complete raw records', () => {
+test('one large insertion retains the selected order and complete raw records', () => {
     const additions = Array.from({ length: 1000 }, (_, index) => prepared(`new-${index}`));
     const result = plan(block('first'), '{"slides":{"first":{}}}', additions, 'first')!;
     assert.ok(result);
@@ -159,7 +159,7 @@ const definition = (id: string): PreparedPart => ({
     record: '{"controls":{"caption":{"type":"text"}},"future":9007199254740993}'
 });
 
-void test('a group and its new definitions enter different source positions without replacing intervening content', () => {
+test('a group and its new definitions enter different source positions without replacing intervening content', () => {
     const held = definition('held'),
         incoming = definition('card');
     const source = block('a') + block('b') + held.markdown;
@@ -175,7 +175,7 @@ void test('a group and its new definitions enter different source positions with
     assert.ok(result.companion.includes('"future":9007199254740995'));
 });
 
-void test('EOF and empty-draft insertion combine the slide and definition without extra authored blank lines', () => {
+test('EOF and empty-draft insertion combine the slide and definition without extra authored blank lines', () => {
     const incoming = { ...prepared('copy'), markdown: '<!-- slide: copy -->\n<!-- text: title -->\nCopied.' };
     const added = definition('card');
     for (const source of ['', '<!-- slide: a -->\n<!-- text: body -->\nOriginal.\n\n \t']) {
@@ -194,7 +194,7 @@ void test('EOF and empty-draft insertion combine the slide and definition withou
     }
 });
 
-void test("appending definitions preserves an existing definition's terminal payload spacing", () => {
+test("appending definitions preserves an existing definition's terminal payload spacing", () => {
     const source = block('a') + '<!-- composition: held -->\n<!-- control: caption -->\nDefault.\n\n \t';
     const companion = '{"slides":{"a":{}},"compositions":{"held":{}}}';
     const result = planSlideInsertion(source, indexPresentation(source, 0)!, companion, [prepared('copy')], 'a', 0, [definition('card')])!;
@@ -204,7 +204,7 @@ void test("appending definitions preserves an existing definition's terminal pay
     );
 });
 
-void test('definition insertion rejects collisions, malformed fragments and conflicting pending metadata', () => {
+test('definition insertion rejects collisions, malformed fragments and conflicting pending metadata', () => {
     const source = block('a');
     const data = '{"slides":{"a":{},"orphan":{}},"compositions":{"pending":{}}}';
     for (const added of [

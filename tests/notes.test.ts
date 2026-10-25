@@ -17,11 +17,11 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
 import { notesInsertion, slideNotes, validatedNotesInsertion } from '../src/editor/notes.ts';
 
-void test('notes preserve existing payload ranges and expose missing slots at their slide boundary', () => {
+test('notes preserve existing payload ranges and expose missing slots at their slide boundary', () => {
     const markdown =
         '<!-- slide: first -->\n<!-- text: body -->\nWords.\n\n<!-- notes -->\nA reminder.\n\n<!-- slide: second -->\n<!-- text: body -->\n';
     const document = indexPresentation(markdown, 0)!;
@@ -36,12 +36,12 @@ void test('notes preserve existing payload ranges and expose missing slots at th
     assert.equal(slots[1]!.at, markdown.length);
 });
 
-void test('duplicate notes stay raw and do not produce an additional notes slot', () => {
+test('duplicate notes stay raw and do not produce an additional notes slot', () => {
     const markdown = '<!-- slide: first -->\n<!-- notes -->\nOne.\n<!-- notes -->\nTwo.\n';
     assert.deepEqual(slideNotes(markdown, indexPresentation(markdown, 0)!, 'Notes'), []);
 });
 
-void test('creating notes preserves existing source and leaves a writable insertion caret', () => {
+test('creating notes preserves existing source and leaves a writable insertion caret', () => {
     for (const suffix of ['', '\n', '\n\n'])
         for (const after of ['', '<!-- slide: second -->\n<!-- text: title -->\n']) {
             const before = '<!-- slide: first -->\n<!-- text: body -->\nBody.' + suffix;
@@ -66,7 +66,7 @@ void test('creating notes preserves existing source and leaves a writable insert
         }
 });
 
-void test('notes insertion respects CRLF and stays within its slide before a section or composition', () => {
+test('notes insertion respects CRLF and stays within its slide before a section or composition', () => {
     for (const next of ['<!-- section: next -->\r\n# Later\r\n', '<!-- composition: reusable -->\r\n']) {
         const markdown = '<!-- slide: first -->\r\n<!-- text: body -->\r\nBody.\r\n\r\n' + next;
         const document = indexPresentation(markdown, 0)!;
@@ -80,7 +80,7 @@ void test('notes insertion respects CRLF and stays within its slide before a sec
     }
 });
 
-void test('missing notes cannot be inserted into an unfinished final code fence', () => {
+test('missing notes cannot be inserted into an unfinished final code fence', () => {
     for (const fence of ['```js', '~~~text']) {
         const markdown = `<!-- slide: first -->\n<!-- text: body -->\n${fence}\nA code example.`;
         const document = indexPresentation(markdown, 0)!;
@@ -94,7 +94,7 @@ void test('missing notes cannot be inserted into an unfinished final code fence'
     }
 });
 
-void test('validating notes preserves section ranges and never creates duplicate note blocks', () => {
+test('validating notes preserves section ranges and never creates duplicate note blocks', () => {
     const markdown =
         '<!-- section: opening -->\n# Opening\n<!-- slide: first -->\n<!-- text: body -->\nWords.\n\n<!-- section: closing -->\n# Closing\n';
     const document = indexPresentation(markdown, 0)!;

@@ -16,7 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// Minimal Vault file objects for transfer tests; the live checks use Obsidian's real implementation.
+import { StateField } from '@codemirror/state';
+
+// Headless stand-ins for the parts of Obsidian's API the tests reach. Vitest aliases 'obsidian' to this module;
+// no DOM or Obsidian app is created. Live checks use Obsidian's real implementation.
+
+export class Component {}
+export class MarkdownView {}
+export const editorInfoField = StateField.define({ create: () => ({ file: { path: 'Talk/slides.md' } }), update: value => value });
+export const editorLivePreviewField = StateField.define({ create: () => true, update: value => value });
+export const getLanguage = () => 'en';
+export const setIcon = () => undefined;
+export const setTooltip = () => undefined;
+
 export class TFolder {
     path: string;
     parent: TFolder | null = null;

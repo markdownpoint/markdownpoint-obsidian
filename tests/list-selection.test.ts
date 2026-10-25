@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 
 import {
     gatheredOrder,
@@ -50,7 +50,7 @@ const down: Input = state => ({ kind: 'step', to: ORDER[ORDER.indexOf(state.curs
 
 const NONE = selectionOf<number>([], null);
 
-void test("Johan's example: click 1, Shift-click 3, Command-click 5, then Shift-Up and Shift-Down", () => {
+test("Johan's example: click 1, Shift-click 3, Command-click 5, then Shift-Up and Shift-Down", () => {
     assert.deepEqual(play(NONE, [{ kind: 'select', id: 1 }, { kind: 'range', id: 3 }, { kind: 'toggle', id: 5 }, up, down]), [
         '1 @1',
         '1,2,3 @3',
@@ -60,11 +60,11 @@ void test("Johan's example: click 1, Shift-click 3, Command-click 5, then Shift-
     ]);
 });
 
-void test('a click selects the item alone, whatever was selected', () => {
+test('a click selects the item alone, whatever was selected', () => {
     assert.deepEqual(play(selectionOf([1, 2, 6], 6), [{ kind: 'select', id: 4 }]), ['4 @4']);
 });
 
-void test('Command-click puts an item in with the cursor on it, and takes one out leaving the cursor, or moving it to the first selected', () => {
+test('Command-click puts an item in with the cursor on it, and takes one out leaving the cursor, or moving it to the first selected', () => {
     assert.deepEqual(
         play(selectionOf([2], 2), [
             { kind: 'toggle', id: 6 },
@@ -84,14 +84,14 @@ void test('Command-click puts an item in with the cursor on it, and takes one ou
     assert.equal(selectionAfter(ORDER, alone, { kind: 'toggle', id: 4 }), alone, 'the last selected item stays');
 });
 
-void test('Shift-click adds the range from the cursor to the item, keeping what was selected, and moves the cursor there', () => {
+test('Shift-click adds the range from the cursor to the item, keeping what was selected, and moves the cursor there', () => {
     assert.deepEqual(play(selectionOf([8], 8), [{ kind: 'range', id: 6 }]), ['6,7,8 @6'], 'backward');
     assert.deepEqual(play(selectionOf([1, 7], 3), [{ kind: 'range', id: 5 }]), ['1,3,4,5,7 @5'], 'items outside the range stay');
     assert.deepEqual(play(selectionOf([2, 3], 3), [{ kind: 'range', id: 3 }]), ['2,3 @3'], 'onto the cursor itself');
     assert.deepEqual(play(NONE, [{ kind: 'range', id: 4 }]), ['4 @4'], 'with no cursor it selects the item alone');
 });
 
-void test('Shift-Down and Shift-Up grow a run, shrink it when they turn back, and jump the cursor over a selected run they reach', () => {
+test('Shift-Down and Shift-Up grow a run, shrink it when they turn back, and jump the cursor over a selected run they reach', () => {
     assert.deepEqual(
         play(selectionOf([3], 3), [down, down, up, up, up]),
         ['3,4 @4', '3,4,5 @5', '3,4 @4', '3 @3', '2,3 @2'],
@@ -104,13 +104,13 @@ void test('Shift-Down and Shift-Up grow a run, shrink it when they turn back, an
     );
 });
 
-void test('a step to where the cursor stands, or with no cursor, changes nothing', () => {
+test('a step to where the cursor stands, or with no cursor, changes nothing', () => {
     const state = selectionOf([1, 2], 1);
     assert.equal(selectionAfter(ORDER, state, { kind: 'step', to: 1 }), state);
     assert.equal(selectionAfter(ORDER, NONE, { kind: 'step', to: 2 }), NONE);
 });
 
-void test('in a grid, Shift-Down to the tile below takes the tiles on the way, and Shift-Up back gives them back', () => {
+test('in a grid, Shift-Down to the tile below takes the tiles on the way, and Shift-Up back gives them back', () => {
     // Four tiles a row: 1–4 above 5–8.
     assert.deepEqual(
         play(selectionOf([2], 2), [
@@ -122,7 +122,7 @@ void test('in a grid, Shift-Down to the tile below takes the tiles on the way, a
     assert.deepEqual(play(selectionOf([2, 7, 8], 2), [{ kind: 'step', to: 6 }]), ['2,3,4,5,6,7,8 @8'], 'and jumps the selected run beyond');
 });
 
-void test("Shift-Home and Shift-End, a range to the list's first or last item, keep what was selected", () => {
+test("Shift-Home and Shift-End, a range to the list's first or last item, keep what was selected", () => {
     assert.deepEqual(play(selectionOf([2, 6], 6), [{ kind: 'range', id: 8 }]), ['2,6,7,8 @8']);
     assert.deepEqual(play(selectionOf([2, 6], 6), [{ kind: 'range', id: 1 }]), ['1,2,3,4,5,6 @1']);
     assert.deepEqual(
@@ -132,7 +132,7 @@ void test("Shift-Home and Shift-End, a range to the list's first or last item, k
     );
 });
 
-void test('Select All selects every item, the cursor staying, or on the first item when there was none', () => {
+test('Select All selects every item, the cursor staying, or on the first item when there was none', () => {
     assert.deepEqual(play(selectionOf([5], 5), [{ kind: 'all' }]), ['1,2,3,4,5,6,7,8 @5']);
     assert.deepEqual(play(NONE, [{ kind: 'all' }]), ['1,2,3,4,5,6,7,8 @1']);
     assert.equal(selectionAfter([], NONE, { kind: 'all' }), NONE, 'an empty list');
@@ -140,7 +140,7 @@ void test('Select All selects every item, the cursor staying, or on the first it
 
 // Ported as it stands from Notebook Navigator's findNextFileAfterRemoval (notes/selection.md): a set with gaps leaves the
 // item in its first gap selected, not the one after its last.
-void test('after a deletion the item kept after the first one deleted is selected, else the nearest before it, else none', () => {
+test('after a deletion the item kept after the first one deleted is selected, else the nearest before it, else none', () => {
     assert.equal(shown(selectionAfterRemoval(ORDER, new Set([3, 4, 6]))), '5 @5', 'after the first deleted, past the others');
     assert.equal(shown(selectionAfterRemoval(ORDER, new Set([2, 4, 6]))), '3 @3', 'a set with gaps: the item in its first gap');
     assert.equal(shown(selectionAfterRemoval(ORDER, new Set([7, 8]))), '6 @6', 'the last ones: the nearest before');
@@ -148,7 +148,7 @@ void test('after a deletion the item kept after the first one deleted is selecte
     assert.equal(shown(selectionAfterRemoval(ORDER, new Set([9]))), ' @none', 'nothing in the list');
 });
 
-void test('a selection whose items left the list, by an Undo or a collaborator, keeps those still there', () => {
+test('a selection whose items left the list, by an Undo or a collaborator, keeps those still there', () => {
     const state = selectionOf([2, 4, 6], 4);
     assert.equal(reconcileSelection(ORDER, state), state, 'all still there: the same selection');
     assert.equal(shown(reconcileSelection([1, 2, 3, 5, 6, 7, 8], state)), '2,6 @2', "the cursor's item gone: the first selected");
@@ -156,7 +156,7 @@ void test('a selection whose items left the list, by an Undo or a collaborator, 
     assert.equal(shown(reconcileSelection([1, 3], state)), ' @none', 'all gone');
 });
 
-void test("ids of any kind, such as a list's string ids, select alike", () => {
+test("ids of any kind, such as a list's string ids, select alike", () => {
     const order = ['intro', 'growth', 'costs', 'team'];
     let state = selectionOf<string>([], null);
     for (const action of [
@@ -170,7 +170,7 @@ void test("ids of any kind, such as a list's string ids, select alike", () => {
     assert.equal(state.cursor, 'team', "the item taken out wasn't the cursor's, so the cursor stays");
 });
 
-void test('items moved gather at the line in the order they stood, though it falls among them', () => {
+test('items moved gather at the line in the order they stood, though it falls among them', () => {
     const order = ['a', 'b', 'c', 'd', 'e'];
     assert.deepEqual(gatheredOrder(order, ['b', 'd'], 'a', 'before'), ['b', 'd', 'a', 'c', 'e']);
     assert.deepEqual(gatheredOrder(order, ['d', 'b'], 'e', 'after'), ['a', 'c', 'e', 'b', 'd'], 'in the order they stood, not as named');
@@ -184,7 +184,7 @@ void test('items moved gather at the line in the order they stood, though it fal
     assert.equal(gatheredOrder(order, ['b'], 'x', 'after'), null, 'a line at no item');
 });
 
-void test('items moved step past the one beside them, keeping their gaps, and those at the end stay while the others close up', () => {
+test('items moved step past the one beside them, keeping their gaps, and those at the end stay while the others close up', () => {
     const stepped = (moved: readonly number[], toward: 'up' | 'down') => steppedOrder(ORDER, ORDER, moved, toward)?.join(',') ?? null;
     assert.equal(stepped([2, 4, 7], 'up'), '2,1,4,3,5,7,6,8', 'each moves one place, the gaps between them kept');
     assert.equal(stepped([2, 4, 7], 'down'), '1,3,2,5,4,6,8,7');

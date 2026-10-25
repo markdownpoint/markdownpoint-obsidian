@@ -17,11 +17,11 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { textBindingLabel, textBindingName } from '../src/format/text-binding.ts';
 import { en } from '../src/i18n/locales/en.ts';
 
-void test('only the explicit allocation suffix is hidden; authored names and numbers stay readable', () => {
+test('only the explicit allocation suffix is hidden; authored names and numbers stay readable', () => {
     const cases = new Map([
         ['title-2-id-b7d9e1', 'Title 2'],
         ['body-03', 'Body 03'],
@@ -38,7 +38,7 @@ void test('only the explicit allocation suffix is hidden; authored names and num
     for (const [id, expected] of cases) assert.equal(textBindingLabel(textBindingName(id), en.fields), expected, id);
 });
 
-void test('the catalog owns known field names and the complete numbered phrase', () => {
+test('the catalog owns known field names and the complete numbered phrase', () => {
     const labels = {
         text: 'Generic',
         names: { body: 'Localized body' },

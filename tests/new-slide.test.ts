@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { prepareNewSlide, orderedLayouts, layoutName } from '../src/format/new-slide.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { planSlideInsertion } from '../src/format/insert.ts';
@@ -51,7 +51,7 @@ const layouts = theme({
     text: { title: 'Do not save sample words', branding: 'Fixed artwork' }
 });
 
-void test('a new slide exposes empty writing slots in reading order without persisting samples or images', () => {
+test('a new slide exposes empty writing slots in reading order without persisting samples or images', () => {
     const part = prepareNewSlide(layouts, 'title', 'new-slide')!;
     assert.deepEqual(JSON.parse(part.record), { layout: 'title' });
     const document = indexPresentation(part.markdown, 0)!;
@@ -70,7 +70,7 @@ void test('a new slide exposes empty writing slots in reading order without pers
     for (const block of document.slides[0]!.blocks) assert.equal(part.markdown.slice(block.contentFrom, block.to).trim(), '');
 });
 
-void test('a blank layout creates a valid slide without persisting an empty notes marker', () => {
+test('a blank layout creates a valid slide without persisting an empty notes marker', () => {
     const part = prepareNewSlide(layouts, 'blank', 'blank-slide')!;
     const document = indexPresentation(part.markdown, 0)!;
     assert.equal(document.slides.length, 1);
@@ -79,7 +79,7 @@ void test('a blank layout creates a valid slide without persisting an empty note
     assert.ok(planSlideInsertion('', indexPresentation('', 0)!, '{"slides":{}}', [part], null, 0));
 });
 
-void test('new slide insertion keeps surrounding source and metadata intact', () => {
+test('new slide insertion keeps surrounding source and metadata intact', () => {
     const source = '<!-- slide: old -->\n<!-- text: title -->\nExisting words\n<!-- notes -->\nKeep notes.\n';
     const part = prepareNewSlide(layouts, 'title', 'next')!;
     const companion = '{"unknown":9007199254740993,"slides":{"old":{"layout":"title","custom":true}}}';
@@ -92,7 +92,7 @@ void test('new slide insertion keeps surrounding source and metadata intact', ()
     );
 });
 
-void test('layout inventory preserves declared order and rejects unsafe or duplicate writing identities', () => {
+test('layout inventory preserves declared order and rejects unsafe or duplicate writing identities', () => {
     assert.deepEqual(orderedLayouts(layouts), ['title', 'blank']);
     assert.equal(layoutName('text-image', {}), 'Text image');
     assert.equal(layoutName('internal', { name: 'Two ideas' }), 'Two ideas');
@@ -113,7 +113,7 @@ void test('layout inventory preserves declared order and rejects unsafe or dupli
     );
 });
 
-void test('multicolumn writing reads down each column under a spanning title', () => {
+test('multicolumn writing reads down each column under a spanning title', () => {
     const field = (id: string, x: number, y: number, width: number, height: number) => ({
         id,
         type: 'text',

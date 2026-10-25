@@ -17,10 +17,10 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { payloadContentEnd } from '../src/format/payload.ts';
 
-void test('exactly one terminal blank line is organizational; further lines stay authored', () => {
+test('exactly one terminal blank line is organizational; further lines stay authored', () => {
     for (const newline of ['\n', '\r\n']) {
         for (let blanks = 0; blanks < 5; blanks++) {
             const raw = 'Words.' + newline.repeat(blanks + 1);
@@ -30,14 +30,14 @@ void test('exactly one terminal blank line is organizational; further lines stay
     }
 });
 
-void test('leading and interior empty paragraphs, lists, quotes, and code stay intact', () => {
+test('leading and interior empty paragraphs, lists, quotes, and code stay intact', () => {
     for (const text of ['\n\nWords.', 'Before.\n\n\nAfter.', '- One\n\n\n- Two', '> One\n>\n> Two', '```\nOne\n\nTwo\n```', '> One\n>']) {
         const source = text + '\n\n';
         assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), text + '\n');
     }
 });
 
-void test('horizontal whitespace counts as a blank line only when terminated', () => {
+test('horizontal whitespace counts as a blank line only when terminated', () => {
     for (const newline of ['\n', '\r\n']) {
         const text = 'Words.' + newline;
         for (const tail of [' \t', ' \t' + newline, ' \t' + newline + '  ']) {
@@ -49,7 +49,7 @@ void test('horizontal whitespace counts as a blank line only when terminated', (
     assert.equal(payloadContentEnd(nonbreaking, 0, nonbreaking.length), nonbreaking.length);
 });
 
-void test('empty text retains additional authored empty paragraphs and original source offsets', () => {
+test('empty text retains additional authored empty paragraphs and original source offsets', () => {
     const prefix = '<!-- text: body -->\r\n';
     for (let count = 0; count < 5; count++) {
         const raw = '\r\n'.repeat(count);

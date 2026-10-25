@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { EditorState } from '@codemirror/state';
 import { indexPresentation } from '../src/format/document.ts';
 import { boundaryChangesAllowed } from '../src/editor/boundary-protection.ts';
@@ -34,7 +34,7 @@ function editor(): EditorState {
     });
 }
 
-void test('ordinary field text and section heading edits remain editable', () => {
+test('ordinary field text and section heading edits remain editable', () => {
     for (const word of ['Alpha', 'Opening']) {
         const from = markdown.indexOf(word);
         assert.equal(
@@ -46,7 +46,7 @@ void test('ordinary field text and section heading edits remain editable', () =>
     }
 });
 
-void test('typing, deleting, cutting, or replacing a slide or section separator is rejected as one edit', () => {
+test('typing, deleting, cutting, or replacing a slide or section separator is rejected as one edit', () => {
     for (const token of ['<!-- slide: first -->', '<!-- slide: second -->', '<!-- section: opening -->']) {
         const from = markdown.indexOf(token);
         for (const change of [
@@ -65,7 +65,7 @@ void test('typing, deleting, cutting, or replacing a slide or section separator 
         assert.equal(editor().update({ userEvent: 'input', changes: { from, to, insert } }).docChanged, false);
 });
 
-void test('one marker-crossing change rejects a multi-change edit without applying its ordinary portion', () => {
+test('one marker-crossing change rejects a multi-change edit without applying its ordinary portion', () => {
     const transaction = editor().update({
         userEvent: 'input',
         changes: [
@@ -76,7 +76,7 @@ void test('one marker-crossing change rejects a multi-change edit without applyi
     assert.equal(transaction.newDoc.toString(), markdown);
 });
 
-void test('separator protection uses the current source positions after earlier text edits', () => {
+test('separator protection uses the current source positions after earlier text edits', () => {
     const first = editor().update({ userEvent: 'input', changes: { from: markdown.indexOf('Alpha'), insert: 'Some more words. ' } }).state;
     const from = first.doc.toString().indexOf('<!-- slide: second -->');
     assert.equal(first.update({ userEvent: 'input', changes: { from, to: from + 5 } }).docChanged, false);
@@ -84,13 +84,13 @@ void test('separator protection uses the current source positions after earlier 
     assert.equal(first.update({ userEvent: 'input', changes: { from: field, insert: 'Still editable. ' } }).docChanged, true);
 });
 
-void test('native file reload transactions can replace structural content', () => {
+test('native file reload transactions can replace structural content', () => {
     const source = editor();
     const loaded = source.update({ changes: { from: 0, to: source.doc.length, insert: 'A replacement from disk' } });
     assert.equal(loaded.newDoc.toString(), 'A replacement from disk');
 });
 
-void test('a rejected replacement preserves the original selection for subsequent typing', () => {
+test('a rejected replacement preserves the original selection for subsequent typing', () => {
     const from = markdown.indexOf('Alpha');
     const to = markdown.indexOf('Beta') + 4;
     const state = editor().update({ selection: { anchor: from, head: to } }).state;

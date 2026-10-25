@@ -17,14 +17,14 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
 import { slideForMenu } from '../src/editor/menu-target.ts';
 
 const source =
     '\n<!-- section: opening -->\nOpening\n<!-- slide: one -->\n<!-- text: body -->\nFirst\n\n\n<!-- slide: two -->\n<!-- text: body -->\nSecond\n';
 
-void test('slide menu targets fields, inter-slide whitespace and EOF without targeting section names', () => {
+test('slide menu targets fields, inter-slide whitespace and EOF without targeting section names', () => {
     const document = indexPresentation(source, 0)!;
     assert.equal(slideForMenu(document, source.indexOf('First'), source)?.id, 'one');
     assert.equal(slideForMenu(document, source.indexOf('\n\n\n') + 2, source)?.id, 'one');
@@ -33,7 +33,7 @@ void test('slide menu targets fields, inter-slide whitespace and EOF without tar
     assert.equal(slideForMenu(document, source.indexOf('Opening'), source), null);
 });
 
-void test('draft margins select their nearest slide but reusable composition text is excluded', () => {
+test('draft margins select their nearest slide but reusable composition text is excluded', () => {
     const source =
         '\n\n<!-- slide: one -->\n<!-- text: title -->\nFirst\n<!-- composition: reusable -->\n<!-- control: title -->\nShared words\n';
     const document = indexPresentation(source, 0)!;
@@ -44,7 +44,7 @@ void test('draft margins select their nearest slide but reusable composition tex
     assert.equal(slideForMenu({ slides: [], compositions: [], sections: [] }, 0, ''), null);
 });
 
-void test("a leading composition and frontmatter do not borrow the first slide's actions", () => {
+test("a leading composition and frontmatter do not borrow the first slide's actions", () => {
     const source =
         '<!-- composition: shared -->\n<!-- control: title -->\nReusable words\n<!-- slide: actual -->\n<!-- text: body -->\nSlide words\n';
     const document = indexPresentation(source, 0)!;

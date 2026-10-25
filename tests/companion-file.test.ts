@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { processCompanion } from '../src/presentation/companion-file.ts';
 
 const path = 'deck/presentation.mdpoint';
@@ -25,7 +25,7 @@ const file = { path };
 const markdown = { path: 'deck/slides.md' };
 const pair = { markdown, companion: file };
 
-void test('a companion change during recovery preparation is reread without overwriting it', async () => {
+test('a companion change during recovery preparation is reread without overwriting it', async () => {
     let disk = 'old',
         attempts = 0,
         preparations = 0;
@@ -47,7 +47,7 @@ void test('a companion change during recovery preparation is reread without over
     assert.equal(attempts, 2);
 });
 
-void test('failed recovery preparation and unchanged contents never reach a vault write', async () => {
+test('failed recovery preparation and unchanged contents never reach a vault write', async () => {
     let writes = 0;
     const vault = {
         getPair: () => pair,
@@ -69,7 +69,7 @@ void test('failed recovery preparation and unchanged contents never reach a vaul
     );
 });
 
-void test('a real vault write failure is reported without retries', async () => {
+test('a real vault write failure is reported without retries', async () => {
     let attempts = 0;
     const vault = {
         getPair: () => pair,
@@ -86,7 +86,7 @@ void test('a real vault write failure is reported without retries', async () => 
     assert.equal(attempts, 1);
 });
 
-void test('replacing either member or introducing a conflict during recovery preparation cannot receive the old write', async () => {
+test('replacing either member or introducing a conflict during recovery preparation cannot receive the old write', async () => {
     for (const replacement of [null, { ...pair, companion: { path } }, { ...pair, markdown: { path: markdown.path } }]) {
         let current: typeof pair | null = pair,
             disk = 'original';
@@ -109,7 +109,7 @@ void test('replacing either member or introducing a conflict during recovery pre
     }
 });
 
-void test('replacing Markdown while Vault.process is queued cannot commit old slide membership', async () => {
+test('replacing Markdown while Vault.process is queued cannot commit old slide membership', async () => {
     let current: typeof pair | null = pair,
         disk = 'original';
     const vault = {

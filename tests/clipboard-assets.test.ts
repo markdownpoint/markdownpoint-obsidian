@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { isPresentationMediaPath, planClipboardAssets } from '../src/format/clipboard-assets.ts';
 import type { CapturedPart, CapturedSlides } from '../src/format/capture.ts';
 
@@ -28,7 +28,7 @@ const slide = (record: string): CapturedPart => ({
 });
 const captured = (record: string): CapturedSlides => ({ slides: [slide(record)], compositions: [] });
 
-void test('all declared slide media locations are collected once, including posters and original images', () => {
+test('all declared slide media locations are collected once, including posters and original images', () => {
     const value = captured(
         JSON.stringify({
             background: { image: 'media/back.png', 'image-result': { source: 'generated/original.png' } },
@@ -61,7 +61,7 @@ void test('all declared slide media locations are collected once, including post
     ]);
 });
 
-void test('only declared media controls authorize files, not text that resembles a path', () => {
+test('only declared media controls authorize files, not text that resembles a path', () => {
     const definition = {
         id: 'card',
         markdown: '<!-- composition: card -->\n',
@@ -93,7 +93,7 @@ void test('only declared media controls authorize files, not text that resembles
     assert.deepEqual(planClipboardAssets(value)?.files, ['media/selected.png', 'media/default.png']);
 });
 
-void test('remapping replaces only asset values and retains raw precision, escapes, words and unrelated metadata', () => {
+test('remapping replaces only asset values and retains raw precision, escapes, words and unrelated metadata', () => {
     const record = String.raw`{ "unknown":900719925474099312345, "escape":"\u00e9", "description":"media/picture.png", "objects":[{"id":"photo","type":"image","asset":"media/picture.png"}], "extra":{"asset":"media/unrelated.png"} }`;
     const value = captured(record),
         before = JSON.stringify(value),
@@ -107,7 +107,7 @@ void test('remapping replaces only asset values and retains raw precision, escap
     assert.deepEqual(planClipboardAssets(captured('{"objects":[{"type":"shape","source":{"poster":"media/unknown.png"}}]}'))?.files, []);
 });
 
-void test('every copied asset must receive a safe destination before any record is returned', () => {
+test('every copied asset must receive a safe destination before any record is returned', () => {
     const plan = planClipboardAssets(captured('{"objects":[{"asset":"media/a.png"},{"asset":"generated/b.png"}]}'))!;
     assert.equal(plan.remap(new Map([['media/a.png', 'media/copy.png']])), null);
     assert.equal(
@@ -121,7 +121,7 @@ void test('every copied asset must receive a safe destination before any record 
     );
 });
 
-void test('unsafe or non-media source references cannot authorize a vault read', () => {
+test('unsafe or non-media source references cannot authorize a vault read', () => {
     for (const path of [
         '../private.png',
         '/absolute.png',
@@ -141,7 +141,7 @@ void test('unsafe or non-media source references cannot authorize a vault read',
     assert.equal(isPresentationMediaPath('media/Årets möte/Photo 1.PNG'), true);
 });
 
-void test('empty and cleared assignments need no files; malformed JSON is refused', () => {
+test('empty and cleared assignments need no files; malformed JSON is refused', () => {
     const value = captured('{"background":{"image":"none"},"objects":[{"asset":""},{"asset":null}]}');
     assert.deepEqual(planClipboardAssets(value)?.files, []);
     assert.deepEqual(planClipboardAssets(value)?.remap(new Map()), value);

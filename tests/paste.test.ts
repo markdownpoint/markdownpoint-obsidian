@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { decodeSlideClipboard, encodeSlideClipboard } from '../src/format/clipboard.ts';
 import { prepareClipboardPaste, sameClipboardPresentation, sameClipboardTheme } from '../src/format/paste.ts';
 import { indexPresentation } from '../src/format/document.ts';
@@ -44,7 +44,7 @@ const packet = decodeSlideClipboard(
     encodeSlideClipboard(uuid, origin, { slides: [{ id: 'first', markdown, record }], compositions: [] }, theme)!
 )!;
 
-void test('same-presentation paste keeps raw fields, notes and metadata while creating independent IDs', () => {
+test('same-presentation paste keeps raw fields, notes and metadata while creating independent IDs', () => {
     let source = markdown,
         companion = '{"slides":{"first":' + record + '}}';
     for (let count = 0; count < 3; count++) {
@@ -64,13 +64,13 @@ void test('same-presentation paste keeps raw fields, notes and metadata while cr
     );
 });
 
-void test('an empty presentation accepts the first pasted slide', () => {
+test('an empty presentation accepts the first pasted slide', () => {
     const document = indexPresentation('', 0)!;
     const prepared = prepareClipboardPaste(packet, '', document, '{"slides":{}}', new Map(), () => 'fresh')!;
     assert.ok(planSlideInsertion('', document, '{"slides":{}}', prepared.slides, null, 0));
 });
 
-void test('orphaned and recoverable identities are not recycled by a copied slide', () => {
+test('orphaned and recoverable identities are not recycled by a copied slide', () => {
     const document = indexPresentation(markdown, 0)!;
     assert.equal(
         prepareClipboardPaste(packet, markdown, document, '{"slides":{"first":{},"orphan":{}}}', new Map(), () => 'orphan'),
@@ -82,7 +82,7 @@ void test('orphaned and recoverable identities are not recycled by a copied slid
     );
 });
 
-void test('same-origin asset references require the original vault, document, path and theme sources', () => {
+test('same-origin asset references require the original vault, document, path and theme sources', () => {
     assert.equal(sameClipboardPresentation(packet, origin), true);
     assert.equal(sameClipboardPresentation(packet, { ...origin, path: 'deck/Slides.MD' }), true);
     assert.equal(sameClipboardPresentation(packet, { ...origin, path: 'other/slides.md' }), false);
@@ -94,7 +94,7 @@ void test('same-origin asset references require the original vault, document, pa
     assert.equal(sameClipboardTheme(packet, { ...theme, layouts: new Map() }), false);
 });
 
-void test('a locally owned Cut restores identity once; repeated Paste and Undo Cut clone instead', () => {
+test('a locally owned Cut restores identity once; repeated Paste and Undo Cut clone instead', () => {
     const empty = indexPresentation('', 0)!,
         companion = '{"slides":{}}';
     const restored = prepareClipboardPaste(packet, '', empty, companion, new Map([['first', record]]), () => 'copy', true)!;

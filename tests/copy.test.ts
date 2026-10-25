@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { prepareSlideCopies } from '../src/format/copy.ts';
 import type { CapturedPart, CapturedSlides } from '../src/format/capture.ts';
 import { indexPresentation } from '../src/format/document.ts';
@@ -47,7 +47,7 @@ const allocator = (start = 0) => {
 const prepare = (held: readonly CapturedPart[] = [], value = captured, mint = allocator(), occupied = new Set<string>()) =>
     prepareSlideCopies(value, held, occupied, fields(value), mint);
 
-void test('copy groups receive fresh slide identities and new dependencies arrive before their parents', () => {
+test('copy groups receive fresh slide identities and new dependencies arrive before their parents', () => {
     const before = JSON.stringify(captured),
         result = prepare()!;
     assert.ok(result);
@@ -68,7 +68,7 @@ void test('copy groups receive fresh slide identities and new dependencies arriv
     assert.equal(JSON.stringify(captured), before);
 });
 
-void test('unchanged definitions are reused under their existing identities', () => {
+test('unchanged definitions are reused under their existing identities', () => {
     const result = prepare(captured.compositions)!;
     assert.ok(result);
     assert.deepEqual(result.compositions, []);
@@ -81,7 +81,7 @@ void test('unchanged definitions are reused under their existing identities', ()
     assert.equal(preferred.slides[1]!.record, placement('outer'));
 });
 
-void test('repeated paste reuses unchanged imported definitions instead of appending more copies', () => {
+test('repeated paste reuses unchanged imported definitions instead of appending more copies', () => {
     const first = prepare()!;
     const second = prepare(
         first.compositions,
@@ -97,7 +97,7 @@ void test('repeated paste reuses unchanged imported definitions instead of appen
     assert.equal(second.slides[1]!.record, placement('new-4'));
 });
 
-void test('actual repeated insertion reuses nested definitions after an original definition changes', () => {
+test('actual repeated insertion reuses nested definitions after an original definition changes', () => {
     for (const tail of ['\n', '', '  ', '\t', '\n\n', '\n\n\n', '\n \t', '\n\n \t']) {
         const copiedInner = { ...inner, markdown: inner.markdown.slice(0, -1) + tail };
         const clipboard = { ...captured, compositions: [outer, copiedInner] };
@@ -132,13 +132,13 @@ void test('actual repeated insertion reuses nested definitions after an original
     }
 });
 
-void test('an authored trailing empty paragraph keeps a definition distinct from a structural gap', () => {
+test('an authored trailing empty paragraph keeps a definition distinct from a structural gap', () => {
     const value = { ...captured, compositions: [outer, { ...inner, markdown: inner.markdown + '\n\n' }] };
     const held = [outer, { ...inner, markdown: inner.markdown + '\n' }];
     assert.equal(prepare(held, value)!.compositions.length, 2);
 });
 
-void test('definitions whose links follow copied slides are cloned while their originals stay untouched', () => {
+test('definitions whose links follow copied slides are cloned while their originals stay untouched', () => {
     const linked = { ...captured, compositions: [outer, part('composition', 'inner', '{}', '[B](slide:b)')] };
     const first = prepare(linked.compositions, linked)!;
     assert.equal(first.compositions.length, 2);
@@ -149,7 +149,7 @@ void test('definitions whose links follow copied slides are cloned while their o
     assert.ok(linked.compositions[1]!.markdown.includes('[B](slide:b)'));
 });
 
-void test('native newline and terminal-boundary normalization do not duplicate identical definitions', () => {
+test('native newline and terminal-boundary normalization do not duplicate identical definitions', () => {
     const value = { ...captured, compositions: [outer, { ...inner, markdown: inner.markdown + '\n \t' }] };
     const held = [{ ...inner, markdown: inner.markdown.replaceAll('\n', '\r\n') + ' \t\r\n' }, outer];
     assert.deepEqual(prepare(held, value)!.compositions, []);
@@ -158,7 +158,7 @@ void test('native newline and terminal-boundary normalization do not duplicate i
     assert.equal(prepare(different, precise)!.compositions.length, 2);
 });
 
-void test('incomplete graphs, cycles and unavailable fresh identities refuse the entire copy', () => {
+test('incomplete graphs, cycles and unavailable fresh identities refuse the entire copy', () => {
     assert.equal(prepare([], { ...captured, compositions: [outer] }), null);
     assert.equal(prepare([], { ...captured, compositions: [outer, part('composition', 'inner', placement('outer'))] }), null);
     assert.equal(prepare([], { ...captured, compositions: [inner, inner] }), null);
@@ -182,7 +182,7 @@ void test('incomplete graphs, cycles and unavailable fresh identities refuse the
     assert.equal(prepare([], { ...captured, slides: [part('slide', 'a', '{')] }), null);
 });
 
-void test('large definition chains are prepared iteratively and shared dependencies are counted once', () => {
+test('large definition chains are prepared iteratively and shared dependencies are counted once', () => {
     const count = 1200;
     const definitions = Array.from({ length: count }, (_, index) =>
         part(

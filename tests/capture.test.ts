@@ -17,7 +17,7 @@
  */
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { captureSlides } from '../src/format/capture.ts';
 import { CompanionDocument } from '../src/format/companion.ts';
 import { indexPresentation } from '../src/format/document.ts';
@@ -39,7 +39,7 @@ const companion = `{"slides":{"one":${firstRecord},"two":${secondRecord}},"compo
 const capture = (markdown = source, data = companion, ids = ['two', 'one']) =>
     captureSlides(markdown, indexPresentation(markdown, 0)!, data, ids);
 
-void test('capture preserves complete selected source and raw metadata in source order without section headers', () => {
+test('capture preserves complete selected source and raw metadata in source order without section headers', () => {
     const result = capture()!;
     assert.ok(result);
     assert.deepEqual(result.slides, [
@@ -52,7 +52,7 @@ void test('capture preserves complete selected source and raw metadata in source
     assert.deepEqual(capture(source, companion, ['one'])!.compositions, []);
 });
 
-void test('capture includes each transitive composition once with default controls and instance text intact', () => {
+test('capture includes each transitive composition once with default controls and instance text intact', () => {
     const result = capture()!;
     assert.deepEqual(result.compositions, [
         { id: 'card', markdown: card, record: cardRecord },
@@ -66,13 +66,13 @@ void test('capture includes each transitive composition once with default contro
     );
 });
 
-void test('literal fenced directives, authored EOF whitespace and unknown records are copied unchanged', () => {
+test('literal fenced directives, authored EOF whitespace and unknown records are copied unchanged', () => {
     const markdown = '<!-- slide: one -->\n<!-- text: body -->\n```md\n<!-- slide: example -->\n```\n\n\n \t';
     assert.equal(capture(markdown, companion, ['one'])!.slides[0]!.markdown, markdown);
     assert.equal(capture(markdown, companion, ['one'])!.slides[0]!.record, firstRecord);
 });
 
-void test('slide paint order retains inherited object names among complete own objects', () => {
+test('slide paint order retains inherited object names among complete own objects', () => {
     const ordered = companion.replace('"objects":[{"id":"card"', '"objects":["title",{"id":"card"');
     const result = capture(source, ordered)!;
     assert.ok(result);
@@ -87,7 +87,7 @@ void test('slide paint order retains inherited object names among complete own o
     assert.equal(capture(source, companion.replace('"objects":[]', '"objects":["title"]')), null);
 });
 
-void test('incomplete selection or dependency source refuses capture instead of silently losing content', () => {
+test('incomplete selection or dependency source refuses capture instead of silently losing content', () => {
     for (const ids of [[], ['missing'], ['one', 'missing']]) assert.equal(capture(source, companion, ids), null);
     assert.equal(capture(source, companion.replace('"two":', '"other":')), null);
     assert.equal(capture(source.replace(badge, '')), null);
@@ -98,7 +98,7 @@ void test('incomplete selection or dependency source refuses capture instead of 
     assert.equal(capture(source, companion.replace('"compositions":{', '"compositions":{},"compositions":{')), null);
 });
 
-void test('composition raw-record maps use the same lossless updates as slide maps', () => {
+test('composition raw-record maps use the same lossless updates as slide maps', () => {
     const data = CompanionDocument.read(companion, 'compositions')!;
     assert.equal(data.records.get('card'), cardRecord);
     const changed = data.change(
@@ -112,7 +112,7 @@ void test('composition raw-record maps use the same lossless updates as slide ma
     assert.equal(CompanionDocument.read(changed, 'compositions')!.records.has('badge'), false);
 });
 
-void test('deep shared composition graphs are captured iteratively without duplication', () => {
+test('deep shared composition graphs are captured iteratively without duplication', () => {
     const count = 1200;
     const parts = Array.from({ length: count }, (_, index) => `<!-- composition: c${index} -->\n<!-- text: body -->\nWords ${index}\n`);
     const metadata = Object.fromEntries(
