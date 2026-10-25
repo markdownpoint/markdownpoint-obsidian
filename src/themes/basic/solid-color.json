@@ -1,0 +1,9 @@
+{
+  "markdownpoint": 1,
+  "kind": "layout",
+  "scheme": "mint",
+  "overrides": {
+    "footer": null,
+    "slide-number": null
+  }
+}

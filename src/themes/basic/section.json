@@ -1,0 +1,52 @@
+{
+  "markdownpoint": 1,
+  "kind": "layout",
+  "scheme": "butter",
+  "objects": [
+    {
+      "id": "section-number",
+      "type": "text",
+      "locked": true,
+      "frame": {
+        "x": 110,
+        "y": 90,
+        "width": 1200,
+        "height": 400
+      },
+      "text-style": "display",
+      "font-size": 400,
+      "tracking": -0.05
+    },
+    {
+      "id": "section-name",
+      "type": "text",
+      "locked": true,
+      "frame": {
+        "x": 120,
+        "y": 500,
+        "width": 1560,
+        "height": 310
+      },
+      "text-style": "display",
+      "vertical-align": "bottom"
+    },
+    {
+      "id": "body",
+      "type": "text",
+      "placeholder": true,
+      "frame": {
+        "x": 120,
+        "y": 830,
+        "width": 1560,
+        "height": 130
+      },
+      "text-style": "body",
+      "color": "muted"
+    }
+  ],
+  "text": {
+    "section-number": "{{section-number}}",
+    "section-name": "{{section-name}}",
+    "body": "A new part of the story begins here."
+  }
+}

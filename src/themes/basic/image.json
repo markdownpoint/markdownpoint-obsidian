@@ -1,0 +1,22 @@
+{
+  "markdownpoint": 1,
+  "kind": "layout",
+  "scheme": "dark",
+  "overrides": {
+    "footer": null,
+    "slide-number": null
+  },
+  "objects": [
+    {
+      "id": "image",
+      "type": "image",
+      "placeholder": true,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  ]
+}

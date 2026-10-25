@@ -1,0 +1,23 @@
+{
+  "markdownpoint": 1,
+  "kind": "layout",
+  "objects": [
+    {
+      "id": "body",
+      "type": "text",
+      "placeholder": true,
+      "frame": {
+        "x": 120,
+        "y": 120,
+        "width": 1680,
+        "height": 800
+      },
+      "text-style": "body",
+      "align": "center",
+      "vertical-align": "center"
+    }
+  ],
+  "text": {
+    "body": "Start with your main point.\n\nAdd the details that help your audience understand it."
+  }
+}
