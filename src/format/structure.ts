@@ -40,6 +40,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
   const master = theme.master.value, layout = theme.layouts.get(record.layout)?.value, size = master.size;
   if (!layout || !isRecord(size) || !finite(size.width) || !finite(size.height) || size.width <= 0 || size.height <= 0) return null;
   const objects = new Map<string, Record<string, unknown>>();
+  const ownIds = new Set<string>();
   for (const level of [master, layout, record]) {
     const inherited = new Set(objects.keys());
     if (isRecord(level.overrides)) for (const [id, override] of Object.entries(level.overrides)) {
@@ -54,6 +55,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
     if (Array.isArray(level.objects)) for (const object of level.objects) {
       if (!isRecord(object) || typeof object.id !== "string" || inherited.has(object.id)) continue;
       objects.set(object.id, object);
+      if (level === record) ownIds.add(object.id);
     }
   }
   const regions: StructureRegion[] = [];
@@ -67,7 +69,10 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
       frame.width <= 0 || frame.height <= 0 || (object.rotation != null && !finite(object.rotation))) continue;
     if (typeof object.type !== "string") continue;
     const text = ["text", "table", "chart"].includes(object.type);
-    if (!text && !["image", "video", "web-video", "shape", "composition"].includes(object.type)) continue;
+    // Theme labels and decorative shapes do not describe the slide's writing areas.
+    // Slide-owned text remains editable even without the theme placeholder flag.
+    if (text && object.placeholder !== true && !ownIds.has(String(object.id))) continue;
+    if (!text && !["image", "video", "web-video", "composition"].includes(object.type)) continue;
     const styles = master["text-styles"];
     const style = isRecord(styles) && typeof object["text-style"] === "string" ? styles[object["text-style"]] : undefined;
     const count = object["column-count"] ?? (isRecord(style) ? style["column-count"] : undefined) ?? 1;

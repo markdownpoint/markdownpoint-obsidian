@@ -57,7 +57,17 @@ void test("unknown geometry, hidden objects and hierarchy are omitted; framed me
 
 void test("an own object cannot replace an inherited frame by colliding with its identity", () => {
   const preview = slideStructure({ layout: "title", objects: [{ ...field, frame: { x: 0, y: 0, width: 10, height: 10 } }] }, theme)!;
-  assert.equal(preview.regions[1]!.width, 800);
+  assert.equal(preview.regions[0]!.width, 800);
+});
+
+void test("writing previews omit fixed theme labels and decorative backdrops while retaining slide-owned fields", () => {
+  const preview = slideStructure({ layout: "title", objects: [
+    { id: "card", type: "shape", frame: { x: 80, y: 40, width: 1440, height: 820 } },
+    { ...field, id: "headline", frame: { x: 100, y: 400, width: 800, height: 120 }, placeholder: false },
+    { ...field, id: "figure", type: "chart", frame: { x: 100, y: 540, width: 800, height: 140 }, placeholder: false },
+    { ...field, id: "photo", type: "image", frame: { x: 960, y: 100, width: 480, height: 580 } },
+  ] }, theme)!;
+  assert.deepEqual(preview.regions.map(region => [region.kind, region.y]), [["text", 100], ["text", 400], ["text", 540], ["media", 100]]);
 });
 
 void test("null rotation and scale overrides reset to flat defaults without removing the region", () => {
