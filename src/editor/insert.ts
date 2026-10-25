@@ -25,7 +25,7 @@ import { slideStructureChange } from "./boundary-protection.ts";
 
 /** Insert the complete group as one native edit, ready to write in its first slide. */
 export function slideInsertionTransaction(state: EditorState, plan: SlideInsertion, firstId: string, livePreview = false, bodyStart = 0): TransactionSpec | null {
-  let changes = state.changes({ from: plan.from, to: plan.to, insert: plan.insert });
+  let changes = state.changes(plan.changes);
   // CodeMirror normalizes incoming line endings. Resolve caret offsets from its
   // actual document, not the format plan's possibly mixed LF/CRLF source.
   const document = indexPresentation(changes.apply(state.doc).toString(), bodyStart);

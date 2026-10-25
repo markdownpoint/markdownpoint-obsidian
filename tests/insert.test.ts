@@ -21,12 +21,12 @@ import test from "node:test";
 import { indexPresentation } from "../src/format/document.ts";
 import { CompanionDocument } from "../src/format/companion.ts";
 import { planSlideInsertion } from "../src/format/insert.ts";
-import type { PreparedSlide, SlideInsertion } from "../src/format/insert.ts";
+import type { PreparedPart, SlideInsertion } from "../src/format/insert.ts";
 
 const block = (id: string) => `<!-- slide: ${id} -->\n<!-- text: title -->\nWords for ${id}.\n<!-- notes -->\nRemember.\n\n`;
-const prepared = (id: string): PreparedSlide => ({ id, markdown: block(id), record: '{"layout":"title"}' });
-const apply = (source: string, plan: SlideInsertion) => source.slice(0, plan.from) + plan.insert + source.slice(plan.to);
-const plan = (source: string, companion: string, slides: readonly PreparedSlide[], after: string | null, bodyStart = 0) =>
+const prepared = (id: string): PreparedPart => ({ id, markdown: block(id), record: '{"layout":"title"}' });
+const apply = (source: string, plan: SlideInsertion) => [...plan.changes].reverse().reduce((text, change) => text.slice(0, change.from) + change.insert + text.slice(change.to), source);
+const plan = (source: string, companion: string, slides: readonly PreparedPart[], after: string | null, bodyStart = 0) =>
   planSlideInsertion(source, indexPresentation(source, bodyStart)!, companion, slides, after, bodyStart);
 
 void test("insertion preserves independent source/JSON order and every surviving record byte", () => {
@@ -39,8 +39,8 @@ void test("insertion preserves independent source/JSON order and every surviving
   const added = { ...prepared("new"), record: '{"layout":"title","objects":[{"id":"image","asset":"media/photo.png"}],"future":{"kept":true}}' };
   const result = plan(source, companion, [added, prepared("another")], "b", header.length)!;
   assert.ok(result);
-  assert.equal(result.from, source.indexOf(section));
-  assert.equal(result.from, result.to);
+  assert.equal(result.changes[0]!.from, source.indexOf(section));
+  assert.equal(result.changes[0]!.from, result.changes[0]!.to);
   assert.equal(apply(source, result), header + block("a") + block("b") + block("new") + block("another") + section + block("c") + composition);
   assert.ok(result.companion.includes(raw));
   assert.equal(result.companion.slice(result.companion.indexOf(', "compositions"')), companion.slice(companion.indexOf(', "compositions"')));
@@ -76,7 +76,7 @@ void test("EOF separation preserves authored blank-line counts on both sides of 
     const result = plan(source, '{"slides":{"a":{}}}', [{ id: "b", markdown: incoming, record: '{}' }], "a")!;
     assert.ok(result);
     assert.equal(apply(source, result), first + closed + incoming);
-    assert.ok(result.from >= first.length);
+    assert.ok(result.changes[0]!.from >= first.length);
     const before = block("existing");
     const inserted = plan(before, '{"slides":{"existing":{}}}', [{ id: "a", markdown: source, record: '{}' }, prepared("last")], "existing")!;
     assert.equal(apply(before, inserted), before + first + closed + block("last"));
@@ -120,4 +120,56 @@ void test("one large insertion retains the selected order and complete raw recor
   assert.ok(result);
   assert.deepEqual(result.document.slides.map(slide => slide.id), ["first", ...additions.map(slide => slide.id)]);
   assert.equal(CompanionDocument.read(result.companion)!.records.size, 1001);
+});
+
+const definition = (id: string): PreparedPart => ({ id, markdown: `<!-- composition: ${id} -->\n<!-- control: caption -->\nDefault ${id}.\n`, record: '{"controls":{"caption":{"type":"text"}},"future":9007199254740993}' });
+
+void test("a group and its new definitions enter different source positions without replacing intervening content", () => {
+  const held = definition("held"), incoming = definition("card");
+  const source = block("a") + block("b") + held.markdown;
+  const companion = '{"slides":{"a":{},"b":{}},"compositions":{"held":{"keep":true}},"future":9007199254740995}';
+  const result = planSlideInsertion(source, indexPresentation(source, 0)!, companion, [prepared("copy")], "a", 0, [incoming])!;
+  assert.ok(result);
+  assert.equal(result.changes.length, 2);
+  assert.equal(result.changes[0]!.from, block("a").length);
+  assert.equal(result.changes[1]!.from, source.length);
+  assert.equal(apply(source, result), block("a") + block("copy") + block("b") + held.markdown + incoming.markdown);
+  assert.equal(CompanionDocument.read(result.companion, "compositions")!.records.get("held"), '{"keep":true}');
+  assert.equal(CompanionDocument.read(result.companion, "compositions")!.records.get("card"), incoming.record);
+  assert.ok(result.companion.includes('"future":9007199254740995'));
+});
+
+void test("EOF and empty-draft insertion combine the slide and definition without extra authored blank lines", () => {
+  const incoming = { ...prepared("copy"), markdown: '<!-- slide: copy -->\n<!-- text: title -->\nCopied.' };
+  const added = definition("card");
+  for (const source of ["", '<!-- slide: a -->\n<!-- text: body -->\nOriginal.\n\n \t']) {
+    const companion = source ? '{"slides":{"a":{}}}' : '{"slides":{}}';
+    const result = planSlideInsertion(source, indexPresentation(source, 0)!, companion, [incoming], source ? "a" : null, 0, [added])!;
+    assert.ok(result);
+    assert.equal(result.changes.length, 1);
+    assert.equal(apply(source, result), (source ? '<!-- slide: a -->\n<!-- text: body -->\nOriginal.\n \t\n' : '') + incoming.markdown + '\n' + added.markdown);
+    assert.deepEqual(result.document.compositions.map(part => part.id), ["card"]);
+  }
+});
+
+void test("appending definitions preserves an existing definition's terminal payload spacing", () => {
+  const source = block("a") + '<!-- composition: held -->\n<!-- control: caption -->\nDefault.\n\n \t';
+  const companion = '{"slides":{"a":{}},"compositions":{"held":{}}}';
+  const result = planSlideInsertion(source, indexPresentation(source, 0)!, companion, [prepared("copy")], "a", 0, [definition("card")])!;
+  assert.equal(apply(source, result), block("a") + block("copy") + '<!-- composition: held -->\n<!-- control: caption -->\nDefault.\n \t\n' + definition("card").markdown);
+});
+
+void test("definition insertion rejects collisions, malformed fragments and conflicting pending metadata", () => {
+  const source = block("a");
+  const data = '{"slides":{"a":{},"orphan":{}},"compositions":{"pending":{}}}';
+  for (const added of [
+    [definition("a")], [definition("copy")], [definition("orphan")], [definition("card"), definition("card")],
+    [prepared("card")], [{ ...definition("card"), markdown: definition("card").markdown + block("extra") }],
+    [{ ...definition("card"), record: 'null' }], [definition("pending")],
+  ]) assert.equal(planSlideInsertion(source, indexPresentation(source, 0)!, data, [prepared("copy")], "a", 0, added), null);
+  const restored = { ...definition("pending"), record: '{}' };
+  assert.ok(planSlideInsertion(source, indexPresentation(source, 0)!, data, [prepared("copy")], "a", 0, [restored]));
+  for (const invalid of ['{"slides":{"a":{}},"compositions":null}', '{"slides":{"a":{}},"compositions":{},"compositions":{}}']) {
+    assert.equal(planSlideInsertion(source, indexPresentation(source, 0)!, invalid, [prepared("copy")], "a", 0, [definition("card")]), null);
+  }
 });

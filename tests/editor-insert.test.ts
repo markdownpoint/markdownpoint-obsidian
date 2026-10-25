@@ -22,7 +22,7 @@ import { EditorState } from "@codemirror/state";
 import { history, historyField, undo, redo, undoDepth } from "@codemirror/commands";
 import { indexPresentation } from "../src/format/document.ts";
 import { planSlideInsertion } from "../src/format/insert.ts";
-import type { PreparedSlide } from "../src/format/insert.ts";
+import type { PreparedPart } from "../src/format/insert.ts";
 import { slideInsertionTransaction } from "../src/editor/insert.ts";
 import { historyBoundarySelection, slideEditTransactions } from "../src/editor/structural-history.ts";
 import type { Transaction } from "@codemirror/state";
@@ -31,7 +31,7 @@ import { boundaryChangesAllowed } from "../src/editor/boundary-protection.ts";
 const block = (id: string) => `<!-- slide: ${id} -->\n<!-- text: title -->\nThought ${id}\n\n`;
 const markdown = block("one") + block("two");
 const companion = '{"slides":{"one":{},"two":{}}}';
-const prepared = (id: string, source = block(id)): PreparedSlide => ({ id, markdown: source, record: '{"layout":"title"}' });
+const prepared = (id: string, source = block(id)): PreparedPart => ({ id, markdown: source, record: '{"layout":"title"}' });
 const idsOf = (state: EditorState) => indexPresentation(state.doc.toString(), 0)!.slides.map(slide => slide.id);
 const insert = (state: EditorState, slides = [prepared("new")], after: string | null = "one", livePreview = true) => {
   const plan = planSlideInsertion(state.doc.toString(), indexPresentation(state.doc.toString(), 0)!, companion, slides, after, 0)!;
@@ -129,4 +129,26 @@ void test("explicit slide insertion passes Live Preview boundary protection with
   })] });
   assert.deepEqual(idsOf(insert(state)), ["one", "new", "two"]);
   assert.equal(state.update({ changes: { from: 0, to: 10 }, userEvent: "delete" }).docChanged, false);
+});
+
+void test("middle insertion with a tail definition is one native undo and keeps CRLF caret positions", () => {
+  const source = '<!-- slide: copy -->\r\n<!-- text: title -->\r\n<!-- text: body -->\r\nWords\r\n';
+  const definition = { id: "card", markdown: '<!-- composition: card -->\r\n<!-- control: caption -->\r\nDefault.\r\n', record: '{}' };
+  for (const livePreview of [false, true]) {
+    let state = EditorState.create({ doc: markdown, extensions: [history()] });
+    const plan = planSlideInsertion(markdown, indexPresentation(markdown, 0)!, companion, [prepared("copy", source)], "one", 0, [definition])!;
+    state = slideEditTransactions(state, slideInsertionTransaction(state, plan, "copy", livePreview)!).at(-1)!.state;
+    const inserted = state.doc.toString();
+    assert.deepEqual(indexPresentation(inserted, 0)!.compositions.map(part => part.id), ["card"]);
+    assert.equal(state.doc.lineAt(state.selection.main.head).text, livePreview ? "" : "<!-- text: title -->");
+    assert.equal(undoDepth(state), 1);
+    const target = { get state() { return state; }, dispatch: (transaction: Transaction) => { state = transaction.state; } };
+    for (let cycle = 0; cycle < 3; cycle++) {
+      state = EditorState.fromJSON(state.toJSON({ history: historyField }), { extensions: [history()] }, { history: historyField });
+      assert.ok(undo(target));
+      assert.equal(state.doc.toString(), markdown);
+      assert.ok(redo(target));
+      assert.equal(state.doc.toString(), inserted);
+    }
+  }
 });

@@ -44,7 +44,7 @@ import { planSlideDeletion } from "../format/delete.ts";
 import { slideDeletionTransaction } from "./delete.ts";
 import { historyBoundarySelection, slideEditTransactions } from "./structural-history.ts";
 import { planSlideInsertion } from "../format/insert.ts";
-import type { PreparedSlide } from "../format/insert.ts";
+import type { PreparedPart } from "../format/insert.ts";
 import { slideInsertionTransaction } from "./insert.ts";
 
 const refreshPresentation = StateEffect.define<boolean>();
@@ -223,19 +223,20 @@ export class PresentationEditor extends Component {
     });
   }
 
-  insertSlides(editor: Editor, slides: readonly PreparedSlide[], afterSlideId: string | null, canApply: () => boolean): Promise<boolean> {
+  insertSlides(editor: Editor, slides: readonly PreparedPart[], afterSlideId: string | null, canApply: () => boolean, compositions: readonly PreparedPart[] = []): Promise<boolean> {
     const prepared = slides.map(slide => ({ ...slide }));
+    const definitions = compositions.map(part => ({ ...part }));
     return this.editSlideRecords(editor, canApply, (state, snapshot, companion) => {
-      const plan = planSlideInsertion(state.doc.toString(), snapshot.document, companion, prepared, afterSlideId, snapshot.bodyStart);
+      const plan = planSlideInsertion(state.doc.toString(), snapshot.document, companion, prepared, afterSlideId, snapshot.bodyStart, definitions);
       if (!plan) return null;
-      return { companion: plan.companion, ids: prepared.map(slide => slide.id),
+      return { companion: plan.companion, ids: prepared.map(slide => slide.id), compositionIds: definitions.map(part => part.id),
         transaction: (current, livePreview) => slideInsertionTransaction(current, plan, prepared[0]!.id, livePreview, snapshot.bodyStart) };
     });
   }
 
   private async editSlideRecords(editor: Editor, canApply: () => boolean,
     prepare: (state: EditorState, snapshot: PresentationSnapshot, companion: string) =>
-      { readonly companion: string; readonly ids: Iterable<string>;
+      { readonly companion: string; readonly ids: Iterable<string>; readonly compositionIds?: Iterable<string>;
         transaction(state: EditorState, livePreview: boolean): TransactionSpec | null } | null): Promise<boolean> {
     const view = [...this.views].find(view => view.state.field(editorInfoField, false)?.editor === editor);
     const owner = view?.state.field(editorInfoField, false);
@@ -248,7 +249,7 @@ export class PresentationEditor extends Component {
     const companion = snapshot && this.reader.companionFor(file, snapshot);
     if (!snapshot || companion === null) return false;
     const plan = prepare(view.state, snapshot, companion);
-    if (!plan || !await this.data.remember(file.path, snapshot.id, plan.companion, plan.ids)) return false;
+    if (!plan || !await this.data.remember(file.path, snapshot.id, plan.companion, plan.ids, plan.compositionIds)) return false;
     if (!this.running || !this.views.has(view) || owner.file !== file || owner.getMode() !== "source" ||
       view.state.doc !== before || !this.reader.matchesIdentity(file, before.toString()) || !canApply()) return false;
     const transaction = plan.transaction(view.state, view.state.field(editorLivePreviewField, false) === true);

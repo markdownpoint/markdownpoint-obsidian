@@ -419,7 +419,11 @@ void test("copied slides and definitions share recovery, one disk write and nati
   let data = new SlideData(host);
   assert.ok(await data.remember(path, document, prepared, ["copy"], ["card"]));
   let editor = EditorState.create({ doc: before, extensions: [history()] });
-  editor = editor.update({ changes: { from: before.length, insert: inserted }, annotations: isolateHistory.of("full"), userEvent: "input.markdownpoint" }).state;
+  const definitionFrom = inserted.indexOf("<!-- composition:");
+  const plan = planSlideInsertion(before, indexPresentation(before, 0)!, disk.disk,
+    [{ id: "copy", markdown: inserted.slice(0, definitionFrom), record: slide }], "a", 0,
+    [{ id: "card", markdown: inserted.slice(definitionFrom), record: definition }])!;
+  editor = slideEditTransactions(editor, slideInsertionTransaction(editor, plan, "copy", true)!).at(-1)!.state;
   const synchronize = async () => {
     const indexed = indexPresentation(editor.doc.toString(), 0)!;
     data.observe(path, document, disk.disk, new Set(indexed.slides.map(part => part.id)), new Set(indexed.compositions.map(part => part.id)));
