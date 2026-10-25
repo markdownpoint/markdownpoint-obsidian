@@ -19,10 +19,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EditorSelection, EditorState } from "@codemirror/state";
-import { history, undo, redo } from "@codemirror/commands";
+import { history, historyField, undo, redo, undoDepth } from "@codemirror/commands";
 import { indexPresentation } from "../src/format/document.ts";
 import { planSlideDeletion } from "../src/format/delete.ts";
 import { slideDeletionTransaction } from "../src/editor/delete.ts";
+import { slideEditTransactions } from "../src/editor/structural-history.ts";
 
 const block = (id: string) => `<!-- slide: ${id} -->\n<!-- text: title -->\nThought ${id}\n\n`;
 const markdown = ["one", "two", "three"].map(block).join("");
@@ -42,7 +43,7 @@ void test("a deleted writing position lands in the next slide and one native und
   let state = EditorState.create({ doc: markdown, selection: { anchor: cursor }, extensions: [history()] });
   const document = indexPresentation(markdown, 0)!;
   const plan = planSlideDeletion(markdown, document, companion, ["two"])!;
-  state = state.update(slideDeletionTransaction(state, document, plan)).state;
+  state = slideEditTransactions(state, slideDeletionTransaction(state, document, plan)).at(-1)!.state;
   assert.equal(state.doc.sliceString(state.selection.main.head, state.selection.main.head + 13), "Thought three");
   const dispatch = (transaction: { state: EditorState }) => { state = transaction.state; };
   assert.ok(undo({ state, dispatch }));
@@ -56,7 +57,7 @@ void test("all-slide deletion leaves a valid caret and undo restores the complet
   let state = EditorState.create({ doc: markdown, selection: { anchor: markdown.length }, extensions: [history()] });
   const document = indexPresentation(markdown, 0)!;
   const plan = planSlideDeletion(markdown, document, companion, ["one", "two", "three"])!;
-  state = state.update(slideDeletionTransaction(state, document, plan)).state;
+  state = slideEditTransactions(state, slideDeletionTransaction(state, document, plan)).at(-1)!.state;
   assert.equal(state.doc.length, 0);
   assert.equal(state.selection.main.head, 0);
   assert.ok(undo({ state, dispatch: transaction => { state = transaction.state; } }));
@@ -70,4 +71,42 @@ void test("a compact surviving field retains a focusable marker before its empty
   const plan = planSlideDeletion(source, document, companion, ["one"])!;
   const next = state.update(slideDeletionTransaction(state, document, plan)).state;
   assert.equal(next.selection.main.head, next.doc.toString().indexOf("<!-- text: title -->"));
+});
+
+void test("Live Preview includes a compact caret line in deletion's single native history event", () => {
+  const source = block("one") + '<!-- slide: two -->\n<!-- text: title -->\n<!-- text: body -->\nWords.\n';
+  const document = indexPresentation(source, 0)!;
+  const plan = planSlideDeletion(source, document, companion, ["one"])!;
+  const cursor = source.indexOf("Thought one");
+  let state = EditorState.create({ doc: source, selection: { anchor: cursor }, extensions: [history()] });
+  state = slideEditTransactions(state, slideDeletionTransaction(state, document, plan, true)).at(-1)!.state;
+  const inserted = '<!-- slide: two -->\n<!-- text: title -->\n\n<!-- text: body -->\nWords.\n';
+  assert.equal(state.doc.toString(), inserted);
+  assert.equal(state.doc.lineAt(state.selection.main.head).text, "");
+  assert.equal(undoDepth(state), 1);
+  state = EditorState.fromJSON(state.toJSON({ history: historyField }), { extensions: [history()] }, { history: historyField });
+  const dispatch = (transaction: { state: EditorState }) => { state = transaction.state; };
+  assert.ok(undo({ state, dispatch }));
+  assert.equal(state.doc.toString(), source);
+  assert.equal(state.selection.main.head, cursor);
+  assert.ok(redo({ state, dispatch }));
+  assert.equal(state.doc.toString(), inserted);
+  assert.equal(state.doc.lineAt(state.selection.main.head).text, "");
+  const position = state.selection.main.head;
+  state = state.update({ changes: { from: position, insert: "New words" }, selection: { anchor: position + 9 }, userEvent: "input.type" }).state;
+  assert.equal(undoDepth(state), 2);
+  assert.ok(undo({ state, dispatch }));
+  assert.equal(state.doc.toString(), inserted);
+  assert.ok(undo({ state, dispatch }));
+  assert.equal(state.doc.toString(), source);
+});
+
+void test("deletion adds no caret line to an independent surviving writing selection", () => {
+  const source = block("one") + '<!-- slide: two -->\n<!-- text: title -->\n<!-- text: body -->\nWords.\n';
+  const document = indexPresentation(source, 0)!;
+  const plan = planSlideDeletion(source, document, companion, ["one"])!;
+  const state = EditorState.create({ doc: source, selection: { anchor: source.indexOf("Words.") } });
+  const next = state.update(slideDeletionTransaction(state, document, plan, true)).state;
+  assert.equal(next.doc.toString(), source.slice(block("one").length));
+  assert.equal(next.doc.sliceString(next.selection.main.head), "Words.\n");
 });

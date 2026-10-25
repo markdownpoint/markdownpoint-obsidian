@@ -36,12 +36,13 @@ import type { NotesActions } from "./notes-widgets.ts";
 import type { NotesUi } from "../settings/notes-ui.ts";
 import { payloadContentEnd } from "../format/payload.ts";
 import { slideAtPosition } from "../format/document.ts";
-import { slideReorderTransaction } from "./reorder.ts";
+import { historyReorderSelection, slideReorderTransaction } from "./reorder.ts";
 import type { SlideReorder } from "../format/reorder.ts";
 import { undo, redo } from "@codemirror/commands";
 import type { SlideData } from "../presentation/slide-data.ts";
 import { planSlideDeletion } from "../format/delete.ts";
 import { slideDeletionTransaction } from "./delete.ts";
+import { slideEditTransactions } from "./structural-history.ts";
 
 const refreshPresentation = StateEffect.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
@@ -143,6 +144,7 @@ export class PresentationEditor extends Component {
         return {
           update: update => {
             sync();
+            for (const transaction of update.transactions) this.restoreHistoryCaret(view, transaction);
             if (update.selectionSet || update.docChanged || update.focusChanged ||
               update.transactions.some(transaction => transaction.reconfigured || transaction.effects.some(effect => effect.is(refreshPresentation)))) {
               this.reportCaret(view);
@@ -192,7 +194,7 @@ export class PresentationEditor extends Component {
     if (!snapshot) return false;
     const transaction = slideReorderTransaction(view.state, snapshot.document, ids, action);
     if (!transaction) return false;
-    view.dispatch(transaction);
+    view.dispatch(slideEditTransactions(view.state, transaction));
     return true;
   }
 
@@ -204,10 +206,7 @@ export class PresentationEditor extends Component {
     const owner = view.state.field(editorInfoField, false);
     if (changed && owner instanceof MarkdownView) {
       this.reader.syncEditor(owner);
-      const snapshot = this.reader.snapshot(file, view.state.doc.toString());
-      const position = Math.max(0, Math.min(view.state.selection.main.head, view.state.doc.length - 1));
-      const slide = snapshot && slideAtPosition(snapshot.document, position);
-      if (slide) this.caretChanged(owner, slide.id);
+      this.publishCaret(view);
     }
     return changed;
   }
@@ -228,7 +227,8 @@ export class PresentationEditor extends Component {
     if (!plan || !await this.data.remember(file.path, snapshot.id, companion, selected)) return false;
     if (!this.running || !this.views.has(view) || owner.file !== file || owner.getMode() !== "source" ||
       view.state.doc !== before || !this.reader.matchesIdentity(file, before.toString()) || !canApply()) return false;
-    view.dispatch(slideDeletionTransaction(view.state, snapshot.document, plan));
+    view.dispatch(slideEditTransactions(view.state,
+      slideDeletionTransaction(view.state, snapshot.document, plan, view.state.field(editorLivePreviewField, false) === true)));
     this.reader.syncEditor(owner);
     return true;
   }
@@ -241,13 +241,34 @@ export class PresentationEditor extends Component {
     view.dom.ownerDocument.defaultView?.queueMicrotask(() => {
       this.pendingCaret.delete(view);
       if (!this.running || !this.views.has(view) || !view.hasFocus) return;
-      const editor = view.state.field(editorInfoField, false);
-      if (!(editor instanceof MarkdownView) || !editor.file) return;
-      const snapshot = this.reader.snapshot(editor.file, view.state.doc.toString());
-      if (!snapshot) return;
-      const position = Math.max(0, Math.min(view.state.selection.main.head, view.state.doc.length - 1));
-      const slide = slideAtPosition(snapshot.document, position);
-      if (slide) this.caretChanged(editor, slide.id);
+      this.publishCaret(view);
+    });
+  }
+
+  private publishCaret(view: EditorView): void {
+    const editor = view.state.field(editorInfoField, false);
+    if (!this.running || !this.views.has(view) || !(editor instanceof MarkdownView) || !editor.file) return;
+    const snapshot = this.reader.snapshot(editor.file, view.state.doc.toString());
+    const position = Math.max(0, Math.min(view.state.selection.main.head, view.state.doc.length - 1));
+    const slide = snapshot && slideAtPosition(snapshot.document, position);
+    if (slide) this.caretChanged(editor, slide.id);
+  }
+
+  private restoreHistoryCaret(view: EditorView, transaction: Transaction): void {
+    if (!transaction.docChanged || !(transaction.isUserEvent("undo") || transaction.isUserEvent("redo"))) return;
+    const file = transaction.state.field(editorInfoField, false)?.file;
+    if (!file) return;
+    const before = transaction.startState.field(this.field).snapshot ?? this.reader.snapshot(file, transaction.startState.doc.toString());
+    const after = transaction.state.field(this.field).snapshot ?? this.reader.snapshot(file, transaction.newDoc.toString());
+    if (!before || !after || before.id !== after.id) return;
+    const selection = historyReorderSelection(transaction, before.document, after.document);
+    if (!selection) return;
+    view.dom.ownerDocument.defaultView?.queueMicrotask(() => {
+      if (this.running && this.views.has(view) && view.state.field(editorInfoField, false)?.file === file &&
+        view.state.doc === transaction.newDoc && view.state.selection.eq(transaction.newSelection)) {
+        view.dispatch({ selection, userEvent: "select.markdownpoint", scrollIntoView: true });
+        this.publishCaret(view);
+      }
     });
   }
 
@@ -317,7 +338,8 @@ export class PresentationEditor extends Component {
     for (const effect of transaction?.effects ?? []) if (effect.is(editorFocus) || effect.is(refreshPresentation)) focused = effect.value;
     const id = snapshot?.id ?? previous?.id;
     const openedNotes = this.notesUi.opened(id ?? "");
-    if (snapshot && previous?.snapshot === snapshot && openedNotes === previous.openedNotes && !transaction?.selection && focused === previous.focused) return previous;
+    const selectionChanged = transaction?.selection && !transaction.startState.selection.eq(transaction.newSelection);
+    if (snapshot && previous?.snapshot === snapshot && openedNotes === previous.openedNotes && !selectionChanged && focused === previous.focused) return previous;
     if (snapshot && !snapshot.document.slides.length && !snapshot.document.sections.length && !markdown.slice(snapshot.bodyStart).trim()) {
       return { id: snapshot.id, snapshot, empty: true, fields: [], notes: [], openedNotes, focused,
         markers: [{ from: 0, markerTo: state.doc.length, text: markdown, label: null }],

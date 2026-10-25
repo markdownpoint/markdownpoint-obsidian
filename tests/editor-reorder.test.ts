@@ -18,13 +18,14 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { history, undo, redo, undoDepth } from "@codemirror/commands";
+import { history, historyField, undo, redo, undoDepth } from "@codemirror/commands";
 import { EditorState, EditorSelection } from "@codemirror/state";
 import type { Transaction } from "@codemirror/state";
 import { boundaryChangesAllowed } from "../src/editor/boundary-protection.ts";
-import { slideReorderTransaction } from "../src/editor/reorder.ts";
+import { historyReorderSelection, slideReorderTransaction } from "../src/editor/reorder.ts";
 import { indexPresentation, slideAtPosition } from "../src/format/document.ts";
 import type { PresentationDocument } from "../src/format/document.ts";
+import { slideEditTransactions } from "../src/editor/structural-history.ts";
 
 const slideStepTransaction = (state: EditorState, document: PresentationDocument, ids: Iterable<string>, direction: "up" | "down") =>
   slideReorderTransaction(state, document, ids, { kind: "step", direction });
@@ -51,7 +52,7 @@ void test("each slide step is one native undo event, separate from typing before
   const typed = state.doc.toString();
   const step = slideStepTransaction(state, documentOf(state), ["bravo"], "up");
   assert.ok(step);
-  state = state.update(step).state;
+  state = slideEditTransactions(state, step).at(-1)!.state;
   assert.deepEqual(idsOf(state), ["bravo", "alpha", "charlie"]);
   assert.equal(state.selection.main.head, state.doc.toString().indexOf("BeXta") + 3);
   const moved = state.doc.toString();
@@ -72,9 +73,9 @@ void test("each slide step is one native undo event, separate from typing before
 void test("repeated slide steps stay separate in native undo and redo", () => {
   let state = editor();
   const target = { get state() { return state; }, dispatch: (transaction: Transaction) => { state = transaction.state; } };
-  state = state.update(slideStepTransaction(state, documentOf(state), ["bravo"], "up")!).state;
+  state = slideEditTransactions(state, slideStepTransaction(state, documentOf(state), ["bravo"], "up")!).at(-1)!.state;
   const first = state.doc.toString();
-  state = state.update(slideStepTransaction(state, documentOf(state), ["bravo"], "down")!).state;
+  state = slideEditTransactions(state, slideStepTransaction(state, documentOf(state), ["bravo"], "down")!).at(-1)!.state;
   assert.equal(state.doc.toString(), markdown);
   assert.equal(undoDepth(state), 2);
   undo(target);
@@ -83,6 +84,7 @@ void test("repeated slide steps stay separate in native undo and redo", () => {
   assert.equal(state.doc.toString(), markdown);
   redo(target);
   assert.equal(state.doc.toString(), first);
+  assert.equal(state.selection.main.head, state.doc.toString().indexOf("Beta") + 2);
 });
 
 void test("multiple native text selections keep their words, directions and main range after moving", () => {
@@ -121,7 +123,7 @@ void test("a split-group drop is one native undo event and retains the independe
   const drop = slideReorderTransaction(state, documentOf(state), ["charlie", "alpha"],
     { kind: "drop", target: { kind: "slide", id: "bravo", edge: "after" } });
   assert.ok(drop);
-  state = state.update(drop).state;
+  state = slideEditTransactions(state, drop).at(-1)!.state;
   assert.deepEqual(idsOf(state), ["bravo", "alpha", "charlie"]);
   assert.equal(state.selection.main.head, state.doc.toString().indexOf("Beta") + 2);
   assert.equal(undoDepth(state), 1);
@@ -130,4 +132,53 @@ void test("a split-group drop is one native undo event and retains the independe
   assert.equal(state.selection.main.head, caret);
   assert.equal(redo(target), true);
   assert.deepEqual(idsOf(state), ["bravo", "alpha", "charlie"]);
+  assert.equal(state.selection.main.head, state.doc.toString().indexOf("Beta") + 2);
+});
+
+void test("repeated native history cycles and serialization retain the writing slide and character", () => {
+  let state = editor();
+  state = slideEditTransactions(state, slideStepTransaction(state, documentOf(state), ["bravo"], "up")!).at(-1)!.state;
+  const target = { get state() { return state; }, dispatch: (transaction: Transaction) => {
+    const selection = historyReorderSelection(transaction, documentOf(transaction.startState), documentOf(transaction.state));
+    state = selection ? transaction.state.update({ selection, userEvent: "select.markdownpoint" }).state : transaction.state;
+  } };
+  for (let cycle = 0; cycle < 4; cycle++) {
+    state = EditorState.fromJSON(state.toJSON({ history: historyField }), { extensions: [history()] }, { history: historyField });
+    assert.equal(undoDepth(state), 1);
+    assert.ok(undo(target));
+    assert.equal(state.doc.toString(), markdown);
+    assert.equal(state.selection.main.head, markdown.indexOf("Beta") + 2);
+    assert.ok(redo(target));
+    assert.deepEqual(idsOf(state), ["bravo", "alpha", "charlie"]);
+    assert.equal(state.selection.main.head, state.doc.toString().indexOf("Beta") + 2);
+  }
+});
+
+void test("history recognizes section crossings even when the slide order stays the same", () => {
+  const source = '<!-- section: opening -->\n# Opening\n<!-- slide: alpha -->\n<!-- text: body -->\nAlpha\n<!-- section: ending -->\n# Ending\n<!-- slide: bravo -->\n<!-- text: body -->\nBeta\n';
+  let state = EditorState.create({ doc: source, selection: { anchor: source.indexOf("Beta") + 2 }, extensions: [history()] });
+  state = slideEditTransactions(state, slideStepTransaction(state, documentOf(state), ["bravo"], "up")!).at(-1)!.state;
+  assert.deepEqual(idsOf(state), ["alpha", "bravo"]);
+  const target = { get state() { return state; }, dispatch: (transaction: Transaction) => {
+    const selection = historyReorderSelection(transaction, documentOf(transaction.startState), documentOf(transaction.state));
+    state = selection ? transaction.state.update({ selection, userEvent: "select.markdownpoint" }).state : transaction.state;
+  } };
+  for (let cycle = 0; cycle < 3; cycle++) {
+    assert.ok(undo(target));
+    assert.equal(state.doc.toString(), source);
+    assert.equal(state.selection.main.head, source.indexOf("Beta") + 2);
+    assert.ok(redo(target));
+    assert.equal(state.selection.main.head, state.doc.toString().indexOf("Beta") + 2);
+  }
+});
+
+void test("history caret remapping leaves ordinary text undo and slide insertion/removal to their native selections", () => {
+  for (const removeSlide of [false, true]) {
+    let state = editor();
+    const part = documentOf(state).slides[1]!;
+    state = state.update({ changes: removeSlide ? { from: part.from, to: part.to } : { from: state.selection.main.head, insert: "X" } }).state;
+    assert.ok(undo({ state, dispatch: transaction => {
+      assert.equal(historyReorderSelection(transaction, documentOf(transaction.startState), documentOf(transaction.state)), null);
+    } }));
+  }
 });

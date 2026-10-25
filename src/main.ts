@@ -249,8 +249,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const editor = await this.editingView(target.owner.leaf);
         if (editor && current()) {
           const deleted = await this.presentationEditor?.deleteSlides(editor.editor, [target.slide], current);
-          if (deleted && current() && this.app.workspace.getMostRecentLeaf() === editor.leaf &&
-            !this.presentationEditor?.focus(editor.editor)) editor.editor.focus();
+          if (deleted && current() && this.app.workspace.getMostRecentLeaf() === editor.leaf) editor.editor.focus();
         }
       } catch (error) { this.storage?.preparationFailed(error); }
     });
