@@ -67,7 +67,9 @@ export const vi: Translations = {
         openFailed: 'Đã tạo bài thuyết trình nhưng không thể mở. Hãy mở slides.md trong thư mục của bài thuyết trình.',
         openChanged: 'Bài thuyết trình đã thay đổi hoặc không đọc được. Hãy thử lại.',
         handoffFailed: 'Không thể lưu và mở bài thuyết trình.',
-        themeChanged: 'Chủ đề đã thay đổi hoặc không khả dụng. Hãy mở lại hộp thoại này và chọn lại chủ đề.'
+        themeChanged: 'Chủ đề đã thay đổi hoặc không khả dụng. Hãy mở lại hộp thoại này và chọn lại chủ đề.',
+        newerFormat: ({ version }: { version: string }) =>
+            `Bài thuyết trình này dùng định dạng MarkdownPoint mới hơn (${version}). Hãy cập nhật plugin MarkdownPoint để mở dưới dạng bài thuyết trình.`
     },
     slides: {
         new: 'Trang chiếu mới',
@@ -95,6 +97,8 @@ export const vi: Translations = {
         copyFailed: 'Không thể sao chép trang chiếu.',
         copyUnavailable: 'Không thể đọc bài thuyết trình hoặc các tệp chủ đề của nó.',
         copyChanged: 'Bài thuyết trình đã thay đổi trước khi kịp sao chép trang chiếu. Hãy thử lại.',
+        copyNewer:
+            'Bài thuyết trình này dùng định dạng MarkdownPoint mới hơn. Hãy cập nhật plugin MarkdownPoint để sao chép hoặc cắt các trang chiếu trong đó.',
         delete: () => 'Xóa trang chiếu',
         deleteFailed: 'Không thể xóa trang chiếu.',
         recoveryUnavailable: 'Không thể đọc các bản sao khôi phục trên thiết bị này.',
@@ -110,5 +114,19 @@ export const vi: Translations = {
         focusEditor: 'Chuyển tới trình soạn thảo',
         moveSlidesUp: 'Di chuyển trang chiếu lên',
         moveSlidesDown: 'Di chuyển trang chiếu xuống'
+    },
+    whatsNew: {
+        title: 'Có gì mới trong MarkdownPoint',
+        version: ({ version }: { version: string }) => `Phiên bản ${version}`,
+        new: 'Mới',
+        improved: 'Cải tiến',
+        changed: 'Thay đổi',
+        fixed: 'Sửa lỗi',
+        close: 'Đóng',
+        setting: ({ version }: { version: string }) => `Có gì mới trong MarkdownPoint ${version}`,
+        settingDescription: 'Xem những thay đổi trong các bản phát hành gần đây.',
+        view: 'Xem cập nhật gần đây',
+        showOnUpdate: 'Hiển thị “Có gì mới” sau khi cập nhật',
+        showOnUpdateDescription: 'Mở hộp thoại “Có gì mới” một lần sau mỗi lần cập nhật.'
     }
 };

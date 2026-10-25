@@ -278,6 +278,6 @@ test('local Cut authority survives reload but cannot authorize an altered packet
 test('slides are not copied out of a presentation of a newer format minor', async () => {
     const { state, copier } = setup();
     state.companion = state.companion.replace('"markdownpoint":"1.0"', '"markdownpoint":"1.1"');
-    assert.equal((await copier.copy('view', ['one'])).kind, 'unavailable');
+    assert.equal((await copier.copy('view', ['one'])).kind, 'newer');
     assert.deepEqual(state.writes, []);
 });

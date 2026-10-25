@@ -67,7 +67,9 @@ export const ko: Translations = {
         openFailed: '프레젠테이션을 생성했지만 열지 못했습니다. 해당 폴더에서 slides.md를 여세요.',
         openChanged: '프레젠테이션이 변경되었거나 읽을 수 없습니다. 다시 시도하세요.',
         handoffFailed: '프레젠테이션을 저장하고 열지 못했습니다.',
-        themeChanged: '테마가 변경되었거나 사용할 수 없습니다. 이 대화 상자를 다시 열고 테마를 다시 선택하세요.'
+        themeChanged: '테마가 변경되었거나 사용할 수 없습니다. 이 대화 상자를 다시 열고 테마를 다시 선택하세요.',
+        newerFormat: ({ version }: { version: string }) =>
+            `이 프레젠테이션은 더 새로운 MarkdownPoint 포맷(${version})을 사용합니다. 프레젠테이션으로 열려면 MarkdownPoint 플러그인을 업데이트하세요.`
     },
     slides: {
         new: '새 슬라이드',
@@ -94,6 +96,8 @@ export const ko: Translations = {
         copyFailed: '슬라이드를 복사하지 못했습니다.',
         copyUnavailable: '프레젠테이션이나 테마 파일을 읽지 못했습니다.',
         copyChanged: '슬라이드를 복사하기 전에 프레젠테이션이 변경되었습니다. 다시 시도하세요.',
+        copyNewer:
+            '이 프레젠테이션은 더 새로운 MarkdownPoint 포맷을 사용합니다. 슬라이드를 복사하거나 잘라내려면 MarkdownPoint 플러그인을 업데이트하세요.',
         delete: () => '슬라이드 삭제',
         deleteFailed: '슬라이드를 삭제하지 못했습니다.',
         recoveryUnavailable: '이 기기의 복구용 복사본을 읽지 못했습니다.',
@@ -109,5 +113,19 @@ export const ko: Translations = {
         focusEditor: '편집기에 포커스',
         moveSlidesUp: '슬라이드 위로 이동',
         moveSlidesDown: '슬라이드 아래로 이동'
+    },
+    whatsNew: {
+        title: 'MarkdownPoint의 새로운 기능',
+        version: ({ version }: { version: string }) => `버전 ${version}`,
+        new: '새 기능',
+        improved: '개선',
+        changed: '변경',
+        fixed: '수정',
+        close: '닫기',
+        setting: ({ version }: { version: string }) => `MarkdownPoint ${version}의 새로운 기능`,
+        settingDescription: '최근 릴리스에서 달라진 점을 확인하세요.',
+        view: '최근 업데이트 보기',
+        showOnUpdate: '업데이트 후 새로운 기능 표시',
+        showOnUpdateDescription: '업데이트할 때마다 새로운 기능 대화 상자를 한 번 엽니다.'
     }
 };

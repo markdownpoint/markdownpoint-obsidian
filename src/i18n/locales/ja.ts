@@ -67,7 +67,9 @@ export const ja: Translations = {
         openFailed: 'プレゼンテーションは作成されましたが、開けませんでした。そのフォルダのslides.mdを開いてください。',
         openChanged: 'プレゼンテーションが変更されたか、読み込めませんでした。もう一度お試しください。',
         handoffFailed: 'プレゼンテーションを保存して開くことができませんでした。',
-        themeChanged: 'テーマが変更されたか、利用できません。このダイアログを開き直して、もう一度テーマを選んでください。'
+        themeChanged: 'テーマが変更されたか、利用できません。このダイアログを開き直して、もう一度テーマを選んでください。',
+        newerFormat: ({ version }: { version: string }) =>
+            `このプレゼンテーションは新しいバージョンのMarkdownPointフォーマット（${version}）を使っています。プレゼンテーションとして開くには、MarkdownPointプラグインをアップデートしてください。`
     },
     slides: {
         new: '新規スライド',
@@ -97,6 +99,8 @@ export const ja: Translations = {
         copyFailed: 'スライドをコピーできませんでした。',
         copyUnavailable: 'プレゼンテーションまたはテーマのファイルを読み込めませんでした。',
         copyChanged: 'スライドをコピーする前にプレゼンテーションが変更されました。もう一度お試しください。',
+        copyNewer:
+            'このプレゼンテーションは新しいバージョンのMarkdownPointフォーマットを使っています。スライドをコピーまたはカットするには、MarkdownPointプラグインをアップデートしてください。',
         delete: () => 'スライドを削除',
         deleteFailed: 'スライドを削除できませんでした。',
         recoveryUnavailable: 'このデバイスの復元用コピーを読み込めませんでした。',
@@ -112,5 +116,19 @@ export const ja: Translations = {
         focusEditor: 'エディタにフォーカス',
         moveSlidesUp: 'スライドを上に移動',
         moveSlidesDown: 'スライドを下に移動'
+    },
+    whatsNew: {
+        title: 'MarkdownPointの新機能',
+        version: ({ version }: { version: string }) => `バージョン${version}`,
+        new: '新機能',
+        improved: '改善',
+        changed: '変更',
+        fixed: '修正',
+        close: '閉じる',
+        setting: ({ version }: { version: string }) => `MarkdownPoint ${version}の新機能`,
+        settingDescription: '最近のリリースで変わった点を確認します。',
+        view: '最近の更新を表示',
+        showOnUpdate: '更新後に新機能を表示',
+        showOnUpdateDescription: '更新のたびに新機能のダイアログを一度表示します。'
     }
 };

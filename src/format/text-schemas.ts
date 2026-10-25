@@ -17,7 +17,8 @@
  */
 
 import type { DocumentSlide } from './document.ts';
-import { isRecord, isStableId, opensFormatVersion } from './recognition.ts';
+import { opensFormatVersion } from './format-version.ts';
+import { isRecord, isStableId } from './recognition.ts';
 
 export interface TextSchemaTheme {
     readonly master: unknown;

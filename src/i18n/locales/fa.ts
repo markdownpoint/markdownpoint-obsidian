@@ -67,7 +67,9 @@ export const fa: Translations = {
         openFailed: 'ارائه ساخته شد اما باز نشد. پروندهٔ slides.md را در پوشهٔ آن باز کنید.',
         openChanged: 'ارائه تغییر کرده یا خوانده نشد. دوباره تلاش کنید.',
         handoffFailed: 'ذخیره و باز کردن ارائه انجام نشد.',
-        themeChanged: 'طرح زمینه تغییر کرده یا در دسترس نیست. این پنجره را دوباره باز کنید و آن را از نو انتخاب کنید.'
+        themeChanged: 'طرح زمینه تغییر کرده یا در دسترس نیست. این پنجره را دوباره باز کنید و آن را از نو انتخاب کنید.',
+        newerFormat: ({ version }: { version: string }) =>
+            `این ارائه از قالب جدیدتری از MarkdownPoint (نسخهٔ ${version}) استفاده می‌کند. برای باز کردن آن به‌صورت ارائه، افزونهٔ MarkdownPoint را به‌روز کنید.`
     },
     slides: {
         new: 'اسلاید جدید',
@@ -94,6 +96,8 @@ export const fa: Translations = {
         copyFailed: 'اسلایدها کپی نشدند.',
         copyUnavailable: 'ارائه یا پرونده‌های طرح زمینهٔ آن خوانده نشد.',
         copyChanged: 'ارائه پیش از کپی اسلایدها تغییر کرد. دوباره تلاش کنید.',
+        copyNewer:
+            'این ارائه از قالب جدیدتری از MarkdownPoint استفاده می‌کند. برای کپی یا برش اسلایدهای آن، افزونهٔ MarkdownPoint را به‌روز کنید.',
         delete: ({ count }: { count: number }) => (count === 1 ? 'حذف اسلاید' : 'حذف اسلایدها'),
         deleteFailed: 'اسلایدها حذف نشدند.',
         recoveryUnavailable: 'نسخه‌های بازیابی در این دستگاه خوانده نشدند.',
@@ -109,5 +113,19 @@ export const fa: Translations = {
         focusEditor: 'تمرکز بر ویرایشگر',
         moveSlidesUp: 'بالا بردن اسلایدها',
         moveSlidesDown: 'پایین آوردن اسلایدها'
+    },
+    whatsNew: {
+        title: 'تازه‌های MarkdownPoint',
+        version: ({ version }: { version: string }) => `نسخهٔ ${version}`,
+        new: 'تازه',
+        improved: 'بهبودیافته',
+        changed: 'تغییریافته',
+        fixed: 'رفع‌شده',
+        close: 'بستن',
+        setting: ({ version }: { version: string }) => `تازه‌های MarkdownPoint ${version}`,
+        settingDescription: 'تغییرات نسخه‌های اخیر را ببینید.',
+        view: 'دیدن تازه‌ها',
+        showOnUpdate: 'نمایش تازه‌ها پس از به‌روزرسانی',
+        showOnUpdateDescription: 'پس از هر به‌روزرسانی، پنجرهٔ تازه‌ها را یک بار باز می‌کند.'
     }
 };

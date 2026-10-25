@@ -25,6 +25,7 @@ import { MARKDOWNPOINT_ICON_ID } from '../markdownpoint-icon.ts';
 
 export class MarkdownPointSettingTab extends PluginSettingTab {
     icon = MARKDOWNPOINT_ICON_ID;
+    private readonly version: string;
 
     constructor(
         app: App,
@@ -32,13 +33,27 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
         private readonly localUi: LocalUiState,
         private readonly setOutlineSide: (side: OutlineSide) => Promise<void>,
         private readonly shared: SharedSettings,
-        private readonly imagesChanged: () => void
+        private readonly imagesChanged: () => void,
+        private readonly showWhatsNew: () => void
     ) {
         super(app, plugin);
+        this.version = plugin.manifest.version;
     }
 
     getSettingDefinitions(): SettingDefinitionItem[] {
         return [
+            {
+                name: uiText.whatsNew.setting({ version: this.version }),
+                desc: uiText.whatsNew.settingDescription,
+                render: setting => {
+                    setting.addButton(button => button.setButtonText(uiText.whatsNew.view).onClick(() => this.showWhatsNew()));
+                }
+            },
+            {
+                name: uiText.whatsNew.showOnUpdate,
+                desc: uiText.whatsNew.showOnUpdateDescription,
+                control: { type: 'toggle', key: 'showReleaseNotes', defaultValue: true }
+            },
             {
                 name: uiText.sidebar,
                 control: {
@@ -57,7 +72,9 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
     }
 
     getControlValue(key: string): unknown {
-        return key === 'outlineSide' ? this.localUi.outlineSide : key === 'showSlideImages' ? this.shared.showSlideImages : undefined;
+        if (key === 'outlineSide') return this.localUi.outlineSide;
+        if (key === 'showSlideImages') return this.shared.showSlideImages;
+        return key === 'showReleaseNotes' ? this.shared.showReleaseNotes : undefined;
     }
 
     /** Keep local workspace state separate from synced writing preferences. */
@@ -67,6 +84,8 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
         } else if (key === 'showSlideImages' && typeof value === 'boolean') {
             await this.shared.setShowSlideImages(value);
             this.imagesChanged();
+        } else if (key === 'showReleaseNotes' && typeof value === 'boolean') {
+            await this.shared.setShowReleaseNotes(value);
         }
     }
 }

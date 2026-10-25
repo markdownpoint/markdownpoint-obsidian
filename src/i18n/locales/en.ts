@@ -65,7 +65,9 @@ export const en = {
         openFailed: 'The presentation was created but couldn’t be opened. Open slides.md in its folder.',
         openChanged: 'The presentation changed or couldn’t be read. Try again.',
         handoffFailed: 'Couldn’t save and open the presentation.',
-        themeChanged: 'The theme changed or is unavailable. Reopen this dialog and choose it again.'
+        themeChanged: 'The theme changed or is unavailable. Reopen this dialog and choose it again.',
+        newerFormat: ({ version }: { version: string }) =>
+            `This presentation uses a newer MarkdownPoint format (${version}). Update the MarkdownPoint plugin to open it as a presentation.`
     },
     slides: {
         new: 'New slide',
@@ -92,6 +94,7 @@ export const en = {
         copyFailed: 'Couldn’t copy the slides.',
         copyUnavailable: 'Couldn’t read the presentation or its theme files.',
         copyChanged: 'The presentation changed before the slides could be copied. Try again.',
+        copyNewer: 'This presentation uses a newer MarkdownPoint format. Update the MarkdownPoint plugin to copy or cut its slides.',
         delete: ({ count }: { count: number }): string => (count === 1 ? 'Delete slide' : 'Delete slides'),
         deleteFailed: 'Couldn’t delete the slides.',
         recoveryUnavailable: 'Couldn’t read the recovery copies on this device.',
@@ -107,5 +110,19 @@ export const en = {
         focusEditor: 'Focus editor',
         moveSlidesUp: 'Move slides up',
         moveSlidesDown: 'Move slides down'
+    },
+    whatsNew: {
+        title: 'What’s new in MarkdownPoint',
+        version: ({ version }: { version: string }) => `Version ${version}`,
+        new: 'New',
+        improved: 'Improved',
+        changed: 'Changed',
+        fixed: 'Fixed',
+        close: 'Close',
+        setting: ({ version }: { version: string }) => `What’s new in MarkdownPoint ${version}`,
+        settingDescription: 'See what changed in recent releases.',
+        view: 'View recent updates',
+        showOnUpdate: 'Show release notes after updating',
+        showOnUpdateDescription: 'Open the What’s new dialog once after each update.'
     }
 };

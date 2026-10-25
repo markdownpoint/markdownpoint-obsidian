@@ -136,7 +136,9 @@ The plugin sets no hotkeys. Assign your own under **Settings → Hotkeys**:
 
 The move commands work while the outline has focus. Tab and Obsidian’s tab-switching shortcuts work as usual.
 
-Sidebar placement and expanded notes are stored on each device. Layout shortcuts and **Show slide images** are plugin settings. They sync when your vault syncs plugin settings. Obsidian manages sidebar visibility and width.
+After an update, MarkdownPoint shows the release notes once. To stop this, turn off **Settings → MarkdownPoint → Show release notes after updating**. To read them at any time, select **View recent updates** in the same settings.
+
+Sidebar placement and expanded notes are stored on each device. Layout shortcuts, **Show slide images** and **Show release notes after updating** are plugin settings. They sync when your vault syncs plugin settings. Obsidian manages sidebar visibility and width.
 
 ## Languages
 
@@ -150,7 +152,7 @@ In any other language, the plugin appears in English. The language setting never
 
 **Can I use Obsidian links and embeds?** They stay in the Markdown as you wrote them. The plugin doesn’t turn wikilinks, note embeds or other plugins’ output into slide content. For links that work outside Obsidian, use standard Markdown links. Add slide images in MarkdownPoint.
 
-**The file looks like ordinary Markdown.** Open `slides.md` in **Live Preview** and check that its own `presentation.mdpoint` is in the same folder. An unrelated note named `slides.md` stays an ordinary note. An extra `.mdpoint` file or a conflicted copy in the folder makes the pair ambiguous. The plugin then leaves both files alone.
+**The file looks like ordinary Markdown.** Open `slides.md` in **Live Preview** and check that its own `presentation.mdpoint` is in the same folder. An unrelated note named `slides.md` stays an ordinary note. An extra `.mdpoint` file or a conflicted copy in the folder makes the pair ambiguous. The plugin then leaves both files alone. If a notice says the presentation uses a newer MarkdownPoint format, update the plugin in **Settings → Community plugins**.
 
 **The outline still shows another presentation.** The outline keeps the last presentation you worked in, even while an ordinary note is active. Select the tab of the presentation you want.
 

@@ -662,3 +662,99 @@
     gap: var(--size-4-2);
     margin-top: var(--size-4-2);
 }
+
+/* What's new: the release list is the only part that scrolls, so the close button stays visible however many versions it shows. */
+.modal.markdownpoint-whats-new {
+    width: 600px;
+    max-width: 90vw;
+}
+
+.modal.markdownpoint-whats-new .modal-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.markdownpoint-release-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(60vh, 480px);
+    overflow-y: auto;
+    padding-inline-end: var(--size-4-2);
+}
+
+.markdownpoint-release + .markdownpoint-release {
+    margin-top: var(--size-4-4);
+}
+
+.markdownpoint-release h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--size-4-2);
+    margin: 0 0 var(--size-4-2);
+    padding: var(--size-4-1) var(--size-4-2);
+    border-radius: var(--radius-s);
+    background-color: var(--background-secondary);
+    font-size: var(--font-ui-medium);
+}
+
+/* The version reads as heading text and only shows that it is a link on hover */
+.markdownpoint-release h3 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.markdownpoint-release h3 a:hover {
+    text-decoration: underline;
+}
+
+.markdownpoint-release-date {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-normal);
+}
+
+.markdownpoint-release h4 {
+    margin: var(--size-4-3) 0 var(--size-4-1);
+    font-size: var(--font-ui-small);
+}
+
+.markdownpoint-release ul {
+    margin: 0;
+    padding-inline-start: var(--size-4-5);
+}
+
+.markdownpoint-release li {
+    margin-bottom: var(--size-4-1);
+}
+
+.markdownpoint-release-info {
+    margin: 0 0 var(--size-4-3);
+    color: var(--text-muted);
+}
+
+/* Inline code in a release note, set the way a theme sets code in a note */
+.markdownpoint-release code {
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius-s);
+    background-color: var(--code-background);
+    color: var(--code-normal);
+    font-size: 0.9em;
+}
+
+/* Marks the one point a release note wants read first, as a highlight in a note does */
+.markdownpoint-release-emphasis {
+    padding: 0 var(--size-2-1);
+    border-radius: var(--radius-s);
+    background-color: var(--text-highlight-bg);
+    color: var(--text-normal);
+    font-weight: var(--font-semibold);
+}
+
+.markdownpoint-whats-new-buttons {
+    display: flex;
+    justify-content: center;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-4);
+}

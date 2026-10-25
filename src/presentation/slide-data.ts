@@ -19,15 +19,9 @@
 import { CompanionDocument, isSlideRecordSource, reconcileSlideRecords } from '../format/companion.ts';
 import type { CompanionMap } from '../format/companion.ts';
 import { holdsOldWords } from '../format/file-words.ts';
+import { FORMAT_VERSION } from '../format/format-version.ts';
 import { readJsonObject } from '../format/json.ts';
-import {
-    isDocumentId,
-    isRecord,
-    isStableId,
-    presentationCompanionPath,
-    FORMAT_VERSION,
-    presentationIdentity
-} from '../format/recognition.ts';
+import { isDocumentId, isRecord, isStableId, presentationCompanionPath, presentationIdentity } from '../format/recognition.ts';
 export interface SlideDataHost {
     loadRecovery(): Promise<unknown>;
     saveRecovery(data: unknown): Promise<void>;

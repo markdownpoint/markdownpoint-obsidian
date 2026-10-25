@@ -18,7 +18,8 @@
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { isThemeKey } from './embedded-theme.ts';
-import { FORMAT_VERSION, isDocumentId } from './recognition.ts';
+import { FORMAT_VERSION } from './format-version.ts';
+import { isDocumentId } from './recognition.ts';
 import { orderedLayouts, prepareNewSlide } from './new-slide.ts';
 import { readJsonObject } from './json.ts';
 

@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { presentationCompanionPath, presentationIdentity, presentationPairNames } from '../src/format/recognition.ts';
+import { newerFormat, presentationCompanionPath, presentationIdentity, presentationPairNames } from '../src/format/recognition.ts';
 
 const document = '12345678-1234-7234-9234-123456789abc';
 const frontmatter = { markdownpoint: '1.0', id: document };
@@ -110,4 +110,24 @@ test('recognition leaves unrelated frontmatter and presentation data untouched',
     const before = structuredClone({ markdown, data });
     assert.equal(presentationIdentity(markdown, data), document);
     assert.deepEqual({ markdown, data }, before);
+});
+
+test('a pair of a newer major states its version through the envelope keys, and every other pair states none', () => {
+    const later = { ...companion, markdownpoint: '2.0', slides: { opening: { layout: 'title', unknown: true } } };
+    assert.equal(presentationIdentity({ ...frontmatter, markdownpoint: '2.0' }, later), null);
+    assert.equal(newerFormat({ ...frontmatter, markdownpoint: '2.0' }, later), '2.0');
+    assert.equal(newerFormat(frontmatter, later), '2.0');
+    assert.equal(newerFormat({ ...frontmatter, markdownpoint: '3.1' }, companion), '3.1');
+    for (const markdownpoint of ['1.0', '1.4'])
+        assert.equal(newerFormat(frontmatter, { ...companion, markdownpoint }), null, markdownpoint);
+    for (const value of [
+        { ...later, kind: 'theme' },
+        { ...later, id: '87654321-1234-7234-9234-123456789abc' },
+        { ...later, id: undefined, document }
+    ])
+        assert.equal(newerFormat({ ...frontmatter, markdownpoint: '2.0' }, value), null);
+    for (const markdownpoint of [undefined, 1, '2', '0.9'])
+        assert.equal(newerFormat({ ...frontmatter, markdownpoint }, later), null, String(markdownpoint));
+    assert.equal(newerFormat(null, later), null);
+    assert.equal(newerFormat({ markdownpoint: 1, document }, { markdownpoint: 1, kind: 'presentation', document }), null);
 });

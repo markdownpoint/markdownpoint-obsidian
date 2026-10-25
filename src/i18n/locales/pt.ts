@@ -67,7 +67,9 @@ export const pt: Translations = {
         openFailed: 'A apresentação foi criada, mas não foi possível abri-la. Abra o slides.md na pasta da apresentação.',
         openChanged: 'A apresentação foi alterada ou não foi possível lê-la. Tente novamente.',
         handoffFailed: 'Não foi possível guardar e abrir a apresentação.',
-        themeChanged: 'O tema foi alterado ou não está disponível. Volte a abrir esta caixa de diálogo e escolha-o novamente.'
+        themeChanged: 'O tema foi alterado ou não está disponível. Volte a abrir esta caixa de diálogo e escolha-o novamente.',
+        newerFormat: ({ version }: { version: string }) =>
+            `Esta apresentação usa um formato MarkdownPoint mais recente (${version}). Atualize o plugin MarkdownPoint para a abrir como apresentação.`
     },
     slides: {
         new: 'Novo diapositivo',
@@ -95,6 +97,8 @@ export const pt: Translations = {
         copyFailed: 'Não foi possível copiar os diapositivos.',
         copyUnavailable: 'Não foi possível ler a apresentação ou os ficheiros do tema.',
         copyChanged: 'A apresentação foi alterada antes de os diapositivos serem copiados. Tente novamente.',
+        copyNewer:
+            'Esta apresentação usa um formato MarkdownPoint mais recente. Atualize o plugin MarkdownPoint para copiar ou cortar os diapositivos.',
         delete: ({ count }: { count: number }) => (count === 1 ? 'Eliminar diapositivo' : 'Eliminar diapositivos'),
         deleteFailed: 'Não foi possível eliminar os diapositivos.',
         recoveryUnavailable: 'Não foi possível ler as cópias de recuperação neste dispositivo.',
@@ -110,5 +114,19 @@ export const pt: Translations = {
         focusEditor: 'Focar no editor',
         moveSlidesUp: 'Mover diapositivos para cima',
         moveSlidesDown: 'Mover diapositivos para baixo'
+    },
+    whatsNew: {
+        title: 'Novidades do MarkdownPoint',
+        version: ({ version }: { version: string }) => `Versão ${version}`,
+        new: 'Novo',
+        improved: 'Melhorado',
+        changed: 'Alterado',
+        fixed: 'Corrigido',
+        close: 'Fechar',
+        setting: ({ version }: { version: string }) => `Novidades do MarkdownPoint ${version}`,
+        settingDescription: 'Veja o que mudou nas versões recentes.',
+        view: 'Ver atualizações recentes',
+        showOnUpdate: 'Mostrar as novidades após uma atualização',
+        showOnUpdateDescription: 'Abrir a caixa de diálogo de novidades uma vez após cada atualização.'
     }
 };

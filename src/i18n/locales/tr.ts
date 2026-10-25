@@ -67,7 +67,9 @@ export const tr: Translations = {
         openFailed: 'Sunu oluşturuldu ama açılamadı. Klasöründeki slides.md dosyasını açın.',
         openChanged: 'Sunu değişti veya okunamadı. Tekrar deneyin.',
         handoffFailed: 'Sunu kaydedilip açılamadı.',
-        themeChanged: 'Tema değişti veya kullanılamıyor. Bu iletişim kutusunu yeniden açıp temayı tekrar seçin.'
+        themeChanged: 'Tema değişti veya kullanılamıyor. Bu iletişim kutusunu yeniden açıp temayı tekrar seçin.',
+        newerFormat: ({ version }: { version: string }) =>
+            `Bu sunu daha yeni bir MarkdownPoint biçimi (${version}) kullanıyor. Sunu olarak açmak için MarkdownPoint eklentisini güncelleyin.`
     },
     slides: {
         new: 'Yeni slayt',
@@ -94,6 +96,8 @@ export const tr: Translations = {
         copyFailed: 'Slaytlar kopyalanamadı.',
         copyUnavailable: 'Sunu veya tema dosyaları okunamadı.',
         copyChanged: 'Slaytlar kopyalanmadan önce sunu değişti. Tekrar deneyin.',
+        copyNewer:
+            'Bu sunu daha yeni bir MarkdownPoint biçimi kullanıyor. Slaytlarını kopyalamak veya kesmek için MarkdownPoint eklentisini güncelleyin.',
         delete: ({ count }: { count: number }) => (count === 1 ? 'Slaytı sil' : 'Slaytları sil'),
         deleteFailed: 'Slaytlar silinemedi.',
         recoveryUnavailable: 'Bu cihazdaki kurtarma kopyaları okunamadı.',
@@ -109,5 +113,19 @@ export const tr: Translations = {
         focusEditor: 'Editöre odaklan',
         moveSlidesUp: 'Slaytları yukarı taşı',
         moveSlidesDown: 'Slaytları aşağı taşı'
+    },
+    whatsNew: {
+        title: 'MarkdownPoint yenilikleri',
+        version: ({ version }: { version: string }) => `Sürüm ${version}`,
+        new: 'Yeni',
+        improved: 'İyileştirildi',
+        changed: 'Değişti',
+        fixed: 'Düzeltildi',
+        close: 'Kapat',
+        setting: ({ version }: { version: string }) => `MarkdownPoint ${version} sürümündeki yenilikler`,
+        settingDescription: 'Son sürümlerde nelerin değiştiğini gör.',
+        view: 'Son güncellemeleri görüntüle',
+        showOnUpdate: 'Güncellemeden sonra yenilikleri göster',
+        showOnUpdateDescription: 'Yenilikler iletişim kutusunu her güncellemeden sonra bir kez aç.'
     }
 };

@@ -39,6 +39,7 @@ import { PresentationClipboard } from './presentation/clipboard.ts';
 import { PresentationCreation } from './presentation/create-presentation.ts';
 import { openPresentationInDesktop } from './presentation/handoff.ts';
 import { MARKDOWNPOINT_ICON_ID, MARKDOWNPOINT_ICON_SVG } from './markdownpoint-icon.ts';
+import { WhatsNew } from './whats-new.ts';
 
 export default class MarkdownPointPlugin extends Plugin {
     localUi: LocalUiState = { outlineSide: 'right' };
@@ -66,6 +67,7 @@ export default class MarkdownPointPlugin extends Plugin {
         this.register(() => removeIcon(MARKDOWNPOINT_ICON_ID));
         this.running = true;
         this.sharedSettings = new SharedSettings(this);
+        const whatsNew = this.addChild(new WhatsNew(this.app, this.manifest.version, this.sharedSettings));
         this.storage = this.addChild(new PresentationStorage(this.app));
         const creation = this.addChild(new PresentationCreation(this.app));
         this.addCommand({ id: 'new-presentation', name: uiText.commands.newPresentation, callback: () => creation.open() });
@@ -115,7 +117,8 @@ export default class MarkdownPointPlugin extends Plugin {
                 this.localUi,
                 side => this.setOutlineSide(side),
                 this.sharedSettings,
-                () => this.presentationEditor?.refreshAll()
+                () => this.presentationEditor?.refreshAll(),
+                () => whatsNew.show()
             )
         );
         this.addCommand({

@@ -79,6 +79,14 @@ function assertVersionFields(expectedVersion) {
     }
 }
 
+function assertReleaseNotes(version) {
+    const source = readFileSync(join(projectRoot, 'src', 'release-notes.ts'), 'utf8');
+    const escaped = version.replace(/\./g, '\\.');
+    if (!new RegExp(`version:\\s*['"]${escaped}['"]`).test(source)) {
+        throw new Error(`src/release-notes.ts has no entry for ${version}`);
+    }
+}
+
 // Only the version being released must map to the current minimum: earlier entries keep the minimum they shipped with
 function assertCompatibility(version) {
     const { minAppVersion } = readJson('manifest.json');
@@ -214,13 +222,14 @@ async function main() {
     const selectedFromMenu = releaseType === undefined;
     releaseType ??= await selectReleaseType(currentVersion, currentReleased);
     const targetVersion = nextVersion(currentVersion, releaseType);
+    assertReleaseNotes(targetVersion);
     // A bump records its compatibility through npm version; the current version must already have its entry
     if (releaseType === 'current') assertCompatibility(targetVersion);
     assertCleanMain();
     if (isTagged(targetVersion)) throw new Error(`Tag ${targetVersion} already exists`);
 
     console.log(releaseType === 'current' ? `Release ${targetVersion}` : `Release ${currentVersion} -> ${targetVersion}`);
-    console.log('Versions, clean main, origin/main and tag availability are valid.');
+    console.log('Release notes, versions, clean main, origin/main and tag availability are valid.');
 
     if (dryRun) {
         console.log('Dry run complete. No version commit or tag was created.');

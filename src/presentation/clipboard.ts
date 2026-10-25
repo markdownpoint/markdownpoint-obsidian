@@ -259,6 +259,7 @@ export class PresentationClipboard extends Component {
             if (result.kind === 'failed') new Notice(uiText.slides.copyFailed);
             else if (result.kind === 'unavailable') new Notice(uiText.slides.copyUnavailable);
             else if (result.kind === 'changed') new Notice(uiText.slides.copyChanged);
+            else if (result.kind === 'newer') new Notice(uiText.slides.copyNewer);
         }
         return result;
     }

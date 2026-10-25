@@ -63,7 +63,9 @@ export const zhTW: Translations = {
         openFailed: '已建立簡報，但無法開啟。請開啟其資料夾中的 slides.md。',
         openChanged: '簡報已變更或無法讀取。請再試一次。',
         handoffFailed: '無法儲存並開啟簡報。',
-        themeChanged: '主題已變更或無法使用。請重新開啟此對話框並再次選擇。'
+        themeChanged: '主題已變更或無法使用。請重新開啟此對話框並再次選擇。',
+        newerFormat: ({ version }: { version: string }) =>
+            `此簡報使用較新的 MarkdownPoint 格式（${version}）。請更新 MarkdownPoint 外掛程式，才能將其作為簡報開啟。`
     },
     slides: {
         new: '新增投影片',
@@ -90,6 +92,7 @@ export const zhTW: Translations = {
         copyFailed: '無法複製投影片。',
         copyUnavailable: '無法讀取簡報或其主題檔案。',
         copyChanged: '簡報在複製投影片前已變更。請再試一次。',
+        copyNewer: '此簡報使用較新的 MarkdownPoint 格式。請更新 MarkdownPoint 外掛程式，才能複製或剪下其中的投影片。',
         delete: () => '刪除投影片',
         deleteFailed: '無法刪除投影片。',
         recoveryUnavailable: '無法讀取此裝置上的復原副本。',
@@ -105,5 +108,19 @@ export const zhTW: Translations = {
         focusEditor: '移至編輯區',
         moveSlidesUp: '上移投影片',
         moveSlidesDown: '下移投影片'
+    },
+    whatsNew: {
+        title: 'MarkdownPoint 的新功能',
+        version: ({ version }: { version: string }) => `版本 ${version}`,
+        new: '新增',
+        improved: '改進',
+        changed: '變更',
+        fixed: '修正',
+        close: '關閉',
+        setting: ({ version }: { version: string }) => `MarkdownPoint ${version} 的新功能`,
+        settingDescription: '查看最近幾個版本的變動。',
+        view: '查看最近更新',
+        showOnUpdate: '更新後顯示新功能',
+        showOnUpdateDescription: '每次更新後開啟一次新功能對話框。'
     }
 };

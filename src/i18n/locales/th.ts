@@ -63,7 +63,9 @@ export const th: Translations = {
         openFailed: 'สร้างงานนำเสนอแล้วแต่เปิดไม่ได้ เปิด slides.md ในโฟลเดอร์ของงานนำเสนอ',
         openChanged: 'งานนำเสนอมีการเปลี่ยนแปลงหรืออ่านไม่ได้ ลองอีกครั้ง',
         handoffFailed: 'ไม่สามารถบันทึกและเปิดงานนำเสนอได้',
-        themeChanged: 'ธีมมีการเปลี่ยนแปลงหรือใช้งานไม่ได้ เปิดหน้าต่างนี้ใหม่แล้วเลือกธีมอีกครั้ง'
+        themeChanged: 'ธีมมีการเปลี่ยนแปลงหรือใช้งานไม่ได้ เปิดหน้าต่างนี้ใหม่แล้วเลือกธีมอีกครั้ง',
+        newerFormat: ({ version }: { version: string }) =>
+            `งานนำเสนอนี้ใช้รูปแบบไฟล์ MarkdownPoint ที่ใหม่กว่า (${version}) อัปเดตปลั๊กอิน MarkdownPoint เพื่อเปิดเป็นงานนำเสนอ`
     },
     slides: {
         new: 'สไลด์ใหม่',
@@ -90,6 +92,7 @@ export const th: Translations = {
         copyFailed: 'ไม่สามารถคัดลอกสไลด์ได้',
         copyUnavailable: 'ไม่สามารถอ่านงานนำเสนอหรือไฟล์ธีมได้',
         copyChanged: 'งานนำเสนอมีการเปลี่ยนแปลงก่อนที่จะคัดลอกสไลด์ได้ ลองอีกครั้ง',
+        copyNewer: 'งานนำเสนอนี้ใช้รูปแบบไฟล์ MarkdownPoint ที่ใหม่กว่า อัปเดตปลั๊กอิน MarkdownPoint เพื่อคัดลอกหรือตัดสไลด์',
         delete: () => 'ลบสไลด์',
         deleteFailed: 'ไม่สามารถลบสไลด์ได้',
         recoveryUnavailable: 'ไม่สามารถอ่านสำเนากู้คืนบนอุปกรณ์นี้ได้',
@@ -105,5 +108,19 @@ export const th: Translations = {
         focusEditor: 'โฟกัสที่เอดิเตอร์',
         moveSlidesUp: 'ย้ายสไลด์ขึ้น',
         moveSlidesDown: 'ย้ายสไลด์ลง'
+    },
+    whatsNew: {
+        title: 'มีอะไรใหม่ใน MarkdownPoint',
+        version: ({ version }: { version: string }) => `รุ่น ${version}`,
+        new: 'ใหม่',
+        improved: 'ปรับปรุง',
+        changed: 'เปลี่ยนแปลง',
+        fixed: 'แก้ไข',
+        close: 'ปิด',
+        setting: ({ version }: { version: string }) => `มีอะไรใหม่ใน MarkdownPoint ${version}`,
+        settingDescription: 'ดูสิ่งที่เปลี่ยนไปในรุ่นล่าสุด',
+        view: 'ดูการอัปเดตล่าสุด',
+        showOnUpdate: 'แสดงหน้าต่างมีอะไรใหม่หลังอัปเดต',
+        showOnUpdateDescription: 'เปิดหน้าต่างมีอะไรใหม่หนึ่งครั้งหลังการอัปเดตแต่ละครั้ง'
     }
 };

@@ -63,7 +63,9 @@ export const zh: Translations = {
         openFailed: '演示文稿已创建，但无法打开。请打开其文件夹中的 slides.md。',
         openChanged: '演示文稿已更改或无法读取。请重试。',
         handoffFailed: '无法保存并打开演示文稿。',
-        themeChanged: '主题已更改或不可用。请重新打开此对话框，然后再次选择它。'
+        themeChanged: '主题已更改或不可用。请重新打开此对话框，然后再次选择它。',
+        newerFormat: ({ version }: { version: string }) =>
+            `此演示文稿使用较新的 MarkdownPoint 格式（${version}）。请更新 MarkdownPoint 插件，以便作为演示文稿打开它。`
     },
     slides: {
         new: '新建幻灯片',
@@ -90,6 +92,7 @@ export const zh: Translations = {
         copyFailed: '无法复制幻灯片。',
         copyUnavailable: '无法读取演示文稿或其主题文件。',
         copyChanged: '复制幻灯片之前，演示文稿已更改。请重试。',
+        copyNewer: '此演示文稿使用较新的 MarkdownPoint 格式。请更新 MarkdownPoint 插件，以便复制或剪切其中的幻灯片。',
         delete: () => '删除幻灯片',
         deleteFailed: '无法删除幻灯片。',
         recoveryUnavailable: '无法读取此设备上的恢复副本。',
@@ -105,5 +108,19 @@ export const zh: Translations = {
         focusEditor: '聚焦编辑器',
         moveSlidesUp: '向上移动幻灯片',
         moveSlidesDown: '向下移动幻灯片'
+    },
+    whatsNew: {
+        title: 'MarkdownPoint 的新功能',
+        version: ({ version }: { version: string }) => `版本 ${version}`,
+        new: '新增',
+        improved: '改进',
+        changed: '变更',
+        fixed: '修复',
+        close: '关闭',
+        setting: ({ version }: { version: string }) => `MarkdownPoint ${version} 的新功能`,
+        settingDescription: '查看最近几个版本的改动。',
+        view: '查看最近更新',
+        showOnUpdate: '更新后显示新功能',
+        showOnUpdateDescription: '每次更新后打开一次新功能对话框。'
     }
 };

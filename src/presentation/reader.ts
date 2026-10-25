@@ -16,11 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Component, MarkdownView, getFrontMatterInfo, parseYaml } from 'obsidian';
+import { Component, MarkdownView, Notice, getFrontMatterInfo, parseYaml } from 'obsidian';
 import type { App, TAbstractFile, TFile } from 'obsidian';
 import { indexPresentation } from '../format/document.ts';
 import type { PresentationDocument } from '../format/document.ts';
-import { isRecord, presentationCompanionPath, presentationIdentity, presentationMember } from '../format/recognition.ts';
+import { isRecord, newerFormat, presentationCompanionPath, presentationIdentity, presentationMember } from '../format/recognition.ts';
 import { presentationFiles } from './presentation-files.ts';
 import { outlineSections, outlineSlides } from '../outline/model.ts';
 import type { OutlinePresentation } from '../outline/model.ts';
@@ -60,6 +60,8 @@ export class PresentationReader extends Component {
     private followed: TFile | null = null;
     private requested: TFile | null = null;
     private running = false;
+    // Presentations a newer format keeps closed, told once each session
+    private readonly newer = new Set<string>();
 
     constructor(
         private readonly app: App,
@@ -342,20 +344,24 @@ export class PresentationReader extends Component {
     }
 
     private identity(source: PresentationSource, markdown: string): { id: string; bodyStart: number } | null {
-        const header = getFrontMatterInfo(markdown);
-        let frontmatter: unknown;
-        try {
-            frontmatter = header.exists ? parseYaml(header.frontmatter) : null;
-        } catch {
-            return null;
-        }
-        const id = presentationIdentity(frontmatter, source.companion);
-        if (!id || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
-        return { id, bodyStart: header.contentStart };
+        const header = frontmatterOf(markdown);
+        const id = header && presentationIdentity(header.frontmatter, source.companion);
+        if (!header || !id || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
+        return { id, bodyStart: header.bodyStart };
+    }
+
+    /** A presentation of a newer format opens as an ordinary note; its author learns why once. */
+    private tellNewer(source: PresentationSource, markdown: string): void {
+        const header = frontmatterOf(markdown);
+        const version = header && newerFormat(header.frontmatter, source.companion);
+        if (!version || this.newer.has(source.path)) return;
+        this.newer.add(source.path);
+        new Notice(uiText.presentations.newerFormat({ version }));
     }
 
     private parse(source: PresentationSource, markdown: string): PresentationSnapshot | null {
         const identity = this.identity(source, markdown);
+        if (!identity) this.tellNewer(source, markdown);
         if (!identity || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
         const document = indexPresentation(markdown, identity.bodyStart);
         const slides = source.companion.slides;
@@ -395,5 +401,14 @@ export class PresentationReader extends Component {
                 sections
             }
         };
+    }
+}
+
+function frontmatterOf(markdown: string): { frontmatter: unknown; bodyStart: number } | null {
+    const header = getFrontMatterInfo(markdown);
+    try {
+        return { frontmatter: header.exists ? parseYaml(header.frontmatter) : null, bodyStart: header.contentStart };
+    } catch {
+        return null;
     }
 }

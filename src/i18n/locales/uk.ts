@@ -67,7 +67,9 @@ export const uk: Translations = {
         openFailed: 'Презентацію створено, але не вдалося відкрити. Відкрийте slides.md у її теці.',
         openChanged: 'Презентація змінилася або її не вдалося прочитати. Спробуйте ще раз.',
         handoffFailed: 'Не вдалося зберегти й відкрити презентацію.',
-        themeChanged: 'Тема змінилася або недоступна. Відкрийте це вікно знову й виберіть її ще раз.'
+        themeChanged: 'Тема змінилася або недоступна. Відкрийте це вікно знову й виберіть її ще раз.',
+        newerFormat: ({ version }: { version: string }) =>
+            `Ця презентація використовує новіший формат MarkdownPoint (${version}). Оновіть додаток MarkdownPoint, щоб відкрити її як презентацію.`
     },
     slides: {
         new: 'Новий слайд',
@@ -94,6 +96,8 @@ export const uk: Translations = {
         copyFailed: 'Не вдалося скопіювати слайди.',
         copyUnavailable: 'Не вдалося прочитати презентацію або файли її теми.',
         copyChanged: 'Презентація змінилася, перш ніж вдалося скопіювати слайди. Спробуйте ще раз.',
+        copyNewer:
+            'Ця презентація використовує новіший формат MarkdownPoint. Оновіть додаток MarkdownPoint, щоб копіювати або вирізати її слайди.',
         delete: ({ count }: { count: number }) => (count === 1 ? 'Видалити слайд' : 'Видалити слайди'),
         deleteFailed: 'Не вдалося видалити слайди.',
         recoveryUnavailable: 'Не вдалося прочитати копії для відновлення на цьому пристрої.',
@@ -109,5 +113,19 @@ export const uk: Translations = {
         focusEditor: 'Фокусуватися на редакторі',
         moveSlidesUp: 'Перемістити слайди вгору',
         moveSlidesDown: 'Перемістити слайди вниз'
+    },
+    whatsNew: {
+        title: 'Що нового в MarkdownPoint',
+        version: ({ version }: { version: string }) => `Версія ${version}`,
+        new: 'Нове',
+        improved: 'Покращено',
+        changed: 'Змінено',
+        fixed: 'Виправлено',
+        close: 'Закрити',
+        setting: ({ version }: { version: string }) => `Що нового в MarkdownPoint ${version}`,
+        settingDescription: 'Що змінилося в останніх випусках.',
+        view: 'Переглянути оновлення',
+        showOnUpdate: 'Показувати вікно «Що нового» після оновлення',
+        showOnUpdateDescription: 'Відкриває вікно «Що нового» один раз після кожного оновлення.'
     }
 };

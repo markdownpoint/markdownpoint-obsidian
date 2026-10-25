@@ -18,7 +18,8 @@
 
 import { holdsOldWords } from './file-words.ts';
 import { readJsonObject } from './json.ts';
-import { isDocumentId, isRecord, isStableId, opensFormatVersion, presentationCompanionPath } from './recognition.ts';
+import { opensFormatVersion } from './format-version.ts';
+import { isDocumentId, isRecord, isStableId, presentationCompanionPath } from './recognition.ts';
 
 export interface EmbeddedThemeDocument {
     readonly path: string;

@@ -17,6 +17,7 @@
  */
 
 import { isRecord } from '../format/recognition.ts';
+import { compareVersions, normalizeVersion } from '../release-notes.ts';
 import { assignLayoutDigit, readLayoutAssignments } from './layout-shortcuts.ts';
 import type { LayoutAssignments } from './layout-shortcuts.ts';
 
@@ -35,6 +36,13 @@ export class SharedSettings {
     ready: Promise<void>;
     get showSlideImages(): boolean {
         return this.data.showSlideImages !== false;
+    }
+    get showReleaseNotes(): boolean {
+        return this.data.showReleaseNotes !== false;
+    }
+    /** The release whose notes were last shown, unchecked: the What's new dialog validates it. */
+    get lastShownVersion(): unknown {
+        return this.data.lastShownVersion;
     }
 
     constructor(host: SettingsHost) {
@@ -64,6 +72,15 @@ export class SharedSettings {
     }
     setShowSlideImages(show: boolean): Promise<void> {
         return this.change(data => ({ ...data, showSlideImages: show }));
+    }
+    setShowReleaseNotes(show: boolean): Promise<void> {
+        return this.change(data => ({ ...data, showReleaseNotes: show }));
+    }
+    /** Compared inside the serialized write, so a newer marker that synced in meanwhile is never replaced. */
+    advanceLastShownVersion(version: string): Promise<void> {
+        return this.change(data =>
+            compareVersions(normalizeVersion(data.lastShownVersion), version) >= 0 ? data : { ...data, lastShownVersion: version }
+        );
     }
 
     private change(update: (data: Record<string, unknown>) => Record<string, unknown>): Promise<void> {

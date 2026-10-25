@@ -21,3 +21,4 @@ import { getTranslations } from './i18n/index.ts';
 
 export const uiText = getTranslations(getLanguage());
 export const uiNumber = new Intl.NumberFormat(getLanguage(), { useGrouping: false });
+export const uiDate = new Intl.DateTimeFormat(getLanguage(), { year: 'numeric', month: 'long', day: 'numeric' });

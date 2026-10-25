@@ -67,7 +67,9 @@ export const ru: Translations = {
         openFailed: 'Презентация создана, но открыть её не удалось. Откройте slides.md в папке презентации.',
         openChanged: 'Презентация изменилась или недоступна для чтения. Повторите попытку.',
         handoffFailed: 'Не удалось сохранить и открыть презентацию.',
-        themeChanged: 'Тема изменилась или недоступна. Откройте это окно снова и выберите тему ещё раз.'
+        themeChanged: 'Тема изменилась или недоступна. Откройте это окно снова и выберите тему ещё раз.',
+        newerFormat: ({ version }: { version: string }) =>
+            `В этой презентации используется более новый формат MarkdownPoint (${version}). Обновите плагин MarkdownPoint, чтобы открыть её как презентацию.`
     },
     slides: {
         new: 'Новый слайд',
@@ -96,6 +98,8 @@ export const ru: Translations = {
         copyFailed: 'Не удалось скопировать слайды.',
         copyUnavailable: 'Не удалось прочитать презентацию или файлы её темы.',
         copyChanged: 'Презентация изменилась до копирования слайдов. Повторите попытку.',
+        copyNewer:
+            'В этой презентации используется более новый формат MarkdownPoint. Обновите плагин MarkdownPoint, чтобы копировать или вырезать её слайды.',
         delete: ({ count }: { count: number }) => (count === 1 ? 'Удалить слайд' : 'Удалить слайды'),
         deleteFailed: 'Не удалось удалить слайды.',
         recoveryUnavailable: 'Не удалось прочитать копии для восстановления на этом устройстве.',
@@ -111,5 +115,19 @@ export const ru: Translations = {
         focusEditor: 'Вернуться в редактор',
         moveSlidesUp: 'Переместить слайды вверх',
         moveSlidesDown: 'Переместить слайды вниз'
+    },
+    whatsNew: {
+        title: 'Что нового в MarkdownPoint',
+        version: ({ version }: { version: string }) => `Версия ${version}`,
+        new: 'Новое',
+        improved: 'Улучшено',
+        changed: 'Изменено',
+        fixed: 'Исправлено',
+        close: 'Закрыть',
+        setting: ({ version }: { version: string }) => `Что нового в MarkdownPoint ${version}`,
+        settingDescription: 'Что изменилось в последних выпусках.',
+        view: 'Посмотреть обновления',
+        showOnUpdate: 'Показывать окно «Что нового» после обновления',
+        showOnUpdateDescription: 'Открывать окно «Что нового» один раз после каждого обновления.'
     }
 };

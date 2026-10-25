@@ -67,7 +67,9 @@ export const ar: Translations = {
         openFailed: 'تم إنشاء العرض التقديمي لكن تعذّر فتحه. افتح slides.md في مجلده.',
         openChanged: 'تغيّر العرض التقديمي أو تعذّرت قراءته. حاول مرة أخرى.',
         handoffFailed: 'تعذّر حفظ العرض التقديمي وفتحه.',
-        themeChanged: 'تغيّرت السمة أو أصبحت غير متاحة. أعد فتح هذه النافذة واخترها مرة أخرى.'
+        themeChanged: 'تغيّرت السمة أو أصبحت غير متاحة. أعد فتح هذه النافذة واخترها مرة أخرى.',
+        newerFormat: ({ version }: { version: string }) =>
+            `يستخدم هذا العرض التقديمي إصدارًا أحدث من تنسيق MarkdownPoint (${version}). حدّث إضافة MarkdownPoint لفتحه كعرض تقديمي.`
     },
     slides: {
         new: 'شريحة جديدة',
@@ -94,6 +96,7 @@ export const ar: Translations = {
         copyFailed: 'تعذّر نسخ الشرائح.',
         copyUnavailable: 'تعذّرت قراءة العرض التقديمي أو ملفات سمته.',
         copyChanged: 'تغيّر العرض التقديمي قبل نسخ الشرائح. حاول مرة أخرى.',
+        copyNewer: 'يستخدم هذا العرض التقديمي إصدارًا أحدث من تنسيق MarkdownPoint. حدّث إضافة MarkdownPoint لنسخ شرائحه أو قصها.',
         delete: ({ count }: { count: number }) => (count === 1 ? 'حذف الشريحة' : 'حذف الشرائح'),
         deleteFailed: 'تعذّر حذف الشرائح.',
         recoveryUnavailable: 'تعذّرت قراءة نُسخ الاسترداد على هذا الجهاز.',
@@ -109,5 +112,19 @@ export const ar: Translations = {
         focusEditor: 'التركيز على المحرر',
         moveSlidesUp: 'نقل الشرائح للأعلى',
         moveSlidesDown: 'نقل الشرائح للأسفل'
+    },
+    whatsNew: {
+        title: 'الجديد في MarkdownPoint',
+        version: ({ version }: { version: string }) => `الإصدار ${version}`,
+        new: 'جديد',
+        improved: 'محسّن',
+        changed: 'مُغيّر',
+        fixed: 'مُصلح',
+        close: 'إغلاق',
+        setting: ({ version }: { version: string }) => `الجديد في MarkdownPoint ${version}`,
+        settingDescription: 'اطّلع على ما تغيّر في الإصدارات الأخيرة.',
+        view: 'عرض التحديثات الأخيرة',
+        showOnUpdate: 'عرض الجديد بعد التحديث',
+        showOnUpdateDescription: 'فتح مربع حوار «الجديد» مرة واحدة بعد كل تحديث.'
     }
 };

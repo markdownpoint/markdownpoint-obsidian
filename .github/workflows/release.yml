@@ -76,10 +76,14 @@ jobs:
         run: |
           tag="${GITHUB_REF#refs/tags/}"
 
+          # The notes are the version's entry in src/release-notes.ts, the same the
+          # What's new dialog shows
+          node scripts/release-notes.js "$tag" > release-notes.md
+
           # The three files must be individual assets, not a zip, so that Obsidian
           # can fetch them directly
           gh release create "$tag" \
             --repo "$GITHUB_REPOSITORY" \
             --title="$tag" \
-            --generate-notes \
+            --notes-file release-notes.md \
             main.js manifest.json styles.css

@@ -67,7 +67,9 @@ export const ptBR: Translations = {
         openFailed: 'A apresentação foi criada, mas não pôde ser aberta. Abra o slides.md na pasta dela.',
         openChanged: 'A apresentação mudou ou não pôde ser lida. Tente novamente.',
         handoffFailed: 'Não foi possível salvar e abrir a apresentação.',
-        themeChanged: 'O tema mudou ou está indisponível. Reabra esta janela e escolha-o novamente.'
+        themeChanged: 'O tema mudou ou está indisponível. Reabra esta janela e escolha-o novamente.',
+        newerFormat: ({ version }: { version: string }) =>
+            `Esta apresentação usa um formato mais novo do MarkdownPoint (${version}). Atualize o plugin MarkdownPoint para abri-la como apresentação.`
     },
     slides: {
         new: 'Novo slide',
@@ -94,6 +96,8 @@ export const ptBR: Translations = {
         copyFailed: 'Não foi possível copiar os slides.',
         copyUnavailable: 'Não foi possível ler a apresentação ou os arquivos do tema dela.',
         copyChanged: 'A apresentação mudou antes de os slides serem copiados. Tente novamente.',
+        copyNewer:
+            'Esta apresentação usa um formato mais novo do MarkdownPoint. Atualize o plugin MarkdownPoint para copiar ou cortar os slides dela.',
         delete: ({ count }: { count: number }) => (count === 1 ? 'Excluir slide' : 'Excluir slides'),
         deleteFailed: 'Não foi possível excluir os slides.',
         recoveryUnavailable: 'Não foi possível ler as cópias de recuperação neste dispositivo.',
@@ -109,5 +113,19 @@ export const ptBR: Translations = {
         focusEditor: 'Focar no editor',
         moveSlidesUp: 'Mover slides para cima',
         moveSlidesDown: 'Mover slides para baixo'
+    },
+    whatsNew: {
+        title: 'Novidades do MarkdownPoint',
+        version: ({ version }: { version: string }) => `Versão ${version}`,
+        new: 'Novo',
+        improved: 'Melhorado',
+        changed: 'Alterado',
+        fixed: 'Corrigido',
+        close: 'Fechar',
+        setting: ({ version }: { version: string }) => `Novidades do MarkdownPoint ${version}`,
+        settingDescription: 'Veja o que mudou nas versões recentes.',
+        view: 'Ver atualizações recentes',
+        showOnUpdate: 'Mostrar as novidades após uma atualização',
+        showOnUpdateDescription: 'Abrir a janela de novidades uma vez após cada atualização.'
     }
 };

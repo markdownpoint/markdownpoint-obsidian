@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { formatStanding, opensFormatVersion } from './format-version.ts';
+
 export function presentationCompanionPath(markdownPath: string): string | null {
     const slash = markdownPath.lastIndexOf('/');
     if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md') return null;
@@ -55,32 +57,9 @@ export function isStableId(value: unknown): value is string {
     return typeof value === 'string' && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value);
 }
 
-/** The format version the plugin writes: a major and a minor, always a string, since 1.10 and 1.1 are one number. */
-export const FORMAT_VERSION = '1.0';
-
-/** A stated version's major and minor: whole numbers without leading zeros, as the MarkdownPoint app reads them. */
-function versionParts(value: unknown): { major: number; minor: number } | null {
-    const parts = typeof value === 'string' ? /^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$/.exec(value) : null;
-    return parts ? { major: Number(parts[1]), minor: Number(parts[2]) } : null;
-}
-
-/** Whether a stated format version opens: any minor of major 1. A later minor only adds what an earlier reader passes over. */
-export function opensFormatVersion(value: unknown): boolean {
-    return versionParts(value)?.major === 1;
-}
-
-/**
- * Whether the plugin knows every key of a stated version: version 1.0 or earlier. A newer minor may hold keys a 1.0
- * file must not receive, so slides are only copied out of a presentation of this version.
- */
-export function readsFormatFully(value: unknown): boolean {
-    const parts = versionParts(value);
-    return parts?.major === 1 && parts.minor <= 0;
-}
-
 /**
  * Recognizes the pair's identity only, not its layouts or full format conformance.
- * Both files must declare a version 1 format and the same lowercase UUID as `id`;
+ * Both files must declare a format version the plugin opens and the same lowercase UUID as `id`;
  * a similarly named ordinary note or a mismatched companion stays ordinary Markdown.
  */
 export function presentationIdentity(frontmatter: unknown, companion: unknown): string | null {
@@ -90,4 +69,18 @@ export function presentationIdentity(frontmatter: unknown, companion: unknown): 
     const id = frontmatter.id;
     if (!isDocumentId(id)) return null;
     return companion.id === id ? id : null;
+}
+
+/**
+ * The newer major a pair states when it is otherwise one presentation: the companion's kind and both files' `id` match,
+ * and one file states a version the plugin doesn't open, so it reads as ordinary Markdown until the plugin is updated.
+ * The app never renames these envelope keys, so a newer major is recognized through them.
+ */
+export function newerFormat(frontmatter: unknown, companion: unknown): string | null {
+    if (!isRecord(frontmatter) || !isRecord(companion) || companion.kind !== 'presentation') return null;
+    if (!isDocumentId(frontmatter.id) || companion.id !== frontmatter.id) return null;
+    const versions = [companion.markdownpoint, frontmatter.markdownpoint];
+    if (versions.some(version => formatStanding(version) === 'invalid')) return null;
+    const newer = versions.find(version => formatStanding(version) === 'newer');
+    return typeof newer === 'string' ? newer : null;
 }

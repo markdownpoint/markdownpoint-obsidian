@@ -67,7 +67,9 @@ export const id: Translations = {
         openFailed: 'Presentasi telah dibuat, tetapi tidak dapat dibuka. Buka slides.md di foldernya.',
         openChanged: 'Presentasi berubah atau tidak dapat dibaca. Coba lagi.',
         handoffFailed: 'Tidak dapat menyimpan dan membuka presentasi.',
-        themeChanged: 'Tema berubah atau tidak tersedia. Buka kembali dialog ini dan pilih lagi.'
+        themeChanged: 'Tema berubah atau tidak tersedia. Buka kembali dialog ini dan pilih lagi.',
+        newerFormat: ({ version }: { version: string }) =>
+            `Presentasi ini menggunakan format MarkdownPoint yang lebih baru (${version}). Perbarui plugin MarkdownPoint untuk membukanya sebagai presentasi.`
     },
     slides: {
         new: 'Slide baru',
@@ -94,6 +96,8 @@ export const id: Translations = {
         copyFailed: 'Tidak dapat menyalin slide.',
         copyUnavailable: 'Tidak dapat membaca presentasi atau berkas temanya.',
         copyChanged: 'Presentasi berubah sebelum slide dapat disalin. Coba lagi.',
+        copyNewer:
+            'Presentasi ini menggunakan format MarkdownPoint yang lebih baru. Perbarui plugin MarkdownPoint untuk menyalin atau memotong slide di dalamnya.',
         delete: () => 'Hapus slide',
         deleteFailed: 'Tidak dapat menghapus slide.',
         recoveryUnavailable: 'Tidak dapat membaca salinan pemulihan di perangkat ini.',
@@ -109,5 +113,19 @@ export const id: Translations = {
         focusEditor: 'Fokus ke pengubah',
         moveSlidesUp: 'Pindahkan slide ke atas',
         moveSlidesDown: 'Pindahkan slide ke bawah'
+    },
+    whatsNew: {
+        title: 'Yang baru di MarkdownPoint',
+        version: ({ version }: { version: string }) => `Versi ${version}`,
+        new: 'Baru',
+        improved: 'Ditingkatkan',
+        changed: 'Diubah',
+        fixed: 'Diperbaiki',
+        close: 'Tutup',
+        setting: ({ version }: { version: string }) => `Yang baru di MarkdownPoint ${version}`,
+        settingDescription: 'Lihat apa yang berubah pada rilis terbaru.',
+        view: 'Lihat pembaruan terbaru',
+        showOnUpdate: 'Tampilkan catatan rilis setelah pembaruan',
+        showOnUpdateDescription: 'Buka dialog “Yang baru” satu kali setelah setiap pembaruan.'
     }
 };

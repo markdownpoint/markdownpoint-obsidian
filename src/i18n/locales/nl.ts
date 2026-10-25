@@ -67,7 +67,9 @@ export const nl: Translations = {
         openFailed: 'De presentatie is aangemaakt, maar kon niet worden geopend. Open slides.md in de map van de presentatie.',
         openChanged: 'De presentatie is gewijzigd of kon niet worden gelezen. Probeer het opnieuw.',
         handoffFailed: 'Kon de presentatie niet opslaan en openen.',
-        themeChanged: 'Het thema is gewijzigd of niet beschikbaar. Open dit venster opnieuw en kies het thema nogmaals.'
+        themeChanged: 'Het thema is gewijzigd of niet beschikbaar. Open dit venster opnieuw en kies het thema nogmaals.',
+        newerFormat: ({ version }: { version: string }) =>
+            `Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling (${version}). Werk de MarkdownPoint-plug-in bij om deze als presentatie te openen.`
     },
     slides: {
         new: 'Nieuwe dia',
@@ -96,6 +98,8 @@ export const nl: Translations = {
         copyFailed: 'Kon de dia’s niet kopiëren.',
         copyUnavailable: 'Kon de presentatie of de themabestanden niet lezen.',
         copyChanged: 'De presentatie is gewijzigd voordat de dia’s konden worden gekopieerd. Probeer het opnieuw.',
+        copyNewer:
+            'Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling. Werk de MarkdownPoint-plug-in bij om de dia’s te kopiëren of te knippen.',
         delete: ({ count }: { count: number }) => (count === 1 ? 'Dia verwijderen' : 'Dia’s verwijderen'),
         deleteFailed: 'Kon de dia’s niet verwijderen.',
         recoveryUnavailable: 'Kon de herstelkopieën op dit apparaat niet lezen.',
@@ -111,5 +115,19 @@ export const nl: Translations = {
         focusEditor: 'Focus op de editor',
         moveSlidesUp: 'Dia’s omhoog verplaatsen',
         moveSlidesDown: 'Dia’s omlaag verplaatsen'
+    },
+    whatsNew: {
+        title: 'Nieuw in MarkdownPoint',
+        version: ({ version }: { version: string }) => `Versie ${version}`,
+        new: 'Nieuw',
+        improved: 'Verbeterd',
+        changed: 'Gewijzigd',
+        fixed: 'Opgelost',
+        close: 'Sluiten',
+        setting: ({ version }: { version: string }) => `Nieuw in MarkdownPoint ${version}`,
+        settingDescription: 'Bekijk wat er in recente versies is veranderd.',
+        view: 'Bekijk recente updates',
+        showOnUpdate: 'Releasenotes tonen na een update',
+        showOnUpdateDescription: 'Open na elke update één keer het venster met wat er nieuw is.'
     }
 };
