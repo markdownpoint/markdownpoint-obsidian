@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { prepareNewSlide, orderedLayouts, layoutName } from '../src/format/new-slide.ts';
+import { prepareNewSlide, orderedLayouts, layoutName, layoutTextSlots, slideTextSlots } from '../src/format/new-slide.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { planSlideInsertion } from '../src/format/insert.ts';
 import type { EmbeddedTheme } from '../src/format/embedded-theme.ts';
@@ -51,23 +51,19 @@ const layouts = theme({
     text: { title: 'Do not save sample words', branding: 'Fixed artwork' }
 });
 
-test('a new slide exposes empty writing slots in reading order without persisting samples or images', () => {
+test("a new slide is its marker and its first slot's, the layout giving the other empty slots without samples or images", () => {
     const part = prepareNewSlide(layouts, 'title', 'new-slide')!;
     assert.deepEqual(JSON.parse(part.record), { layout: 'title' });
-    const document = indexPresentation(part.markdown, 0)!;
+    assert.equal(part.markdown, '<!-- slide: new-slide -->\n\n<!-- text: eyebrow -->\n');
     assert.deepEqual(
-        document.slides[0]!.blocks.map(block => [block.kind, block.id]),
-        [
-            ['text', 'eyebrow'],
-            ['text', 'title'],
-            ['text', 'body']
-        ]
+        indexPresentation(part.markdown, 0)!.slides[0]!.blocks.map(block => [block.kind, block.id]),
+        [['text', 'eyebrow']]
     );
-    assert.equal(part.markdown, '<!-- slide: new-slide -->\n\n<!-- text: eyebrow -->\n\n<!-- text: title -->\n\n<!-- text: body -->\n');
-    assert.equal(part.markdown.includes('sample'), false);
-    assert.equal(part.markdown.includes('picture'), false);
-    assert.equal(part.markdown.includes('footer'), false);
-    for (const block of document.slides[0]!.blocks) assert.equal(part.markdown.slice(block.contentFrom, block.to).trim(), '');
+    assert.deepEqual(layoutTextSlots(layouts, 'title'), ['eyebrow', 'title', 'body']);
+    assert.deepEqual(layoutTextSlots(layouts, 'blank'), []);
+    assert.deepEqual(slideTextSlots({ layout: 'title', overrides: { eyebrow: null, title: { frame: {} } } }, layouts), ['title', 'body']);
+    assert.deepEqual(slideTextSlots({ layout: 'missing' }, layouts), []);
+    assert.deepEqual(slideTextSlots({ layout: 'title' }, null), []);
 });
 
 test('a blank layout creates a valid slide without persisting an empty notes marker', () => {
@@ -129,11 +125,5 @@ test('multicolumn writing reads down each column under a spanning title', () => 
             field('left-heading', 40, 160, 400, 80)
         ]
     });
-    const part = prepareNewSlide(columns, 'title', 'new')!;
-    assert.deepEqual(
-        indexPresentation(part.markdown, 0)!
-            .slides[0]!.blocks.filter(block => block.kind === 'text')
-            .map(block => block.id),
-        ['title', 'left-heading', 'left-body', 'right-heading', 'right-body']
-    );
+    assert.deepEqual(layoutTextSlots(columns, 'title'), ['title', 'left-heading', 'left-body', 'right-heading', 'right-body']);
 });

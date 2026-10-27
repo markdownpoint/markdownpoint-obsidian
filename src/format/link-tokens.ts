@@ -19,6 +19,8 @@
 import { Lexer, Marked, Tokenizer } from 'marked';
 import type { Token } from 'marked';
 import { blockRules } from './block-grammar.ts';
+import { decodeHTMLStrict } from 'entities';
+import { isRecord, isStableId } from './recognition.ts';
 
 interface EmphasisMask {
     from: number;
@@ -36,7 +38,7 @@ function relaxedStars(source: string): string {
 }
 
 /** Advance over Markdown that keeps delimiter characters literal. */
-function literalEnd(source: string, at: number): number {
+export function literalEnd(source: string, at: number): number {
     const char = source[at];
     if (char === '\\') return Math.min(source.length, at + 2);
     if (char !== '`' && char !== '<') return at;
@@ -49,7 +51,7 @@ function literalEnd(source: string, at: number): number {
 }
 
 /** Balanced parentheses, with quoted titles, angle destinations and escapes opaque. */
-function destinationEnd(source: string, opening: number): number {
+export function destinationEnd(source: string, opening: number): number {
     const rest = source.slice(opening);
     const pieces = /\\[\s\S]|(?<=^\(\s*)<[^>]*>|(?<=\s)"(?:\\[\s\S]|[^"\\])*"|(?<=\s)'(?:\\[\s\S]|[^'\\])*'|[()]/g;
     let depth = 0;
@@ -109,16 +111,29 @@ function delimitedSpan(source: string): { length: number; content: string } | nu
     return null;
 }
 
-function colorSpan(source: string): { length: number; content: string } | null {
+const spanAttributes = /^\{((?:[a-z-]+=(?:"[^"]*"|[^\s"{}]+))(?:[ \t]+[a-z-]+=(?:"[^"]*"|[^\s"{}]+))*)?\}/;
+const spanAttribute = /([a-z-]+)=(?:"([^"]*)"|([^\s"{}]+))/g;
+const spanWeights = new Set(['300', '400', '500', '600', '700', '900']);
+
+/**
+ * A bracketed span as the MarkdownPoint app reads one: words with a color, a weight or both, `[words]{color=muted
+ * font-weight=600}`, or a group with neither, `[words]{}`. Any other key, a key twice or a value that names no color or
+ * weight leaves the brackets as written.
+ */
+export function presentationSpan(source: string): { length: number; content: string; group: boolean } | null {
     if (!source.startsWith('[')) return null;
     const close = closingBracket(source, 0, true);
     if (close <= 1) return null;
-    const attribute = /^\{color=(?:"([^"]*)"|([^\s"{}]+))\}/.exec(source.slice(close + 1));
-    const value = attribute?.[1] ?? attribute?.[2];
-    if (!attribute || value === undefined) return null;
-    const role = /^[a-z][a-z0-9-]*$/.test(value);
-    const hex = /^#[a-f\d]+$/i.test(value) && [4, 5, 7, 9].includes(value.length);
-    return role || hex ? { length: close + 1 + attribute[0].length, content: source.slice(1, close) } : null;
+    const block = spanAttributes.exec(source.slice(close + 1));
+    if (!block) return null;
+    const keys = new Set<string>();
+    for (const [, key, quoted, bare] of (block[1] ?? '').matchAll(spanAttribute)) {
+        const value = quoted ?? bare!;
+        const color = /^#[a-f\d]+$/i.test(value) ? [4, 5, 7, 9].includes(value.length) : isStableId(value);
+        if (keys.has(key!) || !(key === 'color' ? color : key === 'font-weight' && spanWeights.has(value))) return null;
+        keys.add(key!);
+    }
+    return { length: close + 1 + block[0].length, content: source.slice(1, close), group: keys.size === 0 };
 }
 
 /** An enclosing emphasis delimiter cannot close inside another formatting span. */
@@ -133,7 +148,7 @@ function maskFormatting(source: string, masked: string): EmphasisMask {
             at = end;
             continue;
         }
-        const span = delimitedSpan(source.slice(at)) ?? colorSpan(source.slice(at));
+        const span = delimitedSpan(source.slice(at)) ?? presentationSpan(source.slice(at));
         if (span) {
             pieces.push(masked.slice(offset + from, offset + at), 'a'.repeat(span.length));
             shown.push(source.slice(from, at), 'a'.repeat(span.length));
@@ -187,7 +202,7 @@ const grammar = new Marked({
                 return found?.index;
             },
             tokenizer(source) {
-                const span = delimitedSpan(source) ?? colorSpan(source);
+                const span = delimitedSpan(source) ?? presentationSpan(source);
                 if (!span) return undefined;
                 return {
                     type: 'strong',
@@ -200,7 +215,35 @@ const grammar = new Marked({
     ]
 });
 
-/** Tokens for finding navigation links, never for rendering or serializing words. */
+/** Tokens for finding navigation links and reading words as labels, never for rendering or serializing words. */
 export function linkTokens(source: string): Token[] {
     return grammar.lexer(source);
+}
+
+/** Inline tokens for reading words as labels: a span's marks only contribute a container for its words. */
+export function wordTokens(source: string): Token[] {
+    return Lexer.lexInline(source, grammar.defaults);
+}
+
+/** The words tokens read as, without their marks: a list's items and a table's cells included. */
+export function inlineText(tokens: readonly unknown[]): string {
+    return tokens
+        .map(token => {
+            if (!isRecord(token)) return '';
+            if (token.type === 'html' || token.type === 'def') return '';
+            if (token.type === 'br') return '\n';
+            const children: unknown = token.tokens ?? token.items;
+            if (Array.isArray(children)) return inlineText(children);
+            const header: unknown = token.header;
+            const rows: unknown = token.rows;
+            if (Array.isArray(header) && Array.isArray(rows)) return inlineText(header) + inlineText(rows.flat() as unknown[]);
+            if (typeof token.text !== 'string') return '';
+            return token.type === 'text' ? decodeHTMLStrict(token.text) : token.text;
+        })
+        .join('');
+}
+
+/** The words of a block of Markdown, as a reader reads them, without their marks. */
+export function markdownWords(source: string): string {
+    return inlineText(linkTokens(source));
 }

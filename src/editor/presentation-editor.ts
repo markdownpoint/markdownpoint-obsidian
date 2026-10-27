@@ -26,13 +26,14 @@ import type { PresentationReader, PresentationSnapshot } from '../presentation/r
 import type { SlideImagePreview } from '../presentation/image-reader.ts';
 import { imageSpacing, ImageSpace } from './image-spacing.ts';
 import { slideThumbnails } from './thumbnail-widgets.ts';
+import { groupMarks } from './group-marks.ts';
 import type { SlideStructure } from '../format/structure.ts';
 import { outlineSlideNumbers } from '../outline/model.ts';
 import { uiNumber, uiText } from '../ui-text.ts';
 import { boundaryChangesAllowed, slideStructureChange } from './boundary-protection.ts';
-import { compactFieldAt, writingFields } from './writing-fields.ts';
-import type { WritingField } from './writing-fields.ts';
-import { fieldDecorations, focusWritingField, insertWritingBlock } from './field-widgets.ts';
+import { compactFieldAt, missingSlots, validatedSlotInsertion, writingFields } from './writing-fields.ts';
+import type { MissingSlot, WritingField } from './writing-fields.ts';
+import { fieldDecorations, focusWritingField, insertWritingBlock, missingFieldDecorations } from './field-widgets.ts';
 import { validatedNotesInsertion, slideNotes } from './notes.ts';
 import type { SlideNotes } from './notes.ts';
 import { notesDecorations } from './notes-widgets.ts';
@@ -62,6 +63,7 @@ interface DraftState {
     readonly markers: readonly DraftMarker[];
     readonly decorations: DecorationSet;
     readonly fields: readonly WritingField[];
+    readonly missing: readonly MissingSlot[];
     readonly notes: readonly SlideNotes[];
     readonly openedNotes: ReadonlySet<string>;
     readonly focused: boolean;
@@ -137,6 +139,14 @@ export class PresentationEditor extends Component {
         }
     };
 
+    private readonly writeSlot = (view: EditorView, key: string): void => {
+        const draft = view.state.field(this.field);
+        const slot = draft.missing.find(slot => slot.key === key);
+        if (!this.running || !slot || !draft.snapshot) return;
+        const insertion = validatedSlotInsertion(view.state.doc.toString(), draft.snapshot.document, slot);
+        if (insertion) insertWritingBlock(view, insertion);
+    };
+
     constructor(
         private readonly reader: PresentationReader,
         private readonly notesUi: NotesUi,
@@ -158,6 +168,7 @@ export class PresentationEditor extends Component {
         this.extension = [
             imageSpacing,
             field,
+            groupMarks(state => state.field(field).snapshot?.document ?? null),
             slideThumbnails(view => {
                 const draft = view.state.field(field);
                 return {
@@ -543,6 +554,7 @@ export class PresentationEditor extends Component {
                 snapshot,
                 empty: true,
                 fields: [],
+                missing: [],
                 notes: [],
                 openedNotes,
                 focused,
@@ -617,6 +629,15 @@ export class PresentationEditor extends Component {
                 return mapped ? [mapped] : [];
             });
         }
+        let missing = snapshot ? missingSlots(snapshot.document, snapshot.slots, uiText.fields) : [];
+        if (!snapshot && markers.length && previous)
+            missing = previous.missing.flatMap(slot => {
+                const at = transaction?.docChanged ? transaction.changes.mapPos(slot.at, 1) : slot.at;
+                return at === state.doc.length || state.doc.lineAt(at).from === at ? [{ ...slot, at }] : [];
+            });
+        // A slot shown above a slide's first field opens the slide in its place.
+        const opening = new Set(missing.flatMap(slot => (slot.opening ? [slot.at] : [])));
+        if (opening.size) fields = fields.map(field => (field.opening && opening.has(field.from) ? { ...field, opening: false } : field));
         let notes = snapshot ? slideNotes(markdown, snapshot.document, uiText.notes.placeholder) : [];
         if (!snapshot && markers.length && previous)
             notes = previous.notes.flatMap(slot => {
@@ -644,6 +665,7 @@ export class PresentationEditor extends Component {
             }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to)
         );
         ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
+        ranges.push(...missingFieldDecorations(state, missing, this.writeSlot));
         ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions));
         if (showImages)
             for (const marker of markers) {
@@ -671,6 +693,7 @@ export class PresentationEditor extends Component {
             empty: false,
             markers,
             fields,
+            missing,
             notes,
             openedNotes,
             focused,

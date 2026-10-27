@@ -38,7 +38,7 @@ test('the bundled licensed theme has a valid master and every ordered layout', (
     }
 });
 
-test('a new presentation has matching identity, the chosen theme, and empty title fields', () => {
+test('a new presentation has matching identity, the chosen theme, and a first slide open on its first slot', () => {
     const made = prepareNewPresentation(basicTheme, document, 'opening')!;
     const companion = readJsonObject(made.companion)!;
     assert.equal(presentationIdentity({ markdownpoint: '1.0', id: document }, companion), document);
@@ -47,7 +47,7 @@ test('a new presentation has matching identity, the chosen theme, and empty titl
     const body = made.markdown.indexOf('<!-- slide:');
     const indexed = indexPresentation(made.markdown, body)!;
     assert.equal(indexed.slides.length, 1);
-    assert.match(made.markdown, /<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n\n<!-- text: title -->\n\n<!-- text: body -->\n$/);
+    assert.equal(made.markdown, `---\nmarkdownpoint: "1.0"\nid: ${document}\n---\n\n<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n`);
     assert.doesNotMatch(made.markdown, /Presentation title|Presentation subtitle|Author and date/);
 });
 

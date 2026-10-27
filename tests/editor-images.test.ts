@@ -55,6 +55,7 @@ test('unfinished code fences retain image clearance at mapped slide ends until p
                     bodyStart: 0,
                     document,
                     images: new Map(document.slides.map(slide => [slide.id, images])),
+                    slots: new Map(),
                     outline: { slides: document.slides.map(slide => ({ id: slide.id, skipped: false })), sections: [] }
                 }
             );

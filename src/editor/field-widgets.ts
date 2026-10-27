@@ -19,7 +19,7 @@
 import type { EditorState, Range } from '@codemirror/state';
 import { Decoration, WidgetType } from '@codemirror/view';
 import type { EditorView } from '@codemirror/view';
-import type { WritingField } from './writing-fields.ts';
+import type { MissingSlot, WritingField } from './writing-fields.ts';
 
 export function focusWritingField(view: EditorView, field: WritingField): void {
     const position = field.contentFrom;
@@ -101,6 +101,47 @@ class FieldGhost extends WidgetType {
         });
         return element;
     }
+}
+
+/** A slot without a block looks like its empty field; choosing it writes the marker and puts the caret in it. */
+class MissingField extends WidgetType {
+    constructor(
+        private readonly slot: MissingSlot,
+        private readonly write: (view: EditorView, key: string) => void
+    ) {
+        super();
+    }
+    eq(other: MissingField): boolean {
+        return (
+            this.slot.key === other.slot.key &&
+            this.slot.label === other.slot.label &&
+            this.slot.role === other.slot.role &&
+            this.slot.opening === other.slot.opening
+        );
+    }
+    toDOM(view: EditorView): HTMLElement {
+        const element = view.dom.ownerDocument.defaultView!.createDiv({ cls: 'markdownpoint-missing-field' });
+        const header = element.createDiv({ cls: ['markdownpoint-field-header', 'is-empty', ...(this.slot.opening ? ['is-opening'] : [])] });
+        header.createDiv({ cls: 'markdownpoint-field-label', text: this.slot.label });
+        // A button, as the missing notes' is, so the keyboard reaches it too.
+        const ghost = element.createEl('button', {
+            cls: ['markdownpoint-field-ghost', `markdownpoint-field-${this.slot.role}`, 'is-compact'],
+            text: this.slot.label,
+            attr: { type: 'button' }
+        });
+        ghost.addEventListener('click', () => this.write(view, this.slot.key));
+        return element;
+    }
+}
+
+export function missingFieldDecorations(
+    state: EditorState,
+    slots: readonly MissingSlot[],
+    write: (view: EditorView, key: string) => void
+): Range<Decoration>[] {
+    return slots.map(slot =>
+        Decoration.widget({ block: true, side: slot.at < state.doc.length ? -1 : 1, widget: new MissingField(slot, write) }).range(slot.at)
+    );
 }
 
 export function fieldDecorations(

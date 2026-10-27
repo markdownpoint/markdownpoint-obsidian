@@ -148,6 +148,15 @@
     display: none;
 }
 
+/* Obsidian reads a group's brackets as a bare link; its words keep the look of the words around them */
+.markdownpoint-presentation .markdownpoint-group {
+    --link-external-decoration-hover: none;
+}
+
+.markdownpoint-presentation .markdownpoint-group span.cm-link {
+    color: inherit;
+}
+
 .markdownpoint-field-header {
     padding-top: var(--size-4-4);
     color: var(--markdownpoint-muted);
@@ -197,6 +206,23 @@
 
 .markdownpoint-field-ghost.is-compact {
     display: block;
+}
+
+.markdownpoint-missing-field .markdownpoint-field-ghost {
+    width: 100%;
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-family: inherit;
+    text-align: start;
+}
+
+.markdownpoint-missing-field .markdownpoint-field-ghost:focus-visible {
+    color: var(--markdownpoint-muted);
+    outline: none;
 }
 
 .markdownpoint-writing-field.markdownpoint-field-title,
