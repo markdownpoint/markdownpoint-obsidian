@@ -54,6 +54,16 @@ test('a remembered record returns when its native Markdown marker returns', () =
     assert.equal(reconcileSlideRecords(restored.companion, restored.remembered, new Set(['a', 'b']))!.companion, restored.companion);
 });
 
+test('a parent-inverse keeps every digit through a slide copy and a delete brought back', () => {
+    // MarkdownPoint writes these as JavaScript's shortest round-trip spelling, finer than the millionth other numbers keep.
+    const raw = String.raw`{ "objects":[{"id":"mat","type":"model","file":"media/mat.glb","parent":"chart","parent-inverse":[3.3333333333333335,0,0,0,0,3.3333333333333335,0,0,0,0,3.3333333333333335,0,-3000,-1066.6666666666667,0,1e-7]}] }`;
+    assert.equal(remapRecordReferences(raw, new Map([['a', 'copy-a']]), new Map()), raw);
+    const source = `{"slides":{"a":${raw},"b":{}}}`;
+    const deleted = reconcileSlideRecords(source, new Map([['a', raw]]), new Set(['b']))!;
+    const restored = reconcileSlideRecords(deleted.companion, deleted.remembered, new Set(['a', 'b']))!;
+    assert.equal(CompanionDocument.read(restored.companion)!.records.get('a'), raw);
+});
+
 test('newer external record data is retained and unmanaged orphan records are not removed', () => {
     const saved = new Map([['a', '{"old":true}']]);
     const source = '{"slides":{"a":{"external":true},"orphan":{"preserve":true}},"externalSetting":3}';
