@@ -134,6 +134,8 @@ Any other language shows the plugin in English. The words in your presentation n
 
 **My presentation looks like an ordinary note.** Open `slides.md` in **Live Preview** and check that its `presentation.mdpoint` sits in the same folder. An unrelated note named `slides.md` stays an ordinary note, and an extra `.mdpoint` file or a conflicted copy in the folder makes the plugin leave both files alone. If a notice says the presentation uses a newer MarkdownPoint format, update the plugin in **Settings → Community plugins**.
 
+**Can I write in a presentation saved by a newer MarkdownPoint?** Yes, as long as its format is 1.x. What the plugin doesn’t know stays in both files as MarkdownPoint wrote it, through writing, slide actions and undo. The files keep their version. Copying and cutting slides out of it needs a plugin update, so that a pasted slide brings nothing the other presentation's version lacks.
+
 **The outline shows another presentation.** The outline keeps the last presentation you worked in, even while an ordinary note is open. Select the tab of the presentation you want.
 
 **Some images are missing.** Keep the whole presentation folder together, media included. The editor shows up to five images per slide, and only files it can find.
