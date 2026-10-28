@@ -133,6 +133,21 @@ test('placed compositions use assigned media controls without listing unused def
     assert.deepEqual(paths(companion, null), [root + 'media/selected.svg']);
 });
 
+test('a media control may be named as JavaScript names its own, and an instance that sets no value for it shows its default', () => {
+    // presentation.mdpoint reads as JSON, whose records hold JavaScript's own names unless the file names them itself.
+    const companion = JSON.parse(`{
+        "slides": { "one": { "objects": [{ "id": "instance", "type": "composition", "composition": "card" }] } },
+        "compositions": { "card": {
+            "controls": { "__proto__": { "type": "media", "default": "media/default.svg" } },
+            "objects": [
+                { "id": "photo", "type": "image", "file": "media/original.svg", "bind": { "file": "__proto__" } },
+                { "id": "loose", "type": "image", "file": "media/loose.svg", "bind": { "file": "toString" } }
+            ]
+        } }
+    }`) as Record<string, unknown>;
+    assert.deepEqual(paths(companion, null), [root + 'media/default.svg', root + 'media/loose.svg']);
+});
+
 test('only five existing vault resources are loaded, with the Vault API owning URLs', () => {
     const references = Array.from({ length: 8 }, (_, index) => ({ path: `media/${index}.png`, name: null, category: 'image' as const }));
     const vault = {

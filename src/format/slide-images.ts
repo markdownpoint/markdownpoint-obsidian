@@ -17,7 +17,7 @@
  */
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
-import { isRecord, presentationCompanionPath } from './recognition.ts';
+import { isRecord, ownEntry, presentationCompanionPath } from './recognition.ts';
 
 export interface SlideImageReference {
     readonly path: string;
@@ -140,9 +140,9 @@ export function assignedSlideImages(
         for (const member of composition.objects) {
             if (!isRecord(member)) continue;
             const binding = isRecord(member.bind) && typeof member.bind.file === 'string' ? member.bind.file : null;
-            const control = binding ? controls[binding] : undefined;
+            const control = binding ? ownEntry(controls, binding) : undefined;
             const bound = binding !== null && isRecord(control) && control.type === 'media';
-            const file = bound ? (values[binding] ?? control.default) : member.file;
+            const file = bound ? (ownEntry(values, binding) ?? control.default) : member.file;
             pending.push({
                 object: { raw: member, scope: root, file, placeholder: bound },
                 parent: { composition: raw.composition, parent }

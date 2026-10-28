@@ -49,6 +49,14 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * A record's own entry by a name the author chose, as a composition's control or an instance's value for one: a name
+ * may be one JavaScript gives every object, as `__proto__` and `toString` are, which a record lacking it doesn't hold.
+ */
+export function ownEntry(record: Readonly<Record<string, unknown>>, name: string): unknown {
+    return Object.hasOwn(record, name) ? record[name] : undefined;
+}
+
 export function isDocumentId(value: unknown): value is string {
     return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
 }

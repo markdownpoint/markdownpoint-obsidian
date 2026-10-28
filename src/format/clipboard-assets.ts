@@ -20,7 +20,7 @@ import { applyEdits, findNodeAtLocation, parseTree } from 'jsonc-parser';
 import type { Edit } from 'jsonc-parser';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { readJsonObject } from './json.ts';
-import { isRecord } from './recognition.ts';
+import { isRecord, ownEntry } from './recognition.ts';
 
 const mediaExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|mp4|m4v|mov|webm|ogv|mp3|m4a|wav|ogg|flac|glb|eot)$/i;
 
@@ -97,7 +97,7 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
                 const controls = definitions.get(object.composition)?.controls;
                 if (!isRecord(controls)) continue;
                 for (const [name, value] of Object.entries(object.controls)) {
-                    const declaration = controls[name];
+                    const declaration = ownEntry(controls, name);
                     if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'controls', name]);
                 }
             }

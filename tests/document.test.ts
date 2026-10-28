@@ -262,6 +262,35 @@ test('composition definitions retain complete control and text ranges wherever t
     assert.equal(slideAtPosition(document, markdown.length - 1), null);
 });
 
+test("a control is named in the author's words, in its marker and after an instance's first dot, and other words are a comment", () => {
+    const notes = '<!-- text: ask Anna -->\nRemember.\n\n';
+    const markdown =
+        '<!-- slide: actual -->\n<!-- text: badge.Headline text -->\nInstance words.\n\n<!-- text: badge.Step 1.5 -->\nMore.\n\n<!-- notes -->\n' +
+        notes +
+        '<!-- composition: shared -->\n<!-- control: Headline text -->\nDefault words.\n\n<!-- control: 見出し -->\nWords.\n';
+    const document = indexPresentation(markdown, 0)!;
+    const slide = document.slides[0]!;
+    assert.deepEqual(
+        slide.blocks.map(block => [block.kind, block.id]),
+        [
+            ['text', 'badge.Headline text'],
+            ['text', 'badge.Step 1.5'],
+            ['notes', null]
+        ]
+    );
+    assert.equal(markdown.slice(slide.blocks[2]!.contentFrom, slide.blocks[2]!.to), notes, 'words that name no instance stay notes');
+    assert.deepEqual(
+        document.compositions[0]!.blocks.map(block => [block.kind, block.id]),
+        [
+            ['control', 'Headline text'],
+            ['control', '見出し']
+        ]
+    );
+    // A control's marker, or an instance's text marker, whose words are no name refuses the file, as MarkdownPoint reports it.
+    for (const line of ['<!-- control: Headline  text -->', '<!-- text: badge.Headline  text -->', '<!-- control: a --> b -->'])
+        assert.equal(indexPresentation(`<!-- composition: shared -->\n${line}\nWords.\n`, 0), null, line);
+});
+
 test('literal composition/control examples stay in their field and real definitions have globally unique IDs', () => {
     const markdown =
         '<!-- composition: shared -->\n<!-- control: sample -->\n```md\n<!-- composition: example -->\n<!-- control: example -->\n```\n<!-- slide: actual -->\n<!-- text: title -->\nWords.\n';
