@@ -32,7 +32,7 @@ import type { SlideReorder } from './format/reorder.ts';
 import { PresentationStorage } from './presentation/storage.ts';
 import type { ListSelection } from './selection/list-selection.ts';
 import { SlideMenus } from './editor/slide-menus.ts';
-import { hideReadingGroups } from './editor/group-marks.ts';
+import { hideReadingSpans } from './editor/span-marks.ts';
 import type { SlideMenuTarget } from './editor/slide-menus.ts';
 import { SharedSettings } from './settings/shared.ts';
 import { SlideCreation } from './presentation/new-slide.ts';
@@ -214,7 +214,7 @@ export default class MarkdownPointPlugin extends Plugin {
         );
         this.registerEditorExtension(this.slideMenus.extension);
         this.registerMarkdownPostProcessor((element, context) => this.slideMenus?.readingSection(element, context));
-        this.registerMarkdownPostProcessor((element, context) => hideReadingGroups(this.app.vault, element, context));
+        this.registerMarkdownPostProcessor((element, context) => hideReadingSpans(this.app.vault, element, context));
     }
 
     onunload(): void {

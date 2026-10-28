@@ -148,12 +148,12 @@
     display: none;
 }
 
-/* Obsidian reads a group's brackets as a bare link; its words keep the look of the words around them */
-.markdownpoint-presentation .markdownpoint-group {
+/* Obsidian reads a span's brackets as a bare link; its words keep the look of the words around them */
+.markdownpoint-presentation .markdownpoint-span {
     --link-external-decoration-hover: none;
 }
 
-.markdownpoint-presentation .markdownpoint-group span.cm-link {
+.markdownpoint-presentation .markdownpoint-span span.cm-link {
     color: inherit;
 }
 

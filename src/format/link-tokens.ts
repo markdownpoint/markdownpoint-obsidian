@@ -116,24 +116,33 @@ const spanAttribute = /([a-z-]+)=(?:"([^"]*)"|([^\s"{}]+))/g;
 const spanWeights = new Set(['300', '400', '500', '600', '700', '900']);
 
 /**
- * A bracketed span as the MarkdownPoint app reads one: words with a color, a weight or both, `[words]{color=muted
- * font-weight=600}`, or a group with neither, `[words]{}`. Any other key, a key twice or a value that names no color or
- * weight leaves the brackets as written.
+ * The length of the attributes a span's closing bracket carries at the start of `source`: a color, a weight or both,
+ * `{color=muted font-weight=600}`, or neither, `{}`. Any other key, a key twice or a value that names no color or weight
+ * is no span's, 0.
  */
-export function presentationSpan(source: string): { length: number; content: string; group: boolean } | null {
-    if (!source.startsWith('[')) return null;
-    const close = closingBracket(source, 0, true);
-    if (close <= 1) return null;
-    const block = spanAttributes.exec(source.slice(close + 1));
-    if (!block) return null;
+export function spanAttributesLength(source: string): number {
+    const block = spanAttributes.exec(source);
+    if (!block) return 0;
     const keys = new Set<string>();
     for (const [, key, quoted, bare] of (block[1] ?? '').matchAll(spanAttribute)) {
         const value = quoted ?? bare!;
         const color = /^#[a-f\d]+$/i.test(value) ? [4, 5, 7, 9].includes(value.length) : isStableId(value);
-        if (keys.has(key!) || !(key === 'color' ? color : key === 'font-weight' && spanWeights.has(value))) return null;
+        if (keys.has(key!) || !(key === 'color' ? color : key === 'font-weight' && spanWeights.has(value))) return 0;
         keys.add(key!);
     }
-    return { length: close + 1 + block[0].length, content: source.slice(1, close), group: keys.size === 0 };
+    return block[0].length;
+}
+
+/**
+ * A bracketed span as the MarkdownPoint app reads one: words with a color, a weight or both, `[words]{color=muted
+ * font-weight=600}`, or a group with neither, `[words]{}`. Other attributes leave the brackets as written.
+ */
+export function presentationSpan(source: string): { length: number; content: string } | null {
+    if (!source.startsWith('[')) return null;
+    const close = closingBracket(source, 0, true);
+    if (close <= 1) return null;
+    const attributes = spanAttributesLength(source.slice(close + 1));
+    return attributes ? { length: close + 1 + attributes, content: source.slice(1, close) } : null;
 }
 
 /** An enclosing emphasis delimiter cannot close inside another formatting span. */

@@ -21,11 +21,12 @@ import { blockTokens } from './block-grammar.ts';
 import { destinationEnd, literalEnd, presentationSpan, wordTokens } from './link-tokens.ts';
 
 /**
- * A group, `[words]{}`: the MarkdownPoint app writes each run whose style changes inside a word in one, such as
- * `[**Mark**]{}[***do***]{}[*wn*]{}`. `wordsFrom` and `wordsTo` bound what an author reads: the words without the
- * brackets, the braces and the emphasis delimiters that enclose all of the group's words.
+ * A span, `[words]{color=accent}`: words with a color, a weight or both, or a group with neither, `[words]{}`, which the
+ * MarkdownPoint app writes for each run whose style changes inside a word, such as `[**Mark**]{}[***do***]{}[*wn*]{}`.
+ * `wordsFrom` and `wordsTo` bound what an author reads: the words without the brackets, the attributes and the emphasis
+ * delimiters that enclose all of the span's words.
  */
-export interface WordGroup {
+export interface WordSpan {
     readonly from: number;
     readonly to: number;
     readonly wordsFrom: number;
@@ -57,9 +58,9 @@ function enclosingWidth(content: string, lead: string): number {
     return width === lead.length && words.length > 0 ? width : 0;
 }
 
-function groupAt(source: string, at: number): WordGroup | null {
+function spanAt(source: string, at: number): WordSpan | null {
     const span = presentationSpan(source.slice(at));
-    if (!span?.group) return null;
+    if (!span) return null;
     const content = span.content;
     // Delimiters that enclose the words read as their style; any other run stays where the author can see it.
     const inner = enclosingWidth(content, /^(?:==|~~|[*_])*/.exec(content)![0]);
@@ -67,21 +68,21 @@ function groupAt(source: string, at: number): WordGroup | null {
 }
 
 /**
- * The groups in one field's Markdown, at offsets into it, as the MarkdownPoint app reads them: never in code, HTML, a
+ * The spans in one field's Markdown, at offsets into it, as the MarkdownPoint app reads them: never in code, HTML, a
  * reference definition or a link's destination, and inside another span or a link's words too. A block that holds code
  * anywhere keeps all of its source in view.
  */
-export function fieldGroups(source: string): WordGroup[] {
-    if (!source.includes(']{}')) return [];
+export function fieldSpans(source: string): WordSpan[] {
+    if (!source.includes(']{')) return [];
     const tokens = blockTokens(source);
     if (tokens.map(token => token.raw).join('') !== source) return [];
-    const groups: WordGroup[] = [];
+    const spans: WordSpan[] = [];
     let from = 0;
     for (const token of tokens) {
         const to = from + token.raw.length;
         // Offsets stay the field's, and nothing reads past the block's end.
         const block = source.slice(0, to);
-        if (token.raw.includes(']{}') && !keepsSource(token))
+        if (token.raw.includes(']{') && !keepsSource(token))
             for (let at = from; at < to;) {
                 const end = literalEnd(block, at);
                 if (end > at) {
@@ -92,11 +93,11 @@ export function fieldGroups(source: string): WordGroup[] {
                     at = Math.max(at + 1, destinationEnd(block, at + 1));
                     continue;
                 }
-                const group = block[at] === '[' ? groupAt(block, at) : null;
-                if (group) groups.push(group);
+                const span = block[at] === '[' ? spanAt(block, at) : null;
+                if (span) spans.push(span);
                 at++;
             }
         from = to;
     }
-    return groups;
+    return spans;
 }

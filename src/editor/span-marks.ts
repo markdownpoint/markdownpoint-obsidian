@@ -21,13 +21,13 @@ import { Decoration, EditorView, ViewPlugin } from '@codemirror/view';
 import type { DecorationSet, ViewUpdate } from '@codemirror/view';
 import type { MarkdownPostProcessorContext, Vault } from 'obsidian';
 import type { PresentationDocument } from '../format/document.ts';
-import { markdownWords } from '../format/link-tokens.ts';
+import { markdownWords, spanAttributesLength } from '../format/link-tokens.ts';
 import { readsAsPresentation } from '../presentation/reader.ts';
-import { fieldGroups } from '../format/groups.ts';
-import type { WordGroup } from '../format/groups.ts';
+import { fieldSpans } from '../format/spans.ts';
+import type { WordSpan } from '../format/spans.ts';
 
 const hiddenMark = Decoration.replace({});
-const groupWords = Decoration.mark({ class: 'markdownpoint-group' });
+const spanWords = Decoration.mark({ class: 'markdownpoint-span' });
 
 /** Every stretch of a presentation's source that holds words: text, notes, controls and section headings. */
 function wordFields(document: PresentationDocument): { from: number; to: number }[] {
@@ -38,63 +38,64 @@ function wordFields(document: PresentationDocument): { from: number; to: number 
     return fields;
 }
 
-/** The groups of a presentation's source, read again only for fields whose words changed. */
-export class GroupIndex {
-    private known = new Map<string, readonly WordGroup[]>();
+/** The spans of a presentation's source, read again only for fields whose words changed. */
+export class SpanIndex {
+    private known = new Map<string, readonly WordSpan[]>();
 
-    read(state: EditorState, document: PresentationDocument): WordGroup[] {
-        const next = new Map<string, readonly WordGroup[]>();
-        const groups: WordGroup[] = [];
+    read(state: EditorState, document: PresentationDocument): WordSpan[] {
+        const next = new Map<string, readonly WordSpan[]>();
+        const spans: WordSpan[] = [];
         for (const field of wordFields(document)) {
             const source = state.doc.sliceString(field.from, field.to);
-            if (!source.includes(']{}')) continue;
-            const found = next.get(source) ?? this.known.get(source) ?? fieldGroups(source);
+            if (!source.includes(']{')) continue;
+            const found = next.get(source) ?? this.known.get(source) ?? fieldSpans(source);
             next.set(source, found);
-            for (const group of found)
-                groups.push({
-                    from: field.from + group.from,
-                    to: field.from + group.to,
-                    wordsFrom: field.from + group.wordsFrom,
-                    wordsTo: field.from + group.wordsTo
+            for (const span of found)
+                spans.push({
+                    from: field.from + span.from,
+                    to: field.from + span.to,
+                    wordsFrom: field.from + span.wordsFrom,
+                    wordsTo: field.from + span.wordsTo
                 });
         }
         this.known = next;
-        return groups.sort((a, b) => a.from - b.from);
+        return spans.sort((a, b) => a.from - b.from);
     }
 }
 
 /**
- * Hide each group's brackets, braces and enclosing delimiters, so its word reads as styled words. A selection on any
- * group of a word shows the whole word's source, as Obsidian shows its own marks where the caret is.
+ * Hide each span's brackets, attributes and enclosing delimiters, so its word reads as styled words. A selection on any
+ * span of a word shows the whole word's source, as Obsidian shows its own marks where the caret is.
  */
-export function groupDecorations(state: EditorState, groups: readonly WordGroup[]): { hidden: DecorationSet; words: DecorationSet } {
+export function spanDecorations(state: EditorState, spans: readonly WordSpan[]): { hidden: DecorationSet; words: DecorationSet } {
     const hidden: Range<Decoration>[] = [];
     const words: Range<Decoration>[] = [];
-    for (let first = 0; first < groups.length;) {
+    for (let first = 0; first < spans.length;) {
+        const from = spans[first]!.from;
+        let to = spans[first]!.to;
         let last = first;
-        while (last + 1 < groups.length && groups[last + 1]!.from === groups[last]!.to) last++;
-        const from = groups[first]!.from;
-        const to = groups[last]!.to;
+        // A span inside another, or right after it, is of the same word.
+        while (last + 1 < spans.length && spans[last + 1]!.from <= to) to = Math.max(to, spans[++last]!.to);
         if (!state.selection.ranges.some(range => range.from <= to && range.to >= from))
-            for (const group of groups.slice(first, last + 1)) {
-                hidden.push(hiddenMark.range(group.from, group.wordsFrom), hiddenMark.range(group.wordsTo, group.to));
-                words.push(groupWords.range(group.wordsFrom, group.wordsTo));
+            for (const span of spans.slice(first, last + 1)) {
+                hidden.push(hiddenMark.range(span.from, span.wordsFrom), hiddenMark.range(span.wordsTo, span.to));
+                words.push(spanWords.range(span.wordsFrom, span.wordsTo));
             }
         first = last + 1;
     }
-    // A group inside another closes before the outer one does.
+    // A span inside another closes before the outer one does.
     return { hidden: Decoration.set(hidden, true), words: Decoration.set(words, true) };
 }
 
-/** Live Preview's group marks, for the presentation `document` reads from the editor's state. */
-export function groupMarks(document: (state: EditorState) => PresentationDocument | null): Extension {
+/** Live Preview's span marks, for the presentation `document` reads from the editor's state. */
+export function spanMarks(document: (state: EditorState) => PresentationDocument | null): Extension {
     const plugin = ViewPlugin.fromClass(
         class {
             hidden: DecorationSet = Decoration.none;
             words: DecorationSet = Decoration.none;
-            private readonly index = new GroupIndex();
+            private readonly index = new SpanIndex();
             private document: PresentationDocument | null = null;
-            private groups: readonly WordGroup[] = [];
+            private spans: readonly WordSpan[] = [];
 
             constructor(view: EditorView) {
                 this.refresh(view.state, true);
@@ -108,9 +109,9 @@ export function groupMarks(document: (state: EditorState) => PresentationDocumen
             private refresh(state: EditorState, reread: boolean): void {
                 if (reread) {
                     this.document = document(state);
-                    this.groups = this.document ? this.index.read(state, this.document) : [];
+                    this.spans = this.document ? this.index.read(state, this.document) : [];
                 }
-                ({ hidden: this.hidden, words: this.words } = groupDecorations(state, this.groups));
+                ({ hidden: this.hidden, words: this.words } = spanDecorations(state, this.spans));
             }
         },
         {
@@ -133,12 +134,12 @@ interface RenderedPlace {
 }
 
 /**
- * Take a group's `[` and `]{}` out of the words reading view rendered from `source`, Obsidian having read them as plain
+ * Take a span's `[` and `]{…}` out of the words reading view rendered from `source`, Obsidian having read them as plain
  * characters: only when the words then read as the source's own do, whichever brackets the rendering pairs. Otherwise
  * the words keep every character.
  */
-export function hideRenderedGroups(element: HTMLElement, source: string): void {
-    const count = fieldGroups(source).length;
+export function hideRenderedSpans(element: HTMLElement, source: string): void {
+    const count = fieldSpans(source).length;
     if (!count) return;
     let words = '';
     const opened: RenderedPlace[] = [];
@@ -150,9 +151,10 @@ export function hideRenderedGroups(element: HTMLElement, source: string): void {
                 if (text.data[at] === '[') opened.push({ node: text, at, position: words.length + at });
                 else if (text.data[at] === ']' && opened.length) {
                     const open = opened.pop()!;
-                    if (!text.data.startsWith(']{}', at)) continue;
-                    removals.push({ ...open, length: 1 }, { node: text, at, position: words.length + at, length: 3 });
-                    at += 2;
+                    const attributes = spanAttributesLength(text.data.slice(at + 1));
+                    if (!attributes) continue;
+                    removals.push({ ...open, length: 1 }, { node: text, at, position: words.length + at, length: 1 + attributes });
+                    at += attributes;
                 }
             }
             words += text.data;
@@ -187,10 +189,10 @@ function sourceLines(text: string, first: number, last: number): string {
     return text.slice(from, to).replace(/\r\n?/g, '\n');
 }
 
-/** Reading view of a presentation's slides.md shows a group's words without the marks it renders as characters. */
-export async function hideReadingGroups(vault: Vault, element: HTMLElement, context: MarkdownPostProcessorContext): Promise<void> {
-    if (!element.textContent?.includes(']{}')) return;
+/** Reading view of a presentation's slides.md shows a span's words without the marks it renders as characters. */
+export async function hideReadingSpans(vault: Vault, element: HTMLElement, context: MarkdownPostProcessorContext): Promise<void> {
+    if (!element.textContent?.includes(']{')) return;
     const section = context.getSectionInfo(element);
     if (!section || !(await readsAsPresentation(vault, context.sourcePath, section.text))) return;
-    hideRenderedGroups(element, sourceLines(section.text, section.lineStart, section.lineEnd));
+    hideRenderedSpans(element, sourceLines(section.text, section.lineStart, section.lineEnd));
 }
