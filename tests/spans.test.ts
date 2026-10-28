@@ -118,6 +118,54 @@ test('spans stand outside code, HTML and destinations, and inside links and othe
     ]);
 });
 
+test("a link in a span's words reads as one, with its destination, as no other link or image does", () => {
+    const linked = (source: string) =>
+        fieldSpans(source).map(span => [source.slice(span.from, span.to), source.slice(span.wordsFrom, span.wordsTo), span.href ?? null]);
+    assert.deepEqual(linked('Read the [[launch notes](https://example.com)]{color=accent} first.'), [
+        ['[[launch notes](https://example.com)]{color=accent}', '[launch notes](https://example.com)', null],
+        ['[launch notes](https://example.com)', 'launch notes', 'https://example.com']
+    ]);
+    assert.deepEqual(linked('[**see [the [plan]](<https://x.com/a b> "Title") now**]{font-weight=600}'), [
+        [
+            '[**see [the [plan]](<https://x.com/a b> "Title") now**]{font-weight=600}',
+            'see [the [plan]](<https://x.com/a b> "Title") now',
+            null
+        ],
+        ['[the [plan]](<https://x.com/a b> "Title")', 'the [plan]', 'https://x.com/a b']
+    ]);
+    assert.deepEqual(linked('[x [[y](slide:two)]{} z]{color=accent}'), [
+        ['[x [[y](slide:two)]{} z]{color=accent}', 'x [[y](slide:two)]{} z', null],
+        ['[[y](slide:two)]{}', '[y](slide:two)', null],
+        ['[y](slide:two)', 'y', 'slide:two']
+    ]);
+    // A `!` a backslash escapes stays a character, and the link after it a link.
+    assert.deepEqual(linked('[Wow\\![the plan](https://example.com)]{color=accent}')[1], [
+        '[the plan](https://example.com)',
+        'the plan',
+        'https://example.com'
+    ]);
+    assert.deepEqual(linked('[[q](https://example.com/?a=1&amp;b=2)]{}')[1], [
+        '[q](https://example.com/?a=1&amp;b=2)',
+        'q',
+        'https://example.com/?a=1&b=2'
+    ]);
+    // A link without words, or with a destination past its line, keeps its source: Live Preview can't hide it.
+    for (const source of [
+        '[a ![i](p.png) b]{color=accent}',
+        '[a \\\\![i](p.png) b]{color=accent}',
+        '[`[x](u)`]{color=accent}',
+        '[[a](b c)]{color=accent}',
+        '[go](https://example.com) and [[*c*]{}d](slide:one) [e]{}',
+        'See [the [](https://example.com) plan]{} now',
+        'See [the [plan](https://example.com\n"Title") now]{} and [[it](\nhttps://example.com)]{}'
+    ])
+        assert.deepEqual(
+            linked(source).filter(([, , href]) => href !== null),
+            [],
+            source
+        );
+});
+
 const deck =
     '<!-- slide: first -->\n<!-- text: title -->\n# ' +
     word +
@@ -134,6 +182,11 @@ test("the index finds a presentation's spans in text, notes, controls and sectio
         ['Mark', 'do', 'wn', 'x', 'here', 'it', 'now', 'Pa', 'No']
     );
     assert.deepEqual(index.read(state, document), spans);
+    const linked = deck.replace('[here]{color=accent}', '[see [here](https://example.com)]{color=accent}');
+    const link = new SpanIndex()
+        .read(EditorState.create({ doc: linked }), indexPresentation(linked, 0)!)
+        .find(span => span.href !== undefined);
+    assert.deepEqual(link && [linked.slice(link.wordsFrom, link.wordsTo), link.href], ['here', 'https://example.com']);
 });
 
 function ranges(set: DecorationSet, doc: string): string[] {
@@ -175,6 +228,30 @@ test("Live Preview hides a color or weight span's marks as a group's, until a se
     // The weight span and the group after it make one word, so the caret on either shows both.
     const word = spanDecorations(EditorState.create({ doc, selection: { anchor: doc.indexOf('er*') } }), spans);
     assert.deepEqual(ranges(word.hidden, doc), ['[**', '**]{color=accent}']);
+});
+
+test("Live Preview hides a link's marks in a span's words with the span's, and only the link's words read as a link", () => {
+    const doc = 'See [the [whole plan](https://example.com/plan) in one page]{font-weight=600} today.';
+    const spans = fieldSpans(doc);
+    const away = spanDecorations(EditorState.create({ doc, selection: { anchor: 0 } }), spans);
+    assert.deepEqual(ranges(away.hidden, doc), ['[', '[', '](https://example.com/plan)', ']{font-weight=600}']);
+    const classes: [string, string][] = [];
+    for (const cursor = away.words.iter(); cursor.value; cursor.next())
+        classes.push([doc.slice(cursor.from, cursor.to), String((cursor.value.spec as { class?: string }).class)]);
+    assert.deepEqual(classes, [
+        ['the [whole plan](https://example.com/plan) in one page', 'markdownpoint-span markdownpoint-span-linked'],
+        ['whole plan', 'markdownpoint-span-link']
+    ]);
+    // The caret on the link's words shows the whole span's source, as on any other word of it.
+    const near = spanDecorations(EditorState.create({ doc, selection: { anchor: doc.indexOf('plan]') } }), spans);
+    assert.deepEqual(ranges(near.hidden, doc), []);
+    assert.deepEqual(ranges(near.words, doc), []);
+    // A link without words has none to mark.
+    const empty = 'See [the [](https://example.com) plan]{} now';
+    assert.deepEqual(
+        ranges(spanDecorations(EditorState.create({ doc: empty, selection: { anchor: 0 } }), fieldSpans(empty)).words, empty),
+        ['the [](https://example.com) plan']
+    );
 });
 
 interface FakeNode {
@@ -254,6 +331,9 @@ test('reading view drops the marks of color and weight spans as it does a group,
     assert.equal(hidden(source, paragraph), 'A ink and bolder x [y]{size=2}');
     const nested = element('P', text('[['), element('EM', text('c')), text(']{}d]{color=accent}'));
     assert.equal(hidden('[[*c*]{}d]{color=accent}', nested), 'cd');
+    // Reading view renders a link in a span's words as a link: only the span's marks remain as characters.
+    const linked = element('P', text('Read the ['), element('A', text('launch notes')), text(']{color=accent} first.'));
+    assert.equal(hidden('Read the [[launch notes](https://example.com)]{color=accent} first.', linked), 'Read the launch notes first.');
 });
 
 test('outline titles read the words of groups and spans, not their marks', () => {

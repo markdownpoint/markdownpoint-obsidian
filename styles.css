@@ -157,6 +157,24 @@
     color: inherit;
 }
 
+/* When the words hold a link, Obsidian draws all of them as one; only the link's own words keep a link's look */
+.markdownpoint-presentation .markdownpoint-span-linked .cm-link .cm-underline,
+.markdownpoint-presentation .markdownpoint-span-linked .cm-link .cm-underline:hover {
+    color: inherit;
+    text-decoration: none;
+    cursor: inherit;
+}
+
+.markdownpoint-presentation .markdownpoint-span-link {
+    color: var(--link-external-color);
+    text-decoration: var(--link-external-decoration);
+    cursor: var(--cursor-link);
+}
+
+.markdownpoint-presentation .markdownpoint-span-link:hover {
+    color: var(--link-external-color-hover);
+}
+
 .markdownpoint-field-header {
     padding-top: var(--size-4-4);
     color: var(--markdownpoint-muted);

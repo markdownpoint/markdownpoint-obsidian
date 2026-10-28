@@ -28,6 +28,9 @@ import type { WordSpan } from '../format/spans.ts';
 
 const hiddenMark = Decoration.replace({});
 const spanWords = Decoration.mark({ class: 'markdownpoint-span' });
+// Obsidian draws all of the words of a span that holds a link as one link, with no destination of its own.
+const linkedWords = Decoration.mark({ class: 'markdownpoint-span markdownpoint-span-linked' });
+const linkWords = Decoration.mark({ class: 'markdownpoint-span-link' });
 
 /** Every stretch of a presentation's source that holds words: text, notes, controls and section headings. */
 function wordFields(document: PresentationDocument): { from: number; to: number }[] {
@@ -52,6 +55,7 @@ export class SpanIndex {
             next.set(source, found);
             for (const span of found)
                 spans.push({
+                    ...span,
                     from: field.from + span.from,
                     to: field.from + span.to,
                     wordsFrom: field.from + span.wordsFrom,
@@ -64,8 +68,9 @@ export class SpanIndex {
 }
 
 /**
- * Hide each span's brackets, attributes and enclosing delimiters, so its word reads as styled words. A selection on any
- * span of a word shows the whole word's source, as Obsidian shows its own marks where the caret is.
+ * Hide each span's brackets, attributes and enclosing delimiters, so its word reads as styled words, and the brackets and
+ * destination of a link in its words, so only the link's words read as a link. A selection on any span of a word shows
+ * the whole word's source, as Obsidian shows its own marks where the caret is.
  */
 export function spanDecorations(state: EditorState, spans: readonly WordSpan[]): { hidden: DecorationSet; words: DecorationSet } {
     const hidden: Range<Decoration>[] = [];
@@ -76,11 +81,14 @@ export function spanDecorations(state: EditorState, spans: readonly WordSpan[]):
         let last = first;
         // A span inside another, or right after it, is of the same word.
         while (last + 1 < spans.length && spans[last + 1]!.from <= to) to = Math.max(to, spans[++last]!.to);
-        if (!state.selection.ranges.some(range => range.from <= to && range.to >= from))
-            for (const span of spans.slice(first, last + 1)) {
+        if (!state.selection.ranges.some(range => range.from <= to && range.to >= from)) {
+            const word = spans.slice(first, last + 1);
+            for (const span of word) {
                 hidden.push(hiddenMark.range(span.from, span.wordsFrom), hiddenMark.range(span.wordsTo, span.to));
-                words.push(spanWords.range(span.wordsFrom, span.wordsTo));
+                const linked = word.some(link => link.href !== undefined && span.wordsFrom <= link.from && link.to <= span.wordsTo);
+                words.push((span.href !== undefined ? linkWords : linked ? linkedWords : spanWords).range(span.wordsFrom, span.wordsTo));
             }
+        }
         first = last + 1;
     }
     // A span inside another closes before the outer one does.
@@ -113,11 +121,39 @@ export function spanMarks(document: (state: EditorState) => PresentationDocument
                 }
                 ({ hidden: this.hidden, words: this.words } = spanDecorations(state, this.spans));
             }
+
+            /**
+             * Obsidian finds no link to open in words it draws as a span's own link, and keeps the click from placing the
+             * caret: a link's words open its destination, as Obsidian opens a link, and the span's other words take the caret.
+             */
+            click(event: MouseEvent, view: EditorView): boolean {
+                const node = event.targetNode;
+                const element = node?.instanceOf(Element) ? node : node?.parentElement;
+                if (event.button !== 0 || event.altKey || event.shiftKey || !element?.closest('.markdownpoint-span-linked')) return false;
+                const link = element.closest('.markdownpoint-span-link');
+                // A link's words break into a mark for each line they run over.
+                const at = link ? view.posAtDOM(link) : -1;
+                const href = this.spans.find(span => span.href !== undefined && span.wordsFrom <= at && at < span.wordsTo)?.href;
+                if (href && URL.canParse(href)) window.open(href);
+                else {
+                    const at = view.posAtCoords({ x: event.clientX, y: event.clientY });
+                    if (at === null) return false;
+                    view.focus();
+                    view.dispatch({ selection: { anchor: at }, userEvent: 'select.pointer' });
+                }
+                event.preventDefault();
+                return true;
+            }
         },
         {
             decorations: value => value.hidden,
             // Outside every other mark, so the words' own highlighting, such as Obsidian's link color, sits inside it.
-            provide: plugin => EditorView.outerDecorations.of(view => view.plugin(plugin)?.words ?? Decoration.none)
+            provide: plugin => EditorView.outerDecorations.of(view => view.plugin(plugin)?.words ?? Decoration.none),
+            eventHandlers: {
+                click(event, view) {
+                    return this.click(event, view);
+                }
+            }
         }
     );
     return plugin;
@@ -139,7 +175,8 @@ interface RenderedPlace {
  * the words keep every character.
  */
 export function hideRenderedSpans(element: HTMLElement, source: string): void {
-    const count = fieldSpans(source).length;
+    // Reading view renders a link in a span's words as a link.
+    const count = fieldSpans(source).filter(span => span.href === undefined).length;
     if (!count) return;
     let words = '';
     const opened: RenderedPlace[] = [];
