@@ -56,6 +56,18 @@ test('Live Preview hides each paragraph id, the space before it included, until 
     );
 });
 
+test('an id written with any spaces or tabs around and inside its comment is hidden as one; a misspelled one or one alone on its line is a note', () => {
+    const loose = deckOf('One<!-- id: a7k2p9 -->\n\nTwo\t<!--id:k3x9a2-->\t\n\nThree <!-- ID: p7m2q1 -->\n\nFour <!-- id: K3X9A2 -->\n\nFive\n<!-- id: b8c4d0 -->\n\nSix \\<!-- id: c5d6e7 -->\n\nSeven \\\\<!-- id: d6e7f8 -->');
+    const state = EditorState.create({ doc: loose, selection: { anchor: 0 } });
+    assert.deepEqual(covered(paragraphIdDecorations(state, paragraphIds(state, indexPresentation(loose, 0)!)), loose),
+        ['<!-- id: a7k2p9 -->', '\t<!--id:k3x9a2-->\t', '<!-- id: d6e7f8 -->'], 'an escaped comment is words; an escaped backslash before one is not');
+    // A long line of spaces and tabs is read in one pass.
+    const long = deckOf(`Words${' \t'.repeat(40_000)}end`);
+    const started = performance.now();
+    paragraphIds(EditorState.create({ doc: long }), indexPresentation(long, 0)!);
+    assert.ok(performance.now() - started < 50, `${performance.now() - started} ms`);
+});
+
 /** The deck after one change an author makes in it, its ids kept as MarkdownPoint keeps them. */
 function edited(doc: string, change: { from: number; to?: number; insert?: string }, userEvent = 'input'): string {
     const state = EditorState.create({ doc, extensions: keptParagraphIds(state => indexPresentation(state.doc.toString(), 0)) });
@@ -113,6 +125,15 @@ test("a join of two blocks keeps the first one's id and drops the second's, or k
         edited(heading, { from: line, to: line + 1 }, 'delete'),
         heading.replace('# A <!-- id: a7k2p9 -->\nB <!-- id: k3x9a2 -->', '# AB <!-- id: a7k2p9 -->')
     );
+});
+
+test('Enter and a join read an id written loosely, and write the one they keep as MarkdownPoint writes it', () => {
+    const doc = deckOf('One line\t<!--id:a7k2p9-->\n\nTwo <!-- id: k3x9a2 -->');
+    const at = doc.indexOf(' line');
+    const once = edited(doc, { from: at, insert: '\n' });
+    assert.match(edited(once, { from: at + 1, insert: '\n' }), /One <!-- id: a7k2p9 -->\n\n line\n\nTwo/);
+    const blank = doc.indexOf('\n\nTwo');
+    assert.match(edited(doc, { from: blank, to: blank + 1 }, 'delete'), /One line\nTwo <!-- id: a7k2p9 -->\n/);
 });
 
 test('every other edit leaves the ids as the author typed it: typing, retyping, pastes, marks, deletions, a reload, two changes at once and code', () => {

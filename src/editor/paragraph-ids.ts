@@ -24,17 +24,33 @@ import { blockTokens } from '../format/block-grammar.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import { wordFields } from './span-marks.ts';
 
-/** A paragraph's id at the end of its last line, with the space before it: the id a step's paragraph cue names it by. */
-const PARAGRAPH_ID = / <!-- id: [A-Za-z0-9-]+ -->$/;
+/**
+ * A paragraph's id at the end of its last line: the id a step's paragraph cue names it by, read as MarkdownPoint reads
+ * it, with any spaces or tabs around and inside the comment.
+ */
+const PARAGRAPH_ID = /<!--[ \t]*id:[ \t]*([a-z](?:[a-z0-9]|-(?!-))*[a-z0-9]|[a-z])[ \t]*-->[ \t]*$/;
 const hiddenId = Decoration.replace({});
 
+/**
+ * The id a line of words ends with, and its comment from the spaces and tabs before it, or null: a comment alone on its
+ * line is a note, and one after a backslash is words.
+ */
+function idOnLine(text: string): { id: string; comment: string; index: number } | null {
+    const id = PARAGRAPH_ID.exec(text);
+    if (!id) return null;
+    let slashes = 0;
+    while (text[id.index - 1 - slashes] === '\\') slashes++;
+    let index = id.index;
+    while (index > 0 && (text[index - 1] === ' ' || text[index - 1] === '\t')) index--;
+    return slashes % 2 === 0 && /\S/.test(text.slice(0, index)) ? { id: id[1]!, comment: text.slice(index), index } : null;
+}
 /** Where each line of a presentation's words ends with a paragraph's id. */
 export function paragraphIds(state: EditorState, document: PresentationDocument): { from: number; to: number }[] {
     const ids: { from: number; to: number }[] = [];
     for (const field of wordFields(document)) {
         if (field.to <= field.from) continue;
         for (let line = state.doc.lineAt(field.from); ; line = state.doc.line(line.number + 1)) {
-            const id = PARAGRAPH_ID.exec(line.text);
+            const id = idOnLine(line.text);
             if (id) ids.push({ from: line.from + id.index, to: line.to });
             if (line.to >= field.to || line.number === state.doc.lines) break;
         }
@@ -151,11 +167,11 @@ function blockAt(blocks: readonly Block[], at: number): number {
     return -1;
 }
 
-/** The id ending a block's last line, the space before it included. */
-function idOf(doc: Text, block: Block): { id: string; from: number; to: number } | null {
+/** The id ending a block's last line, and its comment as written, the spaces before it included. */
+function idOf(doc: Text, block: Block): { id: string; comment: string; from: number; to: number } | null {
     const line = doc.lineAt(block.to);
-    const id = PARAGRAPH_ID.exec(line.text);
-    return id ? { id: id[0].slice(' <!-- id: '.length, -' -->'.length), from: line.from + id.index, to: line.to } : null;
+    const id = idOnLine(line.text);
+    return id ? { id: id.id, comment: id.comment, from: line.from + id.index, to: line.to } : null;
 }
 
 /** What Obsidian writes for Enter in a block: a line break, and the marks that carry a quote or a list on. */
@@ -163,9 +179,8 @@ const SPLIT = /^\n(?:[ \t]*>)*[ \t]*(?:(?:[*+-]|\d{1,9}[.)])[ \t]+(?:\[[ xX]\][ 
 /** What it deletes for Backspace or Delete between two blocks: a line break, or an item's marker. */
 const JOIN = /^(?:\n|(?:[ \t]*>)*[ \t]*(?:[*+-]|\d{1,9}[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)$/;
 
-/** An id comment and the space before it, read where it stands in `doc`. */
-function commentAt(doc: Text, from: number, id: string): Range | null {
-    const comment = ` <!-- id: ${id} -->`;
+/** An id's comment as it was written, read where it stands in `doc`. */
+function commentAt(doc: Text, from: number, comment: string): Range | null {
     const at = doc.sliceString(from, from + comment.length) === comment ? from : -1;
     return at < 0 ? null : { from: at, to: at + comment.length };
 }
@@ -197,7 +212,7 @@ function gestureChanges(transaction: Transaction, document: PresentationDocument
         const id = block?.words ? idOf(before, block) : null;
         if (!block || !id || edit.fromA > id.from) return [];
         const first = blockAt(blocks, map(block.start, -1));
-        const moved = commentAt(after, map(id.from, 1), id.id);
+        const moved = commentAt(after, map(id.from, 1), id.comment);
         if (first < 0 || !blocks[first]!.words || !moved || blockAt(blocks, moved.from) === first) return [];
         return [
             { from: blocks[first]!.to, insert: ` <!-- id: ${id.id} -->` },
@@ -213,9 +228,9 @@ function gestureChanges(transaction: Transaction, document: PresentationDocument
     const kept = first.words ? idOf(before, first) : null;
     const dropped = second.words ? idOf(before, second) : null;
     const changes: ChangeSpec[] = [];
-    const keptAt = kept && commentAt(after, map(kept.from, 1), kept.id);
+    const keptAt = kept && commentAt(after, map(kept.from, 1), kept.comment);
     if (keptAt) changes.push({ from: keptAt.from, to: keptAt.to });
-    const droppedAt = dropped && commentAt(after, map(dropped.from, 1), dropped.id);
+    const droppedAt = dropped && commentAt(after, map(dropped.from, 1), dropped.comment);
     const comment = kept ? ` <!-- id: ${kept.id} -->` : '';
     if (droppedAt) changes.push({ from: droppedAt.from, to: droppedAt.to, insert: comment });
     else if (comment) changes.push({ from: blocks[joined]!.to, insert: comment });
