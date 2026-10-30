@@ -41,7 +41,7 @@ Every slide starts with a numbered divider, followed by its text areas in writin
 
 Write in **Live Preview** to see the draft. It protects the slide dividers from stray edits, so you rearrange slides in the outline or from the right-click menu. Switch to **Source mode** whenever you want the plain Markdown, dividers included.
 
-Blank lines are yours to use. The draft hides the single blank line that separates text areas, and any extra blank lines stay visible and carry over to MarkdownPoint.
+Blank lines only separate paragraphs, however many you leave, and the draft hides the ones between text areas. For an empty line on the slide, write `<br>` on a line of its own.
 
 ### Presenter notes
 

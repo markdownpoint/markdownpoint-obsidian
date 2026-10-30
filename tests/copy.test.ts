@@ -132,10 +132,12 @@ test('actual repeated insertion reuses nested definitions after an original defi
     }
 });
 
-test('an authored trailing empty paragraph keeps a definition distinct from a structural gap', () => {
-    const value = { ...captured, compositions: [outer, { ...inner, markdown: inner.markdown + '\n\n' }] };
+test('trailing blank lines keep a definition the same, as they only separate blocks; a trailing <br> makes it another', () => {
     const held = [outer, { ...inner, markdown: inner.markdown + '\n' }];
-    assert.equal(prepare(held, value)!.compositions.length, 2);
+    const blank = { ...captured, compositions: [outer, { ...inner, markdown: inner.markdown + '\n\n' }] };
+    assert.equal(prepare(held, blank)!.compositions.length, 0);
+    const empty = { ...captured, compositions: [outer, { ...inner, markdown: inner.markdown + '\n<br>\n' }] };
+    assert.equal(prepare(held, empty)!.compositions.length, 2);
 });
 
 test('definitions whose links follow copied slides are cloned while their originals stay untouched', () => {
