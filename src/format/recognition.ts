@@ -18,9 +18,12 @@
 
 import { formatStanding, opensFormatVersion } from './format-version.ts';
 
+/** A saved version's folder, `versions/` and its save time, which MarkdownPoint opens only from its presentation. */
+const SAVED_VERSION = /(?:^|\/)versions\/[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}\.[0-9]{2}\.[0-9]{2}Z(?:-[a-z0-9]{4})?\/[^/]*$/;
+
 export function presentationCompanionPath(markdownPath: string): string | null {
     const slash = markdownPath.lastIndexOf('/');
-    if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md') return null;
+    if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md' || SAVED_VERSION.test(markdownPath)) return null;
     return markdownPath.slice(0, slash + 1) + 'presentation.mdpoint';
 }
 
