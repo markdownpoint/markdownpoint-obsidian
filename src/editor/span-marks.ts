@@ -33,7 +33,7 @@ const linkedWords = Decoration.mark({ class: 'markdownpoint-span markdownpoint-s
 const linkWords = Decoration.mark({ class: 'markdownpoint-span-link' });
 
 /** Every stretch of a presentation's source that holds words: text, notes, controls and section headings. */
-function wordFields(document: PresentationDocument): { from: number; to: number }[] {
+export function wordFields(document: PresentationDocument): { from: number; to: number }[] {
     const fields = [...document.slides, ...document.compositions].flatMap(part =>
         part.blocks.map(block => ({ from: block.contentFrom, to: block.to }))
     );

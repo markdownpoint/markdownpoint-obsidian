@@ -26,6 +26,7 @@ import type { PresentationReader, PresentationSnapshot } from '../presentation/r
 import type { SlideImagePreview } from '../presentation/image-reader.ts';
 import { imageSpacing, ImageSpace } from './image-spacing.ts';
 import { slideThumbnails } from './thumbnail-widgets.ts';
+import { paragraphIdMarks } from './paragraph-ids.ts';
 import { spanMarks } from './span-marks.ts';
 import type { SlideStructure } from '../format/structure.ts';
 import { outlineSlideNumbers } from '../outline/model.ts';
@@ -169,6 +170,7 @@ export class PresentationEditor extends Component {
             imageSpacing,
             field,
             spanMarks(state => state.field(field).snapshot?.document ?? null),
+            paragraphIdMarks(state => state.field(field).snapshot?.document ?? null),
             slideThumbnails(view => {
                 const draft = view.state.field(field);
                 return {
