@@ -85,7 +85,7 @@ test('malformed replacement records refuse without changing source', () => {
 test('copy references change in own objects and overrides without rewriting other JSON', () => {
     const source = String.raw`{ "layout":"title", "future":900719925474099312345, "escaped":"\u00e9",
     "objects":["title",{"id":"picture","type":"image","file":"assets/one.png","link":"slide:one","extra":{"link":"slide:one"}},
-      {"id":"card","type":"composition","composition":"card","link":"slide:two","controls":{"label":"slide:one"}}],
+      {"id":"card","type":"composition","composition":"card","link":"slide:two","inputs":{"label":"slide:one"}}],
     "overrides":{"title":{"link":"slide:one","name":"slide:one"},"removed":null,"other":{"link":"https://example.com/slide:one"}},
     "link":"slide:one", "composition":"card", "controls":{"caption":{"type":"text","default":"[Go](slide:one)"}} }`;
     const expected = source

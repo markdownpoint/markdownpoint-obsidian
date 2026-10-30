@@ -133,7 +133,7 @@ export function assignedSlideImages(
         const composition = companion.compositions[raw.composition];
         if (!isRecord(composition) || !Array.isArray(composition.objects)) continue;
         const controls = isRecord(composition.controls) ? composition.controls : {};
-        const values = isRecord(raw.controls) ? raw.controls : {};
+        const values = isRecord(raw.inputs) ? raw.inputs : {};
         const instance = JSON.stringify([raw.composition, values]);
         if (expanded.has(instance)) continue;
         expanded.add(instance);

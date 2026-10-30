@@ -92,13 +92,13 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
                 base[0] === 'objects' &&
                 object.type === 'composition' &&
                 typeof object.composition === 'string' &&
-                isRecord(object.controls)
+                isRecord(object.inputs)
             ) {
                 const controls = definitions.get(object.composition)?.controls;
                 if (!isRecord(controls)) continue;
-                for (const [name, value] of Object.entries(object.controls)) {
+                for (const [name, value] of Object.entries(object.inputs)) {
                     const declaration = ownEntry(controls, name);
-                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'controls', name]);
+                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'inputs', name]);
                 }
             }
         }

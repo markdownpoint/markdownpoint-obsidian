@@ -115,7 +115,7 @@ test('image references cannot escape their declared vault folder or load a remot
 test('placed compositions use assigned media controls without listing unused defaults or looping', () => {
     const companion = {
         slides: {
-            one: { objects: [{ id: 'instance', type: 'composition', composition: 'card', controls: { picture: 'media/selected.svg' } }] }
+            one: { objects: [{ id: 'instance', type: 'composition', composition: 'card', inputs: { picture: 'media/selected.svg' } }] }
         },
         compositions: {
             card: {
