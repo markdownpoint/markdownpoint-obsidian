@@ -57,10 +57,15 @@ test('Live Preview hides each paragraph id, the space before it included, until 
 });
 
 test('an id written with any spaces or tabs around and inside its comment is hidden as one; a misspelled one or one alone on its line is a note', () => {
-    const loose = deckOf('One<!-- id: a7k2p9 -->\n\nTwo\t<!--id:k3x9a2-->\t\n\nThree <!-- ID: p7m2q1 -->\n\nFour <!-- id: K3X9A2 -->\n\nFive\n<!-- id: b8c4d0 -->\n\nSix \\<!-- id: c5d6e7 -->\n\nSeven \\\\<!-- id: d6e7f8 -->');
+    const loose = deckOf(
+        'One<!-- id: a7k2p9 -->\n\nTwo\t<!--id:k3x9a2-->\t\n\nThree <!-- ID: p7m2q1 -->\n\nFour <!-- id: K3X9A2 -->\n\nFive\n<!-- id: b8c4d0 -->\n\nSix \\<!-- id: c5d6e7 -->\n\nSeven \\\\<!-- id: d6e7f8 -->'
+    );
     const state = EditorState.create({ doc: loose, selection: { anchor: 0 } });
-    assert.deepEqual(covered(paragraphIdDecorations(state, paragraphIds(state, indexPresentation(loose, 0)!)), loose),
-        ['<!-- id: a7k2p9 -->', '\t<!--id:k3x9a2-->\t', '<!-- id: d6e7f8 -->'], 'an escaped comment is words; an escaped backslash before one is not');
+    assert.deepEqual(
+        covered(paragraphIdDecorations(state, paragraphIds(state, indexPresentation(loose, 0)!)), loose),
+        ['<!-- id: a7k2p9 -->', '\t<!--id:k3x9a2-->\t', '<!-- id: d6e7f8 -->'],
+        'an escaped comment is words; an escaped backslash before one is not'
+    );
     // A long line of spaces and tabs is read in one pass.
     const long = deckOf(`Words${' \t'.repeat(40_000)}end`);
     const started = performance.now();
