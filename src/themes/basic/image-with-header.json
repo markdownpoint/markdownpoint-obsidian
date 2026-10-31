@@ -29,7 +29,7 @@
       "type": "text",
       "placeholder": true,
       "frame": {"x":120,"y":600,"width":1680,"height":360},
-      "drop-shadow": {"blur":6,"offset":{"x":0,"y":3},"color":"#000000","opacity":0.35},
+      "drop-shadow": {"size":0.05741,"offset":{"x":0,"y":0.023438},"color":"#000000","opacity":0.35},
       "text-style": "display",
       "color": "#FFFFFF",
       "vertical-align": "center"
