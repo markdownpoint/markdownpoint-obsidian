@@ -40,7 +40,7 @@ const theme = {
 const markdown = '<!-- slide: first -->\n<!-- text: body -->\nFirst words.\n<!-- notes -->\nRemember this.\n';
 const record = '{"layout":"title","unknown":{"value":9007199254740993},"objects":[{"id":"photo","type":"image","file":"media/photo.jpg"}]}';
 const packet = decodeSlideClipboard(
-    encodeSlideClipboard(uuid, origin, { slides: [{ id: 'first', markdown, record }], compositions: [] }, theme)!
+    encodeSlideClipboard(uuid, origin, 'en-US', { slides: [{ id: 'first', markdown, record }], compositions: [] }, theme)!
 )!;
 
 test('same-presentation paste keeps raw fields, notes and metadata while creating independent IDs', () => {

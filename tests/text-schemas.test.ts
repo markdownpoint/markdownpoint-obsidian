@@ -62,7 +62,7 @@ test('field schemas come from actual own and inherited object types, never their
             ['caption', 'rich-text'],
             ['body', 'table'],
             ['data', 'rich-text'],
-            ['chart', 'table'],
+            ['chart', 'chart'],
             ['shape', 'rich-text']
         ]
     );
@@ -88,7 +88,7 @@ test('removed objects and same-level collisions follow the effective inherited t
     );
     const removed = { ...theme, layout: { ...layout, overrides: { 'inherited-grid': null } } };
     const replacement = { layout: 'title', objects: [{ id: 'inherited-grid', type: 'chart' }] };
-    assert.equal(copyTextSchemas(part, 'slide', replacement, removed)!.get('inherited-grid'), 'table');
+    assert.equal(copyTextSchemas(part, 'slide', replacement, removed)!.get('inherited-grid'), 'chart');
     assert.equal(
         copyTextSchemas(part, 'slide', { layout: 'title', overrides: { 'inherited-grid': null } }, theme)!.get('inherited-grid'),
         'rich-text'
@@ -98,6 +98,26 @@ test('removed objects and same-level collisions follow the effective inherited t
         const collision = { layout: 'title', objects: [{ id: type, type: 'table' }] };
         assert.equal(copyTextSchemas(fields([type]), 'slide', collision, kept)!.get(type), 'rich-text');
     }
+});
+
+test("only a part's own chart reads its cells by its presentation's language: a theme's chart, and a slide's object colliding with it, stay a table", () => {
+    const charted = { ...theme, master: { ...master, objects: [...master.objects, { id: 'sales', type: 'chart' }] } };
+    const record = {
+        layout: 'title',
+        objects: [
+            { id: 'sales', type: 'chart' },
+            { id: 'costs', type: 'chart' }
+        ]
+    };
+    assert.deepEqual(
+        [...copyTextSchemas(fields(['sales', 'costs']), 'slide', record, charted)!],
+        [
+            ['sales', 'table'],
+            ['costs', 'chart']
+        ]
+    );
+    const definition = fields(['costs'], 'composition', 'card');
+    assert.equal(copyTextSchemas(definition, 'composition', { objects: [{ id: 'costs', type: 'chart' }] }, null)!.get('costs'), 'chart');
 });
 
 test('definitions use their own types while instance controls and unbound text remain rich text', () => {

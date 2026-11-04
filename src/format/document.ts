@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { Token } from 'marked';
 import { blockTokens } from './block-grammar.ts';
 import { isStableId } from './recognition.ts';
 
@@ -56,19 +57,38 @@ export function slideAtPosition(document: PresentationDocument, position: number
     return document.slides.find(slide => position >= slide.from && position < slide.to) ?? null;
 }
 
-const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*([^\s]+))?\s*-->[ \t]*$/;
+// A control's name is the author's words, so a control marker, and an instance's text marker after its first dot, name
+// words: one line, one space between them, no control character and no `-->`, as MarkdownPoint reads them.
+const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*((?:(?!-->).)+?))?\s*-->[ \t]*$/;
+const controlName = /^(?!.*-->)[^\s\p{Cc}]+(?: [^\s\p{Cc}]+)*$/u;
+
+/** A marker's id as its kind reads it: a control's name, an instance's id and its text control's name, or a stable id. */
+function markerId(kind: string, id: string): boolean {
+    if (kind === 'control') return controlName.test(id);
+    const dot = id.indexOf('.');
+    if (kind !== 'text' || dot < 0) return isStableId(id);
+    return isStableId(id.slice(0, dot)) && controlName.test(id.slice(dot + 1));
+}
 const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[:\s]|-->|$)(?:\s*:?\s*[^\s<>]*)?\s*(?:-->|$)/i;
 
 /**
- * A candidate directive consumed by a code token is content, not a slide boundary. `start` is where that code block
- * begins in the field's normalized text.
+ * A candidate directive consumed by a fenced code token is content, not a slide boundary. `start` is where the block
+ * holding that code begins in the field's normalized text. An indented line may continue a list item, and the fenced
+ * code that ends it. Indented code holds no marker, since MarkdownPoint reads a marker however far it is indented.
  */
 function containingCode(markdown: string, line: string) {
     const source = markdown.replace(/\r\n?/g, '\n');
-    const last = blockTokens(source).at(-1);
-    if (last?.type !== 'code' || !last.raw.trimEnd().endsWith(line.trimEnd())) return undefined;
-    const start = source.length - last.raw.length;
-    return { raw: last.raw, start, leading: source.slice(0, start).trim().length === 0 };
+    const top = blockTokens(source).at(-1);
+    let last = top;
+    while (last?.type === 'list' || last?.type === 'list_item' || last?.type === 'blockquote') {
+        // A list holds its items, and an item or a quote its blocks.
+        const { items, tokens } = last as { items?: Token[]; tokens?: Token[] };
+        last = (items ?? tokens)?.filter(token => token.type !== 'space').at(-1);
+    }
+    if (!top || last?.type !== 'code' || last.codeBlockStyle === 'indented' || !last.raw.trimEnd().endsWith(line.trimEnd()))
+        return undefined;
+    const start = source.length - top.raw.length;
+    return { raw: last.raw, start, leading: last === top && source.slice(0, start).trim().length === 0 };
 }
 
 /** Ask the same grammar using a bounded probe, not the growing document prefix. */
@@ -124,9 +144,15 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
         hasFence ||= line.includes('```') || line.includes('~~~');
         // Each field is its own Markdown block. HTML or a fence-like line in one
         // field must not change how the next field is interpreted.
-        const match = marker.exec(line);
-        if (match || markerLike.test(line)) {
-            const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), line) : undefined;
+        // As MarkdownPoint reads a line: a control marker, or a text marker naming an instance's control, is a marker
+        // whatever its words, and words it can't name refuse the file; another line of words, as `text: ask Anna`, is a comment.
+        // A marker is read without the spaces or tabs before it, as after it.
+        const bare = line.replace(/^[ \t]+/, '');
+        const found = marker.exec(bare);
+        const claimed = found !== null && (found[1] === 'control' || (found[1] === 'text' && /^[a-z][a-z0-9-]*\./.test(found[2] ?? '')));
+        const match = found && (found[2] === undefined || claimed || markerId(found[1]!, found[2])) ? found : null;
+        if (match || markerLike.test(bare)) {
+            const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), bare) : undefined;
             if (code) {
                 swallowedFrom = code.start;
                 const fence = /^ {0,3}(`{3,}|~{3,})/.exec(code.raw)?.[1];
@@ -138,8 +164,7 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
             if (!match || newline < 0) return null;
             const kind = match[1];
             const id = match[2];
-            if (kind === 'notes' ? id !== undefined : !id || !id.split('.').every(isStableId)) return null;
-            if (kind !== 'text' && id?.includes('.')) return null;
+            if (kind === 'notes' ? id !== undefined : !id || !markerId(kind!, id)) return null;
 
             if (block) block.to = offset;
             block = null;

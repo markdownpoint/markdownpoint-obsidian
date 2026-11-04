@@ -1,0 +1,21 @@
+{
+  "files": {
+    "src/core/chart-number-rules.ts": "5e2316d9cbd5332917f5d6b39af67550b4a056fa05107cd2e2f3a485740aa4bb",
+    "src/core/chart-numbers.ts": "e93e5189ca37ff3ee225e8658a0e23165fa3af5d70dbc15e0b3d0e315c7acc52",
+    "src/themes/basic/blank.json": "6689d61176f8aab210495be985770256feaab0cab53f6c4981a5516d95672829",
+    "src/themes/basic/content-with-header.json": "66a2a4e211e96967aba42231a609d3ad9a75de8aa470fd3086ade10e6c3020d9",
+    "src/themes/basic/content.json": "7e4c4c9235651c64d8be8fa07e7f27d3fae53c25df3cfbec284dcc93f9f3b2c4",
+    "src/themes/basic/image-text-with-header.json": "f92ae320168efc9dc1504ccca53c4676abd88c84a3ee9eef31b66511c66ee042",
+    "src/themes/basic/image-text.json": "5d363622426935bafa32202ec130b6aa6bb02620535127924b19362e884d13ba",
+    "src/themes/basic/image-with-header.json": "c4e3c31e21d80e116a6a7933e6558b6c5fcc2d717ac8b9eb577baab10dcb705f",
+    "src/themes/basic/image.json": "53aa11f2afaccd6f6f7bf05a8bb8775f570bbdac28ac67ec8c2825ea70e7ad33",
+    "src/themes/basic/master.json": "4634a8e6b792a78b7ae98e934d5e6af1797985b25db6a57227bca920a101b180",
+    "src/themes/basic/media/layout-preview.jpg": "900ce5c58eb172822164da55d32e47786437c5d24b8878438a4f95c978d14e0f",
+    "src/themes/basic/one-liner.json": "0435ae7fdb9004cd6f4ce69da109189ff2198d59325c2aafd1a5bf4b25bc91a9",
+    "src/themes/basic/section.json": "91c22eaa8c4ba18a66d824a2c84e78b9508f24ef79ccc2e6215b26e91b048e59",
+    "src/themes/basic/solid-color.json": "acc3e5a4a1d0b721474b497ac9a634d4d891c65379debb1078fb81879a717443",
+    "src/themes/basic/text-image-with-header.json": "aa087a121ee323d86deaaa7e067792f87a96e2079103bd8b70b1a40ff4bcf110",
+    "src/themes/basic/text-image.json": "7a1c611122c070940a2d878e0ecaeda6f781718cd37d17ce32d2bfb9125d52b5",
+    "src/themes/basic/title.json": "75b7a2758c75999cef20bfcef0a8e9a5152958d2a5a9e74ffb67777c8b3f8190"
+  }
+}

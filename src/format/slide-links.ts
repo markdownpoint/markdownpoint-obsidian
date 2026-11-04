@@ -23,14 +23,28 @@ import { decodeHTMLStrict } from 'entities';
 const punctuation = /\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])/g;
 const decode = (value: string): string => decodeHTMLStrict(value.replace(punctuation, '$1'));
 
-function columns(source: string): number {
-    const line = source.trim();
-    const separators: number[] = [];
-    for (let index = 0; index < line.length; index++) {
+/** Each cell of a table row's line, by where it starts and ends in the line, the pipes at the row's ends set aside. */
+export function rowCells(line: string): { from: number; to: number }[] {
+    const from = line.length - line.trimStart().length;
+    const to = line.trimEnd().length;
+    const pipes: number[] = [];
+    for (let index = from; index < to; index++) {
         if (line[index] === '\\') index++;
-        else if (line[index] === '|') separators.push(index);
+        else if (line[index] === '|') pipes.push(index);
     }
-    return separators.length + 1 - Number(separators[0] === 0) - Number(separators.at(-1) === line.length - 1);
+    const cuts = [from - 1, ...pipes, to];
+    const cells = cuts.slice(1).map((cut, index) => ({ from: cuts[index]! + 1, to: cut }));
+    return cells.slice(pipes[0] === from ? 1 : 0, pipes.at(-1) === to - 1 ? -1 : undefined);
+}
+
+/** The one table a table block's words hold, no row wider than its header, or null when they hold anything else. */
+export function blockTable(source: string): Tokens.Table | null {
+    const trimmed = source.replace(/\r\n?/g, '\n').trim();
+    const blocks = linkTokens(trimmed).filter(token => token.type !== 'space');
+    const table = blocks[0];
+    if (blocks.length !== 1 || table?.type !== 'table' || table.raw.trim() !== trimmed) return null;
+    const width = (table as Tokens.Table).header.length;
+    return width && !trimmed.split('\n').some(line => rowCells(line).length > width) ? (table as Tokens.Table) : null;
 }
 
 /** Trace actual link destinations through a parse-only copy; saved source never receives probe text. */
@@ -74,21 +88,9 @@ export function remapMarkdownSlideLinks(
     }
     pieces.push(source.slice(position));
     const annotated = pieces.join('').replace(/\r\n?/g, '\n');
-    const tokens = linkTokens(schema === 'table' ? annotated.trim() : annotated);
-    if (schema === 'table') {
-        const blocks = tokens.filter(token => token.type !== 'space');
-        const table = blocks[0];
-        if (blocks.length !== 1 || table?.type !== 'table' || table.raw.trim() !== annotated.trim()) return source;
-        const width = (table as Tokens.Table).header.length;
-        if (
-            !width ||
-            annotated
-                .trim()
-                .split(/\r\n?|\n/)
-                .some(line => columns(line) > width)
-        )
-            return source;
-    }
+    const table = schema === 'table' ? blockTable(annotated) : null;
+    if (schema === 'table' && !table) return source;
+    const tokens = table ? [table] : linkTokens(annotated);
     const found = new Set<string>();
     const probes = new Set(candidates.map(candidate => candidate.probe));
     const pending: Token[] = [...tokens];

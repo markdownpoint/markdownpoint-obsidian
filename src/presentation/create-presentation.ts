@@ -92,7 +92,7 @@ export class PresentationCreation extends Component {
         if (!theme || theme.id !== choice.theme.id) throw new Error(uiText.presentations.themeChanged);
         const made = prepareNewPresentation(theme, crypto.randomUUID(), `id-${crypto.randomUUID()}`);
         if (!made) throw new Error(uiText.presentations.themeChanged);
-        const files = new Map<string, string | TFile>();
+        const files = new Map<string, string | Uint8Array | TFile>();
         if (choice.folder) {
             const prefix = choice.folder.path + '/';
             for (const file of this.app.vault.getFiles())
@@ -115,6 +115,8 @@ export class PresentationCreation extends Component {
                 },
                 createFolder: path => this.app.vault.createFolder(path),
                 create: (path, source) => this.app.vault.create(path, source),
+                // Obsidian takes an ArrayBuffer: the bytes' own, never more of a buffer they view.
+                createBinary: (path, bytes) => this.app.vault.createBinary(path, bytes.slice().buffer),
                 copy: (file: TFile, path) => this.app.vault.copy(file, path),
                 trash: file => this.app.fileManager.trashFile(file)
             },

@@ -74,6 +74,7 @@ test('slides without notes keep their notes row while an unclosed fence stops pa
                     bodyStart: 0,
                     document,
                     images: new Map(),
+                    slots: new Map(),
                     outline: { slides: document.slides.map(slide => ({ id: slide.id, skipped: false })), sections: [] }
                 }
             );

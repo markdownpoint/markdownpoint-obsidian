@@ -20,7 +20,7 @@ import { applyEdits, findNodeAtLocation, parseTree } from 'jsonc-parser';
 import type { Edit } from 'jsonc-parser';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { readJsonObject } from './json.ts';
-import { isRecord } from './recognition.ts';
+import { isRecord, ownEntry } from './recognition.ts';
 
 const mediaExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|mp4|m4v|mov|webm|ogv|mp3|m4a|wav|ogg|flac|glb|eot)$/i;
 
@@ -46,7 +46,23 @@ interface Location {
 }
 export interface ClipboardAssets {
     readonly files: readonly string[];
+    /**
+     * Each generation record the slides' pictures name, by its id, with the file of the picture it made: it comes beside
+     * that picture's copy, naming it, as MarkdownPoint brings a record with a pasted picture.
+     */
+    readonly records: ReadonlyMap<string, string>;
     remap(names: ReadonlyMap<string, string>): CapturedSlides | null;
+}
+
+/** A generation record's id, the lowercase UUID its file `generated/<id>.json` is named by. */
+const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** A generation record's text naming `file` as where its picture is, every other word as written; null where it names no picture. */
+export function recordNaming(text: string, file: string): string | null {
+    const tree = parseTree(text);
+    const node = tree && findNodeAtLocation(tree, ['output', 'file']);
+    if (!node || node.type !== 'string') return null;
+    return applyEdits(text, [{ offset: node.offset, length: node.length, content: JSON.stringify(file) }]);
 }
 
 /** Record paths keep ordinary words, links, unknown metadata and numeric source precision untouched. */
@@ -58,6 +74,7 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
         definitions.set(part.id, record);
     }
     const files = new Set<string>();
+    const records = new Map<string, string>();
     const edits = new Map<CapturedPart, { offset: number; length: number; value: string }[]>();
     for (const part of [...captured.slides, ...captured.compositions]) {
         const record = definitions.get(part.id) ?? readJsonObject(part.record);
@@ -68,9 +85,18 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
             if (typeof value === 'string' && value !== '' && value !== 'none') locations.push({ path, value });
         };
         const nested = (value: unknown, name: string): unknown => (isRecord(value) ? value[name] : undefined);
+        // A picture's record, and a restyle's original's, each by the file of the picture it made.
+        const made = (result: unknown, picture: unknown) => {
+            const name = (id: unknown, file: unknown) => {
+                if (typeof id === 'string' && RECORD_ID.test(id) && typeof file === 'string' && !records.has(id)) records.set(id, file);
+            };
+            name(nested(result, 'record'), picture);
+            name(nested(nested(result, 'original'), 'record'), nested(nested(result, 'original'), 'file'));
+        };
         if (isRecord(record.background)) {
             add(record.background.image, ['background', 'image']);
-            add(nested(record.background['image-result'], 'original'), ['background', 'image-result', 'original']);
+            add(nested(nested(record.background['image-result'], 'original'), 'file'), ['background', 'image-result', 'original', 'file']);
+            made(record.background['image-result'], record.background.image);
         }
         if (definitions.has(part.id) && isRecord(record.controls))
             for (const [key, control] of Object.entries(record.controls)) {
@@ -85,20 +111,21 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
             for (const [id, object] of Object.entries(record.overrides)) if (isRecord(object)) objects.push([object, ['overrides', id]]);
         for (const [object, base] of objects) {
             add(object.file, [...base, 'file']);
-            add(object['poster-frame'], [...base, 'poster-frame']);
-            add(nested(object['image-result'], 'original'), [...base, 'image-result', 'original']);
+            add(object.poster, [...base, 'poster']);
+            add(nested(nested(object['image-result'], 'original'), 'file'), [...base, 'image-result', 'original', 'file']);
+            made(object['image-result'], object.file);
             add(nested(object.model, 'file'), [...base, 'model', 'file']);
             if (
                 base[0] === 'objects' &&
                 object.type === 'composition' &&
                 typeof object.composition === 'string' &&
-                isRecord(object.controls)
+                isRecord(object.inputs)
             ) {
                 const controls = definitions.get(object.composition)?.controls;
                 if (!isRecord(controls)) continue;
-                for (const [name, value] of Object.entries(object.controls)) {
-                    const declaration = controls[name];
-                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'controls', name]);
+                for (const [name, value] of Object.entries(object.inputs)) {
+                    const declaration = ownEntry(controls, name);
+                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'inputs', name]);
                 }
             }
         }
@@ -114,6 +141,8 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
     }
     return {
         files: [...files],
+        // A record whose picture comes in no copy, as one an override names over a layout's picture, stays behind.
+        records: new Map([...records].filter(([, picture]) => files.has(picture))),
         remap: names => {
             if ([...files].some(file => !isPresentationMediaPath(names.get(file) ?? ''))) return null;
             const changed = (part: CapturedPart): CapturedPart => {

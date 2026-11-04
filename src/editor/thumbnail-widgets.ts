@@ -21,6 +21,7 @@ import type { EditorView } from '@codemirror/view';
 import { setIcon, setTooltip } from 'obsidian';
 import type { SlideStructure } from '../format/structure.ts';
 import type { SlideImagePreview } from '../presentation/image-reader.ts';
+import { knownOrientation, readPictureOrientation } from '../presentation/picture-orientation.ts';
 import { renderThumbnail } from '../outline/thumbnail.ts';
 import { imageSpacing, imageSpaceNeeded, setImageSpacing } from './image-spacing.ts';
 import { uiText } from '../ui-text.ts';
@@ -144,24 +145,40 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                             images.empty();
                             changed = true;
                             for (const preview of chrome.images) {
-                                const image = images.createEl('img', {
-                                    cls: 'markdownpoint-slide-image',
+                                // The picture drawn from its pixels as stored, turned by the orientation MarkdownPoint
+                                // reads, never the browser's: hidden in its box until that is known.
+                                const box = images.createSpan({ cls: 'markdownpoint-slide-image' });
+                                const image = box.createEl('img', {
                                     attr: {
-                                        src: preview.src,
                                         alt: preview.name || uiText.images.preview,
                                         loading: 'lazy',
                                         decoding: 'async',
-                                        draggable: 'false'
+                                        draggable: 'false',
+                                        crossorigin: 'anonymous'
                                     }
                                 });
+                                const turn = (orientation: number) => box.setAttribute('data-orientation', String(orientation));
+                                const known = knownOrientation(preview.src);
+                                if (known !== undefined) turn(known);
+                                else
+                                    // Lazy pictures mount past the view, so only one that loads is read.
+                                    image.addEventListener(
+                                        'load',
+                                        () =>
+                                            void readPictureOrientation(image.win, preview.src, preview.path, preview.size).then(
+                                                orientation => turn(orientation ?? 1)
+                                            ),
+                                        { once: true }
+                                    );
                                 image.addEventListener(
                                     'error',
                                     () => {
-                                        image.remove();
+                                        box.remove();
                                         if (active) measure();
                                     },
                                     { once: true }
                                 );
+                                image.src = preview.src;
                             }
                         }
                         column.toggleClass('has-images', chrome.images.length > 0);

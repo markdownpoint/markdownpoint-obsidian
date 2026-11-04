@@ -18,6 +18,7 @@
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { isRecord } from './recognition.ts';
+import { columnCountAsRead, placeMoved, standingFrame, TEXT_PLACE_KEYS } from './text-growth.ts';
 
 export interface StructureRegion {
     readonly x: number;
@@ -38,6 +39,29 @@ export interface SlideStructure {
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
+/**
+ * A text's override as MarkdownPoint applies it: one that changes what decides the point its frame's x and y name, and
+ * moves a part it leaves out, waits, so the text keeps the keys it inherits. MarkdownPoint may still apply such a key
+ * alone where it moves nothing; the schematic shows the box its level gives it.
+ */
+function heldPlace(
+    base: Record<string, unknown>,
+    override: Record<string, unknown>,
+    merged: Record<string, unknown>
+): Record<string, unknown> {
+    const changed = Object.keys(override).filter(key => TEXT_PLACE_KEYS.has(key));
+    if (base.type !== 'text' || changed.length === 0) return merged;
+    const moved = placeMoved(base, merged);
+    const frame = isRecord(override.frame) ? override.frame : {};
+    if (!(moved.x && !Object.hasOwn(frame, 'x')) && !(moved.y && !Object.hasOwn(frame, 'y'))) return merged;
+    const held = { ...merged };
+    for (const key of changed) {
+        if (Object.hasOwn(base, key)) held[key] = base[key];
+        else delete held[key];
+    }
+    return held;
+}
+
 /** Resolve only directly framed, flat objects. Unknown geometry stays out of the schematic. */
 export function slideStructure(record: unknown, theme: EmbeddedTheme | null): SlideStructure | null {
     if (!theme || !isRecord(record) || typeof record.layout !== 'string') return null;
@@ -56,20 +80,23 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
                 if (override === null) {
                     objects.delete(id);
                 } else if (isRecord(override))
-                    objects.set(id, {
-                        ...base,
-                        ...override,
-                        type: base.type,
-                        frame:
-                            isRecord(base.frame) && isRecord(override.frame)
-                                ? { ...base.frame, ...override.frame }
-                                : (override.frame ?? base.frame),
-                        scale: isRecord(override.scale)
-                            ? { x: 1, y: 1, ...(isRecord(base.scale) ? base.scale : {}), ...override.scale }
-                            : Object.hasOwn(override, 'scale')
-                              ? override.scale
-                              : base.scale
-                    });
+                    objects.set(
+                        id,
+                        heldPlace(base, override, {
+                            ...base,
+                            ...override,
+                            type: base.type,
+                            frame:
+                                isRecord(base.frame) && isRecord(override.frame)
+                                    ? { ...base.frame, ...override.frame }
+                                    : (override.frame ?? base.frame),
+                            scale: isRecord(override.scale)
+                                ? { x: 1, y: 1, ...(isRecord(base.scale) ? base.scale : {}), ...override.scale }
+                                : Object.hasOwn(override, 'scale')
+                                  ? override.scale
+                                  : base.scale
+                        })
+                    );
             }
         if (Array.isArray(level.objects))
             for (const object of level.objects) {
@@ -80,7 +107,8 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
     }
     const regions: StructureRegion[] = [];
     for (const object of objects.values()) {
-        const frame = object.frame;
+        // A text that grows to its words holds no height: it stands a line tall, as the app stands it until it measures them.
+        const frame = standingFrame(object);
         // Hierarchy, animation, auto layout and 3D require the MarkdownPoint app's renderer. Keep this
         // a source schematic instead of presenting guessed resolved positions.
         if (
@@ -109,7 +137,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
         const style = isRecord(styles) && typeof object['text-style'] === 'string' ? styles[object['text-style']] : undefined;
         const count = object['column-count'] ?? (isRecord(style) ? style['column-count'] : undefined) ?? 1;
         const gap = object['column-gutter'] ?? (isRecord(style) ? style['column-gutter'] : undefined) ?? 48;
-        const columns = object.type === 'text' ? count : 1;
+        const columns = object.type === 'text' ? columnCountAsRead(count) : 1;
         // Dense column grids cannot be distinguished at thumbnail scale.
         if (!finite(columns) || !Number.isInteger(columns) || columns < 1 || columns > 12) continue;
         const gutter = finite(gap) && gap >= 0 ? gap : 48;

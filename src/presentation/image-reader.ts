@@ -22,19 +22,24 @@ export interface SlideImagePreview {
     readonly path: string;
     readonly src: string;
     readonly name: string | null;
+    /** The file's size, which its orientation is read within. */
+    readonly size: number;
 }
-interface ImageVault<File> {
+interface ImageVault<File extends { readonly stat: { readonly size: number } }> {
     getFileByPath(path: string): File | null;
     getResourcePath(file: File): string;
 }
 
 /** Resolve only existing vault files, then cap the visible column at five images. */
-export function readSlideImages<File>(vault: ImageVault<File>, references: readonly SlideImageReference[]): readonly SlideImagePreview[] {
+export function readSlideImages<File extends { readonly stat: { readonly size: number } }>(
+    vault: ImageVault<File>,
+    references: readonly SlideImageReference[]
+): readonly SlideImagePreview[] {
     const images: SlideImagePreview[] = [];
     for (const reference of references) {
         const file = vault.getFileByPath(reference.path);
         if (!file) continue;
-        images.push({ path: reference.path, src: vault.getResourcePath(file), name: reference.name });
+        images.push({ path: reference.path, src: vault.getResourcePath(file), name: reference.name, size: file.stat.size });
         if (images.length === 5) break;
     }
     return images;

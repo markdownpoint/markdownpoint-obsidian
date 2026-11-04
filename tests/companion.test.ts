@@ -54,6 +54,16 @@ test('a remembered record returns when its native Markdown marker returns', () =
     assert.equal(reconcileSlideRecords(restored.companion, restored.remembered, new Set(['a', 'b']))!.companion, restored.companion);
 });
 
+test('a parent-inverse keeps every digit through a slide copy and a delete brought back', () => {
+    // MarkdownPoint writes these as JavaScript's shortest round-trip spelling, finer than the millionth other numbers keep.
+    const raw = String.raw`{ "objects":[{"id":"mat","type":"model","file":"media/mat.glb","parent":"chart","parent-inverse":[3.3333333333333335,0,0,0,0,3.3333333333333335,0,0,0,0,3.3333333333333335,0,-3000,-1066.6666666666667,0,1e-7]}] }`;
+    assert.equal(remapRecordReferences(raw, new Map([['a', 'copy-a']]), new Map()), raw);
+    const source = `{"slides":{"a":${raw},"b":{}}}`;
+    const deleted = reconcileSlideRecords(source, new Map([['a', raw]]), new Set(['b']))!;
+    const restored = reconcileSlideRecords(deleted.companion, deleted.remembered, new Set(['a', 'b']))!;
+    assert.equal(CompanionDocument.read(restored.companion)!.records.get('a'), raw);
+});
+
 test('newer external record data is retained and unmanaged orphan records are not removed', () => {
     const saved = new Map([['a', '{"old":true}']]);
     const source = '{"slides":{"a":{"external":true},"orphan":{"preserve":true}},"externalSetting":3}';
@@ -75,7 +85,7 @@ test('malformed replacement records refuse without changing source', () => {
 test('copy references change in own objects and overrides without rewriting other JSON', () => {
     const source = String.raw`{ "layout":"title", "future":900719925474099312345, "escaped":"\u00e9",
     "objects":["title",{"id":"picture","type":"image","file":"assets/one.png","link":"slide:one","extra":{"link":"slide:one"}},
-      {"id":"card","type":"composition","composition":"card","link":"slide:two","controls":{"label":"slide:one"}}],
+      {"id":"card","type":"composition","composition":"card","link":"slide:two","inputs":{"label":"slide:one"}}],
     "overrides":{"title":{"link":"slide:one","name":"slide:one"},"removed":null,"other":{"link":"https://example.com/slide:one"}},
     "link":"slide:one", "composition":"card", "controls":{"caption":{"type":"text","default":"[Go](slide:one)"}} }`;
     const expected = source

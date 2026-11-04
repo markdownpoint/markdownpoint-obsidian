@@ -53,6 +53,8 @@ const options = {
     platform: 'browser',
     target: 'es2022',
     external: ['obsidian', '@codemirror/*', '@lezer/*'],
+    // A picture the plugin ships, Basic's layout preview, is its bytes: New Presentation writes them into the deck.
+    loader: { '.jpg': 'binary' },
     logLevel: 'info',
     sourcemap: process.argv.includes('--watch') ? 'inline' : false,
     legalComments: 'inline',

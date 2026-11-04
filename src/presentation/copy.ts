@@ -17,6 +17,7 @@
  */
 
 import { captureSlides } from '../format/capture.ts';
+import { presentationLocale } from '../format/chart-cells.ts';
 import { encodeSlideClipboard } from '../format/clipboard.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
@@ -86,6 +87,7 @@ export class SlideCopy<Context> {
             const encoded = encodeSlideClipboard(
                 token,
                 { vault: this.host.vaultId(), path: source.path, document: source.documentId },
+                presentationLocale(metadata),
                 captured,
                 theme
             );

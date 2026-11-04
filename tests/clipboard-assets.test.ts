@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { isPresentationMediaPath, planClipboardAssets } from '../src/format/clipboard-assets.ts';
+import { isPresentationMediaPath, planClipboardAssets, recordNaming } from '../src/format/clipboard-assets.ts';
 import type { CapturedPart, CapturedSlides } from '../src/format/capture.ts';
 
 const slide = (record: string): CapturedPart => ({
@@ -28,15 +28,22 @@ const slide = (record: string): CapturedPart => ({
 });
 const captured = (record: string): CapturedSlides => ({ slides: [slide(record)], compositions: [] });
 
-test('all declared slide media locations are collected once, including posters and original images', () => {
+const [STYLED, SOURCE, BACKGROUND] = ['01', '02', '03'].map(end => `0f5b3c1e-7d1a-4c55-9d3a-7d3f8a2b9c${end}`) as [string, string, string];
+
+test('all declared slide media locations are collected once, including posters and original images, and the records the pictures name', () => {
     const value = captured(
         JSON.stringify({
-            background: { image: 'media/back.png', 'image-result': { original: 'generated/original.png' } },
+            background: { image: 'media/back.png', 'image-result': { record: BACKGROUND, original: { file: 'generated/original.png' } } },
             objects: [
                 'inherited',
-                { id: 'photo', type: 'image', file: 'media/picture.png', 'image-result': { original: 'generated/original.png' } },
-                { id: 'movie', type: 'video', file: 'media/movie.mp4', 'poster-frame': 'media/poster.jpg' },
-                { id: 'web', type: 'web-video', url: 'https://example.com/watch', 'poster-frame': 'media/web.webp' },
+                {
+                    id: 'photo',
+                    type: 'image',
+                    file: 'media/picture.png',
+                    'image-result': { record: STYLED, original: { file: 'generated/original.png', record: SOURCE } }
+                },
+                { id: 'movie', type: 'video', file: 'media/movie.mp4', poster: 'media/poster.jpg', 'poster-frame': 2.5 },
+                { id: 'web', type: 'web-video', url: 'https://example.com/watch', poster: 'media/web.webp' },
                 { id: 'words', type: 'text', model: { file: 'generated/letters.glb' } }
             ],
             overrides: {
@@ -59,6 +66,33 @@ test('all declared slide media locations are collected once, including posters a
         'media/model.glb',
         'media/music.wav'
     ]);
+    assert.deepEqual(
+        [...planClipboardAssets(value)!.records],
+        [
+            [BACKGROUND, 'media/back.png'],
+            [STYLED, 'media/picture.png'],
+            [SOURCE, 'generated/original.png']
+        ],
+        'each record by the picture it made, which its copy names'
+    );
+    // An override naming its record over a picture its layout gives, and an id that names no record, bring none.
+    const unnamed = captured(
+        JSON.stringify({
+            overrides: {
+                image: { 'image-result': { record: STYLED } },
+                other: { file: 'media/a.png', 'image-result': { record: 'media/x' } }
+            }
+        })
+    );
+    assert.deepEqual([...planClipboardAssets(unnamed)!.records], []);
+});
+
+test('a record comes naming its picture where the copy is, every other word as written', () => {
+    const text =
+        '{\n  "markdownpoint": "1.0",\n  "output": {\n    "file": "generated/a.png",\n    "sha256": "aa"\n  },\n  "rating": 9007199254740993\n}\n';
+    assert.equal(recordNaming(text, 'media/clip-1.png'), text.replace('"generated/a.png"', '"media/clip-1.png"'));
+    assert.equal(recordNaming('{"output":{}}', 'media/clip-1.png'), null);
+    assert.equal(recordNaming('not json', 'media/clip-1.png'), null);
 });
 
 test('only declared media controls authorize files, not text that resembles a path', () => {
@@ -82,7 +116,7 @@ test('only declared media controls authorize files, not text that resembles a pa
                             id: 'instance',
                             type: 'composition',
                             composition: 'card',
-                            controls: { photo: 'media/selected.png', words: 'media/still-text.png' }
+                            inputs: { photo: 'media/selected.png', words: 'media/still-text.png' }
                         }
                     ]
                 })

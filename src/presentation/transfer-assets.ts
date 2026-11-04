@@ -22,7 +22,7 @@ import type { SlideClipboard } from '../format/clipboard.ts';
 import type { CapturedSlides } from '../format/capture.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 import { themeAssetPaths } from '../format/embedded-theme.ts';
-import { planClipboardAssets } from '../format/clipboard-assets.ts';
+import { planClipboardAssets, recordNaming } from '../format/clipboard-assets.ts';
 import { readJsonObject } from '../format/json.ts';
 import { presentationIdentity } from '../format/recognition.ts';
 import { clipboardDigest } from '../settings/clipboard.ts';
@@ -202,6 +202,26 @@ export async function transferSlideAssets(
                 names.set(relative, name);
                 break;
             }
+        }
+        // Each record a picture names comes beside the copy of its picture, naming it there. One the destination has is
+        // the same generation's and stays; one that is gone, or names no picture, stays behind.
+        for (const [id, picture] of plan.records) {
+            check();
+            const original = app.vault.getFileByPath(`${originRoot}generated/${id}.json`);
+            const copied = names.get(picture);
+            const path = `${destinationRoot}generated/${id}.json`;
+            if (!original || !copied || app.vault.getAbstractFileByPath(path)) continue;
+            hold(original);
+            const text = await app.vault.read(original);
+            check();
+            const written = recordNaming(text, copied);
+            if (written === null) continue;
+            await ensureParents(path);
+            check();
+            const file = await app.vault.create(path, written);
+            created.push({ file, path, mtime: file.stat.mtime, size: file.stat.size });
+            hold(file);
+            check();
         }
         const latest = await Promise.all([
             readEmbeddedTheme(app.vault, packet.origin.path, { theme: packet.theme.key }, packet.theme.layouts.keys()),

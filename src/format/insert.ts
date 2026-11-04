@@ -53,7 +53,7 @@ function sourceInsertion(markdown: string, at: number, parts: readonly PreparedP
     return { from, to: at, insert };
 }
 
-/** Insert slides below the target and new definitions at the source tail, as one operation. */
+/** Insert slides below the target and new definitions after the existing ones, as one operation. */
 export function planSlideInsertion(
     markdown: string,
     document: PresentationDocument,
@@ -104,14 +104,15 @@ export function planSlideInsertion(
         if (nextCompanion === null) return null;
     }
     const at = after?.to ?? document.sections.at(-1)?.to ?? document.compositions[0]?.from ?? markdown.length;
+    // New definitions follow the existing ones, or the slides when there are none, wherever the author has put them.
+    const definitionsAt = document.compositions.at(-1)?.to ?? document.slides.at(-1)?.to ?? markdown.length;
     const newline = markdown.includes('\r\n') ? '\r\n' : '\n';
     const changes =
-        at === markdown.length
+        at === definitionsAt || !compositions.length
             ? [sourceInsertion(markdown, at, incoming, newline)]
-            : [
-                  sourceInsertion(markdown, at, slides, newline),
-                  ...(compositions.length ? [sourceInsertion(markdown, markdown.length, compositions, newline)] : [])
-              ];
+            : [sourceInsertion(markdown, at, slides, newline), sourceInsertion(markdown, definitionsAt, compositions, newline)].sort(
+                  (a, b) => a.from - b.from
+              );
     const proposed = [...changes]
         .reverse()
         .reduce((source, change) => source.slice(0, change.from) + change.insert + source.slice(change.to), markdown);

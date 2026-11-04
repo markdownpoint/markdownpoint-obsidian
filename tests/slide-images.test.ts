@@ -56,7 +56,14 @@ test('assigned images prioritize background, named layout slots, then other pict
             one: {
                 layout: 'title',
                 overrides: { hero: { file: 'media/hero.svg' }, detail: { file: 'generated/detail.png' } },
-                objects: [{ id: 'own', type: 'image', file: 'media/own.jpg', 'image-result': { original: 'media/history.jpg' } }]
+                objects: [
+                    {
+                        id: 'own',
+                        type: 'image',
+                        file: 'media/own.jpg',
+                        'image-result': { record: '0f5b3c1e-7d1a-4c55-9d3a-7d3f8a2b9c01', original: { file: 'media/history.jpg' } }
+                    }
+                ]
             }
         }
     };
@@ -115,7 +122,7 @@ test('image references cannot escape their declared vault folder or load a remot
 test('placed compositions use assigned media controls without listing unused defaults or looping', () => {
     const companion = {
         slides: {
-            one: { objects: [{ id: 'instance', type: 'composition', composition: 'card', controls: { picture: 'media/selected.svg' } }] }
+            one: { objects: [{ id: 'instance', type: 'composition', composition: 'card', inputs: { picture: 'media/selected.svg' } }] }
         },
         compositions: {
             card: {
@@ -133,11 +140,26 @@ test('placed compositions use assigned media controls without listing unused def
     assert.deepEqual(paths(companion, null), [root + 'media/selected.svg']);
 });
 
+test('a media control may be named as JavaScript names its own, and an instance that sets no value for it shows its default', () => {
+    // presentation.mdpoint reads as JSON, whose records hold JavaScript's own names unless the file names them itself.
+    const companion = JSON.parse(`{
+        "slides": { "one": { "objects": [{ "id": "instance", "type": "composition", "composition": "card" }] } },
+        "compositions": { "card": {
+            "controls": { "__proto__": { "type": "media", "default": "media/default.svg" } },
+            "objects": [
+                { "id": "photo", "type": "image", "file": "media/original.svg", "bind": { "file": "__proto__" } },
+                { "id": "loose", "type": "image", "file": "media/loose.svg", "bind": { "file": "toString" } }
+            ]
+        } }
+    }`) as Record<string, unknown>;
+    assert.deepEqual(paths(companion, null), [root + 'media/default.svg', root + 'media/loose.svg']);
+});
+
 test('only five existing vault resources are loaded, with the Vault API owning URLs', () => {
     const references = Array.from({ length: 8 }, (_, index) => ({ path: `media/${index}.png`, name: null, category: 'image' as const }));
     const vault = {
-        getFileByPath: (path: string) => (path === 'media/0.png' ? null : { path }),
-        getResourcePath: (file: { path: string }) => `app://owned/${file.path}?mtime=10`
+        getFileByPath: (path: string) => (path === 'media/0.png' ? null : { path, stat: { size: 10 } }),
+        getResourcePath: (file: { path: string; stat: { size: number } }) => `app://owned/${file.path}?mtime=10`
     };
     const images = readSlideImages(vault, references);
     assert.equal(images.length, 5);

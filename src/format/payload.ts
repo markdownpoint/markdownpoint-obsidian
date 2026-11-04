@@ -16,18 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/** Source before the one organizational blank line at a MarkdownPoint block boundary. */
+/**
+ * Source through the last line of a MarkdownPoint block that holds more than spaces, its line break included. Blank
+ * lines only separate blocks, however many stand there, and an empty paragraph is written `<br>`, so the blank lines at a
+ * block's end are all organizational.
+ */
 export function payloadContentEnd(markdown: string, from: number, to: number): number {
     let end = to;
-    // An unterminated tail of horizontal whitespace is not another empty line.
-    while (end > from && (markdown[end - 1] === ' ' || markdown[end - 1] === '\t')) end--;
-    if (end === from || markdown[end - 1] !== '\n') return end;
-    let start = end - 1;
-    if (start > from && markdown[start - 1] === '\r') start--;
-    while (start > from && (markdown[start - 1] === ' ' || markdown[start - 1] === '\t')) start--;
-    // Only that final wholly blank, terminated line is organizational. All
-    // earlier lines, including leading/interior/trailing empty paragraphs, stay.
-    return start === from || markdown[start - 1] === '\n' ? start : end;
+    while (end > from && ' \t\r\n'.includes(markdown[end - 1]!)) end--;
+    if (end === from) return from;
+    // The line break that ends the last line with words is its own; an unterminated tail of spaces is not.
+    const feed = markdown.indexOf('\n', end);
+    return feed < 0 || feed >= to ? end : feed + 1;
 }
 
 /** Close a block before its next neighbor without creating another authored blank line. */

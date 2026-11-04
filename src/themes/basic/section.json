@@ -7,7 +7,12 @@
       "id": "section-number",
       "type": "text",
       "locked": true,
-      "frame": {"x":110,"y":90,"width":1200,"height":400},
+      "frame": {
+        "x": 110,
+        "y": 90,
+        "width": 1200,
+        "height": 400
+      },
       "text-style": "display",
       "font-size": 400,
       "tracking": -0.05
@@ -17,7 +22,12 @@
       "id": "section-name",
       "type": "text",
       "locked": true,
-      "frame": {"x":120,"y":500,"width":1560,"height":310},
+      "frame": {
+        "x": 120,
+        "y": 500,
+        "width": 1560,
+        "height": 310
+      },
       "text-style": "display",
       "vertical-align": "bottom"
     },
@@ -26,7 +36,12 @@
       "id": "body",
       "type": "text",
       "placeholder": true,
-      "frame": {"x":120,"y":830,"width":1560,"height":130},
+      "frame": {
+        "x": 120,
+        "y": 830,
+        "width": 1560,
+        "height": 130
+      },
       "text-style": "body",
       "color": "muted"
     }

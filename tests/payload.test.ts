@@ -20,18 +20,27 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { payloadContentEnd } from '../src/format/payload.ts';
 
-test('exactly one terminal blank line is organizational; further lines stay authored', () => {
+test('every terminal blank line is organizational: blank lines only separate, and an empty paragraph is <br>', () => {
     for (const newline of ['\n', '\r\n']) {
         for (let blanks = 0; blanks < 5; blanks++) {
             const raw = 'Words.' + newline.repeat(blanks + 1);
-            const expected = 'Words.' + newline.repeat(Math.max(1, blanks));
+            const expected = 'Words.' + newline;
             assert.equal(raw.slice(0, payloadContentEnd(raw, 0, raw.length)), expected, JSON.stringify(raw));
         }
     }
 });
 
-test('leading and interior empty paragraphs, lists, quotes, and code stay intact', () => {
-    for (const text of ['\n\nWords.', 'Before.\n\n\nAfter.', '- One\n\n\n- Two', '> One\n>\n> Two', '```\nOne\n\nTwo\n```', '> One\n>']) {
+test('leading and interior lines, empty paragraphs, lists, quotes, and code stay as written', () => {
+    for (const text of [
+        '\n\nWords.',
+        'Before.\n\n<br>\n\nAfter.',
+        'Before.\n\n\nAfter.',
+        '- One\n\n\n- Two',
+        '> One\n>\n> Two',
+        '```\nOne\n\nTwo\n```',
+        '> One\n>',
+        'Words.\n\n<br>'
+    ]) {
         const source = text + '\n\n';
         assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), text + '\n');
     }
@@ -49,13 +58,13 @@ test('horizontal whitespace counts as a blank line only when terminated', () => 
     assert.equal(payloadContentEnd(nonbreaking, 0, nonbreaking.length), nonbreaking.length);
 });
 
-test('empty text retains additional authored empty paragraphs and original source offsets', () => {
+test('an empty text is blank lines alone, all organizational, and keeps its source offsets', () => {
     const prefix = '<!-- text: body -->\r\n';
     for (let count = 0; count < 5; count++) {
         const raw = '\r\n'.repeat(count);
         const source = prefix + raw + '<!-- notes -->\r\n';
         const end = payloadContentEnd(source, prefix.length, prefix.length + raw.length);
-        assert.equal(end, prefix.length + Math.max(0, count - 1) * 2);
+        assert.equal(end, prefix.length);
         assert.equal(source.slice(prefix.length, prefix.length + raw.length), raw);
     }
     const words = 'Words.';

@@ -77,6 +77,44 @@ test('code in a list or quote ends with its container; HTML stays within its fie
     }
 });
 
+test("a marker with spaces or tabs before it is that marker; in fenced code, a list item's included, it is the code's words", () => {
+    for (const indent of [' ', '   ', '\t', '    ']) {
+        const text = `${indent}<!-- slide: opening -->\n\n${indent}<!-- text: heading -->\nStart here.\n\n${indent}<!-- notes -->\nA reminder.\n\n${indent}<!-- slide: closing -->\n`;
+        const document = indexPresentation(text, 0)!;
+        assert.deepEqual(
+            document.slides.map(slide => [
+                slide.id,
+                slide.blocks.map(block => [block.kind, block.id, text.slice(block.contentFrom, block.to)])
+            ]),
+            [
+                [
+                    'opening',
+                    [
+                        ['text', 'heading', 'Start here.\n\n'],
+                        ['notes', null, 'A reminder.\n\n']
+                    ]
+                ],
+                ['closing', []]
+            ],
+            JSON.stringify(indent)
+        );
+    }
+    for (const [words, slides] of [
+        ['```\nexample\n```\n  <!-- slide: after -->', ['first', 'after', 'second']],
+        ['Hi.\n\n    <!-- slide: after -->', ['first', 'after', 'second']],
+        ['```\n  <!-- slide: example -->\n```', ['first', 'second']],
+        ['- a\n  ```\n  <!-- slide: example -->\n  ```', ['first', 'second']],
+        ['- a\n  ```\n  <!-- slide: example -->', ['first', 'second']]
+    ] as const) {
+        const text = `<!-- slide: first -->\n\n<!-- text: body -->\n${words}\n\n<!-- slide: second -->\n`;
+        assert.deepEqual(
+            indexPresentation(text, 0)?.slides.map(slide => slide.id),
+            slides,
+            words
+        );
+    }
+});
+
 test('section and composition boundaries do not become slides or extend a preceding slide', () => {
     const text =
         '<!-- section: introduction -->\n# Introduction\n\n<!-- slide: first -->\n\n<!-- text: nested.heading -->\nA heading.\n\n<!-- section: close -->\n# Close\n\n<!-- slide: second -->\n\n<!-- composition: shared -->\n\n<!-- control: caption -->\nReusable words.\n';
@@ -260,6 +298,35 @@ test('composition definitions retain complete control and text ranges wherever t
     assert.equal(document.slides[0]!.blocks[0]!.id, 'badge.caption');
     assert.equal(document.sections[0]!.to, leading.length + section.length);
     assert.equal(slideAtPosition(document, markdown.length - 1), null);
+});
+
+test("a control is named in the author's words, in its marker and after an instance's first dot, and other words are a comment", () => {
+    const notes = '<!-- text: ask Anna -->\nRemember.\n\n';
+    const markdown =
+        '<!-- slide: actual -->\n<!-- text: badge.Headline text -->\nInstance words.\n\n<!-- text: badge.Step 1.5 -->\nMore.\n\n<!-- notes -->\n' +
+        notes +
+        '<!-- composition: shared -->\n<!-- control: Headline text -->\nDefault words.\n\n<!-- control: 見出し -->\nWords.\n';
+    const document = indexPresentation(markdown, 0)!;
+    const slide = document.slides[0]!;
+    assert.deepEqual(
+        slide.blocks.map(block => [block.kind, block.id]),
+        [
+            ['text', 'badge.Headline text'],
+            ['text', 'badge.Step 1.5'],
+            ['notes', null]
+        ]
+    );
+    assert.equal(markdown.slice(slide.blocks[2]!.contentFrom, slide.blocks[2]!.to), notes, 'words that name no instance stay notes');
+    assert.deepEqual(
+        document.compositions[0]!.blocks.map(block => [block.kind, block.id]),
+        [
+            ['control', 'Headline text'],
+            ['control', '見出し']
+        ]
+    );
+    // A control's marker, or an instance's text marker, whose words are no name refuses the file, as MarkdownPoint reports it.
+    for (const line of ['<!-- control: Headline  text -->', '<!-- text: badge.Headline  text -->', '<!-- control: a --> b -->'])
+        assert.equal(indexPresentation(`<!-- composition: shared -->\n${line}\nWords.\n`, 0), null, line);
 });
 
 test('literal composition/control examples stay in their field and real definitions have globally unique IDs', () => {

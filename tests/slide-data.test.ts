@@ -482,7 +482,9 @@ test('malformed stored data cannot introduce arbitrary records', async () => {
         {},
         3,
         [{ path, document: 'invalid', records: { a: '{}' } }],
-        [{ path, document, records: { '../bad': '{}', a: '{} , "injected": {}', b: 'null', c: '{' } }]
+        [{ path, document, records: { '../bad': '{}', a: '{} , "injected": {}', b: 'null', c: '{' } }],
+        // Strict JSON refuses a repeated key and a number past a double, as the MarkdownPoint app does
+        [{ path, document, records: { a: '{"layout":"title","layout":"body"}', b: '{"layout":"title","z":1e999}' } }]
     ]) {
         const { host } = device(value);
         const data = new SlideData(host);
@@ -604,20 +606,4 @@ test('definition membership is independent of slide IDs and newer external metad
     data.observe(path, document, disk.disk, new Set(['a', 'b']), new Set(['card', 'other']));
     await data.settled(path, document);
     assert.equal(CompanionDocument.read(disk.disk, 'compositions')!.records.get('card'), '{"name":"Newer"}');
-});
-
-test('recovery records remembered in the words before 1.0 are not restored into a presentation', async () => {
-    const current = '{"layout":"title","objects":[{"id":"photo","type":"image","file":"media/a.png"}]}';
-    const { host } = device([
-        {
-            path,
-            document,
-            records: { old: '{"layout":"title","objects":[{"id":"photo","type":"image","asset":"media/a.png"}]}', current },
-            compositions: { card: '{"objects":[{"id":"inner","type":"composition","source":"other"}]}' }
-        }
-    ]);
-    const data = new SlideData(host);
-    await data.ready;
-    assert.deepEqual([...data.remembered(path, document)], [['current', current]]);
-    assert.deepEqual([...data.remembered(path, document, 'compositions')], []);
 });

@@ -52,6 +52,30 @@ test('complete slide preparation changes only identity and actual Markdown/JSON 
     );
 });
 
+test('a copied slide whose marker has spaces or tabs before it keeps them and takes its new id', () => {
+    for (const indent of [' ', '\t', '    ']) {
+        const markdown = `${indent}<!-- slide: one -->\n${indent}<!-- text: body -->\nWords.\n`;
+        const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, 'slide', slides, compositions, schemas);
+        assert.equal(result?.markdown, markdown.replace('slide: one', 'slide: copy-one'), JSON.stringify(indent));
+    }
+});
+
+test('a copied slide keeps its groups and spans as written and remaps the links among them', () => {
+    const words =
+        '# [**Mark**]{}[***do***]{}[*wn*]{}[Go](slide:two)\n\n[x]{font-weight=600}[Back](slide:one) [y]{color=muted font-weight=900}\n';
+    const markdown = `<!-- slide: one -->\n<!-- text: body -->\n${words}\n<!-- notes -->\n[*Sa*]{}[**y**]{}[Next](slide:two)\n`;
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, 'slide', slides, compositions, schemas)!;
+    assert.ok(result);
+    assert.equal(
+        result.markdown,
+        markdown
+            .replace('slide: one', 'slide: copy-one')
+            .replace('[Go](slide:two)', '[Go](slide:copy-two)')
+            .replace('[Back](slide:one)', '[Back](slide:copy-one)')
+            .replace('[Next](slide:two)', '[Next](slide:copy-two)')
+    );
+});
+
 test('composition defaults and text use copied slide destinations without changing controls or bindings', () => {
     const markdown = '<!--composition:card-->\n<!-- control: caption -->\n[Default](slide:two)\n<!-- text: body -->\n[Words](slide:one)\n';
     const record =

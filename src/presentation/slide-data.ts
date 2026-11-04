@@ -18,7 +18,6 @@
 
 import { CompanionDocument, isSlideRecordSource, reconcileSlideRecords } from '../format/companion.ts';
 import type { CompanionMap } from '../format/companion.ts';
-import { holdsOldWords } from '../format/file-words.ts';
 import { FORMAT_VERSION } from '../format/format-version.ts';
 import { readJsonObject } from '../format/json.ts';
 import { isDocumentId, isRecord, isStableId, presentationCompanionPath, presentationIdentity } from '../format/recognition.ts';
@@ -56,10 +55,7 @@ function recoveryRecords(value: unknown): ReadonlyMap<string, string> {
     const records = new Map<string, string>();
     if (isRecord(value))
         for (const [id, raw] of Object.entries(value)) {
-            if (!isStableId(id) || typeof raw !== 'string' || !isSlideRecordSource(raw)) continue;
-            // A record remembered before format 1.0 holds words the MarkdownPoint app refuses; restoring it would break the file
-            const record = readJsonObject(raw);
-            if (record && !holdsOldWords(record)) records.set(id, raw);
+            if (isStableId(id) && typeof raw === 'string' && isSlideRecordSource(raw) && readJsonObject(raw)) records.set(id, raw);
         }
     return records;
 }

@@ -30,7 +30,10 @@ const themeId = '33333333-3333-4333-8333-333333333333';
 const token = '44444444-4444-4444-8444-444444444444';
 const header = (id: string) => `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n`;
 
-async function fixture(media = ['media/photo.png'], artwork = false) {
+/** The generation record the first picture names, when the fixture's pictures were made. */
+const made = '55555555-5555-4555-8555-555555555555';
+
+async function fixture(media = ['media/photo.png'], artwork = false, generated = false) {
     let clock = 0;
     const nodes = new Map<string, TFile | TFolder>([['', new TFolder('')]]);
     const copies: string[] = [];
@@ -78,7 +81,8 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
             state.beforeCopy(path);
             copies.push(path);
             return Promise.resolve(add(path, file.bytes));
-        }
+        },
+        create: (path: string, text: string) => Promise.resolve(add(path, text))
     };
     const app = {
         vault,
@@ -120,16 +124,27 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
         if (artwork) add(root + '/themes/basic/media/logo.svg', new Uint8Array([1, 2, 3]));
     }
     for (const path of media) add('source/' + path, new Uint8Array([4, 5, 6]));
+    if (generated)
+        add(
+            `source/generated/${made}.json`,
+            `{\n  "markdownpoint": "1.0",\n  "output": {\n    "file": "${media[0]}",\n    "sha256": "aa"\n  }\n}\n`
+        );
     const sourceTheme = (await readEmbeddedTheme(vault, 'source/slides.md', { theme: 'basic' }, ['title']))!;
     const theme = (await readEmbeddedTheme(vault, 'target/slides.md', { theme: 'basic' }, ['title']))!;
     const record = JSON.stringify({
         layout: 'title',
-        objects: media.map((asset, index) => ({ id: `image-${index}`, type: 'image', file: asset }))
+        objects: media.map((asset, index) => ({
+            id: `image-${index}`,
+            type: 'image',
+            file: asset,
+            ...(generated && index === 0 ? { 'image-result': { record: made } } : {})
+        }))
     });
     const packet = decodeSlideClipboard(
         encodeSlideClipboard(
             token,
             { vault: sourceId, path: 'source/slides.md', document: sourceId },
+            'en-US',
             { slides: [{ id: 'one', markdown: '<!-- slide: one -->\n', record }], compositions: [] },
             sourceTheme
         )!
@@ -162,6 +177,21 @@ test('transfer copies media independently and repeated paste reuses its unchange
     const copied = f.nodes.get(f.copies[0]!);
     assert.ok(copied instanceof TFile);
     assert.deepEqual(copied.bytes, new Uint8Array([4, 5, 6]));
+});
+
+test('a picture’s record comes beside the copy of its picture, naming it there, and one the destination has stays as it is', async () => {
+    const f = await fixture(['media/photo.png'], false, true);
+    await f.transfer();
+    const record = f.nodes.get(`target/generated/${made}.json`);
+    assert.ok(record instanceof TFile);
+    const text = new TextDecoder().decode(record.bytes);
+    assert.equal((JSON.parse(text) as { output: { file: string } }).output.file, f.copies[0]!.slice('target/'.length));
+    assert.match(text, /"sha256": "aa"/, 'every other word as written');
+    // A second paste reuses the picture's copy and keeps the record already there.
+    const before = record.stat.mtime;
+    await f.transfer();
+    assert.equal(f.nodes.get(`target/generated/${made}.json`), record);
+    assert.equal(record.stat.mtime, before);
 });
 
 test('an edited destination image is preserved and a new copy is reused on later pastes', async () => {

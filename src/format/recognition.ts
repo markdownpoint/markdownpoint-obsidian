@@ -18,9 +18,12 @@
 
 import { formatStanding, opensFormatVersion } from './format-version.ts';
 
+/** A saved version's folder, `versions/` and its save time and tail, which MarkdownPoint opens only from its presentation. */
+const SAVED_VERSION = /(?:^|\/)versions\/[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}\.[0-9]{2}\.[0-9]{2}Z-[a-z0-9]{4}\/[^/]*$/;
+
 export function presentationCompanionPath(markdownPath: string): string | null {
     const slash = markdownPath.lastIndexOf('/');
-    if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md') return null;
+    if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md' || SAVED_VERSION.test(markdownPath)) return null;
     return markdownPath.slice(0, slash + 1) + 'presentation.mdpoint';
 }
 
@@ -47,6 +50,14 @@ export function presentationPairNames(names: readonly string[]): { markdown: str
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * A record's own entry by a name the author chose, as a composition's control or an instance's value for one: a name
+ * may be one JavaScript gives every object, as `__proto__` and `toString` are, which a record lacking it doesn't hold.
+ */
+export function ownEntry(record: Readonly<Record<string, unknown>>, name: string): unknown {
+    return Object.hasOwn(record, name) ? record[name] : undefined;
 }
 
 export function isDocumentId(value: unknown): value is string {

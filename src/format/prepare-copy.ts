@@ -21,6 +21,7 @@ import { remapRecordReferences } from './companion.ts';
 import { indexPresentation } from './document.ts';
 import { isStableId } from './recognition.ts';
 import { remapMarkdownSlideLinks } from './slide-links.ts';
+import type { TextSchema } from './text-schemas.ts';
 
 /**
  * Prepare one complete captured part using destination IDs and verified text
@@ -32,7 +33,7 @@ export function prepareCopiedPart(
     kind: 'slide' | 'composition',
     slides: ReadonlyMap<string, string>,
     compositions: ReadonlyMap<string, string>,
-    textSchemas: ReadonlyMap<string, 'rich-text' | 'table'>
+    textSchemas: ReadonlyMap<string, TextSchema>
 ): CapturedPart | null {
     const document = indexPresentation(part.markdown, 0);
     const parts = kind === 'slide' ? document?.slides : document?.compositions;
@@ -53,7 +54,7 @@ export function prepareCopiedPart(
     const record = remapRecordReferences(part.record, slides, compositions);
     if (record === null) return null;
     const marker = part.markdown.slice(0, indexed.markerTo);
-    const match = /^(<!--\s*(?:slide|composition):\s*)([^\s]+)(\s*-->[ \t]*\r?\n)$/.exec(marker);
+    const match = /^([ \t]*<!--\s*(?:slide|composition):\s*)([^\s]+)(\s*-->[ \t]*\r?\n)$/.exec(marker);
     if (!match || match[2] !== part.id) return null;
     const pieces = [match[1]! + id + match[3]!];
     let position = indexed.markerTo;
@@ -62,7 +63,7 @@ export function prepareCopiedPart(
         if (schema === undefined) return null;
         pieces.push(
             part.markdown.slice(position, block.contentFrom),
-            remapMarkdownSlideLinks(part.markdown.slice(block.contentFrom, block.to), slides, schema)
+            remapMarkdownSlideLinks(part.markdown.slice(block.contentFrom, block.to), slides, schema === 'chart' ? 'table' : schema)
         );
         position = block.to;
     }

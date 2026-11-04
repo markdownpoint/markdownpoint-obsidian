@@ -59,11 +59,12 @@ const captured = {
         }
     ]
 };
-const encoded = () => encodeSlideClipboard(uuid, origin, captured, theme)!;
+const encoded = () => encodeSlideClipboard(uuid, origin, 'sv-SE', captured, theme)!;
 const transport = () => ({
-    version: 2,
+    version: 3,
     token: uuid,
     origin: { ...origin },
+    locale: 'sv-SE' as unknown,
     slides: captured.slides.map(part => ({ ...part })),
     compositions: captured.compositions.map(part => ({ ...part })),
     theme: { key: 'basic', id: uuid, master: masterSource, layouts: [{ key: 'title', source: layoutSource }] }
@@ -79,6 +80,7 @@ test('whole-slide clipboard round trips keep complete raw fields, records, Theme
     assert.ok(result);
     assert.equal(result.token, uuid);
     assert.deepEqual(result.origin, origin);
+    assert.equal(result.locale, 'sv-SE');
     assert.deepEqual(result.captured, captured);
     assert.equal(result.theme.master.source, masterSource);
     assert.equal(result.theme.layouts.get('title')!.source, layoutSource);
@@ -96,7 +98,13 @@ test('text and incompatible, malformed or ambiguous transport data are never tre
         '{"version":1,"version":2}',
         JSON.stringify({ markdownpoint: 1, kind: 'slides', root: '/tmp', slides: [] }),
         mutate(value => {
-            value.version = 1;
+            value.version = 2;
+        }),
+        mutate(value => {
+            value.locale = undefined;
+        }),
+        mutate(value => {
+            value.locale = 1;
         }),
         mutate(value => {
             value.token = 'invalid';
@@ -205,22 +213,8 @@ test('supplied schema claims cannot change the grammar derived from the copied T
 test('encoding carries only declared transport fields while raw presentation metadata stays complete', () => {
     const extra = { ...captured, slides: captured.slides.map(part => ({ ...part, privateContext: 'not clipboard data' })) };
     const context = { ...origin, privateContext: 'not clipboard data' };
-    const source = encodeSlideClipboard(uuid, context, extra, theme);
+    const source = encodeSlideClipboard(uuid, context, 'en-US', extra, theme);
     assert.ok(source);
     assert.equal(source.includes('privateContext'), false);
     assert.deepEqual(decodeSlideClipboard(source)!.captured, captured);
-});
-
-test('a record that still holds the words before 1.0 is neither copied nor pasted, in any presentation', () => {
-    for (const record of [
-        '{"layout":"title","objects":[{"id":"photo","type":"image","asset":"media/photo.png"}]}',
-        '{"layout":"title","objects":[{"id":"instance","type":"composition","source":"card"}]}',
-        '{"layout":"title","objects":[{"id":"photo","type":"image","file":"media/a.png","image-result":{"source":"generated/b.png"}}]}',
-        '{"layout":"title","overrides":{"body":{"model":{"asset":"generated/letters.glb"}}}}',
-        '{"layout":"title","background":{"image":"media/back.png","image-result":{"source":"generated/b.png"}}}'
-    ]) {
-        const slides = [{ ...captured.slides[0]!, record }];
-        assert.equal(encodeSlideClipboard(uuid, origin, { slides, compositions: [] }, theme), null, record);
-        assert.equal(decodeSlideClipboard(mutate(value => (value.slides = [{ ...value.slides[0]!, record }]))), null, record);
-    }
 });

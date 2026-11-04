@@ -199,6 +199,13 @@ test('MarkdownPoint formatting boundaries keep adjacent real links separate from
         '~~ftp://x~~[Go](slide:two)',
         '[ftp://x]{color=accent}[Go](slide:two)',
         '[ftp://x]{color="#F0A"}[Go](slide:two)',
+        '[ftp://x]{}[Go](slide:two)',
+        '[**ftp://x**]{}[***y***]{}[*z*]{}[Go](slide:two)',
+        '[ftp://x]{font-weight=600}[Go](slide:two)',
+        '[ftp://x]{font-weight="900"}[Go](slide:two)',
+        '[ftp://x]{color=muted font-weight=600}[Go](slide:two)',
+        '[ftp://x]{font-weight=300 color="#2F7D4F"}[Go](slide:two)',
+        '[[ftp://x]{}]{color=accent}[Go](slide:two)',
         '==`a==b` [Go](slide:two)==',
         '[`a]b` [Go](slide:two)]{color=accent}',
         '==![a==b](picture.png) [Go](slide:two)==',
@@ -216,7 +223,16 @@ test('MarkdownPoint formatting boundaries keep adjacent real links separate from
         '==[reference][a\\]==b] [Go](slide:two)==\n\n[a\\]==b]: https://example.com'
     ])
         assert.equal(rewrite(source), source.replace('[Go](slide:two)', '[Go](slide:copy-two)'));
-    for (const literal of ['~ftp://x~[Go](slide:two)', '[ftp://x]{color=not_valid}[Go](slide:two)', '**==ftp://x**[Go](slide:two)==**']) {
+    for (const literal of [
+        '~ftp://x~[Go](slide:two)',
+        '[ftp://x]{color=not_valid}[Go](slide:two)',
+        '**==ftp://x**[Go](slide:two)==**',
+        '[ftp://x]{font-weight=450}[Go](slide:two)',
+        '[ftp://x]{font-weight=600.0}[Go](slide:two)',
+        '[ftp://x]{color=accent-}[Go](slide:two)',
+        '[ftp://x]{size=2}[Go](slide:two)',
+        '[]{}ftp://x[Go](slide:two)'
+    ]) {
         assert.equal(rewrite(literal), literal);
     }
 });

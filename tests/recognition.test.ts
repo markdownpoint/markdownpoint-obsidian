@@ -33,6 +33,19 @@ test('the fixed companion stays beside slides.md at the vault root or in a neste
     }
 });
 
+test('a saved version stays ordinary Markdown, as MarkdownPoint opens one only from its presentation', () => {
+    for (const path of ['Talk/versions/2026-10-30T16.20.05Z-k3pz/slides.md', 'versions/2026-10-30T16.20.05Z-a1b2/slides.md']) {
+        assert.equal(presentationCompanionPath(path), null);
+    }
+    assert.equal(presentationCompanionPath('versions/slides.md'), 'versions/presentation.mdpoint');
+    assert.equal(presentationCompanionPath('Talk/versions/draft/slides.md'), 'Talk/versions/draft/presentation.mdpoint');
+    // A folder named by a time alone is no version's, as every version's name ends in its tail.
+    assert.equal(
+        presentationCompanionPath('Talk/versions/2026-10-30T16.20.05Z/slides.md'),
+        'Talk/versions/2026-10-30T16.20.05Z/presentation.mdpoint'
+    );
+});
+
 test('pair discovery keeps actual filename case and leaves unrelated notes alone', () => {
     assert.deepEqual(
         presentationPairNames([

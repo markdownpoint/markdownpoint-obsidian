@@ -148,6 +148,33 @@
     display: none;
 }
 
+/* Obsidian reads a span's brackets as a bare link; its words keep the look of the words around them */
+.markdownpoint-presentation .markdownpoint-span {
+    --link-external-decoration-hover: none;
+}
+
+.markdownpoint-presentation .markdownpoint-span span.cm-link {
+    color: inherit;
+}
+
+/* When the words hold a link, Obsidian draws all of them as one; only the link's own words keep a link's look */
+.markdownpoint-presentation .markdownpoint-span-linked .cm-link .cm-underline,
+.markdownpoint-presentation .markdownpoint-span-linked .cm-link .cm-underline:hover {
+    color: inherit;
+    text-decoration: none;
+    cursor: inherit;
+}
+
+.markdownpoint-presentation .markdownpoint-span-link {
+    color: var(--link-external-color);
+    text-decoration: var(--link-external-decoration);
+    cursor: var(--cursor-link);
+}
+
+.markdownpoint-presentation .markdownpoint-span-link:hover {
+    color: var(--link-external-color-hover);
+}
+
 .markdownpoint-field-header {
     padding-top: var(--size-4-4);
     color: var(--markdownpoint-muted);
@@ -197,6 +224,23 @@
 
 .markdownpoint-field-ghost.is-compact {
     display: block;
+}
+
+.markdownpoint-missing-field .markdownpoint-field-ghost {
+    width: 100%;
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-family: inherit;
+    text-align: start;
+}
+
+.markdownpoint-missing-field .markdownpoint-field-ghost:focus-visible {
+    color: var(--markdownpoint-muted);
+    outline: none;
 }
 
 .markdownpoint-writing-field.markdownpoint-field-title,
@@ -515,17 +559,70 @@
     display: none;
 }
 
+/* A picture fits its box from its pixels as stored, its sides swapped inside it for a quarter turn, then turned about its
+   center by the orientation MarkdownPoint reads: EXIF's eight, as transforms. */
 .markdownpoint-slide-image {
+    position: relative;
     display: block;
+    overflow: hidden;
+    container-type: size;
     width: 100%;
     height: 32px;
-    object-fit: contain;
     border: 1px solid var(--background-modifier-border);
     border-radius: 3px;
     background: var(--background-secondary);
     transition:
         border-color 120ms ease,
         filter 120ms ease;
+}
+
+.markdownpoint-slide-image > img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: block;
+    width: 100cqw;
+    height: 100cqh;
+    translate: -50% -50%;
+    object-fit: contain;
+    image-orientation: none;
+}
+
+.markdownpoint-slide-image:not([data-orientation]) > img {
+    visibility: hidden;
+}
+
+.markdownpoint-slide-image:is([data-orientation='5'], [data-orientation='6'], [data-orientation='7'], [data-orientation='8']) > img {
+    width: 100cqh;
+    height: 100cqw;
+}
+
+.markdownpoint-slide-image[data-orientation='2'] > img {
+    transform: scale(-1, 1);
+}
+
+.markdownpoint-slide-image[data-orientation='3'] > img {
+    transform: scale(-1, -1);
+}
+
+.markdownpoint-slide-image[data-orientation='4'] > img {
+    transform: scale(1, -1);
+}
+
+.markdownpoint-slide-image[data-orientation='5'] > img {
+    transform: rotate(90deg) scale(1, -1);
+}
+
+.markdownpoint-slide-image[data-orientation='6'] > img {
+    transform: rotate(90deg);
+}
+
+.markdownpoint-slide-image[data-orientation='7'] > img {
+    transform: rotate(90deg) scale(-1, 1);
+}
+
+.markdownpoint-slide-image[data-orientation='8'] > img {
+    transform: rotate(-90deg);
 }
 
 .markdownpoint-slide-image:hover {

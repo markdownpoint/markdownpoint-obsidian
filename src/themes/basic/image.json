@@ -11,8 +11,14 @@
     {
       "id": "image",
       "type": "image",
+      "file": "media/layout-preview.jpg",
       "placeholder": true,
-      "frame": {"x":0,"y":0,"width":1920,"height":1080}
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
     }
   ]
 }

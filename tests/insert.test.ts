@@ -175,6 +175,37 @@ test('a group and its new definitions enter different source positions without r
     assert.ok(result.companion.includes('"future":9007199254740995'));
 });
 
+test('new definitions follow the existing ones where the author put them, or the last slide when there are none', () => {
+    const held = definition('held');
+    const incoming = definition('card');
+    const ending = '<!-- section: ending -->\n# Ending\n';
+    const source = block('a') + held.markdown + '\n' + block('b');
+    const companion = '{"slides":{"a":{},"b":{}},"compositions":{"held":{}}}';
+    const moved = planSlideInsertion(source, indexPresentation(source, 0)!, companion, [prepared('copy')], 'b', 0, [incoming])!;
+    assert.equal(apply(source, moved), block('a') + held.markdown + '\n' + incoming.markdown + '\n' + block('b') + block('copy'));
+    const first = held.markdown + '\n' + block('a');
+    const before = planSlideInsertion(
+        first,
+        indexPresentation(first, 0)!,
+        '{"slides":{"a":{}},"compositions":{"held":{}}}',
+        [prepared('copy')],
+        'a',
+        0,
+        [incoming]
+    )!;
+    assert.equal(apply(first, before), held.markdown + '\n' + incoming.markdown + '\n' + block('a') + block('copy'));
+    const none = block('a') + block('b') + ending;
+    const last = planSlideInsertion(none, indexPresentation(none, 0)!, '{"slides":{"a":{},"b":{}}}', [prepared('copy')], 'a', 0, [
+        incoming
+    ])!;
+    assert.equal(apply(none, last), block('a') + block('copy') + block('b') + incoming.markdown + '\n' + ending);
+    const after = planSlideInsertion(none, indexPresentation(none, 0)!, '{"slides":{"a":{},"b":{}}}', [prepared('copy')], 'b', 0, [
+        incoming
+    ])!;
+    assert.equal(after.changes.length, 1);
+    assert.equal(apply(none, after), block('a') + block('b') + block('copy') + incoming.markdown + '\n' + ending);
+});
+
 test('EOF and empty-draft insertion combine the slide and definition without extra authored blank lines', () => {
     const incoming = { ...prepared('copy'), markdown: '<!-- slide: copy -->\n<!-- text: title -->\nCopied.' };
     const added = definition('card');

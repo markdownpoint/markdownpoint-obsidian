@@ -88,7 +88,17 @@ test('sections keep authored names, empty sections, and continuous numbers aroun
 });
 
 test('a temporary empty or incomplete section heading keeps the slide structure available', () => {
-    for (const words of ['', '# ', 'Plain words', '## Subheading', '# Invalid\u0007name']) {
+    for (const words of [
+        '',
+        '# ',
+        'Plain words',
+        '## Subheading',
+        '# Invalid\u0007name',
+        '# Start <!-- id: s1 -->',
+        '# Start <!-- note -->',
+        '# *Start <!-- note -->*',
+        '# Start <span>'
+    ]) {
         const markdown = `<!-- section: opening -->\n${words}\n<!-- slide: first -->\n`;
         const document = indexPresentation(markdown, 0)!;
         assert.deepEqual(

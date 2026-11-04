@@ -124,3 +124,78 @@ test('partial scale overrides merge inherited components before testing flat geo
     assert.equal(preview.regions.length, 1);
     assert.equal(preview.regions[0]!.width, 800);
 });
+
+test('a text that grows to its words, holding no height, stands a line tall or at its least height, as the app stands it before measuring', () => {
+    const grows = { ...field, 'auto-size': 'height', frame: { x: 100, y: 100, width: 800 } };
+    const growing = (title: Record<string, unknown>, overrides: Record<string, unknown> = {}) => {
+        const own = { ...layout, objects: [title] };
+        const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
+        return slideStructure({ layout: 'title', overrides: { footer: null, ...overrides } }, shown)!.regions.map(region => region.height);
+    };
+    assert.deepEqual(growing(grows), [48]);
+    assert.deepEqual(growing({ ...grows, 'auto-size': 'both', 'min-height': 120 }), [120]);
+    assert.deepEqual(
+        growing(field, { title: { 'auto-size': 'height' } }),
+        [48],
+        'a slide that makes a fixed box grow drops the height it inherits'
+    );
+    assert.deepEqual(growing({ ...field, 'auto-size': 'height', 'text-path': 'M0 0 L1 0' }), [180], 'words on a path keep their frame');
+});
+
+test('a text whose width follows its words, holding no width, stands a width no page measured yet about the point its alignment holds', () => {
+    const regions = (title: Record<string, unknown>) => {
+        const own = { ...layout, objects: [title] };
+        const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
+        return slideStructure({ layout: 'title', overrides: { footer: null } }, shown)!.regions.map(({ x, y, width, height }) => ({
+            x,
+            y,
+            width,
+            height
+        }));
+    };
+    const point = { x: 400, y: 100 };
+    // Its x and y name the point its growth holds: set left its left edge, centered its middle, set right its right edge.
+    assert.deepEqual(regions({ ...field, 'auto-size': 'both', frame: point }), [{ x: 400, y: 100, width: 48, height: 48 }]);
+    assert.deepEqual(regions({ ...field, 'auto-size': 'both', align: 'center', frame: point }), [
+        { x: 376, y: 100, width: 48, height: 48 }
+    ]);
+    assert.deepEqual(
+        regions({ ...field, 'auto-size': 'both', 'text-direction': 'rtl', frame: point }),
+        [{ x: 352, y: 100, width: 48, height: 48 }],
+        'right to left, it holds the side its lines start on'
+    );
+    // A width alone grows about the point at mid-height, its height its own.
+    assert.deepEqual(regions({ ...field, 'auto-size': 'width', align: 'right', frame: { ...point, height: 80 } }), [
+        { x: 352, y: 100, width: 48, height: 80 }
+    ]);
+    // In columns its width is its own.
+    assert.deepEqual(regions({ ...field, 'auto-size': 'width', 'column-count': 2, frame: { ...point, width: 600, height: 80 } }), [
+        { x: 400, y: 100, width: 600, height: 80 }
+    ]);
+    // Its column count reads to the millionth, as MarkdownPoint reads it: 2.0000004 is two columns, 1.0000004 one.
+    assert.deepEqual(regions({ ...field, 'auto-size': 'width', 'column-count': 2.0000004, frame: { ...point, width: 600, height: 80 } }), [
+        { x: 400, y: 100, width: 600, height: 80 }
+    ]);
+    assert.deepEqual(regions({ ...field, 'auto-size': 'width', 'column-count': 1.0000004, frame: { ...point, height: 80 } }), [
+        { x: 400, y: 100, width: 48, height: 80 }
+    ]);
+});
+
+test("a slide's change of what decides a text's point, moving a part of its frame it leaves out, waits as MarkdownPoint holds it, and applies once it gives that part", () => {
+    const regions = (title: Record<string, unknown>, change: Record<string, unknown>) => {
+        const own = { ...layout, objects: [title] };
+        const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
+        return slideStructure({ layout: 'title', overrides: { footer: null, title: change } }, shown)!.regions.map(
+            ({ x, y, width, height }) => ({ x, y, width, height })
+        );
+    };
+    // Set left, its left edge holds as its words set its width: nothing moves, so it follows its layout.
+    assert.deepEqual(regions(field, { 'auto-size': 'width' }), [{ x: 100, y: 100, width: 48, height: 180 }]);
+    // Centered, its x would name its middle: the change waits, and the box stands as its layout sizes it.
+    const centered = { ...field, align: 'center' };
+    assert.deepEqual(regions(centered, { 'auto-size': 'width' }), [{ x: 100, y: 100, width: 800, height: 180 }]);
+    assert.deepEqual(regions(centered, { 'auto-size': 'width', frame: { x: 500 } }), [{ x: 476, y: 100, width: 48, height: 180 }]);
+    // A height that grows holds the top of its middle, which no alignment moves.
+    const tall = { ...field, 'auto-size': 'height', frame: { x: 100, y: 100, width: 800 } };
+    assert.deepEqual(regions(tall, { align: 'center' }), [{ x: 100, y: 100, width: 800, height: 48 }]);
+});

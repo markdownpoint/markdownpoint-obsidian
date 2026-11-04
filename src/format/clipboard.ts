@@ -20,11 +20,11 @@ import { compositionSources } from './capture.ts';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { indexPresentation } from './document.ts';
 import { embeddedThemePaths, isThemeKey, themeDocument } from './embedded-theme.ts';
-import { holdsOldWords } from './file-words.ts';
 import { readJsonObject } from './json.ts';
 import { isDocumentId, isRecord, isStableId } from './recognition.ts';
 import { copyTextSchemas } from './text-schemas.ts';
 import type { EmbeddedTheme } from './embedded-theme.ts';
+import type { TextSchema } from './text-schemas.ts';
 
 export const SLIDE_CLIPBOARD_MIME = 'web application/x-markdownpoint-obsidian-slides+json';
 
@@ -40,23 +40,27 @@ export interface SlideClipboard {
     /** A local cut owner must also recognize this token before reusing identities. */
     readonly token: string;
     readonly origin: ClipboardOrigin;
+    /** The language the copied presentation is written in, which its own charts' value cells read by. */
+    readonly locale: string;
     readonly captured: CapturedSlides;
     readonly theme: EmbeddedTheme;
-    readonly schemas: ReadonlyMap<string, ReadonlyMap<string, 'rich-text' | 'table'>>;
+    readonly schemas: ReadonlyMap<string, ReadonlyMap<string, TextSchema>>;
 }
 
 /** Only this plugin's versioned custom format carries whole slides. */
 export function encodeSlideClipboard(
     token: string,
     origin: ClipboardOrigin,
+    locale: string,
     captured: CapturedSlides,
     theme: EmbeddedTheme
 ): string | null {
     const parts = (values: readonly CapturedPart[]) => values.map(({ id, markdown, record }) => ({ id, markdown, record }));
     const source = JSON.stringify({
-        version: 2,
+        version: 3,
         token,
         origin: { vault: origin.vault, path: origin.path, document: origin.document },
+        locale,
         slides: parts(captured.slides),
         compositions: parts(captured.compositions),
         theme: {
@@ -74,12 +78,13 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
     const value = readJsonObject(source);
     if (
         !value ||
-        value.version !== 2 ||
+        value.version !== 3 ||
         !isDocumentId(value.token) ||
         !isRecord(value.origin) ||
         !isDocumentId(value.origin.vault) ||
         !isDocumentId(value.origin.document) ||
         typeof value.origin.path !== 'string' ||
+        typeof value.locale !== 'string' ||
         !Array.isArray(value.slides) ||
         !value.slides.length ||
         !Array.isArray(value.compositions) ||
@@ -112,7 +117,7 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
     const compositions: CapturedPart[] = [];
     const seen = new Set<string>();
     const referenced = new Set<string>();
-    const schemas = new Map<string, ReadonlyMap<string, 'rich-text' | 'table'>>();
+    const schemas = new Map<string, ReadonlyMap<string, TextSchema>>();
     for (const [kind, incoming, target] of [
         ['slide', value.slides, slides],
         ['composition', value.compositions, compositions]
@@ -129,8 +134,6 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
             seen.add(part.id);
             const document = indexPresentation(part.markdown, 0);
             const record = readJsonObject(part.record);
-            // Every copy and paste passes here, so a record the MarkdownPoint app would refuse never reaches a destination
-            if (record && holdsOldWords(record)) return null;
             const parts = kind === 'slide' ? document?.slides : document?.compositions;
             const indexed = parts?.[0];
             if (
@@ -163,5 +166,5 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
     }
     const available = new Set(compositions.map(part => part.id));
     if ([...referenced].some(id => !available.has(id))) return null;
-    return { token: value.token, origin, captured: { slides, compositions }, theme, schemas };
+    return { token: value.token, origin, locale: value.locale, captured: { slides, compositions }, theme, schemas };
 }

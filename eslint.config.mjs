@@ -28,7 +28,8 @@ const sentenceCase = {
 };
 
 export default defineConfig([
-    { ignores: ['main.js', 'coverage/**', 'test-vault/**', '.verification/**'] },
+    // src/core holds MarkdownPoint core's own files, byte for byte, linted where they are written
+    { ignores: ['main.js', 'coverage/**', 'test-vault/**', '.verification/**', 'src/core/**'] },
     { linterOptions: { reportUnusedDisableDirectives: 'error' } },
     ...obsidianmd.configs.recommended,
     {

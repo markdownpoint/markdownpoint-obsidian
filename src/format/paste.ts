@@ -17,11 +17,13 @@
  */
 
 import type { CapturedPart, CapturedSlides } from './capture.ts';
+import { presentationLocale, respellCopiedCharts } from './chart-cells.ts';
 import type { SlideClipboard, ClipboardOrigin } from './clipboard.ts';
 import { CompanionDocument } from './companion.ts';
 import { prepareSlideCopies } from './copy.ts';
 import type { PresentationDocument } from './document.ts';
 import type { EmbeddedTheme } from './embedded-theme.ts';
+import { readJsonObject } from './json.ts';
 import { presentationCompanionPath } from './recognition.ts';
 
 export function sameClipboardPresentation(packet: SlideClipboard, origin: ClipboardOrigin): boolean {
@@ -52,7 +54,10 @@ export function prepareClipboardPaste(
 ): CapturedSlides | null {
     const slides = CompanionDocument.read(companion);
     const definitions = CompanionDocument.ensure(companion, 'compositions');
-    if (!slides || !definitions) return null;
+    const presentation = readJsonObject(companion);
+    if (!slides || !definitions || !presentation) return null;
+    // Their own charts' cells take this presentation's spelling before a definition is matched against what it holds.
+    const captured = respellCopiedCharts(packet.captured, packet.schemas, packet.locale, presentationLocale(presentation));
     const held: CapturedPart[] = [];
     for (const part of document.compositions) {
         const record = definitions.records.get(part.id);
@@ -77,5 +82,5 @@ export function prepareClipboardPaste(
                 (remembered.get(part.id) === undefined || remembered.get(part.id) === part.record)
         );
     if (preserve) for (const part of packet.captured.slides) occupied.delete(part.id);
-    return prepareSlideCopies(packet.captured, held, occupied, packet.schemas, mint, preserve);
+    return prepareSlideCopies(captured, held, occupied, packet.schemas, mint, preserve);
 }

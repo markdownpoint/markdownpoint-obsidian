@@ -41,7 +41,7 @@ Every slide starts with a numbered divider, followed by its text areas in writin
 
 Write in **Live Preview** to see the draft. It protects the slide dividers from stray edits, so you rearrange slides in the outline or from the right-click menu. Switch to **Source mode** whenever you want the plain Markdown, dividers included.
 
-Blank lines are yours to use. The draft hides the single blank line that separates text areas, and any extra blank lines stay visible and carry over to MarkdownPoint.
+Blank lines only separate paragraphs, however many you leave, and the draft hides the ones between text areas. For an empty line on the slide, write `<br>` on a line of its own.
 
 ### Presenter notes
 
@@ -133,6 +133,8 @@ Any other language shows the plugin in English. The words in your presentation n
 **Can I use Obsidian links and embeds?** They stay in the Markdown as you wrote them, but wikilinks, note embeds and other plugins’ output don’t become slide content. Use standard Markdown links for links that work outside Obsidian, and add slide images in MarkdownPoint.
 
 **My presentation looks like an ordinary note.** Open `slides.md` in **Live Preview** and check that its `presentation.mdpoint` sits in the same folder. An unrelated note named `slides.md` stays an ordinary note, and an extra `.mdpoint` file or a conflicted copy in the folder makes the plugin leave both files alone. If a notice says the presentation uses a newer MarkdownPoint format, update the plugin in **Settings → Community plugins**.
+
+**Can I write in a presentation saved by a newer MarkdownPoint?** Yes, as long as its format is 1.x. What the plugin doesn’t know stays in both files as MarkdownPoint wrote it, through writing, slide actions and undo. The files keep their version. Copying and cutting slides out of it needs a plugin update, so that a pasted slide brings nothing the other presentation's version lacks.
 
 **The outline shows another presentation.** The outline keeps the last presentation you worked in, even while an ordinary note is open. Select the tab of the presentation you want.
 

@@ -25,6 +25,7 @@ import imageText from './basic/image-text.json' with { type: 'json' };
 import imageWithHeader from './basic/image-with-header.json' with { type: 'json' };
 import image from './basic/image.json' with { type: 'json' };
 import master from './basic/master.json' with { type: 'json' };
+import layoutPreview from './basic/media/layout-preview.jpg';
 import oneLiner from './basic/one-liner.json' with { type: 'json' };
 import section from './basic/section.json' with { type: 'json' };
 import solidColor from './basic/solid-color.json' with { type: 'json' };
@@ -48,15 +49,23 @@ const layouts = {
     title
 };
 
-/** Published Basic theme, adapted to the current format; provenance is in THIRD_PARTY_NOTICES.md. */
-export const basicThemeFiles: ReadonlyMap<string, string> = new Map(
+const documents: ReadonlyMap<string, string> = new Map(
     Object.entries({ master, ...layouts }).map(([key, value]) => [`${key}.json`, JSON.stringify(value, null, 2) + '\n'])
 );
+
+/**
+ * MarkdownPoint's Basic theme as a new presentation holds it, by each file's path in the theme: its master, its layouts
+ * and the picture its image layouts hold. Provenance is in THIRD_PARTY_NOTICES.md.
+ */
+export const basicThemeFiles: ReadonlyMap<string, string | Uint8Array> = new Map<string, string | Uint8Array>([
+    ...documents,
+    ['media/layout-preview.jpg', layoutPreview]
+]);
 
 const root = 'themes/basic';
 const embeddedDocument = (key: string, value: Record<string, unknown>) => ({
     path: `${root}/${key}.json`,
-    source: basicThemeFiles.get(`${key}.json`)!,
+    source: documents.get(`${key}.json`)!,
     value
 });
 export const basicTheme: EmbeddedTheme = {

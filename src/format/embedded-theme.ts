@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { holdsOldWords } from './file-words.ts';
 import { readJsonObject } from './json.ts';
 import { opensFormatVersion } from './format-version.ts';
 import { isDocumentId, isRecord, isStableId, presentationCompanionPath } from './recognition.ts';
@@ -75,8 +74,7 @@ export function themeDocument(source: string, kind: 'master' | 'layout'): Record
     const value = readJsonObject(source);
     if (!value || !opensFormatVersion(value.markdownpoint) || value.kind !== kind || (kind === 'master' && !isDocumentId(value.id)))
         return null;
-    // Every theme path reads its documents here, so none can carry a key the MarkdownPoint app refuses into a presentation
-    return holdsOldWords(value) ? null : value;
+    return value;
 }
 
 /** Files declared by a theme's media objects, overrides, and embedded fonts. */
@@ -104,7 +102,7 @@ export function themeAssetPaths(theme: EmbeddedTheme): readonly string[] | null 
             if (!isRecord(object)) continue;
             const files = isRecord(object.file) ? Object.values(object.file) : [object.file];
             if (!files.every(add)) return null;
-            if (typeof object['poster-frame'] === 'string' && !add(object['poster-frame'])) return null;
+            if (typeof object.poster === 'string' && !add(object.poster)) return null;
         }
     }
     const fonts = theme.master.value['font-files'];
