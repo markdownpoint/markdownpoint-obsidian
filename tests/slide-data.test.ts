@@ -113,7 +113,7 @@ test('ordinary text changes and slide reordering perform no companion writes', a
 test('new slide records survive failed saving, recovery reopening and serialized insertion undo/redo', async () => {
     const { state: disk, host } = device();
     const markdown = '<!-- slide: a -->\n<!-- text: title -->\nFirst\n<!-- slide: b -->\n<!-- text: title -->\nSecond\n';
-    const record = '{"layout":"title","unknown":9007199254740993,"objects":[{"id":"photo","type":"image","src":"assets/picture.png"}]}';
+    const record = '{"layout":"title","unknown":9007199254740993,"objects":[{"id":"photo","type":"image","src":"media/picture.png"}]}';
     const slide = {
         id: 'new',
         markdown: '<!-- slide: new -->\n<!-- text: title -->\nNew thought\n<!-- notes -->\nKeep these notes.\n',

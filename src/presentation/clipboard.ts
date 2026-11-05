@@ -29,8 +29,8 @@ import { SlideCopy } from './copy.ts';
 import type { SlideCopyResult } from './copy.ts';
 import type { PresentationReader } from './reader.ts';
 import { readEmbeddedTheme } from './theme-reader.ts';
-import { ThemeArtworkMismatch, transferSlideAssets } from './transfer-assets.ts';
-import type { TransferredSlides } from './transfer-assets.ts';
+import { ThemeArtworkMismatch, transferSlideFiles } from './transfer-files.ts';
+import type { TransferredSlides } from './transfer-files.ts';
 
 interface CopyContext {
     readonly view: MarkdownView | null;
@@ -172,7 +172,7 @@ export class PresentationClipboard extends Component {
                 let inserted = false;
                 try {
                     if (!samePresentation)
-                        transferred = await transferSlideAssets(
+                        transferred = await transferSlideFiles(
                             this.app,
                             packet,
                             context.file,

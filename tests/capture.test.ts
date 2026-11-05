@@ -29,7 +29,7 @@ const card =
 const badge = '<!-- composition: badge -->\r\n<!-- text: label -->\r\nA small detail.\r\n';
 const source = '<!-- section: intro -->\r\n# Introduction\r\n' + one + '<!-- section: end -->\r\n# Ending\r\n' + two + card + badge;
 const firstRecord =
-    '{"layout":"title","skipped":true,"future":9007199254740993,"escaped":"\\u0061","objects":[{"id":"photo","type":"image","file":"assets/picture.png"}]}';
+    '{"layout":"title","skipped":true,"future":9007199254740993,"escaped":"\\u0061","objects":[{"id":"photo","type":"image","file":"media/picture.png"}]}';
 const secondRecord =
     '{"layout":"body","objects":[{"id":"card","type":"composition","composition":"card"},{"id":"again","type":"composition","composition":"card"}]}';
 const cardRecord =

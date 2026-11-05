@@ -44,7 +44,7 @@ interface Location {
     readonly path: readonly (string | number)[];
     readonly value: string;
 }
-export interface ClipboardAssets {
+export interface ClipboardFiles {
     readonly files: readonly string[];
     /**
      * Each generation record the slides' pictures name, by its id, with the file of the picture it made: it comes beside
@@ -66,7 +66,7 @@ export function recordNaming(text: string, file: string): string | null {
 }
 
 /** Record paths keep ordinary words, links, unknown metadata and numeric source precision untouched. */
-export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets | null {
+export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | null {
     const definitions = new Map<string, Record<string, unknown>>();
     for (const part of captured.compositions) {
         const record = readJsonObject(part.record);

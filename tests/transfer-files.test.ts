@@ -22,7 +22,7 @@ import type { App, TFile as ObsidianFile } from 'obsidian';
 import { TFile, TFolder } from './support/obsidian.ts';
 import { readEmbeddedTheme } from '../src/presentation/theme-reader.ts';
 import { decodeSlideClipboard, encodeSlideClipboard } from '../src/format/clipboard.ts';
-import { ThemeArtworkMismatch, transferSlideAssets } from '../src/presentation/transfer-assets.ts';
+import { ThemeArtworkMismatch, transferSlideFiles } from '../src/presentation/transfer-files.ts';
 
 const sourceId = '11111111-1111-4111-8111-111111111111';
 const targetId = '22222222-2222-4222-8222-222222222222';
@@ -133,10 +133,10 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
     const theme = (await readEmbeddedTheme(vault, 'target/slides.md', { theme: 'basic' }, ['title']))!;
     const record = JSON.stringify({
         layout: 'title',
-        objects: media.map((asset, index) => ({
+        objects: media.map((file, index) => ({
             id: `image-${index}`,
             type: 'image',
-            file: asset,
+            file,
             ...(generated && index === 0 ? { 'image-result': { record: made } } : {})
         }))
     });
@@ -161,7 +161,7 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
         ownerWindow,
         target,
         transfer: (current = () => true, signal = new AbortController().signal) =>
-            transferSlideAssets(app, packet, target as unknown as ObsidianFile, theme, ownerWindow, current, signal)
+            transferSlideFiles(app, packet, target as unknown as ObsidianFile, theme, ownerWindow, current, signal)
     };
 }
 

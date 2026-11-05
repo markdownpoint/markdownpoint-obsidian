@@ -19,7 +19,7 @@
 import { TFile } from 'obsidian';
 import type { TFolder, Vault } from 'obsidian';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
-import { isThemeKey, themeAssetPaths } from '../format/embedded-theme.ts';
+import { isThemeKey, themeFilePaths } from '../format/embedded-theme.ts';
 import { layoutName } from '../format/new-slide.ts';
 import { basicTheme } from '../themes/basic.ts';
 import { readEmbeddedTheme } from './theme-reader.ts';
@@ -44,8 +44,8 @@ export async function readCreationTheme(vault: Vault, folder: TFolder): Promise<
             : []
     );
     const theme = keys.length ? await readEmbeddedTheme(vault, inFolder(parent.path, 'slides.md'), { theme: folder.name }, keys) : null;
-    const assets = theme && themeAssetPaths(theme);
-    return assets && assets.every(path => vault.getFileByPath(`${folder.path}/${path}`)) ? theme : null;
+    const files = theme && themeFilePaths(theme);
+    return files && files.every(path => vault.getFileByPath(`${folder.path}/${path}`)) ? theme : null;
 }
 
 /** Read when the creation dialog opens; no background catalog scan or polling. */

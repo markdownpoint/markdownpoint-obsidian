@@ -81,7 +81,7 @@ test('orphaned and recoverable identities are not recycled by a copied slide', (
     );
 });
 
-test('same-origin asset references require the original vault, document, path and theme sources', () => {
+test('same-origin file references require the original vault, document, path and theme sources', () => {
     assert.equal(sameClipboardPresentation(packet, origin), true);
     assert.equal(sameClipboardPresentation(packet, { ...origin, path: 'deck/Slides.MD' }), true);
     assert.equal(sameClipboardPresentation(packet, { ...origin, path: 'other/slides.md' }), false);

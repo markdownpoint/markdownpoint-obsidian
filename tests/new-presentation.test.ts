@@ -24,7 +24,7 @@ import { prepareNewPresentation } from '../src/format/new-presentation.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { readJsonObject } from '../src/format/json.ts';
 import { presentationIdentity } from '../src/format/recognition.ts';
-import { themeDocument, themeAssetPaths } from '../src/format/embedded-theme.ts';
+import { themeDocument, themeFilePaths } from '../src/format/embedded-theme.ts';
 
 const document = '12345678-1234-4234-8234-123456789abc';
 
@@ -39,7 +39,7 @@ test('the bundled licensed theme has a valid master, every ordered layout and th
 });
 
 test('a new presentation holds every file its Basic theme references, the layouts’ preview as the picture’s bytes', () => {
-    const referenced = themeAssetPaths(basicTheme);
+    const referenced = themeFilePaths(basicTheme);
     assert.ok(referenced?.includes('media/layout-preview.jpg'), 'the image layouts hold the preview');
     for (const file of referenced!) assert.ok(basicThemeFiles.has(file), file);
     const preview = readFileSync(new URL('../src/themes/basic/media/layout-preview.jpg', import.meta.url));
@@ -79,26 +79,26 @@ test('creation refuses invalid identities, keys and missing layouts before retur
 });
 
 test('theme creation inventories media variants, overrides and embedded fonts without sample packages', () => {
-    assert.deepEqual(themeAssetPaths(basicTheme), ['media/layout-preview.jpg']);
-    const make = (asset: unknown) => ({
+    assert.deepEqual(themeFilePaths(basicTheme), ['media/layout-preview.jpg']);
+    const make = (file: unknown) => ({
         ...basicTheme,
         master: {
             ...basicTheme.master,
             value: {
                 ...basicTheme.master.value,
-                objects: [{ file: asset }],
+                objects: [{ file }],
                 'font-files': { Custom: ['fonts/custom.eot'] }
             }
         }
     });
-    assert.deepEqual(themeAssetPaths(make({ light: 'media/light.svg', dark: 'media/dark.svg' })), [
+    assert.deepEqual(themeFilePaths(make({ light: 'media/light.svg', dark: 'media/dark.svg' })), [
         'media/light.svg',
         'media/dark.svg',
         'media/layout-preview.jpg',
         'fonts/custom.eot'
     ]);
     assert.deepEqual(
-        themeAssetPaths({
+        themeFilePaths({
             ...basicTheme,
             master: {
                 ...basicTheme.master,
@@ -121,6 +121,6 @@ test('theme creation inventories media variants, overrides and embedded fonts wi
         'previews/cover.jpg',
         'example/media/file.jpg'
     ]) {
-        assert.equal(themeAssetPaths(make(path)), null, path);
+        assert.equal(themeFilePaths(make(path)), null, path);
     }
 });

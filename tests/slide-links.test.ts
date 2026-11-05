@@ -43,7 +43,7 @@ test('literal code, images, escaped links, reference syntax and autolinks remain
         '    [code](slide:two)\n',
         '\\[escaped](slide:two)',
         '![picture](slide:two)',
-        '![alt [link](slide:two)](assets/picture.png)',
+        '![alt [link](slide:two)](media/picture.png)',
         '[reference][two]\n\n[two]: slide:two "Title"\n',
         '<slide:two>',
         'slide:two',

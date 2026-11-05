@@ -21,8 +21,8 @@ import type { App } from 'obsidian';
 import type { SlideClipboard } from '../format/clipboard.ts';
 import type { CapturedSlides } from '../format/capture.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
-import { themeAssetPaths } from '../format/embedded-theme.ts';
-import { planClipboardAssets, recordNaming } from '../format/clipboard-assets.ts';
+import { themeFilePaths } from '../format/embedded-theme.ts';
+import { planClipboardFiles, recordNaming } from '../format/clipboard-files.ts';
 import { readJsonObject } from '../format/json.ts';
 import { presentationIdentity } from '../format/recognition.ts';
 import { clipboardDigest } from '../settings/clipboard.ts';
@@ -39,7 +39,7 @@ export interface TransferredSlides {
 export class ThemeArtworkMismatch extends Error {}
 
 /** Copy files before a slide edit. Successful imports remain available for native undo/redo. */
-export async function transferSlideAssets(
+export async function transferSlideFiles(
     app: App,
     packet: SlideClipboard,
     destination: TFile,
@@ -48,8 +48,8 @@ export async function transferSlideAssets(
     current: () => boolean,
     signal: AbortSignal
 ): Promise<TransferredSlides> {
-    const plan = planClipboardAssets(packet.captured);
-    const themeFiles = themeAssetPaths(packet.theme);
+    const plan = planClipboardFiles(packet.captured);
+    const themeFiles = themeFilePaths(packet.theme);
     if (!plan || !themeFiles) throw new Error('Clipboard media references are unreadable');
     if (!current() || signal.aborted) throw new Error('Media transfer canceled');
     if (!plan.files.length && !themeFiles.length)

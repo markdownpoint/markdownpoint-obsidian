@@ -78,7 +78,7 @@ export function themeDocument(source: string, kind: 'master' | 'layout'): Record
 }
 
 /** Files declared by a theme's media objects, overrides, and embedded fonts. */
-export function themeAssetPaths(theme: EmbeddedTheme): readonly string[] | null {
+export function themeFilePaths(theme: EmbeddedTheme): readonly string[] | null {
     const paths = new Set<string>();
     const add = (value: unknown): boolean => {
         if (value === undefined || value === null) return true;

@@ -33,7 +33,7 @@ export interface TextSchemaTheme {
 export type TextSchema = 'rich-text' | 'table' | 'chart';
 
 /**
- * Read object types only. No geometry, styles, assets or rendering are evaluated. Returns the IDs of the objects this
+ * Read object types only. No geometry, styles, files or rendering are evaluated. Returns the IDs of the objects this
  * record adds, its own, or null when it doesn't read.
  */
 function applyTypes(types: Map<string, string>, record: Record<string, unknown>, inherits: boolean): Set<string> | null {

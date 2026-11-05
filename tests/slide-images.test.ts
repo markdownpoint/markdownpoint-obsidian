@@ -85,7 +85,7 @@ test('cleared backgrounds, removed objects and empty placeholders do not show sa
     assert.deepEqual(paths({ slides: { one: { background: { image: 'media/own.png' }, objects: [] } } }, null), [root + 'media/own.png']);
 });
 
-test('repeated assets are shown once and video assignments are not treated as images', () => {
+test('repeated files are shown once and video assignments are not treated as images', () => {
     const companion = {
         background: { image: 'media/same.png' },
         slides: {
@@ -103,7 +103,7 @@ test('repeated assets are shown once and video assignments are not treated as im
 });
 
 test('image references cannot escape their declared vault folder or load a remote URL', () => {
-    for (const asset of [
+    for (const file of [
         '../outside.png',
         '/outside.png',
         'media/../../outside.png',
@@ -112,7 +112,7 @@ test('image references cannot escape their declared vault folder or load a remot
         'file:///tmp/image.png',
         'misc/image.png'
     ]) {
-        assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', file: asset }] } } }, null), []);
+        assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', file }] } } }, null), []);
     }
     assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', file: 'media/Wait... what.PNG' }] } } }, null), [
         root + 'media/Wait... what.PNG'
