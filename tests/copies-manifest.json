@@ -1,7 +1,7 @@
 {
   "files": {
     "src/core/chart-number-rules.ts": "5e2316d9cbd5332917f5d6b39af67550b4a056fa05107cd2e2f3a485740aa4bb",
-    "src/core/chart-numbers.ts": "e93e5189ca37ff3ee225e8658a0e23165fa3af5d70dbc15e0b3d0e315c7acc52",
+    "src/core/chart-numbers.ts": "6432ce21f8726f25b22a7b3cb9d743f88fa401d34bd378a5e3251bc1f7bd299a",
     "src/themes/basic/blank.json": "6689d61176f8aab210495be985770256feaab0cab53f6c4981a5516d95672829",
     "src/themes/basic/content-with-header.json": "66a2a4e211e96967aba42231a609d3ad9a75de8aa470fd3086ade10e6c3020d9",
     "src/themes/basic/content.json": "7e4c4c9235651c64d8be8fa07e7f27d3fae53c25df3cfbec284dcc93f9f3b2c4",
