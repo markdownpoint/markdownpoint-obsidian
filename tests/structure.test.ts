@@ -77,6 +77,14 @@ test('unknown geometry, hidden objects and hierarchy are omitted; framed media s
     assert.equal(slideStructure({ layout: 'title' }, null), null);
 });
 
+test('a repeated object stays out of the schematic, since only the MarkdownPoint app places its copies', () => {
+    const dots = { id: 'dots', type: 'image', file: 'media/dot.png', frame: { x: 100, y: 400, width: 80, height: 80 } };
+    const regions = (object: Record<string, unknown>) =>
+        slideStructure({ layout: 'title', overrides: { footer: null, title: null }, objects: [object] }, theme)!.regions.length;
+    assert.equal(regions(dots), 1);
+    assert.equal(regions({ ...dots, repeater: { copies: 3, position: { x: 120, y: 0 } } }), 0);
+});
+
 test('an own object cannot replace an inherited frame by colliding with its identity', () => {
     const preview = slideStructure({ layout: 'title', objects: [{ ...field, frame: { x: 0, y: 0, width: 10, height: 10 } }] }, theme)!;
     assert.equal(preview.regions[0]!.width, 800);

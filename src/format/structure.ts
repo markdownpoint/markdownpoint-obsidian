@@ -115,7 +115,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
             object.hidden === true ||
             object.parent ||
             object['auto-layout'] ||
-            object.repeat ||
+            object.repeater ||
             (object.scale != null && (!isRecord(object.scale) || object.scale.x !== 1 || object.scale.y !== 1)) ||
             !isRecord(frame) ||
             !finite(frame.x) ||
