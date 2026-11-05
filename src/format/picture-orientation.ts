@@ -221,7 +221,7 @@ const AVIF_ORIENTATIONS = { none: [1, 8, 3, 6], 0: [4, 5, 2, 7], 1: [2, 7, 4, 5]
 
 /**
  * An AVIF's orientation, once its primary item (`pitm`) shows a size: the image spatial extents (`ispe`), rotation
- * (`irot`) and mirror (`imir`) properties the item property associations (`ipma`) name for it by their places in
+ * (`irot`) and mirror (`imir`) properties the item property associations (`ipma`) name for it by their indices in
  * `ipco`, inside the file's meta box. Boxes are stepped over by their lengths, a 64-bit one and one reaching its parent's
  * end included.
  */
@@ -245,14 +245,18 @@ function* isobmffFrame(size: number): Reading<number> {
     let extents: { width: number; height: number } | null = null;
     let quarters = 0;
     let mirror: 0 | 1 | 'none' = 'none';
-    for (let offset = ipco.body, place = 1; place <= Math.max(0, ...properties); place++) {
+    for (let offset = ipco.body, propertyIndex = 1; propertyIndex <= Math.max(0, ...properties); propertyIndex++) {
         const property = yield* boxAt(offset, ipco.end);
         if (!property) return 1;
-        if (properties.includes(place) && property.type === 'ispe') {
+        if (properties.includes(propertyIndex) && property.type === 'ispe') {
             // Version and flags, then a 32-bit width and height.
             const sides = property.end - property.body >= 12 ? yield { offset: property.body, length: 12 } : new Uint8Array(0);
             if (sides.length === 12) extents = { width: data(sides).getUint32(4), height: data(sides).getUint32(8) };
-        } else if (properties.includes(place) && (property.type === 'irot' || property.type === 'imir') && property.end > property.body) {
+        } else if (
+            properties.includes(propertyIndex) &&
+            (property.type === 'irot' || property.type === 'imir') &&
+            property.end > property.body
+        ) {
             // Counterclockwise quarter turns in the low two bits, or the mirror's axis in the low bit.
             const value = (yield { offset: property.body, length: 1 })[0]!;
             if (property.type === 'irot') quarters = value & 3;
@@ -265,7 +269,7 @@ function* isobmffFrame(size: number): Reading<number> {
 }
 
 /**
- * The places in `ipco`, counted from 1, of the properties `ipma` associates with `item`. Each association is a byte, or
+ * The indices in `ipco`, counted from 1, of the properties `ipma` associates with `item`. Each association is a byte, or
  * two where the box's flags say so, whose top bit marks the property essential.
  */
 function primaryProperties(ipma: Uint8Array, item: number): number[] | null {
