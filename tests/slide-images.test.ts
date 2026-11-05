@@ -110,7 +110,9 @@ test('image references cannot escape their declared vault folder or load a remot
         'media\\outside.png',
         'https://example.com/image.png',
         'file:///tmp/image.png',
-        'misc/image.png'
+        'misc/image.png',
+        // An animated PNG is a .png, as the format names a picture's file.
+        'media/moving.apng'
     ]) {
         assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', file }] } } }, null), []);
     }

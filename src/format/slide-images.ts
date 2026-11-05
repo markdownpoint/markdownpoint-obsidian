@@ -34,7 +34,7 @@ interface ImageObject {
     scope: string;
     placeholder: boolean;
 }
-const imageExtension = /\.(?:png|apng|jpe?g|gif|webp|svg|avif|bmp)$/i;
+const imageExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp)$/i;
 
 function imagePath(value: unknown, scope: string, presentation: boolean): string | null {
     if (

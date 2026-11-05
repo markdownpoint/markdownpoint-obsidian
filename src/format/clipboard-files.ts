@@ -22,7 +22,7 @@ import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { readJsonObject } from './json.ts';
 import { isRecord, ownEntry } from './recognition.ts';
 
-const mediaExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|mp4|m4v|mov|webm|ogv|mp3|m4a|wav|ogg|flac|glb|eot)$/i;
+const mediaExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|mp4|m4v|mov|webm|ogv|mp3|m4a|wav|ogg|flac|glb)$/i;
 
 /** Only presentation-owned media paths may authorize a cross-presentation file read. */
 export function isPresentationMediaPath(value: string): boolean {

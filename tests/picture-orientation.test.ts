@@ -297,8 +297,7 @@ test("an AVIF's rotation and then its mirror orient it, as every browser draws i
 });
 
 test('a WebP, GIF, BMP or SVG is drawn as stored, its bytes never read', async () => {
-    for (const path of ['a.webp', 'a.gif', 'a.bmp', 'a.svg', 'a.apng', 'noextension'])
-        assert.equal(pictureOrientationReading(path, 100), null, path);
+    for (const path of ['a.webp', 'a.gif', 'a.bmp', 'a.svg', 'noextension']) assert.equal(pictureOrientationReading(path, 100), null, path);
     const { window, served } = serving(png([exif(6)]), 64);
     assert.equal(await readPictureOrientation(window, address('a.webp'), 'media/a.webp', 100), 1);
     assert.equal(served.fetched, 0);

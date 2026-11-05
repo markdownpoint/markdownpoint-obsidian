@@ -167,7 +167,9 @@ test('unsafe or non-media source references cannot authorize a vault read', () =
         'generated/history.json',
         'notes/private.md',
         'https://example.com/image.png',
-        'media/picture.png '
+        'media/picture.png ',
+        // A font is a theme's, never a presentation's media file.
+        'media/font.eot'
     ]) {
         assert.equal(isPresentationMediaPath(path), false, path);
         assert.equal(planClipboardFiles(captured(JSON.stringify({ objects: [{ file: path }] }))), null, path);
