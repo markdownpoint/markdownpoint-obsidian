@@ -75,7 +75,7 @@ export function standingFrame(record: Readonly<Record<string, unknown>>): unknow
     const width = grows.width ? UNMEASURED_TEXT_WIDTH : frame.width;
     const height = grows.height ? (finite(least) && least > UNMEASURED_TEXT_HEIGHT ? least : UNMEASURED_TEXT_HEIGHT) : frame.height;
     if (!finite(width) || !finite(height)) return { ...frame, width, height };
-    // The point the growth holds is the center of the place the file stores, which has no length along a growing side.
+    // The point the growth holds is the center of the frame the file stores, which has no length along a growing side.
     const point = { x: frame.x + (grows.width ? 0 : width / 2), y: frame.y + (grows.height ? 0 : height / 2) };
     const held = heldOffset(record, width, height);
     return { ...frame, x: point.x - held.x - width / 2, y: point.y - held.y - height / 2, width, height };
@@ -97,7 +97,7 @@ function heldOffset(record: Readonly<Record<string, unknown>>, width: number, he
 }
 
 /** The keys of a text record that decide which point its frame's x and y name: which sides grow, the point their growth holds, and the turn and scale it pivots on. */
-export const TEXT_PLACE_KEYS: ReadonlySet<string> = new Set([
+export const TEXT_POINT_KEYS: ReadonlySet<string> = new Set([
     'auto-size',
     'align',
     'text-direction',
@@ -107,11 +107,11 @@ export const TEXT_PLACE_KEYS: ReadonlySet<string> = new Set([
     'scale'
 ]);
 
-/** Two lengths a side that grows to its words is judged at: a place is linear in each length, so two decide it for all. */
+/** Two lengths a side that grows to its words is judged at: a point is linear in each length, so two decide it for all. */
 const JUDGED_LENGTHS = [1000, 2000];
 
 /** Where a text record's frame x and y stand from the center of a box it draws `width` by `height`, its growth, turn and scale read as MarkdownPoint reads them. */
-function placeFromCenter(record: Readonly<Record<string, unknown>>, width: number, height: number): { x: number; y: number } {
+function pointFromCenter(record: Readonly<Record<string, unknown>>, width: number, height: number): { x: number; y: number } {
     const grows = grownSides(record);
     const held = heldOffset(record, width, height);
     return { x: held.x - (grows.width ? 0 : width / 2), y: held.y - (grows.height ? 0 : height / 2) };
@@ -122,7 +122,7 @@ function placeFromCenter(record: Readonly<Record<string, unknown>>, width: numbe
  * level's change of its growth, alignment, direction, columns, path, turn or scale: at every length its words could
  * give a side that grows. A level states each that moves; one it leaves out keeps what the record inherits.
  */
-export function placeMoved(
+export function pointMoved(
     inherited: Readonly<Record<string, unknown>>,
     merged: Readonly<Record<string, unknown>>
 ): { x: boolean; y: boolean } {
@@ -132,9 +132,9 @@ export function placeMoved(
     let y = false;
     for (const width of grows.width ? JUDGED_LENGTHS : [finite(frame.width) ? frame.width : 0])
         for (const height of grows.height ? JUDGED_LENGTHS : [finite(frame.height) ? frame.height : 0]) {
-            const was = placeFromCenter(inherited, width, height);
-            const is = placeFromCenter(merged, width, height);
-            // MarkdownPoint holds a place to the millionth, so one point can round a millionth apart along two paths.
+            const was = pointFromCenter(inherited, width, height);
+            const is = pointFromCenter(merged, width, height);
+            // MarkdownPoint holds a point to the millionth, so the same point can round a millionth apart along two paths.
             x ||= Math.abs(was.x - is.x) > 1.5e-6;
             y ||= Math.abs(was.y - is.y) > 1.5e-6;
         }

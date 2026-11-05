@@ -18,7 +18,7 @@
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { isRecord } from './recognition.ts';
-import { columnCountAsRead, placeMoved, standingFrame, TEXT_PLACE_KEYS } from './text-growth.ts';
+import { columnCountAsRead, pointMoved, standingFrame, TEXT_POINT_KEYS } from './text-growth.ts';
 
 export interface StructureRegion {
     readonly x: number;
@@ -44,14 +44,14 @@ const finite = (value: unknown): value is number => typeof value === 'number' &&
  * moves a part it leaves out, waits, so the text keeps the keys it inherits. MarkdownPoint may still apply such a key
  * alone where it moves nothing; the schematic shows the box its level gives it.
  */
-function heldPlace(
+function heldPoint(
     base: Record<string, unknown>,
     override: Record<string, unknown>,
     merged: Record<string, unknown>
 ): Record<string, unknown> {
-    const changed = Object.keys(override).filter(key => TEXT_PLACE_KEYS.has(key));
+    const changed = Object.keys(override).filter(key => TEXT_POINT_KEYS.has(key));
     if (base.type !== 'text' || changed.length === 0) return merged;
-    const moved = placeMoved(base, merged);
+    const moved = pointMoved(base, merged);
     const frame = isRecord(override.frame) ? override.frame : {};
     if (!(moved.x && !Object.hasOwn(frame, 'x')) && !(moved.y && !Object.hasOwn(frame, 'y'))) return merged;
     const held = { ...merged };
@@ -82,7 +82,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
                 } else if (isRecord(override))
                     objects.set(
                         id,
-                        heldPlace(base, override, {
+                        heldPoint(base, override, {
                             ...base,
                             ...override,
                             type: base.type,
