@@ -84,7 +84,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'إضاءة ثلاثية الأبعاد كما في Blender.',
-                subtext: 'أضواء نقطية وشمسية وبقعية ومساحية مع ظلال.'
+                subtext: 'أضواء نقطية واتجاهية وبقعية ومساحية مع ظلال.'
             },
             {
                 headline: 'تتبّع عروضك في Git.',
@@ -182,7 +182,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D-Beleuchtung wie in Blender.',
-                subtext: 'Punkt, Sonne, Spot und Fläche mit Schatten.'
+                subtext: 'Punkt-, Spot-, Flächen- und gerichtetes Licht mit Schatten.'
             },
             {
                 headline: 'Verwalte deine Präsentationen in Git.',
@@ -280,7 +280,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D lighting like Blender.',
-                subtext: 'Point, sun, spot and area lights with shadows.'
+                subtext: 'Point, directional, spot and area lights with shadows.'
             },
             {
                 headline: 'Track your decks in Git.',
@@ -378,7 +378,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Iluminación 3D como en Blender.',
-                subtext: 'Luces de punto, sol, foco y área con sombras.'
+                subtext: 'Luces de punto, direccionales, de foco y de área con sombras.'
             },
             {
                 headline: 'Versiona tus presentaciones con Git.',
@@ -476,7 +476,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'نورپردازی سه‌بعدی مثل Blender.',
-                subtext: 'نورهای نقطه‌ای، خورشیدی، نورافکن و سطحی با سایه.'
+                subtext: 'نورهای نقطه‌ای، جهت‌دار، نورافکن و سطحی با سایه.'
             },
             {
                 headline: 'ارائه‌هایتان را با Git مدیریت کنید.',
@@ -574,7 +574,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Éclairage 3D comme dans Blender.',
-                subtext: 'Lampes point, soleil, spot et surface avec ombres.'
+                subtext: 'Lumières point, directionnelles, spot et surface avec ombres.'
             },
             {
                 headline: 'Versionnez vos présentations avec Git.',
@@ -672,7 +672,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Pencahayaan 3D ala Blender.',
-                subtext: 'Cahaya titik, matahari, sorot, dan area berbayang.'
+                subtext: 'Cahaya titik, terarah, sorot, dan area berbayang.'
             },
             {
                 headline: 'Lacak presentasi Anda di Git.',
@@ -770,7 +770,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Illuminazione 3D come in Blender.',
-                subtext: 'Luci puntiformi, solari, spot e ad area con ombre.'
+                subtext: 'Luci puntiformi, direzionali, spot e ad area con ombre.'
             },
             {
                 headline: 'Versiona le presentazioni con Git.',
@@ -868,7 +868,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Blender のような 3D ライティング。',
-                subtext: 'ポイント、サン、スポット、エリアのライトと影。'
+                subtext: 'ポイント、指向性、スポット、エリアのライトと影。'
             },
             {
                 headline: 'プレゼンを Git で管理できます。',
@@ -966,7 +966,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Blender 같은 3D 조명.',
-                subtext: '포인트, 태양, 스폿, 영역 조명과 그림자.'
+                subtext: '포인트, 디렉셔널, 스폿, 영역 조명과 그림자.'
             },
             {
                 headline: '발표 자료를 Git으로 관리하세요.',
@@ -1064,7 +1064,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D-belichting zoals in Blender.',
-                subtext: 'Punt-, zon-, spot- en vlaklampen met schaduwen.'
+                subtext: 'Punt-, richtings-, spot- en vlaklichten met schaduwen.'
             },
             {
                 headline: 'Beheer je presentaties in Git.',
@@ -1162,7 +1162,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Oświetlenie 3D jak w Blender.',
-                subtext: 'Punkt, słońce, reflektor i obszar z cieniami.'
+                subtext: 'Światła punktowe, kierunkowe, reflektorowe i powierzchniowe z cieniami.'
             },
             {
                 headline: 'Śledź zmiany prezentacji w Git.',
@@ -1260,7 +1260,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Iluminação 3D como no Blender.',
-                subtext: 'Luzes ponto, sol, foco e área com sombras.'
+                subtext: 'Luzes ponto, direcionais, foco e área com sombras.'
             },
             {
                 headline: 'Controle versões no Git.',
@@ -1358,7 +1358,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Iluminação 3D como no Blender.',
-                subtext: 'Luzes ponto, sol, spot e área com sombras.'
+                subtext: 'Luzes ponto, direcionais, spot e área com sombras.'
             },
             {
                 headline: 'Versione suas apresentações no Git.',
@@ -1456,7 +1456,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D-освещение как в Blender.',
-                subtext: 'Точка, солнце, прожектор и область с тенями.'
+                subtext: 'Точечный, направленный, прожекторный и площадной свет с тенями.'
             },
             {
                 headline: 'Храните версии слайдов в Git.',
@@ -1554,7 +1554,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'แสงไฟ 3D แบบ Blender',
-                subtext: 'ไฟแบบจุด ดวงอาทิตย์ สปอต และพื้นที่ พร้อมเงา'
+                subtext: 'ไฟแบบจุด แบบทิศทาง สปอต และพื้นที่ พร้อมเงา'
             },
             {
                 headline: 'ติดตามงานนำเสนอของคุณใน Git',
@@ -1652,7 +1652,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Blender gibi 3D ışıklandırma.',
-                subtext: 'Gölgeli nokta, güneş, spot ve alan ışıkları.'
+                subtext: 'Gölgeli nokta, yönlü, spot ve alan ışıkları.'
             },
             {
                 headline: "Sunumlarınızı Git'te takip edin.",
@@ -1750,7 +1750,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D-освітлення як у Blender.',
-                subtext: 'Точка, сонце, прожектор і область з тінями.'
+                subtext: 'Точкове, спрямоване, прожекторне й площинне світло з тінями.'
             },
             {
                 headline: 'Відстежуйте зміни презентацій у Git.',
@@ -1848,7 +1848,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Ánh sáng 3D như Blender.',
-                subtext: 'Đèn điểm, mặt trời, spot và vùng có đổ bóng.'
+                subtext: 'Đèn điểm, định hướng, spot và vùng có đổ bóng.'
             },
             {
                 headline: 'Theo dõi bộ slide trong Git.',
@@ -1946,7 +1946,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '像 Blender 一样的 3D 灯光。',
-                subtext: '点光、日光、聚光和面光，都带阴影。'
+                subtext: '点光、平行光、聚光和面光，都带阴影。'
             },
             {
                 headline: '用 Git 管理你的演示文稿。',
@@ -2044,7 +2044,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '像 Blender 一樣的 3D 燈光。',
-                subtext: '點光、日光、聚光和面光，都有陰影。'
+                subtext: '點光、平行光、聚光和面光，都有陰影。'
             },
             {
                 headline: '用 Git 管理你的簡報。',
