@@ -53,6 +53,11 @@ test('text areas retain their whole frame and column divisions', () => {
     assert.equal(preview.regions[0]!.columns, 2);
     assert.equal(preview.regions[0]!.gutter, 40);
     assert.equal(preview.regions[0]!.height, 180);
+    // A text style has no columns, as MarkdownPoint reads one: an object's own count and gutter are its only ones.
+    const styled = { ...master, 'text-styles': { body: { 'column-count': 3, 'column-gutter': 10 } } };
+    const styledTheme = { ...theme, master: { ...theme.master, source: JSON.stringify(styled), value: styled } };
+    const plain = slideStructure({ layout: 'title', overrides: { footer: null, title: { 'text-style': 'body' } } }, styledTheme)!;
+    assert.deepEqual([plain.regions[0]!.columns, plain.regions[0]!.gutter], [1, 48]);
 });
 
 test('unknown geometry, hidden objects and hierarchy are omitted; framed media stays neutral', () => {

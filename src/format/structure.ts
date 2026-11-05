@@ -133,10 +133,9 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
         // Slide-owned text remains editable even without the theme placeholder flag.
         if (text && object.placeholder !== true && !ownIds.has(String(object.id))) continue;
         if (!text && !['image', 'video', 'web-video', 'composition'].includes(object.type)) continue;
-        const styles = master['text-styles'];
-        const style = isRecord(styles) && typeof object['text-style'] === 'string' ? styles[object['text-style']] : undefined;
-        const count = object['column-count'] ?? (isRecord(style) ? style['column-count'] : undefined) ?? 1;
-        const gap = object['column-gutter'] ?? (isRecord(style) ? style['column-gutter'] : undefined) ?? 48;
+        // A text style has no columns: an object states its own.
+        const count = object['column-count'] ?? 1;
+        const gap = object['column-gutter'] ?? 48;
         const columns = object.type === 'text' ? columnCountAsRead(count) : 1;
         // Dense column grids cannot be distinguished at thumbnail scale.
         if (!finite(columns) || !Number.isInteger(columns) || columns < 1 || columns > 12) continue;
