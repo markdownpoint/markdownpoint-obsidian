@@ -189,8 +189,8 @@ export const THEME_CELL_LOCALE = "en-US";
  * The rule a chart's cells read by: a theme's own words, which `scope` marks, are written as en-US, so a deck in any
  * language shows them alike, and a deck's own words as the deck's language, `locale`.
  */
-export function chartCellRule(carrier: { scope?: "theme" } | undefined, locale: string): ChartNumberRule {
-  return chartNumberRule(carrier?.scope === "theme" ? THEME_CELL_LOCALE : locale);
+export function chartCellRule(content: { scope?: "theme" } | undefined, locale: string): ChartNumberRule {
+  return chartNumberRule(content?.scope === "theme" ? THEME_CELL_LOCALE : locale);
 }
 
 /** Whole digits in their groups: the primary width nearest the point, the secondary beyond it. */
