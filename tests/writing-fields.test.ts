@@ -87,7 +87,7 @@ test('numbered fields, allocated copies and composition controls retain independ
             ['Title', 'title'],
             ['Body 2', 'body'],
             ['Body 3', 'body'],
-            ['Caption', 'body'],
+            ['caption', 'body'],
             ['Text', 'body'],
             ['Notes', 'body']
         ]
@@ -95,4 +95,20 @@ test('numbered fields, allocated copies and composition controls retain independ
     const keys = [...fields.map(field => field.key), slideNotes(markdown, document, 'Notes')[0]!.field!.key];
     assert.equal(new Set(keys).size, keys.length);
     assert.ok(fields.every(field => field.markerText === markdown.slice(field.from, field.contentFrom)));
+});
+
+test("a control's field keeps its whole name after the instance's first dot, and only the name title is a title", () => {
+    const ids = ['badge.Step 1.5', 'badge.Intro.title', 'badge.title', 'badge.body-2', 'badge.見出し'];
+    const markdown = '<!-- slide: first -->\n' + ids.map(id => `<!-- text: ${id} -->\nWords.\n\n`).join('');
+    const fields = writingFields(markdown, indexPresentation(markdown, 0)!, labels);
+    assert.deepEqual(
+        fields.map(field => [field.key, field.label, field.role]),
+        [
+            ['first:text:badge.Step 1.5', 'Step 1.5', 'body'],
+            ['first:text:badge.Intro.title', 'Intro.title', 'body'],
+            ['first:text:badge.title', 'title', 'title'],
+            ['first:text:badge.body-2', 'body-2', 'body'],
+            ['first:text:badge.見出し', '見出し', 'body']
+        ]
+    );
 });

@@ -60,6 +60,13 @@ test('a numbered or duplicated Title keeps priority over earlier body text', () 
     }
 });
 
+test("a control is a Title only by its whole name, never by the words after its name's last dot", () => {
+    for (const id of ['card.Intro.title', 'card.Step 1.title']) {
+        const markdown = `<!-- slide: first -->\n<!-- text: body -->\nEarlier body\n<!-- text: ${id} -->\nNot the title\n`;
+        assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, 'Title', new Set())[0]!.title, 'Earlier body', id);
+    }
+});
+
 test('sections keep authored names, empty sections, and continuous numbers around skipped slides', () => {
     const markdown =
         '<!-- section: intro -->\r\n# *A beginning* &amp; a promise\r\n\r\n<!-- slide: first -->\r\n<!-- text: title -->\r\nFirst idea.\r\n<!-- slide: skipped -->\r\n<!-- text: title -->\r\nAn aside.\r\n<!-- section: empty -->\r\n# Room to think\r\n<!-- section: closing -->\r\n# Closing\r\n<!-- slide: last -->\r\n<!-- text: title -->\r\nA last thought.\r\n<!-- section: trailing -->\r\n# Later\r\n';
