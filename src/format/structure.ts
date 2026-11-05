@@ -112,7 +112,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
         // Hierarchy, animation, auto layout and 3D require the MarkdownPoint app's renderer. Keep this
         // a source schematic instead of presenting guessed resolved positions.
         if (
-            object.hidden === true ||
+            object.visible === false ||
             object.parent ||
             object['auto-layout'] ||
             object.repeater ||

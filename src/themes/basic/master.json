@@ -164,7 +164,7 @@
       "id": "slide-number",
       "type": "text",
       "locked": true,
-      "hidden": true,
+      "visible": false,
       "frame": {
         "x": 1704,
         "y": 1004.4,

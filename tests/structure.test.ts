@@ -64,7 +64,7 @@ test('unknown geometry, hidden objects and hierarchy are omitted; framed media s
     const preview = slideStructure(
         {
             layout: 'title',
-            overrides: { footer: null, title: { hidden: true } },
+            overrides: { footer: null, title: { visible: false } },
             objects: [
                 { ...field, id: 'nested', parent: 'group' },
                 { ...field, id: 'scaled', scale: { x: 2, y: 2 } },
