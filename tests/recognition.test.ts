@@ -44,6 +44,19 @@ test('a saved version stays ordinary Markdown, as MarkdownPoint opens one only f
         presentationCompanionPath('Talk/versions/2026-10-30T16.20.05Z/slides.md'),
         'Talk/versions/2026-10-30T16.20.05Z/presentation.mdpoint'
     );
+    // A version is saved on a day the calendar has, at a time the clock shows, as MarkdownPoint names one.
+    for (const time of ['2024-02-29T00.00.00Z', '2000-02-29T23.59.59Z'])
+        assert.equal(presentationCompanionPath(`versions/${time}-k3pz/slides.md`), null, time);
+    for (const time of [
+        '2026-02-29T16.20.05Z',
+        '1900-02-29T16.20.05Z',
+        '0000-01-01T16.20.05Z',
+        '2026-04-31T16.20.05Z',
+        '2026-10-30T24.00.00Z',
+        '2026-10-30T16.60.05Z',
+        '2026-10-30T16.20.60Z'
+    ])
+        assert.equal(presentationCompanionPath(`versions/${time}-k3pz/slides.md`), `versions/${time}-k3pz/presentation.mdpoint`, time);
 });
 
 test('pair discovery keeps actual filename case and leaves unrelated notes alone', () => {

@@ -49,7 +49,7 @@ export function prepareClipboardPaste(
     document: PresentationDocument,
     companion: string,
     remembered: ReadonlyMap<string, string>,
-    mint: () => string,
+    mint: (used: ReadonlySet<string>) => string,
     restoreCut = false
 ): CapturedSlides | null {
     const slides = CompanionDocument.read(companion);

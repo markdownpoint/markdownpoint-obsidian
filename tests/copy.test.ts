@@ -44,8 +44,12 @@ const allocator = (start = 0) => {
     let count = start;
     return () => `new-${++count}`;
 };
-const prepare = (held: readonly CapturedPart[] = [], value = captured, mint = allocator(), occupied = new Set<string>()) =>
-    prepareSlideCopies(value, held, occupied, fields(value), mint);
+const prepare = (
+    held: readonly CapturedPart[] = [],
+    value = captured,
+    mint: (used: ReadonlySet<string>) => string = allocator(),
+    occupied = new Set<string>()
+) => prepareSlideCopies(value, held, occupied, fields(value), mint);
 
 test('copy groups receive fresh slide identities and new dependencies arrive before their parents', () => {
     const before = JSON.stringify(captured);
@@ -66,6 +70,15 @@ test('copy groups receive fresh slide identities and new dependencies arrive bef
     assert.equal(result.slides[1]!.record, placement('new-4'));
     assert.equal(result.compositions[1]!.record, placement('new-3'));
     assert.equal(JSON.stringify(captured), before);
+});
+
+test('each fresh identity is drawn against the identities in use, the ones drawn before it included', () => {
+    const firstFree = (used: ReadonlySet<string>) => ['new-1', 'new-2', 'new-3', 'new-4', 'new-5'].find(id => !used.has(id))!;
+    const result = prepare([], captured, firstFree, new Set(['new-1']))!;
+    assert.deepEqual(
+        [...result.slides, ...result.compositions].map(part => part.id),
+        ['new-2', 'new-3', 'new-4', 'new-5']
+    );
 });
 
 test('unchanged definitions are reused under their existing identities', () => {

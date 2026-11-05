@@ -18,8 +18,16 @@
 
 import { formatStanding, opensFormatVersion } from './format-version.ts';
 
-/** A saved version's folder, `versions/` and its save time and tail, which MarkdownPoint opens only from its presentation. */
-const SAVED_VERSION = /(?:^|\/)versions\/[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}\.[0-9]{2}\.[0-9]{2}Z-[a-z0-9]{4}\/[^/]*$/;
+/** A day the calendar has, from year 0001 on, February 29 in leap years alone: a year divisible by 4, a century only when divisible by 400. */
+const CALENDAR_DAY =
+    '(?!0000)(?:[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))' +
+    '|(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)';
+
+/**
+ * A saved version's folder, `versions/` and its save time in UTC to the second on a day the calendar has, then its
+ * tail, which MarkdownPoint opens only from its presentation.
+ */
+const SAVED_VERSION = new RegExp(`(?:^|/)versions/${CALENDAR_DAY}T(?:[01][0-9]|2[0-3])\\.[0-5][0-9]\\.[0-5][0-9]Z-[a-z0-9]{4}/[^/]*$`);
 
 export function presentationCompanionPath(markdownPath: string): string | null {
     const slash = markdownPath.lastIndexOf('/');

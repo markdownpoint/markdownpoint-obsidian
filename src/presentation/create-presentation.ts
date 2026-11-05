@@ -18,6 +18,7 @@
 
 import { Component, Modal, Notice, TFile, TFolder, getFrontMatterInfo } from 'obsidian';
 import type { App } from 'obsidian';
+import { mintId } from '../format/id-allocation.ts';
 import { prepareNewPresentation, presentationFolderName } from '../format/new-presentation.ts';
 import { orderedLayouts } from '../format/new-slide.ts';
 import { slideStructure } from '../format/structure.ts';
@@ -90,7 +91,7 @@ export class PresentationCreation extends Component {
             (parent.isRoot() ? this.app.vault.getRoot() : this.app.vault.getFolderByPath(parentPath)) === parent;
         const theme = choice.folder ? await readCreationTheme(this.app.vault, choice.folder) : choice.theme;
         if (!theme || theme.id !== choice.theme.id) throw new Error(uiText.presentations.themeChanged);
-        const made = prepareNewPresentation(theme, crypto.randomUUID(), `id-${crypto.randomUUID()}`);
+        const made = prepareNewPresentation(theme, crypto.randomUUID(), mintId());
         if (!made) throw new Error(uiText.presentations.themeChanged);
         const files = new Map<string, string | Uint8Array | TFile>();
         if (choice.folder) {

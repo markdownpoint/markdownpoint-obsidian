@@ -21,6 +21,7 @@ import type { App, TFile } from 'obsidian';
 import { decodeSlideClipboard, SLIDE_CLIPBOARD_MIME } from '../format/clipboard.ts';
 import { clipboardVaultId, clipboardDigest, ownsClipboardCut, CLIPBOARD_CUT_KEY } from '../settings/clipboard.ts';
 import { uiText } from '../ui-text.ts';
+import { mintId } from '../format/id-allocation.ts';
 import { readJsonObject } from '../format/json.ts';
 import { prepareClipboardPaste, sameClipboardPresentation, sameClipboardTheme } from '../format/paste.ts';
 import type { PresentationEditor } from '../editor/presentation-editor.ts';
@@ -193,7 +194,7 @@ export class PresentationClipboard extends Component {
                         snapshot.document,
                         companion,
                         remembered,
-                        () => `id-${crypto.randomUUID()}`,
+                        mintId,
                         digest !== null && ownsClipboardCut(this.app, digest)
                     );
                     const valid = () => current() && (!transferred || transferred.current());

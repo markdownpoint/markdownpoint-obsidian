@@ -21,7 +21,9 @@ import type { App, MarkdownView, TAbstractFile } from 'obsidian';
 import type { PresentationEditor } from '../editor/presentation-editor.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 import { embeddedThemePaths } from '../format/embedded-theme.ts';
+import { mintId } from '../format/id-allocation.ts';
 import { prepareNewSlide } from '../format/new-slide.ts';
+import { isRecord } from '../format/recognition.ts';
 import { readJsonObject } from '../format/json.ts';
 import { uiText } from '../ui-text.ts';
 import type { SharedSettings } from '../settings/shared.ts';
@@ -156,7 +158,11 @@ export class SlideCreation extends Component {
                 new Notice(uiText.slides.layoutChanged);
                 return;
             }
-            const prepared = prepareNewSlide(theme, key, `id-${crypto.randomUUID()}`);
+            // Fresh against every slide and composition the file or its companion names, as insertion refuses those.
+            const taken = (id: string) =>
+                [...snapshot.document.slides, ...snapshot.document.compositions].some(part => part.id === id) ||
+                [metadata.slides, metadata.compositions].some(records => isRecord(records) && Object.hasOwn(records, id));
+            const prepared = prepareNewSlide(theme, key, mintId({ has: taken }));
             const canApply = () =>
                 current() &&
                 !themeChanged &&

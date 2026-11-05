@@ -55,7 +55,7 @@ export function prepareSlideCopies(
     held: readonly CapturedPart[],
     occupied: ReadonlySet<string>,
     schemas: ReadonlyMap<string, ReadonlyMap<string, TextSchema>>,
-    mint: () => string,
+    mint: (used: ReadonlySet<string>) => string,
     preserveSlideIds = false
 ): CapturedSlides | null {
     const incoming = [...captured.slides, ...captured.compositions];
@@ -68,7 +68,7 @@ export function prepareSlideCopies(
     const definitions = new Map(captured.compositions.map(part => [part.id, part]));
     const used = new Set([...occupied, ...incoming.map(part => part.id), ...held.map(part => part.id)]);
     const fresh = (): string | null => {
-        const id = mint();
+        const id = mint(used);
         if (!isStableId(id) || used.has(id)) return null;
         used.add(id);
         return id;
