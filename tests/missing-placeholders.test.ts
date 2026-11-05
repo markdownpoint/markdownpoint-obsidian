@@ -28,7 +28,7 @@ import { prepareNewSlide } from '../src/format/new-slide.ts';
 import type { EmbeddedTheme } from '../src/format/embedded-theme.ts';
 import type { TextFieldLabels } from '../src/format/text-binding.ts';
 import { slideInsertionTransaction } from '../src/editor/insert.ts';
-import { missingSlots, validatedSlotInsertion } from '../src/editor/writing-fields.ts';
+import { missingPlaceholders, validatedPlaceholderInsertion } from '../src/editor/writing-fields.ts';
 import { PresentationEditor } from '../src/editor/presentation-editor.ts';
 import { NotesUi } from '../src/settings/notes-ui.ts';
 import type { PresentationReader } from '../src/presentation/reader.ts';
@@ -43,7 +43,7 @@ const deck =
     '<!-- slide: words -->\n<!-- text: body -->\nWords.\n\n' +
     '<!-- slide: noted -->\n<!-- text: title -->\nA title\n<!-- notes -->\nSay it.\n\n' +
     '<!-- slide: own -->\n<!-- text: chart -->\nNorth\n\n<!-- notes -->\nPoint.\n';
-const slots = new Map<string, readonly string[]>([
+const placeholders = new Map<string, readonly string[]>([
     ['empty', ['eyebrow', 'title', 'body']],
     ['words', ['title', 'body']],
     ['noted', ['title', 'body']],
@@ -51,10 +51,10 @@ const slots = new Map<string, readonly string[]>([
 ]);
 const at = (text: string) => deck.indexOf(text);
 
-test("a layout's slots without blocks go in its reading order among the slot blocks, else after the words, before notes", () => {
-    const missing = missingSlots(indexPresentation(deck, 0)!, slots, labels);
+test("a layout's placeholders without blocks go in its reading order among the placeholder blocks, else after the words, before notes", () => {
+    const missing = missingPlaceholders(indexPresentation(deck, 0)!, placeholders, labels);
     assert.deepEqual(
-        missing.map(slot => [slot.slideId, slot.id, slot.label, slot.at, slot.opening]),
+        missing.map(placeholder => [placeholder.slideId, placeholder.id, placeholder.label, placeholder.at, placeholder.opening]),
         [
             ['empty', 'eyebrow', 'Eyebrow', at('<!-- slide: words'), true],
             ['empty', 'title', 'Title', at('<!-- slide: words'), true],
@@ -67,11 +67,13 @@ test("a layout's slots without blocks go in its reading order among the slot blo
     );
 });
 
-test('writing in a missing slot adds only its marker, with the caret on its writable line', () => {
+test('writing in a missing placeholder adds only its marker, with the caret on its writable line', () => {
     const document = indexPresentation(deck, 0)!;
     const write = (slideId: string, id: string) => {
-        const slot = missingSlots(document, slots, labels).find(slot => slot.slideId === slideId && slot.id === id)!;
-        const insertion = validatedSlotInsertion(deck, document, slot)!;
+        const placeholder = missingPlaceholders(document, placeholders, labels).find(
+            placeholder => placeholder.slideId === slideId && placeholder.id === id
+        )!;
+        const insertion = validatedPlaceholderInsertion(deck, document, placeholder)!;
         assert.ok(insertion);
         const written = deck.slice(0, insertion.from) + insertion.insert + deck.slice(insertion.from);
         const block = indexPresentation(written, 0)!
@@ -85,14 +87,14 @@ test('writing in a missing slot adds only its marker, with the caret on its writ
     assert.equal(write('noted', 'body'), deck.replace('A title\n', 'A title\n\n<!-- text: body -->\n\n'));
     const document2 = indexPresentation(write('words', 'title'), 0)!;
     assert.equal(
-        missingSlots(document2, slots, labels).some(slot => slot.slideId === 'words'),
+        missingPlaceholders(document2, placeholders, labels).some(placeholder => placeholder.slideId === 'words'),
         false
     );
-    const stale = missingSlots(document, slots, labels).find(slot => slot.slideId === 'words')!;
-    assert.equal(validatedSlotInsertion(write('words', 'title'), document2, stale), null);
+    const stale = missingPlaceholders(document, placeholders, labels).find(placeholder => placeholder.slideId === 'words')!;
+    assert.equal(validatedPlaceholderInsertion(write('words', 'title'), document2, stale), null);
 });
 
-/** The draft's fields for slots without blocks; the widget class is internal to the editor. */
+/** The draft's fields for placeholders without blocks; the widget class is internal to the editor. */
 function missingFields(state: EditorState): number {
     let fields = 0;
     for (const decorations of state.facet(EditorView.decorations)) {
@@ -105,7 +107,7 @@ function missingFields(state: EditorState): number {
     return fields;
 }
 
-test('Live Preview shows each missing slot as an empty field until its marker stands, mapped while parsing stops', () => {
+test('Live Preview shows each missing placeholder as an empty field until its marker stands, mapped while parsing stops', () => {
     const reader = {
         snapshot(_file: unknown, markdown: string) {
             const document = indexPresentation(markdown, 0);
@@ -115,7 +117,7 @@ test('Live Preview shows each missing slot as an empty field until its marker st
                     bodyStart: 0,
                     document,
                     images: new Map(),
-                    slots,
+                    placeholders,
                     outline: { slides: document.slides.map(slide => ({ id: slide.id, skipped: false })), sections: [] }
                 }
             );
@@ -149,7 +151,7 @@ function layoutTheme(): EmbeddedTheme {
     };
 }
 
-test('a new slide opens on its first slot in Live Preview and Source mode, the others shown until they have words', () => {
+test('a new slide opens on its first placeholder in Live Preview and Source mode, the others shown until they have words', () => {
     const source = '<!-- slide: one -->\n<!-- text: title -->\nOne\n\n<!-- slide: two -->\n<!-- text: title -->\nTwo\n';
     const part = prepareNewSlide(layoutTheme(), 'title', 'new')!;
     for (const [after, livePreview, expected] of [
@@ -164,9 +166,9 @@ test('a new slide opens on its first slot in Live Preview and Source mode, the o
         const document = indexPresentation(expected, 0)!;
         const slide = document.slides.find(slide => slide.id === 'new')!;
         assert.equal(next.selection.main.head, slide.blocks[0]!.contentFrom);
-        const others = missingSlots(document, new Map([['new', ['title', 'body']]]), labels);
+        const others = missingPlaceholders(document, new Map([['new', ['title', 'body']]]), labels);
         assert.deepEqual(
-            others.map(slot => [slot.id, slot.at]),
+            others.map(placeholder => [placeholder.id, placeholder.at]),
             [['body', slide.blocks[0]!.to]]
         );
     }

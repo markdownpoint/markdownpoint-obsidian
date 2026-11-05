@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { prepareNewSlide, orderedLayouts, layoutName, layoutTextSlots, slideTextSlots } from '../src/format/new-slide.ts';
+import { prepareNewSlide, orderedLayouts, layoutName, layoutTextPlaceholders, slideTextPlaceholders } from '../src/format/new-slide.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { planSlideInsertion } from '../src/format/insert.ts';
 import type { EmbeddedTheme } from '../src/format/embedded-theme.ts';
@@ -51,7 +51,7 @@ const layouts = theme({
     text: { title: 'Do not save sample words', branding: 'Fixed artwork' }
 });
 
-test("a new slide is its marker and its first slot's, the layout giving the other empty slots without samples or images", () => {
+test("a new slide is its marker and its first placeholder's, the layout giving the other empty placeholders without samples or images", () => {
     const part = prepareNewSlide(layouts, 'title', 'new-slide')!;
     assert.deepEqual(JSON.parse(part.record), { layout: 'title' });
     assert.equal(part.markdown, '<!-- slide: new-slide -->\n\n<!-- text: eyebrow -->\n');
@@ -59,11 +59,14 @@ test("a new slide is its marker and its first slot's, the layout giving the othe
         indexPresentation(part.markdown, 0)!.slides[0]!.blocks.map(block => [block.kind, block.id]),
         [['text', 'eyebrow']]
     );
-    assert.deepEqual(layoutTextSlots(layouts, 'title'), ['eyebrow', 'title', 'body']);
-    assert.deepEqual(layoutTextSlots(layouts, 'blank'), []);
-    assert.deepEqual(slideTextSlots({ layout: 'title', overrides: { eyebrow: null, title: { frame: {} } } }, layouts), ['title', 'body']);
-    assert.deepEqual(slideTextSlots({ layout: 'missing' }, layouts), []);
-    assert.deepEqual(slideTextSlots({ layout: 'title' }, null), []);
+    assert.deepEqual(layoutTextPlaceholders(layouts, 'title'), ['eyebrow', 'title', 'body']);
+    assert.deepEqual(layoutTextPlaceholders(layouts, 'blank'), []);
+    assert.deepEqual(slideTextPlaceholders({ layout: 'title', overrides: { eyebrow: null, title: { frame: {} } } }, layouts), [
+        'title',
+        'body'
+    ]);
+    assert.deepEqual(slideTextPlaceholders({ layout: 'missing' }, layouts), []);
+    assert.deepEqual(slideTextPlaceholders({ layout: 'title' }, null), []);
 });
 
 test('a blank layout creates a valid slide without persisting an empty notes marker', () => {
@@ -125,7 +128,7 @@ test('multicolumn writing reads down each column under a spanning title', () => 
             field('left-heading', 40, 160, 400, 80)
         ]
     });
-    assert.deepEqual(layoutTextSlots(columns, 'title'), ['title', 'left-heading', 'left-body', 'right-heading', 'right-body']);
+    assert.deepEqual(layoutTextPlaceholders(columns, 'title'), ['title', 'left-heading', 'left-body', 'right-heading', 'right-body']);
 });
 
 test('a title that grows to its words, holding no height, still reads before the body under it', () => {
@@ -135,5 +138,5 @@ test('a title that grows to its words, holding no height, still reads before the
             { id: 'title', type: 'text', placeholder: true, 'auto-size': 'height', frame: { x: 80, y: 150, width: 600 } }
         ]
     });
-    assert.deepEqual(layoutTextSlots(growing, 'title'), ['title', 'body']);
+    assert.deepEqual(layoutTextPlaceholders(growing, 'title'), ['title', 'body']);
 });

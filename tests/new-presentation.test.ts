@@ -46,7 +46,7 @@ test('a new presentation holds every file its Basic theme references, the layout
     assert.deepEqual(basicThemeFiles.get('media/layout-preview.jpg'), new Uint8Array(preview));
 });
 
-test('a new presentation has matching identity, the chosen theme, and a first slide open on its first slot', () => {
+test('a new presentation has matching identity, the chosen theme, and a first slide open on its first placeholder', () => {
     const made = prepareNewPresentation(basicTheme, document, 'opening')!;
     const companion = readJsonObject(made.companion)!;
     assert.equal(presentationIdentity({ markdownpoint: '1.0', id: document }, companion), document);

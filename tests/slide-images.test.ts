@@ -49,7 +49,7 @@ const theme: EmbeddedTheme = {
 const paths = (value: unknown, embedded: EmbeddedTheme | null = theme) =>
     assignedSlideImages(path, value, 'one', embedded).map(image => image.path);
 
-test('assigned images prioritize background, named layout slots, then other pictures', () => {
+test('assigned images prioritize background, named layout placeholders, then other pictures', () => {
     const companion = {
         background: { image: 'media/back.svg' },
         slides: {

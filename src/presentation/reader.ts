@@ -33,7 +33,7 @@ import { assignedSlideImages } from '../format/slide-images.ts';
 import { readSlideImages } from './image-reader.ts';
 import type { SlideImagePreview } from './image-reader.ts';
 import { slideStructure } from '../format/structure.ts';
-import { slideTextSlots } from '../format/new-slide.ts';
+import { slideTextPlaceholders } from '../format/new-slide.ts';
 import { CompanionDocument } from '../format/companion.ts';
 
 interface PresentationSource {
@@ -53,8 +53,8 @@ export interface PresentationSnapshot {
     readonly document: PresentationDocument;
     readonly outline: OutlinePresentation;
     readonly images: ReadonlyMap<string, readonly SlideImagePreview[]>;
-    /** Each slide's layout text slots in reading order, with or without their blocks. */
-    readonly slots: ReadonlyMap<string, readonly string[]>;
+    /** Each slide's layout text placeholders in reading order, with or without their blocks. */
+    readonly placeholders: ReadonlyMap<string, readonly string[]>;
 }
 
 export class PresentationReader extends Component {
@@ -369,7 +369,7 @@ export class PresentationReader extends Component {
         const skipped = new Set<string>();
         const images = new Map<string, readonly SlideImagePreview[]>();
         const structures = new Map<string, ReturnType<typeof slideStructure>>();
-        const slots = new Map<string, readonly string[]>();
+        const placeholders = new Map<string, readonly string[]>();
         for (const slide of document.slides) {
             let metadata: unknown = slides[slide.id];
             if (!Object.hasOwn(slides, slide.id)) {
@@ -380,7 +380,7 @@ export class PresentationReader extends Component {
             if (!isRecord(metadata) || (metadata.skipped !== undefined && typeof metadata.skipped !== 'boolean')) return null;
             if (metadata.skipped === true) skipped.add(slide.id);
             structures.set(slide.id, slideStructure(metadata, source.theme));
-            slots.set(slide.id, slideTextSlots(metadata, source.theme));
+            placeholders.set(slide.id, slideTextPlaceholders(metadata, source.theme));
             const current = Object.hasOwn(slides, slide.id)
                 ? source.companion
                 : { ...source.companion, slides: { ...slides, [slide.id]: metadata } };
@@ -393,7 +393,7 @@ export class PresentationReader extends Component {
             bodyStart: identity.bodyStart,
             document,
             images,
-            slots,
+            placeholders,
             outline: {
                 documentId: identity.id,
                 path: source.path,

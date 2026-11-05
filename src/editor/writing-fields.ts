@@ -63,19 +63,19 @@ export function writingFields(markdown: string, document: PresentationDocument, 
     return fields;
 }
 
-/** A layout's slot a slide gives no block yet: it shows as its empty field, and writing there writes its marker. */
-export interface MissingSlot {
+/** A layout's placeholder a slide gives no block yet: it shows as its empty field, and writing there writes its marker. */
+export interface MissingPlaceholder {
     readonly key: string;
     readonly slideId: string;
     readonly id: string;
     readonly role: WritingField['role'];
     readonly label: string;
-    /** Where its block goes: in the layout's reading order among the slot blocks, else after the slide's words, before its notes. */
+    /** Where its block goes: in the layout's reading order among the placeholder blocks, else after the slide's words, before its notes. */
     readonly at: number;
     readonly opening: boolean;
 }
 
-function slotPosition(slide: DocumentSlide, order: readonly string[], index: number): number {
+function placeholderPosition(slide: DocumentSlide, order: readonly string[], index: number): number {
     const rank = (id: string | null) => (id === null ? -1 : order.indexOf(id));
     const words = slide.blocks.filter(block => block.kind !== 'notes');
     const before = words.filter(block => rank(block.id) >= 0 && rank(block.id) < index).at(-1);
@@ -84,20 +84,20 @@ function slotPosition(slide: DocumentSlide, order: readonly string[], index: num
     return after?.from ?? words.at(-1)?.to ?? slide.blocks[0]?.from ?? slide.to;
 }
 
-/** The slots each slide's layout gives it, `slots` by slide, that its source has no text block for. */
-export function missingSlots(
+/** The placeholders each slide's layout gives it, `placeholders` by slide, that its source has no text block for. */
+export function missingPlaceholders(
     document: PresentationDocument,
-    slots: ReadonlyMap<string, readonly string[]>,
+    placeholders: ReadonlyMap<string, readonly string[]>,
     labels: TextFieldLabels
-): MissingSlot[] {
-    const missing: MissingSlot[] = [];
+): MissingPlaceholder[] {
+    const missing: MissingPlaceholder[] = [];
     for (const slide of document.slides) {
-        const order = slots.get(slide.id) ?? [];
+        const order = placeholders.get(slide.id) ?? [];
         const written = new Set(slide.blocks.flatMap(block => (block.kind === 'text' && block.id ? [block.id] : [])));
         for (const [index, id] of order.entries()) {
             if (written.has(id)) continue;
             const name = textBindingName(id);
-            const at = slotPosition(slide, order, index);
+            const at = placeholderPosition(slide, order, index);
             missing.push({
                 key: `${slide.id}:text:${id}`,
                 slideId: slide.id,
@@ -130,16 +130,20 @@ export function blockInsertion(markdown: string, at: number, marker: string): Bl
     return { from, insert: prefix, cursor: from + prefix.length };
 }
 
-/** The marker a missing slot gets when the author starts writing there, checked against the whole source. */
-export function validatedSlotInsertion(markdown: string, document: PresentationDocument, slot: MissingSlot): BlockInsertion | null {
-    const slide = document.slides.find(slide => slide.id === slot.slideId);
-    if (!slide || slide.blocks.some(block => block.kind === 'text' && block.id === slot.id)) return null;
-    const insertion = blockInsertion(markdown, slot.at, `<!-- text: ${slot.id} -->`);
+/** The marker a missing placeholder gets when the author starts writing there, checked against the whole source. */
+export function validatedPlaceholderInsertion(
+    markdown: string,
+    document: PresentationDocument,
+    placeholder: MissingPlaceholder
+): BlockInsertion | null {
+    const slide = document.slides.find(slide => slide.id === placeholder.slideId);
+    if (!slide || slide.blocks.some(block => block.kind === 'text' && block.id === placeholder.id)) return null;
+    const insertion = blockInsertion(markdown, placeholder.at, `<!-- text: ${placeholder.id} -->`);
     const proposed = markdown.slice(0, insertion.from) + insertion.insert + markdown.slice(insertion.from);
     const start = Math.min(document.slides[0]?.from ?? 0, document.sections[0]?.from ?? Infinity);
     const indexed = indexPresentation(proposed, start);
     const blocks = indexed?.slides
-        .find(slide => slide.id === slot.slideId)
-        ?.blocks.filter(block => block.kind === 'text' && block.id === slot.id);
+        .find(slide => slide.id === placeholder.slideId)
+        ?.blocks.filter(block => block.kind === 'text' && block.id === placeholder.id);
     return blocks?.length === 1 && blocks[0]!.contentFrom === insertion.cursor ? insertion : null;
 }

@@ -69,10 +69,10 @@ function writingOrder(fields: readonly NewField[]): NewField[] {
 }
 
 /**
- * A layout's text slots, the placeholders a slide fills with its own words, in writing order. Null when the layout
+ * A layout's text placeholders, those a slide fills with its own words, in writing order. Null when the layout
  * cannot give a slide its words: an unsafe or repeated identity.
  */
-export function layoutTextSlots(theme: EmbeddedTheme, layoutKey: string): string[] | null {
+export function layoutTextPlaceholders(theme: EmbeddedTheme, layoutKey: string): string[] | null {
     const layout = theme.layouts.get(layoutKey)?.value;
     if (!layout) return null;
     const objects = layout.objects ?? [];
@@ -110,20 +110,20 @@ export function layoutTextSlots(theme: EmbeddedTheme, layoutKey: string): string
     return writingOrder(fields).map(field => field.id);
 }
 
-/** The text slots a slide's layout gives it, but those its overrides take out. */
-export function slideTextSlots(record: Record<string, unknown>, theme: EmbeddedTheme | null): readonly string[] {
+/** The text placeholders a slide's layout gives it, but those its overrides take out. */
+export function slideTextPlaceholders(record: Record<string, unknown>, theme: EmbeddedTheme | null): readonly string[] {
     if (!theme || typeof record.layout !== 'string') return [];
     const overrides = isRecord(record.overrides) ? record.overrides : {};
-    return (layoutTextSlots(theme, record.layout) ?? []).filter(id => overrides[id] !== null);
+    return (layoutTextPlaceholders(theme, record.layout) ?? []).filter(id => overrides[id] !== null);
 }
 
 /**
- * A new slide is its marker and its first slot's, where the author starts writing. Every other slot gets its marker
- * once it has words, as the MarkdownPoint app writes a slide; sample words stay in the theme.
+ * A new slide is its marker and its first placeholder's, where the author starts writing. Every other placeholder
+ * gets its marker once it has words, as the MarkdownPoint app writes a slide; sample words stay in the theme.
  */
 export function prepareNewSlide(theme: EmbeddedTheme, layoutKey: string, id: string): PreparedPart | null {
-    const slots = layoutTextSlots(theme, layoutKey);
-    if (!isStableId(id) || !slots) return null;
-    const markers = [`<!-- slide: ${id} -->`, ...slots.slice(0, 1).map(slot => `<!-- text: ${slot} -->`)];
+    const placeholders = layoutTextPlaceholders(theme, layoutKey);
+    if (!isStableId(id) || !placeholders) return null;
+    const markers = [`<!-- slide: ${id} -->`, ...placeholders.slice(0, 1).map(placeholder => `<!-- text: ${placeholder} -->`)];
     return { id, record: JSON.stringify({ layout: layoutKey }), markdown: markers.join('\n\n') + '\n' };
 }

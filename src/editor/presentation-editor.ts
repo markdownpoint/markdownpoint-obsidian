@@ -32,8 +32,8 @@ import type { SlideStructure } from '../format/structure.ts';
 import { outlineSlideNumbers } from '../outline/model.ts';
 import { uiNumber, uiText } from '../ui-text.ts';
 import { boundaryChangesAllowed, slideStructureChange } from './boundary-protection.ts';
-import { compactFieldAt, missingSlots, validatedSlotInsertion, writingFields } from './writing-fields.ts';
-import type { MissingSlot, WritingField } from './writing-fields.ts';
+import { compactFieldAt, missingPlaceholders, validatedPlaceholderInsertion, writingFields } from './writing-fields.ts';
+import type { MissingPlaceholder, WritingField } from './writing-fields.ts';
 import { fieldDecorations, focusWritingField, insertWritingBlock, missingFieldDecorations } from './field-widgets.ts';
 import { validatedNotesInsertion, slideNotes } from './notes.ts';
 import type { SlideNotes } from './notes.ts';
@@ -64,7 +64,7 @@ interface DraftState {
     readonly markers: readonly DraftMarker[];
     readonly decorations: DecorationSet;
     readonly fields: readonly WritingField[];
-    readonly missing: readonly MissingSlot[];
+    readonly missing: readonly MissingPlaceholder[];
     readonly notes: readonly SlideNotes[];
     readonly openedNotes: ReadonlySet<string>;
     readonly focused: boolean;
@@ -140,11 +140,11 @@ export class PresentationEditor extends Component {
         }
     };
 
-    private readonly writeSlot = (view: EditorView, key: string): void => {
+    private readonly writePlaceholder = (view: EditorView, key: string): void => {
         const draft = view.state.field(this.field);
-        const slot = draft.missing.find(slot => slot.key === key);
-        if (!this.running || !slot || !draft.snapshot) return;
-        const insertion = validatedSlotInsertion(view.state.doc.toString(), draft.snapshot.document, slot);
+        const placeholder = draft.missing.find(placeholder => placeholder.key === key);
+        if (!this.running || !placeholder || !draft.snapshot) return;
+        const insertion = validatedPlaceholderInsertion(view.state.doc.toString(), draft.snapshot.document, placeholder);
         if (insertion) insertWritingBlock(view, insertion);
     };
 
@@ -632,14 +632,14 @@ export class PresentationEditor extends Component {
                 return mapped ? [mapped] : [];
             });
         }
-        let missing = snapshot ? missingSlots(snapshot.document, snapshot.slots, uiText.fields) : [];
+        let missing = snapshot ? missingPlaceholders(snapshot.document, snapshot.placeholders, uiText.fields) : [];
         if (!snapshot && markers.length && previous)
-            missing = previous.missing.flatMap(slot => {
-                const at = transaction?.docChanged ? transaction.changes.mapPos(slot.at, 1) : slot.at;
-                return at === state.doc.length || state.doc.lineAt(at).from === at ? [{ ...slot, at }] : [];
+            missing = previous.missing.flatMap(placeholder => {
+                const at = transaction?.docChanged ? transaction.changes.mapPos(placeholder.at, 1) : placeholder.at;
+                return at === state.doc.length || state.doc.lineAt(at).from === at ? [{ ...placeholder, at }] : [];
             });
-        // A slot shown above a slide's first field opens the slide in its place.
-        const opening = new Set(missing.flatMap(slot => (slot.opening ? [slot.at] : [])));
+        // A placeholder shown above a slide's first field opens the slide in its place.
+        const opening = new Set(missing.flatMap(placeholder => (placeholder.opening ? [placeholder.at] : [])));
         if (opening.size) fields = fields.map(field => (field.opening && opening.has(field.from) ? { ...field, opening: false } : field));
         let notes = snapshot ? slideNotes(markdown, snapshot.document, uiText.notes.placeholder) : [];
         if (!snapshot && markers.length && previous)
@@ -668,7 +668,7 @@ export class PresentationEditor extends Component {
             }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to)
         );
         ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
-        ranges.push(...missingFieldDecorations(state, missing, this.writeSlot));
+        ranges.push(...missingFieldDecorations(state, missing, this.writePlaceholder));
         ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions));
         if (showImages)
             for (const marker of markers) {
