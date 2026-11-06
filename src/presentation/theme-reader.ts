@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { isDocumentId } from '../format/recognition.ts';
+import { isUuid } from '../format/recognition.ts';
 import { embeddedThemePaths, themeDocument } from '../format/embedded-theme.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 
@@ -60,7 +60,7 @@ export async function readEmbeddedTheme<File>(
         );
         if (stable.some(value => !value)) return null;
         const id = documents[0]!.document.value.id;
-        if (!isDocumentId(id)) return null;
+        if (!isUuid(id)) return null;
         return {
             key: paths.key,
             id,

@@ -18,7 +18,7 @@
 
 import { readJsonObject } from './json.ts';
 import { opensFormatVersion } from './format-version.ts';
-import { isDocumentId, isRecord, isStableId, presentationCompanionPath } from './recognition.ts';
+import { isRecord, isStableId, isUuid, presentationCompanionPath } from './recognition.ts';
 
 export interface EmbeddedThemeDocument {
     readonly path: string;
@@ -72,8 +72,7 @@ export function embeddedThemePaths(markdownPath: string, companion: unknown, lay
 /** Validate the supported Theme envelope while keeping its original source separately. */
 export function themeDocument(source: string, kind: 'master' | 'layout'): Record<string, unknown> | null {
     const value = readJsonObject(source);
-    if (!value || !opensFormatVersion(value.markdownpoint) || value.kind !== kind || (kind === 'master' && !isDocumentId(value.id)))
-        return null;
+    if (!value || !opensFormatVersion(value.markdownpoint) || value.kind !== kind || (kind === 'master' && !isUuid(value.id))) return null;
     return value;
 }
 

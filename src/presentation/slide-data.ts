@@ -20,7 +20,7 @@ import { CompanionDocument, isSlideRecordSource, reconcileSlideRecords } from '.
 import type { CompanionMap } from '../format/companion.ts';
 import { FORMAT_VERSION } from '../format/format-version.ts';
 import { readJsonObject } from '../format/json.ts';
-import { isDocumentId, isRecord, isStableId, presentationCompanionPath, presentationIdentity } from '../format/recognition.ts';
+import { isRecord, isStableId, isUuid, presentationCompanionPath, presentationIdentity } from '../format/recognition.ts';
 export interface SlideDataHost {
     loadRecovery(): Promise<unknown>;
     saveRecovery(data: unknown): Promise<void>;
@@ -93,7 +93,7 @@ export class SlideData {
                 typeof value.path !== 'string' ||
                 value.path.includes('\\') ||
                 value.path.split('/').some(part => !part || part === '.' || part === '..') ||
-                !isDocumentId(value.presentationId) ||
+                !isUuid(value.presentationId) ||
                 !isRecord(value.records)
             )
                 continue;

@@ -17,16 +17,16 @@
  */
 
 import type { LocalStorageHost } from './local-ui.ts';
-import { isDocumentId } from '../format/recognition.ts';
+import { isUuid } from '../format/recognition.ts';
 
 export const CLIPBOARD_VAULT_KEY = 'markdownpoint:clipboard-vault';
 
 /** A local origin identity is stable across reloads and never enters synced settings. */
 export function clipboardVaultId(host: LocalStorageHost, mint: () => string = () => crypto.randomUUID()): string {
     const stored = host.loadLocalStorage(CLIPBOARD_VAULT_KEY);
-    if (isDocumentId(stored)) return stored;
+    if (isUuid(stored)) return stored;
     const id = mint();
-    if (!isDocumentId(id)) throw new Error('Invalid clipboard vault identity');
+    if (!isUuid(id)) throw new Error('Invalid clipboard vault identity');
     host.saveLocalStorage(CLIPBOARD_VAULT_KEY, id);
     return id;
 }

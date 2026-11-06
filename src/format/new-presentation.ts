@@ -19,7 +19,7 @@
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { isThemeKey } from './embedded-theme.ts';
 import { FORMAT_VERSION } from './format-version.ts';
-import { isDocumentId } from './recognition.ts';
+import { isUuid } from './recognition.ts';
 import { orderedLayouts, prepareNewSlide } from './new-slide.ts';
 import { readJsonObject } from './json.ts';
 
@@ -48,7 +48,7 @@ export function prepareNewPresentation(
     slideId: string,
     layoutKey: string | undefined = orderedLayouts(theme)[0]
 ): NewPresentation | null {
-    if (!isDocumentId(id) || !isThemeKey(theme.key) || !layoutKey) return null;
+    if (!isUuid(id) || !isThemeKey(theme.key) || !layoutKey) return null;
     const slide = prepareNewSlide(theme, layoutKey, slideId);
     const record = slide && readJsonObject(slide.record);
     if (!slide || !record) return null;

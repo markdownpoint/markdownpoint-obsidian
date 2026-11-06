@@ -68,7 +68,7 @@ export function ownEntry(record: Readonly<Record<string, unknown>>, name: string
     return Object.hasOwn(record, name) ? record[name] : undefined;
 }
 
-export function isDocumentId(value: unknown): value is string {
+export function isUuid(value: unknown): value is string {
     return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
 }
 
@@ -86,7 +86,7 @@ export function presentationIdentity(frontmatter: unknown, companion: unknown): 
     if (!opensFormatVersion(frontmatter.markdownpoint) || !opensFormatVersion(companion.markdownpoint) || companion.kind !== 'presentation')
         return null;
     const id = frontmatter.id;
-    if (!isDocumentId(id)) return null;
+    if (!isUuid(id)) return null;
     return companion.id === id ? id : null;
 }
 
@@ -97,7 +97,7 @@ export function presentationIdentity(frontmatter: unknown, companion: unknown): 
  */
 export function newerFormat(frontmatter: unknown, companion: unknown): string | null {
     if (!isRecord(frontmatter) || !isRecord(companion) || companion.kind !== 'presentation') return null;
-    if (!isDocumentId(frontmatter.id) || companion.id !== frontmatter.id) return null;
+    if (!isUuid(frontmatter.id) || companion.id !== frontmatter.id) return null;
     const versions = [companion.markdownpoint, frontmatter.markdownpoint];
     if (versions.some(version => formatStanding(version) === 'invalid')) return null;
     const newer = versions.find(version => formatStanding(version) === 'newer');

@@ -21,7 +21,7 @@ import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { indexPresentation } from './document.ts';
 import { embeddedThemePaths, isThemeKey, themeDocument } from './embedded-theme.ts';
 import { readJsonObject } from './json.ts';
-import { isDocumentId, isRecord, isStableId } from './recognition.ts';
+import { isRecord, isStableId, isUuid } from './recognition.ts';
 import { copyTextSchemas } from './text-schemas.ts';
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import type { TextSchema } from './text-schemas.ts';
@@ -79,10 +79,10 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
     if (
         !value ||
         value.version !== 3 ||
-        !isDocumentId(value.token) ||
+        !isUuid(value.token) ||
         !isRecord(value.origin) ||
-        !isDocumentId(value.origin.vault) ||
-        !isDocumentId(value.origin.presentationId) ||
+        !isUuid(value.origin.vault) ||
+        !isUuid(value.origin.presentationId) ||
         typeof value.origin.path !== 'string' ||
         typeof value.locale !== 'string' ||
         !Array.isArray(value.slides) ||
@@ -90,7 +90,7 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
         !Array.isArray(value.compositions) ||
         !isRecord(value.theme) ||
         !isThemeKey(value.theme.key) ||
-        !isDocumentId(value.theme.id) ||
+        !isUuid(value.theme.id) ||
         typeof value.theme.master !== 'string' ||
         !Array.isArray(value.theme.layouts)
     )
