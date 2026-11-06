@@ -1,14 +1,14 @@
-/** How a deck writes a chart's numbers: the rule its language reads cells by, and a cell's number read, spelled and respelled by it. */
+/** How a presentation writes a chart's numbers: the rule its language reads cells by, and a cell's number read, spelled and respelled by it. */
 import { CHART_NUMBER_LOCALES, CHART_NUMBER_PARENTS, CHART_NUMBER_PROFILES, CHART_NUMBER_SCRIPTS } from "./chart-number-rules.js";
 
 /**
- * How a deck writes a number in Latin digits, from Unicode CLDR: its decimal mark, its group mark, and how many digits
+ * How a presentation writes a number in Latin digits, from Unicode CLDR: its decimal mark, its group mark, and how many digits
  * each group holds, nearest the point first and beyond it, as Hindi groups 12,34,567.
  */
 export interface ChartNumberRule { decimal: string; group: string; primary: number; secondary: number }
 
 /**
- * The rule a deck's cells read by, as CLDR resolves its locale (presentationLocale's). The tag is named in full, the
+ * The rule a presentation's cells read by, as CLDR resolves its locale (presentationLocale's). The tag is named in full, the
  * script it's likely written in filled in where it names none (de-CH as de-Latn-CH, zh-HK as zh-Hant-HK), and walks to
  * its first entry: through the parent CLDR names for it, else the tag with its last subtag gone, a language and its
  * script standing last before root. A script a language isn't likely written in has no entry and reads root's rule.
@@ -47,16 +47,16 @@ export interface ChartNumberFormat {
   decimals: number;
   /** The mark the cell groups its whole digits with, as it writes it, or none. */
   group: string;
-  /** How many digits a group holds, nearest the point and beyond it: the deck's. */
+  /** How many digits a group holds, nearest the point and beyond it: the presentation's. */
   primary: number;
   secondary: number;
-  /** The deck's decimal mark. */
+  /** The presentation's decimal mark. */
   point: string;
 }
 
 export interface ChartNumber { value: number; format: ChartNumberFormat }
 
-/** How a count spells its number when its cell holds none: plain digits, the deck's point. */
+/** How a count spells its number when its cell holds none: plain digits, the presentation's point. */
 export const plainFormat = (rule: ChartNumberRule): ChartNumberFormat =>
   ({ prefix: "", suffix: "", negativePrefix: "-", negativeSuffix: "", decimals: 0, group: "", primary: rule.primary, secondary: rule.secondary, point: rule.decimal });
 
@@ -84,9 +84,9 @@ function numberPattern(rule: ChartNumberRule): RegExp {
 }
 
 /**
- * A cell's number and how it is spelled, by its deck's rule, or null when the cell holds no single number by it. The
- * deck's decimal mark is the point; whole digits stand ungrouped, or grouped by the deck's group mark or by a space, in
- * the deck's widths, never by both. Nothing is guessed: "1,234" is 1234 in English and 1.234 in Swedish, and "1,23" in
+ * A cell's number and how it is spelled, by its presentation's rule, or null when the cell holds no single number by it. The
+ * presentation's decimal mark is the point; whole digits stand ungrouped, or grouped by the presentation's group mark or by a space, in
+ * the presentation's widths, never by both. Nothing is guessed: "1,234" is 1234 in English and 1.234 in Swedish, and "1,23" in
  * English holds no number. A loss is written as spreadsheets write one: with a minus before the number or after its
  * prefix, in parentheses, or with a minus ending the cell, as "-$4.50", "($4.50)" and "4.50-" do.
  */
@@ -127,7 +127,7 @@ interface ChartNumberRead { number: ChartNumber; sign1: string; prefix: string; 
 /** A cell's number from the parts a rule's pattern found in it, or null when they spell none by the rule. */
 function readNumberParts(groups: Readonly<Record<string, string | undefined>>, rule: ChartNumberRule): ChartNumberRead | null {
   const { sign1 = "", prefix = "", sign2 = "", digits = "", suffix = "" } = groups;
-  // A prefix that ends in a period or a comma would spell a point the deck doesn't write, as ".5" in Swedish.
+  // A prefix that ends in a period or a comma would spell a point the presentation doesn't write, as ".5" in Swedish.
   if ((sign1 && sign2) || /[.,]$/.test(prefix)) return null;
   const at = digits.indexOf(rule.decimal);
   if (at >= 0 && digits.indexOf(rule.decimal, at + 1) >= 0) return null;
@@ -146,7 +146,7 @@ function readNumberParts(groups: Readonly<Record<string, string | undefined>>, r
 }
 
 /**
- * Whether whole digits stand ungrouped, or grouped by one kind of mark, the deck's group mark or a space, in the deck's
+ * Whether whole digits stand ungrouped, or grouped by one kind of mark, the presentation's group mark or a space, in the presentation's
  * widths: the group nearest the point holds the primary width and every one beyond it the secondary, the first up to
  * that many.
  */
@@ -169,7 +169,7 @@ function digitsValue(whole: string, fraction: string, loss: boolean): number {
 /**
  * A cell's number as another rule spells it, or null when `from` reads no number in it: its signs, words and digits
  * kept, its point, group mark and group widths taken from `to`, so "1 234,50" from a Swedish computer is "1,234.50" in
- * an English deck, and its loss "(1 234,50)" is "(1,234.50)". The same rule gives the cell back as it is.
+ * an English presentation, and its loss "(1 234,50)" is "(1,234.50)". The same rule gives the cell back as it is.
  */
 export function respellChartNumber(text: string, from: ChartNumberRule, to: ChartNumberRule): string | null {
   const read = readChartNumber(text, from);
@@ -182,12 +182,12 @@ export function respellChartNumber(text: string, from: ChartNumberRule, to: Char
 /** Whether two rules spell every number alike. */
 export const sameRule = (a: ChartNumberRule, b: ChartNumberRule): boolean => a.decimal === b.decimal && a.group === b.group && a.primary === b.primary && a.secondary === b.secondary;
 
-/** The language a theme's chart cells are written in, whatever the deck's: a theme has no language of its own. */
+/** The language a theme's chart cells are written in, whatever the presentation's: a theme has no language of its own. */
 export const THEME_CELL_LOCALE = "en-US";
 
 /**
- * The rule a chart's cells read by: a theme's own words, which `scope` marks, are written as en-US, so a deck in any
- * language shows them alike, and a deck's own words as the deck's language, `locale`.
+ * The rule a chart's cells read by: a theme's own words, which `scope` marks, are written as en-US, so a presentation in any
+ * language shows them alike, and a presentation's own words as the presentation's language, `locale`.
  */
 export function chartCellRule(content: { scope?: "theme" } | undefined, locale: string): ChartNumberRule {
   return chartNumberRule(content?.scope === "theme" ? THEME_CELL_LOCALE : locale);
