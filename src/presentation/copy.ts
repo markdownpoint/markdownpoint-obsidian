@@ -26,7 +26,7 @@ import { readsFormatFully } from '../format/format-version.ts';
 
 export interface CopySource {
     readonly path: string;
-    readonly documentId: string;
+    readonly id: string;
     readonly markdown: string;
     readonly companion: string;
     readonly index: PresentationDocument;
@@ -86,7 +86,7 @@ export class SlideCopy<Context> {
             const token = crypto.randomUUID();
             const encoded = encodeSlideClipboard(
                 token,
-                { vault: this.host.vaultId(), path: source.path, document: source.documentId },
+                { vault: this.host.vaultId(), path: source.path, presentationId: source.id },
                 presentationLocale(metadata),
                 captured,
                 theme
@@ -100,7 +100,7 @@ export class SlideCopy<Context> {
                 if (
                     !latest ||
                     latest.path !== source.path ||
-                    latest.documentId !== source.documentId ||
+                    latest.id !== source.id ||
                     latest.markdown !== source.markdown ||
                     latest.companion !== source.companion
                 )

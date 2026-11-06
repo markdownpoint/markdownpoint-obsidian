@@ -30,7 +30,7 @@ export interface SlideMenuTarget {
     readonly owner: MarkdownView;
     readonly file: TFile;
     readonly path: string;
-    readonly document: string;
+    readonly presentationId: string;
     readonly slide: string | null;
 }
 
@@ -251,7 +251,7 @@ export class SlideMenus extends Component {
             target.owner.file === target.file &&
             target.file.path === target.path &&
             this.app.workspace.getLeavesOfType('markdown').some(leaf => leaf.view === target.owner) &&
-            this.reader.snapshot(target.file, target.owner.getViewData())?.id === target.document
+            this.reader.snapshot(target.file, target.owner.getViewData())?.id === target.presentationId
         );
     }
 
@@ -268,7 +268,7 @@ export class SlideMenus extends Component {
             (!snapshot.document.slides.length &&
                 (position >= snapshot.bodyStart ||
                     (owner.getMode() === 'source' && owner.containerEl.querySelector('.markdownpoint-empty-draft') !== null)))
-            ? { owner, file, path: file.path, document: snapshot.id, slide: slide?.id ?? null }
+            ? { owner, file, path: file.path, presentationId: snapshot.id, slide: slide?.id ?? null }
             : null;
     }
 

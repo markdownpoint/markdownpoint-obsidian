@@ -56,7 +56,7 @@ function setup() {
     const state = { markdown, companion, active: true, writes: [] as string[], reads: 0 };
     const source = (): CopySource => ({
         path,
-        documentId: uuid,
+        id: uuid,
         markdown: state.markdown,
         companion: state.companion,
         index: indexPresentation(state.markdown, 0)!

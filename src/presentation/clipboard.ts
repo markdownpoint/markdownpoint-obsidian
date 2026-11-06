@@ -66,7 +66,7 @@ export class PresentationClipboard extends Component {
                 const snapshot = reader.snapshot(context.file, markdown);
                 const companion = snapshot && reader.companionFor(context.file, snapshot);
                 return snapshot && companion !== null
-                    ? { path: context.path, documentId: snapshot.id, markdown, companion, index: snapshot.document }
+                    ? { path: context.path, id: snapshot.id, markdown, companion, index: snapshot.document }
                     : null;
             },
             theme: (source, metadata, layouts) => readEmbeddedTheme(app.vault, source.path, metadata, layouts),
@@ -142,7 +142,7 @@ export class PresentationClipboard extends Component {
                 if (!snapshot || !companion || !metadata || !this.current(context)) return;
                 const theme = await readEmbeddedTheme(this.app.vault, context.path, metadata, packet.theme.layouts.keys());
                 if (!this.current(context)) return;
-                const origin = { vault: clipboardVaultId(this.app), path: context.path, document: snapshot.id };
+                const origin = { vault: clipboardVaultId(this.app), path: context.path, presentationId: snapshot.id };
                 if (packet.origin.vault !== origin.vault) {
                     new Notice(uiText.slides.pasteVault);
                     return;
@@ -233,7 +233,7 @@ export class PresentationClipboard extends Component {
                 intent === this.intent &&
                 this.current(context) &&
                 view.getViewData() === copied.source.markdown &&
-                this.reader.snapshot(input.file, view.getViewData())?.id === copied.source.documentId &&
+                this.reader.snapshot(input.file, view.getViewData())?.id === copied.source.id &&
                 this.reader.companionFor(input.file, this.reader.snapshot(input.file, view.getViewData())!) === copied.source.companion;
             if (!current()) return;
             digest = await clipboardDigest(copied.encoded);

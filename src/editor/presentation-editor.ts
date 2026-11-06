@@ -534,7 +534,7 @@ export class PresentationEditor extends Component {
         const openedNotes = this.notesUi.opened(id ?? '');
         const showImages = preview && this.showSlideImages();
         const spacing = state.field(imageSpacing, false);
-        const imageSpaces = showImages && spacing && spacing.id === id ? spacing.heights : noImageSpaces;
+        const imageSpaces = showImages && spacing && spacing.presentationId === id ? spacing.heights : noImageSpaces;
         const selectionChanged = transaction?.selection && !transaction.startState.selection.eq(transaction.newSelection);
         if (
             snapshot &&

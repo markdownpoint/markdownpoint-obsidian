@@ -360,12 +360,9 @@ export default class MarkdownPointPlugin extends Plugin {
                 this.app,
                 {
                     file,
-                    documentId: presentation.documentId,
+                    presentationId: presentation.id,
                     view,
-                    current: () =>
-                        this.running &&
-                        this.presentation?.path === presentation.path &&
-                        this.presentation.documentId === presentation.documentId
+                    current: () => this.running && this.presentation?.path === presentation.path && this.presentation.id === presentation.id
                 },
                 this.storage?.data ?? null
             )
@@ -377,8 +374,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const file = presentation && this.app.vault.getFileByPath(presentation.path);
         if (!presentation || !file) return;
         const after = this.activeSlideId;
-        const current = () =>
-            this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
+        const current = () => this.running && this.presentation?.path === presentation.path && this.presentation.id === presentation.id;
         const owner = this.currentEditorLeaf()?.view;
         const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
         this.run(async () => {
@@ -419,7 +415,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const current = () =>
             this.running &&
             this.presentation?.path === presentation.path &&
-            this.presentation.documentId === presentation.documentId &&
+            this.presentation.id === presentation.id &&
             this.outline.state.selection === selection;
         const owner = this.currentEditorLeaf()?.view;
         const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
@@ -435,7 +431,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const current = () =>
             this.running &&
             this.presentation?.path === presentation.path &&
-            this.presentation.documentId === presentation.documentId &&
+            this.presentation.id === presentation.id &&
             this.outline.state.selection === selection;
         const owner = this.currentEditorLeaf()?.view;
         const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
@@ -463,8 +459,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const presentation = this.presentation;
         const file = presentation && this.app.vault.getFileByPath(presentation.path);
         if (!presentation || !file) return;
-        const current = () =>
-            this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
+        const current = () => this.running && this.presentation?.path === presentation.path && this.presentation.id === presentation.id;
         const owner = this.currentEditorLeaf()?.view;
         const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
         this.run(async () => {

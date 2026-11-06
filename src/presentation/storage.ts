@@ -27,7 +27,7 @@ import { uiText } from '../ui-text.ts';
 /** Own recovery storage, vault writes and actionable save failures for this plugin. */
 export class PresentationStorage extends Component {
     readonly data: SlideData | null;
-    private readonly notices = new Map<string, { path: string; document: string; notice: Notice }>();
+    private readonly notices = new Map<string, { path: string; presentationId: string; notice: Notice }>();
     private recoveryNotice: Notice | null = null;
     private running = false;
 
@@ -54,8 +54,8 @@ export class PresentationStorage extends Component {
                     update,
                     canCommit
                 ),
-            failed: (path, document, error) => this.saveFailed(path, document, error),
-            saved: (path, document) => this.clearNotice(path, document)
+            failed: (path, presentationId, error) => this.saveFailed(path, presentationId, error),
+            saved: (path, presentationId) => this.clearNotice(path, presentationId)
         }));
         void data.ready.catch((error: unknown) => {
             console.error(error);
@@ -67,8 +67,8 @@ export class PresentationStorage extends Component {
                     if (failure.path !== oldPath && !failure.path.startsWith(oldPath + '/')) continue;
                     this.notices.delete(key);
                     failure.path = file.path + failure.path.slice(oldPath.length);
-                    this.clearNotice(failure.path, failure.document);
-                    this.notices.set(JSON.stringify([failure.path, failure.document]), failure);
+                    this.clearNotice(failure.path, failure.presentationId);
+                    this.notices.set(JSON.stringify([failure.path, failure.presentationId]), failure);
                 }
                 // Nothing to act on: the store keeps its entries in memory and rewrites all of them on the next save
                 void data.rename(oldPath, file.path).catch((error: unknown) => console.error(error));
@@ -96,34 +96,34 @@ export class PresentationStorage extends Component {
         if (this.running) new Notice(uiText.slides.deleteFailed);
     }
 
-    private clearNotice(path: string, document: string): void {
-        const key = JSON.stringify([path, document]);
+    private clearNotice(path: string, presentationId: string): void {
+        const key = JSON.stringify([path, presentationId]);
         this.notices.get(key)?.notice.hide();
         this.notices.delete(key);
     }
 
-    private saveFailed(path: string, document: string, error: unknown): void {
+    private saveFailed(path: string, presentationId: string, error: unknown): void {
         console.error(error);
         if (!this.running) return;
-        this.clearNotice(path, document);
+        this.clearNotice(path, presentationId);
         const documentEl = this.app.workspace.containerEl.ownerDocument;
         const previousFocus = documentEl.activeElement;
         const fragment = documentEl.defaultView!.createFragment();
         fragment.createDiv({ text: uiText.slides.saveFailed });
         const retry = fragment.createEl('button', { cls: 'markdownpoint-save-retry', text: uiText.slides.retry });
         const notice = new Notice(fragment, 0);
-        const failure = { path, document, notice };
+        const failure = { path, presentationId, notice };
         retry.addEventListener('mousedown', event => {
             if (event.button === 0) event.preventDefault();
         });
         retry.addEventListener('click', event => {
             event.stopPropagation(); // Obsidian otherwise dismisses the notice on any click.
-            if (!this.running || !this.data?.retry(failure.path, failure.document)) return;
+            if (!this.running || !this.data?.retry(failure.path, failure.presentationId)) return;
             const hadFocus = documentEl.activeElement === retry;
             notice.hide();
             if (hadFocus && previousFocus?.instanceOf(HTMLElement) && previousFocus.isConnected)
                 previousFocus.focus({ preventScroll: true });
         });
-        this.notices.set(JSON.stringify([path, document]), failure);
+        this.notices.set(JSON.stringify([path, presentationId]), failure);
     }
 }

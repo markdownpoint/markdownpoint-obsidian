@@ -138,7 +138,9 @@ test("a paste from a Swedish presentation into an English one respells its own c
         slides: [{ id: 'first', markdown: slide, record: slideRecord }],
         compositions: [{ id: 'card', markdown: definition('0,5'), record: definitionRecord }]
     };
-    const packet = decodeSlideClipboard(encodeSlideClipboard(uuid, { vault: uuid, path, document: uuid }, 'sv-SE', captured, theme)!)!;
+    const packet = decodeSlideClipboard(
+        encodeSlideClipboard(uuid, { vault: uuid, path, presentationId: uuid }, 'sv-SE', captured, theme)!
+    )!;
     const markdown = definition('0.5');
     const companion = `{"markdownpoint":"1.0","slides":{},"compositions":{"card":${definitionRecord}}}`;
     const prepared = prepareClipboardPaste(packet, markdown, indexPresentation(markdown, 0)!, companion, new Map(), () => 'copy')!;

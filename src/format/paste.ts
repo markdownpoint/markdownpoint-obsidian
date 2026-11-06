@@ -29,7 +29,7 @@ import { presentationCompanionPath } from './recognition.ts';
 export function sameClipboardPresentation(packet: SlideClipboard, origin: ClipboardOrigin): boolean {
     return (
         packet.origin.vault === origin.vault &&
-        packet.origin.document === origin.document &&
+        packet.origin.presentationId === origin.presentationId &&
         presentationCompanionPath(packet.origin.path) === presentationCompanionPath(origin.path)
     );
 }

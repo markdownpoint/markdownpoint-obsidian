@@ -27,7 +27,7 @@ import { uiText } from '../ui-text.ts';
 
 interface Handoff {
     readonly file: TFile;
-    readonly documentId: string;
+    readonly presentationId: string;
     readonly view: MarkdownView | null;
     readonly current: () => boolean;
 }
@@ -43,7 +43,7 @@ export async function openPresentationInDesktop(app: App, input: Handoff, data: 
     try {
         if (!current()) return;
         if (input.view) await input.view.save();
-        if (data && !(await data.settled(path, input.documentId))) {
+        if (data && !(await data.settled(path, input.presentationId))) {
             // The desktop app would open stale slide data; the save failure's own notice may already be dismissed
             if (current()) new Notice(uiText.slides.saveFailed);
             return;
@@ -67,7 +67,7 @@ export async function openPresentationInDesktop(app: App, input: Handoff, data: 
             latest?.markdown !== pair.markdown ||
             latest.companion !== pair.companion ||
             (input.view && input.view.getViewData() !== markdown) ||
-            presentationIdentity(frontmatter, metadata) !== input.documentId ||
+            presentationIdentity(frontmatter, metadata) !== input.presentationId ||
             !document ||
             !isRecord(slides) ||
             document.slides.some(slide => !isRecord(slides[slide.id])) ||

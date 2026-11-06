@@ -113,7 +113,7 @@ test('Live Preview shows each missing placeholder as an empty field until its ma
             const document = indexPresentation(markdown, 0);
             return (
                 document && {
-                    id: 'document',
+                    id: 'presentation',
                     bodyStart: 0,
                     document,
                     images: new Map(),

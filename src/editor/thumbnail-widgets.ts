@@ -55,7 +55,7 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                         )
                     );
                     const current = view.state.field(imageSpacing);
-                    const heights = new Map(current.id === available.id ? current.heights : []);
+                    const heights = new Map(current.presentationId === available.id ? current.heights : []);
                     for (const id of heights.keys()) if (!available.slides.get(id)?.images.length) heights.delete(id);
                     const items: { id: string; chrome: SlideChrome; top: number; right: number }[] = [];
                     for (const boundary of view.contentDOM.querySelectorAll<HTMLElement>('.markdownpoint-slide-boundary[data-slide]')) {
@@ -82,9 +82,9 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                             else heights.delete(id);
                         }
                     }
-                    return { items, id: available.id, heights, document: view.state.doc };
+                    return { items, presentationId: available.id, heights, document: view.state.doc };
                 },
-                write: ({ items, id: documentId, heights, document }) => {
+                write: ({ items, presentationId, heights, document }) => {
                     if (!active) return;
                     let changed = false;
                     const keep = new Set(items.map(item => item.id));
@@ -187,15 +187,15 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                     }
                     const previous = view.state.field(imageSpacing);
                     const different =
-                        previous.id !== documentId ||
+                        previous.presentationId !== presentationId ||
                         previous.heights.size !== heights.size ||
                         [...heights].some(([id, height]) => previous.heights.get(id) !== height);
                     if (different && !pendingSpacing) {
                         pendingSpacing = true;
                         view.dom.ownerDocument.defaultView!.queueMicrotask(() => {
                             pendingSpacing = false;
-                            if (active && view.state.doc === document && readState(view).id === documentId)
-                                view.dispatch({ effects: setImageSpacing.of({ id: documentId, heights }) });
+                            if (active && view.state.doc === document && readState(view).id === presentationId)
+                                view.dispatch({ effects: setImageSpacing.of({ presentationId, heights }) });
                         });
                     }
                     if (changed)

@@ -23,7 +23,7 @@ import type { OutlinePresentation } from '../src/outline/model.ts';
 
 function deck(ids: readonly string[], path = 'presentation/slides.md'): OutlinePresentation {
     return {
-        documentId: 'test-document',
+        id: 'test-presentation',
         path,
         sections: [],
         slides: ids.map((id, index) => ({ id, title: id, line: index * 8, skipped: false }))
@@ -125,7 +125,7 @@ test('replacing a presentation at the same path invalidates a captured action se
     session.follow(original);
     session.selectForMenu('two');
     const captured = session.state.selection;
-    session.follow({ ...original, documentId: 'another-document' });
+    session.follow({ ...original, id: 'another-presentation' });
     assert.notEqual(session.state.selection, captured);
     assert.equal(session.state.selection.cursor, 'one');
 });

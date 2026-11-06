@@ -23,7 +23,7 @@ import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.
 import { prepareSlideCopies } from '../src/format/copy.ts';
 
 const uuid = '11111111-1111-4111-8111-111111111111';
-const origin = { vault: uuid, document: uuid, path: 'Presentations/Å calm place/slides.md' };
+const origin = { vault: uuid, presentationId: uuid, path: 'Presentations/Å calm place/slides.md' };
 const paths = embeddedThemePaths(origin.path, { theme: 'basic' }, ['title'])!;
 const masterSource =
     '\uFEFF{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","future":9007199254740993}';
@@ -113,7 +113,7 @@ test('text and incompatible, malformed or ambiguous transport data are never tre
             value.origin.vault = 'invalid';
         }),
         mutate(value => {
-            value.origin.document = 'invalid';
+            value.origin.presentationId = 'invalid';
         }),
         mutate(value => {
             value.origin.path = '../slides.md';

@@ -25,8 +25,8 @@ export interface SlideDataHost {
     loadRecovery(): Promise<unknown>;
     saveRecovery(data: unknown): Promise<void>;
     process(path: string, update: (source: string) => Promise<string>, canCommit: () => boolean): Promise<void>;
-    failed(path: string, document: string, error: unknown): void;
-    saved?(path: string, document: string): void;
+    failed(path: string, presentationId: string, error: unknown): void;
+    saved?(path: string, presentationId: string): void;
 }
 
 interface RecordMembership {
@@ -36,7 +36,7 @@ interface RecordMembership {
 
 interface SavedSlides {
     path: string;
-    readonly document: string;
+    readonly presentationId: string;
     records: ReadonlyMap<string, string>;
     compositions: ReadonlyMap<string, string>;
     present: RecordMembership | null;
@@ -93,16 +93,16 @@ export class SlideData {
                 typeof value.path !== 'string' ||
                 value.path.includes('\\') ||
                 value.path.split('/').some(part => !part || part === '.' || part === '..') ||
-                !isDocumentId(value.document) ||
+                !isDocumentId(value.presentationId) ||
                 !isRecord(value.records)
             )
                 continue;
             const records = recoveryRecords(value.records);
             const compositions = recoveryRecords(value.compositions);
             if (records.size || compositions.size)
-                this.entries.set(this.key(value.path, value.document), {
+                this.entries.set(this.key(value.path, value.presentationId), {
                     path: value.path,
-                    document: value.document,
+                    presentationId: value.presentationId,
                     records,
                     compositions,
                     present: null,
@@ -117,21 +117,21 @@ export class SlideData {
         this.running = false;
     }
 
-    remembered(path: string, document: string, kind: CompanionMap = 'slides'): ReadonlyMap<string, string> {
-        const entry = this.entries.get(this.key(path, document));
+    remembered(path: string, presentationId: string, kind: CompanionMap = 'slides'): ReadonlyMap<string, string> {
+        const entry = this.entries.get(this.key(path, presentationId));
         return (kind === 'slides' ? entry?.records : entry?.compositions) ?? empty;
     }
 
     /** Save complete current records before any native transaction removes their text. */
     async remember(
         path: string,
-        document: string,
+        presentationId: string,
         companion: string,
         ids: Iterable<string>,
         compositionIds: Iterable<string> = []
     ): Promise<boolean> {
         await this.ready;
-        if (!this.running || !presentationCompanionPath(path) || !this.matches(companion, document)) return false;
+        if (!this.running || !presentationCompanionPath(path) || !this.matches(companion, presentationId)) return false;
         const data = CompanionDocument.read(companion);
         const definitions = CompanionDocument.read(companion, 'compositions');
         const selected = new Set(ids);
@@ -143,10 +143,10 @@ export class SlideData {
             [...selectedCompositions].some(id => !definitions?.records.has(id) || selected.has(id))
         )
             return false;
-        const key = this.key(path, document);
+        const key = this.key(path, presentationId);
         const entry = this.entries.get(key) ?? {
             path,
-            document,
+            presentationId,
             records: empty,
             compositions: empty,
             present: null,
@@ -167,18 +167,18 @@ export class SlideData {
     /** Ordinary typing with the same membership does no companion work. */
     observe(
         path: string,
-        document: string,
+        presentationId: string,
         companion: string,
         slides: ReadonlySet<string>,
         compositions: ReadonlySet<string> = new Set()
     ): void {
         const present = { slides, compositions };
-        const entry = this.entries.get(this.key(path, document));
+        const entry = this.entries.get(this.key(path, presentationId));
         if (
             !this.running ||
             !entry ||
             (entry.source === companion && sameMembership(entry.present, present)) ||
-            !this.matches(companion, document)
+            !this.matches(companion, presentationId)
         )
             return;
         const next = reconcile(companion, entry, present);
@@ -193,20 +193,20 @@ export class SlideData {
             this.save(entry);
         } else if (!entry.saving && entry.dirty) {
             entry.dirty = false;
-            this.host.saved?.(entry.path, entry.document);
+            this.host.saved?.(entry.path, entry.presentationId);
         }
     }
 
-    retry(path: string, document: string): boolean {
-        const entry = this.entries.get(this.key(path, document));
+    retry(path: string, presentationId: string): boolean {
+        const entry = this.entries.get(this.key(path, presentationId));
         if (!this.running || !entry?.present || !presentationCompanionPath(path)) return false;
         entry.dirty = true;
         this.save(entry);
         return true;
     }
 
-    async settled(path: string, document: string): Promise<boolean> {
-        const entry = this.entries.get(this.key(path, document));
+    async settled(path: string, presentationId: string): Promise<boolean> {
+        const entry = this.entries.get(this.key(path, presentationId));
         while (entry?.saving) await entry.saving;
         return entry?.dirty !== true;
     }
@@ -219,7 +219,7 @@ export class SlideData {
             if (entry.path !== from && !entry.path.startsWith(from + '/')) continue;
             this.entries.delete(key);
             entry.path = to + entry.path.slice(from.length);
-            this.entries.set(this.key(entry.path, entry.document), entry);
+            this.entries.set(this.key(entry.path, entry.presentationId), entry);
             changed = true;
         }
         if (changed) await this.persist();
@@ -239,7 +239,7 @@ export class SlideData {
                         path,
                         async source => {
                             if (!this.running || !entry.present) return source;
-                            if (!this.matches(source, entry.document))
+                            if (!this.matches(source, entry.presentationId))
                                 throw new Error('Presentation identity changed before saving slide data');
                             const next = reconcile(source, entry, entry.present);
                             if (!next) throw new Error('Cannot update malformed presentation data');
@@ -254,12 +254,12 @@ export class SlideData {
                         () => this.running
                     );
                 }
-                if (this.running) this.host.saved?.(entry.path, entry.document);
+                if (this.running) this.host.saved?.(entry.path, entry.presentationId);
             })
             .catch((error: unknown) => {
                 failed = true;
                 entry.dirty = true;
-                if (this.running) this.host.failed(entry.path, entry.document, error);
+                if (this.running) this.host.failed(entry.path, entry.presentationId, error);
             })
             .finally(() => {
                 entry.saving = null;
@@ -271,23 +271,23 @@ export class SlideData {
         return this.host.saveRecovery(
             [...this.entries.values()].map(entry => ({
                 path: entry.path,
-                document: entry.document,
+                presentationId: entry.presentationId,
                 records: Object.fromEntries(entry.records),
                 ...(entry.compositions.size ? { compositions: Object.fromEntries(entry.compositions) } : {})
             }))
         );
     }
 
-    private matches(source: string, document: string): boolean {
+    private matches(source: string, presentationId: string): boolean {
         try {
             // The companion alone must belong to the presentation; the frontmatter half restates the remembered id
-            return presentationIdentity({ markdownpoint: FORMAT_VERSION, id: document }, JSON.parse(source)) === document;
+            return presentationIdentity({ markdownpoint: FORMAT_VERSION, id: presentationId }, JSON.parse(source)) === presentationId;
         } catch {
             return false;
         }
     }
 
-    private key(path: string, document: string): string {
-        return JSON.stringify([path, document]);
+    private key(path: string, presentationId: string): string {
+        return JSON.stringify([path, presentationId]);
     }
 }

@@ -51,7 +51,7 @@ test('unfinished code fences retain image clearance at mapped slide ends until p
             const document = indexPresentation(markdown, 0);
             return (
                 document && {
-                    id: 'document',
+                    id: 'presentation',
                     bodyStart: 0,
                     document,
                     images: new Map(document.slides.map(slide => [slide.id, images])),
@@ -67,7 +67,7 @@ test('unfinished code fences retain image clearance at mapped slide ends until p
     let state = EditorState.create({ doc: source, extensions: [editorInfoField, editorLivePreviewField, owner.extension] });
     state = state.update({
         effects: setImageSpacing.of({
-            id: 'document',
+            presentationId: 'presentation',
             heights: new Map([
                 ['first', 140],
                 ['second', 120]

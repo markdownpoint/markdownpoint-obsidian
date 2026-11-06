@@ -26,7 +26,7 @@ import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.
 
 const uuid = '11111111-1111-4111-8111-111111111111';
 const path = 'deck/slides.md';
-const origin = { vault: uuid, path, document: uuid };
+const origin = { vault: uuid, path, presentationId: uuid };
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
 const master = '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
 const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
@@ -81,11 +81,11 @@ test('orphaned and recoverable identities are not recycled by a copied slide', (
     );
 });
 
-test('same-origin file references require the original vault, document, path and theme sources', () => {
+test('same-origin file references require the original vault, presentation, path and theme sources', () => {
     assert.equal(sameClipboardPresentation(packet, origin), true);
     assert.equal(sameClipboardPresentation(packet, { ...origin, path: 'deck/Slides.MD' }), true);
     assert.equal(sameClipboardPresentation(packet, { ...origin, path: 'other/slides.md' }), false);
-    for (const key of ['vault', 'path', 'document'] as const)
+    for (const key of ['vault', 'path', 'presentationId'] as const)
         assert.equal(sameClipboardPresentation(packet, { ...origin, [key]: 'different' }), false);
     assert.equal(sameClipboardTheme(packet, theme), true);
     assert.equal(sameClipboardTheme(packet, { ...theme, root: 'other/themes/basic' }), true);

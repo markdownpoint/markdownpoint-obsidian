@@ -33,7 +33,7 @@ export interface ClipboardOrigin {
     readonly vault: string;
     /** Vault-relative slides.md path captured by the copy operation. */
     readonly path: string;
-    readonly document: string;
+    readonly presentationId: string;
 }
 
 export interface SlideClipboard {
@@ -59,7 +59,7 @@ export function encodeSlideClipboard(
     const source = JSON.stringify({
         version: 3,
         token,
-        origin: { vault: origin.vault, path: origin.path, document: origin.document },
+        origin: { vault: origin.vault, path: origin.path, presentationId: origin.presentationId },
         locale,
         slides: parts(captured.slides),
         compositions: parts(captured.compositions),
@@ -82,7 +82,7 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
         !isDocumentId(value.token) ||
         !isRecord(value.origin) ||
         !isDocumentId(value.origin.vault) ||
-        !isDocumentId(value.origin.document) ||
+        !isDocumentId(value.origin.presentationId) ||
         typeof value.origin.path !== 'string' ||
         typeof value.locale !== 'string' ||
         !Array.isArray(value.slides) ||
@@ -95,7 +95,7 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
         !Array.isArray(value.theme.layouts)
     )
         return null;
-    const origin = { vault: value.origin.vault, path: value.origin.path, document: value.origin.document };
+    const origin = { vault: value.origin.vault, path: value.origin.path, presentationId: value.origin.presentationId };
     const layouts = new Map<string, { source: string; value: Record<string, unknown> }>();
     for (const entry of value.theme.layouts) {
         if (!isRecord(entry) || typeof entry.key !== 'string' || typeof entry.source !== 'string' || layouts.has(entry.key)) return null;

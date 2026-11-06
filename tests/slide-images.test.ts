@@ -193,7 +193,9 @@ test('image clearance adds only the missing height and never enters source or un
     assert.equal(imageSpaceNeeded(200, 280), 0);
     assert.equal(imageSpaceNeeded(200.25, 100), 101);
     const state = EditorState.create({ doc: 'Words remain words.', extensions: [imageSpacing, history()] });
-    const after = state.update({ effects: setImageSpacing.of({ id: 'document', heights: new Map([['slide', 101]]) }) }).state;
+    const after = state.update({
+        effects: setImageSpacing.of({ presentationId: 'presentation', heights: new Map([['slide', 101]]) })
+    }).state;
     assert.equal(after.doc.toString(), state.doc.toString());
     assert.equal(undoDepth(after), 0);
 });

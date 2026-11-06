@@ -70,7 +70,7 @@ test('slides without notes keep their notes row while an unclosed fence stops pa
             const document = indexPresentation(markdown, 0);
             return (
                 document && {
-                    id: 'document',
+                    id: 'presentation',
                     bodyStart: 0,
                     document,
                     images: new Map(),

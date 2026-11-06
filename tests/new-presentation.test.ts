@@ -26,7 +26,7 @@ import { readJsonObject } from '../src/format/json.ts';
 import { presentationIdentity } from '../src/format/recognition.ts';
 import { themeDocument, themeFilePaths } from '../src/format/embedded-theme.ts';
 
-const document = '12345678-1234-4234-8234-123456789abc';
+const presentationId = '12345678-1234-4234-8234-123456789abc';
 
 test('the bundled licensed theme has a valid master, every ordered layout and the picture its image layouts hold', () => {
     assert.equal(basicThemeFiles.size, 15);
@@ -47,22 +47,25 @@ test('a new presentation holds every file its Basic theme references, the layout
 });
 
 test('a new presentation has matching identity, the chosen theme, and a first slide open on its first placeholder', () => {
-    const made = prepareNewPresentation(basicTheme, document, 'opening')!;
+    const made = prepareNewPresentation(basicTheme, presentationId, 'opening')!;
     const companion = readJsonObject(made.companion)!;
-    assert.equal(presentationIdentity({ markdownpoint: '1.0', id: document }, companion), document);
+    assert.equal(presentationIdentity({ markdownpoint: '1.0', id: presentationId }, companion), presentationId);
     assert.equal(companion.theme, 'basic');
     assert.deepEqual(companion.slides, { opening: { layout: 'title' } });
     const body = made.markdown.indexOf('<!-- slide:');
     const indexed = indexPresentation(made.markdown, body)!;
     assert.equal(indexed.slides.length, 1);
-    assert.equal(made.markdown, `---\nmarkdownpoint: "1.0"\nid: ${document}\n---\n\n<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n`);
+    assert.equal(
+        made.markdown,
+        `---\nmarkdownpoint: "1.0"\nid: ${presentationId}\n---\n\n<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n`
+    );
     assert.doesNotMatch(made.markdown, /Presentation title|Presentation subtitle|Author and date/);
 });
 
 test('each bundled layout can start a presentation without altering the template', () => {
     const before = JSON.stringify([...basicThemeFiles]);
     for (const key of basicTheme.layouts.keys()) {
-        const made = prepareNewPresentation(basicTheme, document, 'opening', key)!;
+        const made = prepareNewPresentation(basicTheme, presentationId, 'opening', key)!;
         assert.ok(made, key);
         assert.deepEqual(readJsonObject(made.companion)?.slides, { opening: { layout: key } });
         assert.equal(indexPresentation(made.markdown, made.markdown.indexOf('<!-- slide:'))?.slides.length, 1);
@@ -72,10 +75,10 @@ test('each bundled layout can start a presentation without altering the template
 
 test('creation refuses invalid identities, keys and missing layouts before returning file contents', () => {
     assert.equal(prepareNewPresentation(basicTheme, 'invalid', 'opening'), null);
-    assert.equal(prepareNewPresentation(basicTheme, document, '../outside'), null);
-    assert.equal(prepareNewPresentation(basicTheme, document, 'opening', 'missing'), null);
-    assert.equal(prepareNewPresentation({ ...basicTheme, key: '../outside' }, document, 'opening'), null);
-    assert.equal(prepareNewPresentation({ ...basicTheme, layouts: new Map() }, document, 'opening'), null);
+    assert.equal(prepareNewPresentation(basicTheme, presentationId, '../outside'), null);
+    assert.equal(prepareNewPresentation(basicTheme, presentationId, 'opening', 'missing'), null);
+    assert.equal(prepareNewPresentation({ ...basicTheme, key: '../outside' }, presentationId, 'opening'), null);
+    assert.equal(prepareNewPresentation({ ...basicTheme, layouts: new Map() }, presentationId, 'opening'), null);
 });
 
 test('theme creation inventories media variants, overrides and embedded fonts without sample packages', () => {

@@ -395,7 +395,7 @@ export class PresentationReader extends Component {
             images,
             placeholders,
             outline: {
-                documentId: identity.id,
+                id: identity.id,
                 path: source.path,
                 slides: outlineSlides(markdown, document, uiText.emptySlide, skipped).map(slide => ({
                     ...slide,

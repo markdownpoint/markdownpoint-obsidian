@@ -34,7 +34,7 @@ export class OutlineSession {
         const same =
             presentation !== null &&
             presentation.path === this.current.presentation?.path &&
-            presentation.documentId === this.current.presentation.documentId;
+            presentation.id === this.current.presentation.id;
         const previous = same ? reconcileSelection(order, this.current.selection) : selectionOf<string>([], null);
         const removed = new Set([...this.current.selection.selected].filter(id => !present.has(id)));
         const before =

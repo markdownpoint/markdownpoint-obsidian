@@ -143,7 +143,7 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
     const packet = decodeSlideClipboard(
         encodeSlideClipboard(
             token,
-            { vault: sourceId, path: 'source/slides.md', document: sourceId },
+            { vault: sourceId, path: 'source/slides.md', presentationId: sourceId },
             'en-US',
             { slides: [{ id: 'one', markdown: '<!-- slide: one -->\n', record }], compositions: [] },
             sourceTheme

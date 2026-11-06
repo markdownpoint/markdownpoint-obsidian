@@ -64,7 +64,7 @@ export async function transferSlideFiles(
     ]);
     const header = getFrontMatterInfo(sources[0]);
     const frontmatter: unknown = header.exists ? parseYaml(header.frontmatter) : null;
-    if (presentationIdentity(frontmatter, readJsonObject(sources[1])) !== packet.origin.document)
+    if (presentationIdentity(frontmatter, readJsonObject(sources[1])) !== packet.origin.presentationId)
         throw new Error('Clipboard source identity changed');
     const originRoot = packet.origin.path.slice(0, packet.origin.path.lastIndexOf('/') + 1);
     const destinationRoot = destination.path.slice(0, destination.path.lastIndexOf('/') + 1);
