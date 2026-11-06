@@ -165,11 +165,12 @@ export function spanMarks(document: (state: EditorState) => PresentationDocument
 const TEXT_NODE = 3;
 const ELEMENT_NODE = 1;
 
-interface RenderedPlace {
+interface RenderedTextLocation {
     readonly node: Text;
+    /** Its offset in its text node. */
     readonly at: number;
-    /** Where it stands in the rendered words. */
-    readonly position: number;
+    /** Its offset in the rendered words, in UTF-16 code units across every text node. */
+    readonly offset: number;
 }
 
 /**
@@ -182,18 +183,18 @@ export function hideRenderedSpans(element: HTMLElement, source: string): void {
     const count = fieldSpans(source).filter(span => span.href === undefined).length;
     if (!count) return;
     let words = '';
-    const opened: RenderedPlace[] = [];
-    const removals: (RenderedPlace & { readonly length: number })[] = [];
+    const opened: RenderedTextLocation[] = [];
+    const removals: (RenderedTextLocation & { readonly length: number })[] = [];
     const visit = (node: Node, code: boolean): void => {
         if (node.nodeType === TEXT_NODE) {
             const text = node as Text;
             for (let at = 0; !code && at < text.data.length; at++) {
-                if (text.data[at] === '[') opened.push({ node: text, at, position: words.length + at });
+                if (text.data[at] === '[') opened.push({ node: text, at, offset: words.length + at });
                 else if (text.data[at] === ']' && opened.length) {
                     const open = opened.pop()!;
                     const attributes = spanAttributesLength(text.data.slice(at + 1));
                     if (!attributes) continue;
-                    removals.push({ ...open, length: 1 }, { node: text, at, position: words.length + at, length: 1 + attributes });
+                    removals.push({ ...open, length: 1 }, { node: text, at, offset: words.length + at, length: 1 + attributes });
                     at += attributes;
                 }
             }
@@ -205,9 +206,9 @@ export function hideRenderedSpans(element: HTMLElement, source: string): void {
     visit(element, false);
     if (removals.length !== count * 2) return;
     // From the end, so an earlier offset in the same text stays where it was.
-    removals.sort((a, b) => b.position - a.position);
+    removals.sort((a, b) => b.offset - a.offset);
     let shown = words;
-    for (const removal of removals) shown = shown.slice(0, removal.position) + shown.slice(removal.position + removal.length);
+    for (const removal of removals) shown = shown.slice(0, removal.offset) + shown.slice(removal.offset + removal.length);
     const bare = (text: string) => text.replace(/\s+/g, '');
     if (bare(shown) !== bare(markdownWords(source))) return;
     for (const removal of removals) removal.node.deleteData(removal.at, removal.length);
