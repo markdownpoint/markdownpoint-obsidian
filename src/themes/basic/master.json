@@ -17,65 +17,79 @@
   },
   "schemes": {
     "light": {
-      "background": "#FFFFFF",
-      "text": "#17120F",
-      "muted": "#6B605A",
-      "accent": "{brand.orange}",
-      "stroke": "#E6DED5",
-      "link": "#17120F"
+      "colors": {
+        "background": "#FFFFFF",
+        "text": "#17120F",
+        "muted": "#6B605A",
+        "accent": "{brand.orange}",
+        "stroke": "#E6DED5",
+        "link": "#17120F"
+      }
     },
     "dark": {
-      "background": "#17120F",
-      "text": "#FFF6EA",
-      "muted": "#BDB2A9",
-      "accent": "{brand.orange}",
-      "stroke": "#3A302A",
-      "link": "#FFF6EA"
+      "colors": {
+        "background": "#17120F",
+        "text": "#FFF6EA",
+        "muted": "#BDB2A9",
+        "accent": "{brand.orange}",
+        "stroke": "#3A302A",
+        "link": "#FFF6EA"
+      }
     },
     "apricot": {
       "appearance": "light",
-      "background": "#FECAA3",
-      "text": "#17120F",
-      "muted": "#524843",
-      "accent": "{brand.ember}",
-      "stroke": "#17120F1F",
-      "link": "#17120F"
+      "colors": {
+        "background": "#FECAA3",
+        "text": "#17120F",
+        "muted": "#524843",
+        "accent": "{brand.ember}",
+        "stroke": "#17120F1F",
+        "link": "#17120F"
+      }
     },
     "butter": {
       "appearance": "light",
-      "background": "#FBE991",
-      "text": "#17120F",
-      "muted": "#524843",
-      "accent": "{brand.ember}",
-      "stroke": "#17120F1F",
-      "link": "#17120F"
+      "colors": {
+        "background": "#FBE991",
+        "text": "#17120F",
+        "muted": "#524843",
+        "accent": "{brand.ember}",
+        "stroke": "#17120F1F",
+        "link": "#17120F"
+      }
     },
     "mint": {
       "appearance": "light",
-      "background": "#AFF3D4",
-      "text": "#17120F",
-      "muted": "#524843",
-      "accent": "{brand.ember}",
-      "stroke": "#17120F1F",
-      "link": "#17120F"
+      "colors": {
+        "background": "#AFF3D4",
+        "text": "#17120F",
+        "muted": "#524843",
+        "accent": "{brand.ember}",
+        "stroke": "#17120F1F",
+        "link": "#17120F"
+      }
     },
     "sky": {
       "appearance": "light",
-      "background": "#B4E0FF",
-      "text": "#17120F",
-      "muted": "#524843",
-      "accent": "{brand.ember}",
-      "stroke": "#17120F1F",
-      "link": "#17120F"
+      "colors": {
+        "background": "#B4E0FF",
+        "text": "#17120F",
+        "muted": "#524843",
+        "accent": "{brand.ember}",
+        "stroke": "#17120F1F",
+        "link": "#17120F"
+      }
     },
     "lilac": {
       "appearance": "light",
-      "background": "#D1C4FE",
-      "text": "#17120F",
-      "muted": "#524843",
-      "accent": "{brand.ember}",
-      "stroke": "#17120F1F",
-      "link": "#17120F"
+      "colors": {
+        "background": "#D1C4FE",
+        "text": "#17120F",
+        "muted": "#524843",
+        "accent": "{brand.ember}",
+        "stroke": "#17120F1F",
+        "link": "#17120F"
+      }
     }
   },
   "text-styles": {
