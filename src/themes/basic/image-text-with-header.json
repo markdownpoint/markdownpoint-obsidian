@@ -1,6 +1,6 @@
 {
   "markdownpoint": "1.0",
-  "kind": "layout",
+  "type": "layout",
   "name": "Image & text with header",
   "objects": [
     {

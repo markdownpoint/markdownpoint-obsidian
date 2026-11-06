@@ -24,13 +24,13 @@ import { prepareCopiedPart } from '../src/format/prepare-copy.ts';
 
 const master = {
     markdownpoint: '1.0',
-    kind: 'master',
+    type: 'master',
     objects: [
         { id: 'inherited-grid', type: 'table' },
         { id: 'caption', type: 'text' }
     ]
 };
-const layout = { markdownpoint: '1.0', kind: 'layout', objects: [{ id: 'title', type: 'text', placeholder: true }] };
+const layout = { markdownpoint: '1.0', type: 'layout', objects: [{ id: 'title', type: 'text', placeholder: true }] };
 const theme = { master, layout, layoutKey: 'title' };
 const fields = (ids: string[], kind = 'slide', id = 'one') =>
     indexPresentation(`<!-- ${kind}: ${id} -->\n` + ids.map(id => `<!-- text: ${id} -->\n`).join(''), 0)![

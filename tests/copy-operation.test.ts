@@ -29,15 +29,15 @@ const uuid = '11111111-1111-4111-8111-111111111111';
 const path = 'deck/slides.md';
 const companion = JSON.stringify({
     markdownpoint: '1.0',
-    kind: 'presentation',
+    type: 'presentation',
     id: uuid,
     theme: 'basic',
     slides: { one: { layout: 'title' }, two: { layout: 'title' } }
 });
 const markdown = '<!-- slide: one -->\n<!-- text: body -->\nFirst words.\n<!-- slide: two -->\n<!-- text: body -->\nSecond words.\n';
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
-const master = '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
-const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+const master = '{"markdownpoint":"1.0","type":"master","id":"11111111-1111-4111-8111-111111111111"}';
+const layout = '{"markdownpoint":"1.0","type":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,

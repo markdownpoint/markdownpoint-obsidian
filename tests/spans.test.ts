@@ -394,7 +394,7 @@ test("reading view drops group marks only in a presentation's slides.md, as the 
     const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
     const markdown = `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n<!-- slide: a -->\n<!-- text: title -->\n${word}\n`;
     const companion = (fields: Record<string, unknown>) =>
-        JSON.stringify({ markdownpoint: '1.0', kind: 'presentation', id, theme: 'basic', slides: {}, ...fields });
+        JSON.stringify({ markdownpoint: '1.0', type: 'presentation', id, theme: 'basic', slides: {}, ...fields });
     const reads: string[] = [];
     const deck = vault({ 'slides.md': markdown, 'presentation.mdpoint': companion({}) }, reads);
     assert.deepEqual(await Promise.all([1, 2, 3].map(() => readsAsPresentation(deck, 'Talk/slides.md', markdown))), [true, true, true]);

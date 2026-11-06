@@ -35,8 +35,8 @@ export async function readEmbeddedTheme<File>(
     const paths = embeddedThemePaths(markdownPath, companion, layoutKeys);
     if (!paths) return null;
     const targets = [
-        { key: null, path: paths.master, kind: 'master' as const },
-        ...[...paths.layouts].map(([key, path]) => ({ key, path, kind: 'layout' as const }))
+        { key: null, path: paths.master, type: 'master' as const },
+        ...[...paths.layouts].map(([key, path]) => ({ key, path, type: 'layout' as const }))
     ];
     try {
         const reads = await Promise.all(
@@ -44,7 +44,7 @@ export async function readEmbeddedTheme<File>(
                 const file = vault.getFileByPath(target.path);
                 if (!file) return null;
                 const source = await vault.read(file);
-                const value = themeDocument(source, target.kind);
+                const value = themeDocument(source, target.type);
                 return value ? { ...target, file, document: { path: target.path, source, value } } : null;
             })
         );

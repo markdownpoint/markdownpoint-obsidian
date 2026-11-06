@@ -56,7 +56,7 @@ export function prepareNewPresentation(
         markdown: `---\nmarkdownpoint: "${FORMAT_VERSION}"\nid: ${id}\n---\n\n${slide.markdown}`,
         companion:
             JSON.stringify(
-                { markdownpoint: FORMAT_VERSION, kind: 'presentation', id, theme: theme.key, slides: { [slideId]: record } },
+                { markdownpoint: FORMAT_VERSION, type: 'presentation', id, theme: theme.key, slides: { [slideId]: record } },
                 null,
                 2
             ) + '\n'

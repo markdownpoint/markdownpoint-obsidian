@@ -1,6 +1,6 @@
 {
   "markdownpoint": "1.0",
-  "kind": "layout",
+  "type": "layout",
   "scheme": "dark",
   "overrides": {
     "footer": null,

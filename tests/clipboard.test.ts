@@ -26,8 +26,8 @@ const uuid = '11111111-1111-4111-8111-111111111111';
 const origin = { vault: uuid, presentationId: uuid, path: 'Presentations/Å calm place/slides.md' };
 const paths = embeddedThemePaths(origin.path, { theme: 'basic' }, ['title'])!;
 const masterSource =
-    '\uFEFF{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","future":9007199254740993}';
-const layoutSource = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+    '\uFEFF{"markdownpoint":"1.0","type":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","future":9007199254740993}';
+const layoutSource = '{"markdownpoint":"1.0","type":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,
@@ -96,7 +96,7 @@ test('text and incompatible, malformed or ambiguous transport data are never tre
         '{',
         '[]',
         '{"version":1,"version":2}',
-        JSON.stringify({ markdownpoint: 1, kind: 'slides', root: '/tmp', slides: [] }),
+        JSON.stringify({ markdownpoint: 1, type: 'slides', root: '/tmp', slides: [] }),
         mutate(value => {
             value.version = 2;
         }),

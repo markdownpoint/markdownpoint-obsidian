@@ -28,8 +28,8 @@ const uuid = '11111111-1111-4111-8111-111111111111';
 const path = 'deck/slides.md';
 const origin = { vault: uuid, path, presentationId: uuid };
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
-const master = '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
-const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+const master = '{"markdownpoint":"1.0","type":"master","id":"11111111-1111-4111-8111-111111111111"}';
+const layout = '{"markdownpoint":"1.0","type":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,

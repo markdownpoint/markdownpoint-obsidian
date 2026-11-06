@@ -70,9 +70,9 @@ export function embeddedThemePaths(markdownPath: string, companion: unknown, lay
 }
 
 /** Validate the supported Theme envelope while keeping its original source separately. */
-export function themeDocument(source: string, kind: 'master' | 'layout'): Record<string, unknown> | null {
+export function themeDocument(source: string, type: 'master' | 'layout'): Record<string, unknown> | null {
     const value = readJsonObject(source);
-    if (!value || !opensFormatVersion(value.markdownpoint) || value.kind !== kind || (kind === 'master' && !isUuid(value.id))) return null;
+    if (!value || !opensFormatVersion(value.markdownpoint) || value.type !== type || (type === 'master' && !isUuid(value.id))) return null;
     return value;
 }
 

@@ -85,9 +85,9 @@ export function copyTextSchemas(
             !isRecord(theme.master) ||
             !isRecord(theme.layout) ||
             !opensFormatVersion(theme.master.markdownpoint) ||
-            theme.master.kind !== 'master' ||
+            theme.master.type !== 'master' ||
             !opensFormatVersion(theme.layout.markdownpoint) ||
-            theme.layout.kind !== 'layout' ||
+            theme.layout.type !== 'layout' ||
             typeof record.layout !== 'string' ||
             record.layout !== theme.layoutKey ||
             !applyTypes(types, theme.master, false) ||

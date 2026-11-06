@@ -105,11 +105,11 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
     } as unknown as Window;
     const master = JSON.stringify({
         markdownpoint: '1.0',
-        kind: 'master',
+        type: 'master',
         id: themeId,
         objects: artwork ? [{ id: 'logo', type: 'image', file: 'media/logo.svg' }] : []
     });
-    const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[]}';
+    const layout = '{"markdownpoint":"1.0","type":"layout","objects":[]}';
     for (const [root, id] of [
         ['source', sourceId],
         ['target', targetId]
@@ -117,7 +117,7 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
         add(root + '/slides.md', header(id) + '<!-- slide: one -->\n');
         add(
             root + '/presentation.mdpoint',
-            JSON.stringify({ markdownpoint: '1.0', kind: 'presentation', id, theme: 'basic', slides: { one: { layout: 'title' } } })
+            JSON.stringify({ markdownpoint: '1.0', type: 'presentation', id, theme: 'basic', slides: { one: { layout: 'title' } } })
         );
         add(root + '/themes/basic/master.json', master);
         add(root + '/themes/basic/title.json', layout);

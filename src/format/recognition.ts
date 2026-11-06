@@ -83,7 +83,7 @@ export function isStableId(value: unknown): value is string {
  */
 export function presentationIdentity(frontmatter: unknown, companion: unknown): string | null {
     if (!isRecord(frontmatter) || !isRecord(companion)) return null;
-    if (!opensFormatVersion(frontmatter.markdownpoint) || !opensFormatVersion(companion.markdownpoint) || companion.kind !== 'presentation')
+    if (!opensFormatVersion(frontmatter.markdownpoint) || !opensFormatVersion(companion.markdownpoint) || companion.type !== 'presentation')
         return null;
     const id = frontmatter.id;
     if (!isUuid(id)) return null;
@@ -96,7 +96,7 @@ export function presentationIdentity(frontmatter: unknown, companion: unknown): 
  * The app never renames these envelope keys, so a newer major is recognized through them.
  */
 export function newerFormat(frontmatter: unknown, companion: unknown): string | null {
-    if (!isRecord(frontmatter) || !isRecord(companion) || companion.kind !== 'presentation') return null;
+    if (!isRecord(frontmatter) || !isRecord(companion) || companion.type !== 'presentation') return null;
     if (!isUuid(frontmatter.id) || companion.id !== frontmatter.id) return null;
     const versions = [companion.markdownpoint, frontmatter.markdownpoint];
     if (versions.some(version => formatStanding(version) === 'invalid')) return null;

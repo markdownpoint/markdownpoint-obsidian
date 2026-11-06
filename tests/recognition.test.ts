@@ -22,7 +22,7 @@ import { newerFormat, presentationCompanionPath, presentationIdentity, presentat
 
 const presentationId = '12345678-1234-7234-9234-123456789abc';
 const frontmatter = { markdownpoint: '1.0', id: presentationId };
-const companion = { markdownpoint: '1.0', kind: 'presentation', id: presentationId, slides: {} };
+const companion = { markdownpoint: '1.0', type: 'presentation', id: presentationId, slides: {} };
 
 test('the fixed companion stays beside slides.md at the vault root or in a nested folder', () => {
     assert.equal(presentationCompanionPath('slides.md'), 'presentation.mdpoint');
@@ -104,7 +104,7 @@ test('a missing or unrelated companion and ordinary frontmatter do not recognize
         assert.equal(presentationIdentity(frontmatter, value), null);
         assert.equal(presentationIdentity(value, companion), null);
     }
-    assert.equal(presentationIdentity(frontmatter, { ...companion, kind: 'theme' }), null);
+    assert.equal(presentationIdentity(frontmatter, { ...companion, type: 'theme' }), null);
 });
 
 test('each file must declare a version 1 format as a quoted major and minor', () => {
@@ -123,7 +123,7 @@ test('each file must declare a version 1 format as a quoted major and minor', ()
 
 test('the format before 1.0, with a numeric version and a document key, stays an ordinary note', () => {
     const before = { markdownpoint: 1, document: presentationId };
-    assert.equal(presentationIdentity(before, { markdownpoint: 1, kind: 'presentation', document: presentationId }), null);
+    assert.equal(presentationIdentity(before, { markdownpoint: 1, type: 'presentation', document: presentationId }), null);
     assert.equal(
         presentationIdentity({ markdownpoint: '1.0', document: presentationId }, { ...companion, id: undefined, document: presentationId }),
         null
@@ -154,7 +154,7 @@ test('a pair of a newer major states its version through the envelope keys, and 
     for (const markdownpoint of ['1.0', '1.4'])
         assert.equal(newerFormat(frontmatter, { ...companion, markdownpoint }), null, markdownpoint);
     for (const value of [
-        { ...later, kind: 'theme' },
+        { ...later, type: 'theme' },
         { ...later, id: '87654321-1234-7234-9234-123456789abc' },
         { ...later, id: undefined, document: presentationId }
     ])
@@ -163,7 +163,7 @@ test('a pair of a newer major states its version through the envelope keys, and 
         assert.equal(newerFormat({ ...frontmatter, markdownpoint }, later), null, String(markdownpoint));
     assert.equal(newerFormat(null, later), null);
     assert.equal(
-        newerFormat({ markdownpoint: 1, document: presentationId }, { markdownpoint: 1, kind: 'presentation', document: presentationId }),
+        newerFormat({ markdownpoint: 1, document: presentationId }, { markdownpoint: 1, type: 'presentation', document: presentationId }),
         null
     );
 });

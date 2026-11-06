@@ -25,12 +25,12 @@ const field = { id: 'title', type: 'text', placeholder: true, frame: { x: 100, y
 const staticText = { id: 'footer', type: 'text', frame: { x: 100, y: 800, width: 500, height: 60 } };
 const master = {
     markdownpoint: '1.0',
-    kind: 'master',
+    type: 'master',
     size: { width: 1600, height: 900 },
     objects: [staticText],
     text: { footer: 'Fixed' }
 };
-const layout = { markdownpoint: '1.0', kind: 'layout', objects: [field] };
+const layout = { markdownpoint: '1.0', type: 'layout', objects: [field] };
 const theme: EmbeddedTheme = {
     key: 'basic',
     id: 'id',

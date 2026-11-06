@@ -34,7 +34,7 @@ const sticker = String.raw`{ "layout": "title", "mood": "calm", "objects": [ { "
 const sparkle = String.raw`{ "layout": "content", "steps": [ { "id": "in", "duration": 1, "curves": { "title.sparkle": [ { "id": "k", "at": 0 } ] } } ] }`;
 const spanned = block('a', 'Made by a [newer]{glow=2} MarkdownPoint.');
 const markdown = header + spanned + block('b', 'Words for b.');
-const companion = `{\n  "markdownpoint": "1.1",\n  "kind": "presentation",\n  "id": "${ID}",\n  "handout": { "columns": 2 },\n  "slides": { "a": ${sticker}, "b": ${sparkle} },\n  "compositions": {}\n}\n`;
+const companion = `{\n  "markdownpoint": "1.1",\n  "type": "presentation",\n  "id": "${ID}",\n  "handout": { "columns": 2 },\n  "slides": { "a": ${sticker}, "b": ${sparkle} },\n  "compositions": {}\n}\n`;
 const apply = (source: string, changes: readonly { from: number; to: number; insert: string }[]) =>
     [...changes].reverse().reduce((text, change) => text.slice(0, change.from) + change.insert + text.slice(change.to), source);
 const index = (source: string) => indexPresentation(source, header.length)!;

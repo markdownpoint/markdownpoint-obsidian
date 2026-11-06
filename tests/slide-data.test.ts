@@ -33,7 +33,7 @@ import { slideEditTransactions } from '../src/editor/structural-history.ts';
 const path = 'deck/slides.md';
 const presentationId = '11111111-1111-4111-8111-111111111111';
 const source = (records = '"a":{"layout":"title"},"b":{"layout":"body"}', id = presentationId) =>
-    `{"markdownpoint":"1.0","kind":"presentation","id":"${id}","slides":{${records}},"unrelated":true}`;
+    `{"markdownpoint":"1.0","type":"presentation","id":"${id}","slides":{${records}},"unrelated":true}`;
 function device(initial?: unknown) {
     let stored: unknown = initial;
     const state = { disk: source(), calls: 0, backupFails: false, writeFails: false, errors: [] as unknown[] };
