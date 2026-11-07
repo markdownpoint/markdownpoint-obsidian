@@ -45,6 +45,14 @@ test('structural preview resolves actual frame dimensions and partial inherited 
     assert.deepEqual(preview.regions, [{ x: 300, y: 100, width: 800, height: 180, rotation: 0, kind: 'text', columns: 1, gutter: 48 }]);
 });
 
+test("a master that declares no size lays its slides out at 1920 × 1080, as MarkdownPoint reads it, and one it can't read gives none", () => {
+    const { size: _size, ...sizeless } = master;
+    const at = (value: Record<string, unknown>) =>
+        slideStructure({ layout: 'title' }, { ...theme, master: { ...theme.master, source: JSON.stringify(value), value } });
+    assert.deepEqual([at(sizeless)?.width, at(sizeless)?.height], [1920, 1080]);
+    assert.equal(at({ ...master, size: { width: 1600 } }), null);
+});
+
 test('text areas retain their whole frame and column divisions', () => {
     const preview = slideStructure(
         { layout: 'title', overrides: { footer: null, title: { 'column-count': 2, 'column-gutter': 40 } } },

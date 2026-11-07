@@ -79,10 +79,48 @@ test('assigned images prioritize background, named layout placeholders, then oth
 test('cleared backgrounds, removed objects and empty placeholders do not show samples or prior generations', () => {
     const companion = {
         background: { image: 'media/back.svg' },
-        slides: { one: { layout: 'title', background: { image: 'none' }, overrides: { logo: null, hero: { file: '' } } } }
+        slides: { one: { layout: 'title', background: { image: 'none' }, overrides: { logo: null, hero: { file: null } } } }
     };
     assert.deepEqual(paths(companion), []);
     assert.deepEqual(paths({ slides: { one: { background: { image: 'media/own.png' }, objects: [] } } }, null), [root + 'media/own.png']);
+});
+
+test("an override's null file clears the inherited picture, and a value that names no picture or video leaves it, as MarkdownPoint applies one", () => {
+    const shown = (file: unknown) => paths({ slides: { one: { layout: 'title', overrides: { logo: { file } } } } });
+    assert.deepEqual(shown(null), []);
+    for (const file of ['', 'media/notes.txt', 42]) assert.deepEqual(shown(file), [root + 'themes/field-notes/art/dark.svg'], String(file));
+    assert.deepEqual(shown('media/own.png'), [root + 'media/own.png']);
+    // A video takes the picture's place, and lists no picture.
+    assert.deepEqual(shown('media/clip.mp4'), []);
+    // A layout's null clears the master's picture as a slide's does.
+    const cleared = {
+        ...theme,
+        layouts: new Map([['title', { path: 'title.json', source: '{}', value: { ...layout, overrides: { logo: { file: null } } } }]])
+    };
+    assert.deepEqual(paths({ slides: { one: { layout: 'title' } } }, cleared), []);
+});
+
+test("a slide shows the scheme MarkdownPoint shows: its own, else its layout's, the first of these its theme has, else light", () => {
+    const schemed: EmbeddedTheme = {
+        ...theme,
+        master: {
+            path: 'master.json',
+            source: '{}',
+            value: {
+                schemes: { light: {}, dark: { appearance: 'dark' }, evening: { appearance: 'dark' } },
+                objects: [{ id: 'logo', type: 'image', file: { light: 'art/light.svg', dark: 'art/dark.svg', retired: 'art/retired.svg' } }]
+            }
+        },
+        layouts: new Map([
+            ['title', { path: 'title.json', source: '{}', value: { scheme: 'evening' } }],
+            ['gone', { path: 'gone.json', source: '{}', value: { scheme: 'retired' } }]
+        ])
+    };
+    const shown = (slide: Record<string, unknown>) => paths({ slides: { one: slide } }, schemed);
+    assert.deepEqual(shown({ layout: 'title', scheme: 'retired' }), [root + 'themes/field-notes/art/dark.svg']);
+    assert.deepEqual(shown({ layout: 'gone' }), [root + 'themes/field-notes/art/light.svg']);
+    assert.deepEqual(shown({ layout: 'gone', scheme: 'dark' }), [root + 'themes/field-notes/art/dark.svg']);
+    assert.deepEqual(shown({ layout: 'gone', scheme: 'toString' }), [root + 'themes/field-notes/art/light.svg']);
 });
 
 test('repeated files are shown once and video assignments are not treated as images', () => {

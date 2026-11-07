@@ -67,7 +67,8 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
     if (!theme || !isRecord(record) || typeof record.layout !== 'string') return null;
     const master = theme.master.value;
     const layout = theme.layouts.get(record.layout)?.value;
-    const size = master.size;
+    // A master that declares no size has MarkdownPoint's, 1920 × 1080.
+    const size = master.size === undefined ? { width: 1920, height: 1080 } : master.size;
     if (!layout || !isRecord(size) || !finite(size.width) || !finite(size.height) || size.width <= 0 || size.height <= 0) return null;
     const objects = new Map<string, Record<string, unknown>>();
     const ownIds = new Set<string>();

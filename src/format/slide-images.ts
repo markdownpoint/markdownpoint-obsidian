@@ -35,6 +35,7 @@ interface ImageObject {
     placeholder: boolean;
 }
 const imageExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp)$/i;
+const videoExtension = /\.(?:mp4|m4v|mov|webm|ogv)$/i;
 
 function imagePath(value: unknown, scope: string, presentation: boolean): string | null {
     if (
@@ -63,9 +64,14 @@ export function assignedSlideImages(
     if (!isRecord(slide)) return [];
     const root = markdownPath.slice(0, markdownPath.lastIndexOf('/') + 1);
     const layout = theme && typeof slide.layout === 'string' ? theme.layouts.get(slide.layout)?.value : undefined;
-    const scheme = typeof slide.scheme === 'string' ? slide.scheme : typeof layout?.scheme === 'string' ? layout.scheme : 'light';
-    const schemes = theme?.master.value.schemes;
-    const definition = isRecord(schemes) ? schemes[scheme] : undefined;
+    // The scheme the slide shows, as MarkdownPoint shows it: its own, else its layout's, the first of these its theme has,
+    // else light.
+    const masterSchemes = theme?.master.value.schemes;
+    const schemes = isRecord(masterSchemes) ? masterSchemes : {};
+    const scheme =
+        [slide.scheme, layout?.scheme].find((name): name is string => typeof name === 'string' && isRecord(ownEntry(schemes, name))) ??
+        'light';
+    const definition = ownEntry(schemes, scheme);
     const appearance = isRecord(definition) && definition.appearance === 'dark' ? 'dark' : scheme === 'dark' ? 'dark' : 'light';
     const picture = (value: unknown) => (isRecord(value) ? (value[scheme] ?? value[appearance] ?? value.light) : value);
     const objects = new Map<string, ImageObject>();
@@ -77,13 +83,16 @@ export function assignedSlideImages(
                 if (!current) continue;
                 if (override === null) objects.delete(id);
                 else if (isRecord(override)) {
+                    // As MarkdownPoint applies an override: a picture's or a video's file takes the inherited one's place,
+                    // null clears it, and anything else leaves it.
                     const file = picture(override.file);
-                    const replacement = typeof file === 'string';
-                    objects.set(id, {
-                        ...current,
-                        raw: { ...current.raw, ...override, type: current.raw.type },
-                        ...(replacement ? { file, scope } : {})
-                    });
+                    const shown =
+                        override.file === null
+                            ? { file: undefined }
+                            : typeof file === 'string' && (imageExtension.test(file) || videoExtension.test(file))
+                              ? { file, scope }
+                              : {};
+                    objects.set(id, { ...current, raw: { ...current.raw, ...override, type: current.raw.type }, ...shown });
                 }
             }
         if (Array.isArray(level.objects))
