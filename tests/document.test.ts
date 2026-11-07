@@ -136,10 +136,51 @@ test('invalid or duplicate structural markers cannot publish misleading source r
         '<!-- slide: double--dash -->\n',
         '<!-- slide: missing-newline -->',
         '<!-- slide: first -->\n<!-- notes: named -->\n',
-        '<!-- text: orphan -->\n',
-        '<!-- slide: first -->\n<!-- control: wrong-container -->\n'
+        '<!-- text: orphan -->\n'
     ])
         assert.equal(indexPresentation(text, 0), null, text);
+});
+
+test('a line that reads as a marker, misspelled, closing or with words after it, refuses the file as MarkdownPoint refuses it', () => {
+    // Each line MarkdownPoint reads as a malformed marker, and the comments it keeps as words.
+    for (const line of [
+        '<!-- /slide -->',
+        '<!--/slide: x -->',
+        '<!-- slide: a<b -->',
+        '<!-- slide: a>b -->',
+        '<!-- slide intro -->',
+        '<!-- slide: x --> trailing words',
+        '<!-- notes --> Say hi',
+        '<!-- /notes -->',
+        '  <!-- /text -->  '
+    ])
+        assert.equal(indexPresentation(`<!-- slide: first -->\n<!-- text: body -->\nWords.\n${line}\nMore.\n`, 0), null, line);
+    for (const line of ['<!-- Notes: ask Anna -->', '<!-- slide : x -->', '<!-- text: ask Anna now -->']) {
+        const text = `<!-- slide: first -->\n<!-- text: body -->\nWords.\n${line}\nMore.\n`;
+        const document = indexPresentation(text, 0);
+        assert.ok(document, line);
+        assert.deepEqual(
+            document.slides[0]!.blocks.map(block => text.slice(block.contentFrom, block.to)),
+            [`Words.\n${line}\nMore.\n`]
+        );
+    }
+});
+
+test("a control's default words under a slide stay that slide's words, which MarkdownPoint keeps and warns about", () => {
+    const text =
+        '<!-- slide: first -->\n<!-- text: body -->\nWords.\n\n<!-- control: caption -->\nUnbound words.\n<!-- slide: second -->\n';
+    const document = indexPresentation(text, 0)!;
+    assert.deepEqual(
+        document.slides.map(slide => slide.id),
+        ['first', 'second']
+    );
+    assert.deepEqual(
+        document.slides[0]!.blocks.map(block => [block.kind, block.id, text.slice(block.contentFrom, block.to)]),
+        [
+            ['text', 'body', 'Words.\n\n'],
+            ['control', 'caption', 'Unbound words.\n']
+        ]
+    );
 });
 
 test('ordinary comments, escaped directives, and horizontal rules stay in their text block', () => {

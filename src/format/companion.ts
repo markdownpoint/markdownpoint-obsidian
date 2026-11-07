@@ -21,10 +21,15 @@ import type { Edit, Node, ParseError } from 'jsonc-parser';
 
 export type CompanionMap = 'slides' | 'compositions';
 
-function objectTree(source: string): Node | null {
+/**
+ * A JSON object's tree, its nodes at their offsets in `source`. A companion may start with a byte order mark, which
+ * MarkdownPoint reads past and the tree leaves where it is.
+ */
+function objectTree(source: string, companion = false): Node | null {
     const errors: ParseError[] = [];
     const tree = parseTree(source, errors, { disallowComments: true, allowTrailingComma: false });
-    return !errors.length && tree?.type === 'object' ? tree : null;
+    const bom = companion && source.charCodeAt(0) === 0xfeff;
+    return errors.every(error => bom && error.offset === 0 && error.length === 1) && tree?.type === 'object' ? tree : null;
 }
 
 export function isSlideRecordSource(source: string): boolean {
@@ -90,7 +95,7 @@ export class CompanionDocument {
     }
 
     static read(source: string, mapName: CompanionMap = 'slides'): CompanionDocument | null {
-        const root = objectTree(source);
+        const root = objectTree(source, true);
         const maps = root?.children?.filter(property => property.children?.[0]?.value === mapName);
         const map = maps?.length === 1 ? maps[0]?.children?.[1] : undefined;
         if (map?.type !== 'object') return null;
@@ -108,7 +113,7 @@ export class CompanionDocument {
     static ensure(source: string, mapName: CompanionMap): CompanionDocument | null {
         const existing = CompanionDocument.read(source, mapName);
         if (existing) return existing;
-        const root = objectTree(source);
+        const root = objectTree(source, true);
         if (!root || root.children?.some(property => property.children?.[0]?.value === mapName)) return null;
         const first = root.children?.[0];
         const last = root.children?.at(-1);

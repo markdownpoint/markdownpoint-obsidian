@@ -60,6 +60,16 @@ test('insertion preserves independent source/JSON order and every surviving reco
     assert.equal(result.document.compositions[0]!.id, 'shared');
 });
 
+test('a companion that starts with a byte order mark takes a new slide, as MarkdownPoint reads past the mark', () => {
+    const source = block('a');
+    const bom = String.fromCharCode(0xfeff);
+    const result = plan(source, `${bom}{"slides":{"a":{}},"compositions":{}}`, [prepared('b')], 'a')!;
+    assert.ok(result);
+    assert.equal(apply(source, result), block('a') + block('b'));
+    assert.deepEqual([...CompanionDocument.read(result.companion)!.records.keys()], ['a', 'b']);
+    assert.ok(result.companion.startsWith(bom));
+});
+
 test('an empty draft accepts slides after its final section and before its reusable definitions', () => {
     const header = '---\r\nmarkdownpoint: "1.0"\r\n---\r\n\r\n';
     const section = '<!-- section: empty -->\r\n# Empty\r\n';

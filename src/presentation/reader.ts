@@ -35,6 +35,7 @@ import type { SlideImagePreview } from './image-reader.ts';
 import { slideStructure } from '../format/structure.ts';
 import { slideTextPlaceholders } from '../format/new-slide.ts';
 import { CompanionDocument } from '../format/companion.ts';
+import { readJsonObject } from '../format/json.ts';
 
 interface PresentationSource {
     readonly file: TFile;
@@ -216,7 +217,10 @@ export class PresentationReader extends Component {
             }
             await this.data?.ready.catch(() => undefined);
             const companionText = await this.app.vault.read(companionFile);
-            const companion: unknown = JSON.parse(companionText);
+            // As MarkdownPoint reads it: past a byte order mark, and refused for a key written twice. A save of the words
+            // alone leaves it as it was read.
+            const known = this.sources.get(file);
+            const companion = known?.companionText === companionText ? known.companion : readJsonObject(companionText);
             const markdown = view ? view.getViewData() : await this.app.vault.read(file);
             // The file's newest request owns its metadata. A reused editor is never a
             // source for that earlier file, and unloading invalidates every request.
@@ -229,6 +233,10 @@ export class PresentationReader extends Component {
                 (view && view.file !== file)
             )
                 return;
+            if (!companion) {
+                this.forget(file);
+                return;
+            }
             const layouts =
                 isRecord(companion) && isRecord(companion.slides)
                     ? Object.values(companion.slides).flatMap(record =>
@@ -426,7 +434,7 @@ export async function readsAsPresentation(vault: Vault, path: string, markdown: 
     const { mtime, size } = file.stat;
     let read = readCompanions.get(file);
     if (read?.mtime !== mtime || read.size !== size) {
-        read = { mtime, size, value: vault.cachedRead(file).then(text => JSON.parse(text) as unknown) };
+        read = { mtime, size, value: vault.cachedRead(file).then(readJsonObject) };
         readCompanions.set(file, read);
     }
     try {

@@ -414,3 +414,14 @@ test("reading view drops group marks only in a presentation's slides.md, as the 
     ] as const)
         assert.equal(await readsAsPresentation(vault(files), path, markdown), false, JSON.stringify(Object.keys(files)) + path);
 });
+
+test('a companion reads as MarkdownPoint reads it: past a byte order mark, and refused for a key written twice', async () => {
+    const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
+    const markdown = `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n<!-- slide: a -->\n`;
+    const fields = `"markdownpoint": "1.0", "type": "presentation", "theme": "basic", "slides": {}`;
+    const opens = (companion: string) =>
+        readsAsPresentation(vault({ 'slides.md': markdown, 'presentation.mdpoint': companion }), 'Talk/slides.md', markdown);
+    assert.equal(await opens(`${String.fromCharCode(0xfeff)}{${fields}, "id": "${id}"}`), true);
+    // The last of a key written twice would name this presentation, where MarkdownPoint refuses the file.
+    assert.equal(await opens(`{${fields}, "id": "1c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d", "id": "${id}"}`), false);
+});

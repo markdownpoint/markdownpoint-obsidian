@@ -42,6 +42,18 @@ test('record changes combine removals, replacements and additions without damagi
     assert.deepEqual(JSON.parse(CompanionDocument.read('{"slides":{}}')!.change(new Map([['a', '{}']]))!), { slides: { a: {} } });
 });
 
+test('a companion that starts with a byte order mark reads past it, as MarkdownPoint does, and keeps it through a change', () => {
+    const bom = String.fromCharCode(0xfeff);
+    const source = `${bom}{"slides":{"a":{"v":1}}}`;
+    assert.equal(CompanionDocument.read(source)!.records.get('a'), '{"v":1}');
+    assert.equal(CompanionDocument.read(source)!.change(new Map([['b', '{}']])), `${bom}{"slides":{"a":{"v":1}, "b": {}}}`);
+    assert.equal(CompanionDocument.ensure(source, 'compositions')!.records.size, 0);
+    // A mark anywhere else, or anything after it but the object, is no JSON.
+    assert.equal(CompanionDocument.read(`${bom}x{"slides":{"a":{}}}`), null);
+    assert.equal(CompanionDocument.read(`${bom}${bom}{"slides":{"a":{}}}`), null);
+    assert.equal(CompanionDocument.read(`{"slides":${bom}{"a":{}}}`), null);
+});
+
 test('a remembered record returns when its native Markdown marker returns', () => {
     const raw = String.raw`{ "layout": "title", "unknown": 900719925474099312345, "escaped": "\u00e9" }`;
     const source = `{"slides":{"a":${raw},"b":{}},"keep":true}`;

@@ -68,7 +68,7 @@ test('unknown geometry, hidden objects and hierarchy are omitted; framed media s
             objects: [
                 { ...field, id: 'nested', parent: 'group' },
                 { ...field, id: 'scaled', scale: { x: 2, y: 2 } },
-                { id: 'model', type: 'model', location: { x: 1, y: 2, z: 3 } },
+                { id: 'model', type: 'model', position: { x: 1, y: 2, z: 3 } },
                 { ...field, id: 'photo', type: 'image', rotation: 15, file: 'media/private-name.jpg' }
             ]
         },

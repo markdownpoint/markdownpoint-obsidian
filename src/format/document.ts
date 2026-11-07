@@ -69,7 +69,12 @@ function markerId(kind: string, id: string): boolean {
     if (kind !== 'text' || dot < 0) return isStableId(id);
     return isStableId(id.slice(0, dot)) && controlName.test(id.slice(dot + 1));
 }
-const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[:\s]|-->|$)(?:\s*:?\s*[^\s<>]*)?\s*(?:-->|$)/i;
+/**
+ * A line that reads as one of the markers, misspelled or closing, which MarkdownPoint refuses rather than keeps as words: a
+ * marker's word, after a slash or not, with at most one word after it, colon or not, and words after its `-->` included,
+ * as `<!-- /slide -->`, `<!-- slide: a<b -->` or `<!-- notes --> Say hi`. A comment with more words is the author's.
+ */
+const markerLike = /^<!--\s*\/?(?:section|slide|composition|text|control|notes)(?=[:\s]|-->|$):?\s*(?:\S+?\s*)?(?:-->.*)?$/i;
 
 /**
  * A candidate directive consumed by a fenced code token is content, not a slide boundary. `start` is where the block
@@ -187,7 +192,8 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
                     (kind === 'slide' ? slides : compositions).push(part);
                 }
             } else {
-                if (!container || (kind === 'control' && container !== 'composition')) return null;
+                // A control's default words under a slide are words no object shows, which MarkdownPoint keeps and warns about.
+                if (!container) return null;
                 if (part && (kind === 'text' || kind === 'notes' || kind === 'control')) {
                     block = { kind, id: id ?? null, from: offset, contentFrom: end, to: markdown.length };
                     part.blocks.push(block);

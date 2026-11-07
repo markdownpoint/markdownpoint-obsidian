@@ -19,7 +19,7 @@
 import { CompanionDocument, isSlideRecordSource, reconcileSlideRecords } from '../format/companion.ts';
 import type { CompanionMap } from '../format/companion.ts';
 import { FORMAT_VERSION } from '../format/format-version.ts';
-import { readJsonObject } from '../format/json.ts';
+import { readJsonObject, withoutByteOrderMark } from '../format/json.ts';
 import { isRecord, isStableId, isUuid, presentationCompanionPath, presentationIdentity } from '../format/recognition.ts';
 export interface SlideDataHost {
     loadRecovery(): Promise<unknown>;
@@ -281,7 +281,10 @@ export class SlideData {
     private matches(source: string, presentationId: string): boolean {
         try {
             // The companion alone must belong to the presentation; the frontmatter half restates the remembered id
-            return presentationIdentity({ markdownpoint: FORMAT_VERSION, id: presentationId }, JSON.parse(source)) === presentationId;
+            return (
+                presentationIdentity({ markdownpoint: FORMAT_VERSION, id: presentationId }, JSON.parse(withoutByteOrderMark(source))) ===
+                presentationId
+            );
         } catch {
             return false;
         }

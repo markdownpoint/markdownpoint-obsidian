@@ -18,6 +18,7 @@
 
 import { CompanionDocument } from './companion.ts';
 import { indexPresentation } from './document.ts';
+import { withoutByteOrderMark } from './json.ts';
 import type { PresentationDocument } from './document.ts';
 import { isRecord, isStableId } from './recognition.ts';
 import { terminateSourceBlock } from './payload.ts';
@@ -69,7 +70,7 @@ export function planSlideInsertion(
     if (afterSlideId === null ? document.slides.length > 0 : !after) return null;
     const data = CompanionDocument.read(companion);
     if (!data) return null;
-    const metadata: unknown = JSON.parse(companion);
+    const metadata: unknown = JSON.parse(withoutByteOrderMark(companion));
     if (!isRecord(metadata) || (metadata.compositions !== undefined && !isRecord(metadata.compositions))) return null;
     const definitions = CompanionDocument.read(companion, 'compositions');
     if (metadata.compositions !== undefined && !definitions) return null;
