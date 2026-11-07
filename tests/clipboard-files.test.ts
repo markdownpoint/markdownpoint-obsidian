@@ -116,7 +116,7 @@ test('only declared media controls authorize files, not text that resembles a pa
                             id: 'instance',
                             type: 'composition',
                             composition: 'card',
-                            inputs: { photo: 'media/selected.png', words: 'media/still-text.png' }
+                            controls: { photo: 'media/selected.png', words: 'media/still-text.png' }
                         }
                     ]
                 })
