@@ -38,26 +38,79 @@ test("a Swedish chart's cells keep their numbers in an English presentation, eac
     assert.equal(respellChartCells(table('| Sales | 1.234 | 1,234.5 |'), english, swedish), table('| Sales | 1,234 | 1 234,5 |'));
 });
 
-test("a cell whose number changes its spelling is written as its words, as MarkdownPoint writes a chart's table, its marks set aside", () => {
-    assert.equal(
-        respellChartCells(
-            table('| Sales | **1 234,5** | [1,5](https://example.com/1,5) |', '| Loss | `4,25` | ~~0,5~~ |'),
-            swedish,
-            english
-        ),
-        table('| Sales | 1,234.5 | 1.5 |', '| Loss | 4.25 | 0.5 |')
-    );
-    assert.equal(
-        respellChartCells(table('| Sales | 1&nbsp;234,50 | **1,**234 |', '| Loss | 1\\,5 | 1,_234_ |'), swedish, english),
-        table('| Sales | 1,234.50 | 1.234 |', '| Loss | 1.5 | 1.234 |')
-    );
-    assert.equal(
-        respellChartCells(table('| Sales | [1](https://example.com "quoted, title"),234 | **5** |'), english, swedish),
-        table('| Sales | 1 234 | **5** |')
-    );
+/** Words with each `·` a no-break space, the group mark Swedish writes. */
+const spaced = (words: string) => words.replaceAll('·', String.fromCharCode(0xa0));
+
+/**
+ * Cells respelled from the locale named into the other of en-US and sv-SE, beside what MarkdownPoint core's
+ * `respellChartTable` (`scene/chart-respelling.ts`) writes for each at its 151a2b201, and what the plugin writes where it
+ * writes otherwise.
+ */
+const respelledByCore: readonly (readonly [locale: string, cell: string, core: string, plugin?: string])[] = [
+    ['en-US', '**1,234**', '**1·234**'],
+    ['en-US', '1,**234**', '1·**234**'],
+    ['en-US', '**1**,234', '**1**·234'],
+    ['sv-SE', '1 **234**', '1**,234**'],
+    ['sv-SE', '**1** 234', '**1**,234'],
+    ['sv-SE', '1 234**,5**', '1,234**.5**'],
+    ['en-US', '**1,**234', '**1**·234'],
+    ['en-US', '**1**,**234**', '**1·234**'],
+    ['en-US', '1**,**234', '1·234'],
+    ['en-US', '1,2**3**4', '1·2**3**4'],
+    ['en-US', '*1*,*234*', '*1·234*'],
+    ['sv-SE', '*1* *234*', '*1,234*'],
+    ['en-US', '_1_,234', '*1*·234'],
+    ['sv-SE', '1 _234_', '1*,234*'],
+    ['en-US', '__1__,234', '**1**·234'],
+    ['en-US', '_*1,234*_', '*1·234*'],
+    ['en-US', '***1,234***', '***1·234***'],
+    ['en-US', '==1,234==', '==1·234=='],
+    ['sv-SE', '1 ==234==', '1==,234=='],
+    ['en-US', '1,~~234~~', '1·~~234~~'],
+    ['en-US', '[1,234](https://example.com/1,234)', '[1·234](https://example.com/1,234)'],
+    ['en-US', '1,[234](https://example.com)', '1[·234](https://example.com)'],
+    ['sv-SE', '[1](https://example.com) [234](https://example.com)', '[1,234](https://example.com)'],
+    ['en-US', '1,[234]{color=accent}', '1[·234]{color=accent}'],
+    ['en-US', '`1,234`', '`1·234`'],
+    ['en-US', '`1,`234', '`1`·234'],
+    ['en-US', '1`,234`', '1`·234`'],
+    ['en-US', '1\\,234', '1·234'],
+    ['en-US', '1&#44;234', '1·234'],
+    ['en-US', '1,234&nbsp;kr', '1·234·kr'],
+    ['sv-SE', '-1 234,5 %', '-1,234.5 %'],
+    ['en-US', '$1,234.50', '$1·234,50'],
+    ['en-US', '1,234 \\| kr', '1·234 \\| kr'],
+    ['sv-SE', '1<br>234,5', '1<br>234,5'],
+    ['sv-SE', 'mail@example.com 1,5', 'mail@example.com 1.5'],
+    ['en-US', '1,234 💰', '1·234 💰'],
+    ['sv-SE', '😀**1,5**', '😀**1.5**'],
+    // Core writes the whole table anew, so it also writes a note, HTML, a picture, an escape, an address, an empty link
+    // and a code span's padding its own way, where the plugin keeps the Markdown around the number's runs as written.
+    ['en-US', '1,234<!-- note -->', '1·234', '1·234<!-- note -->'],
+    ['sv-SE', '1 234,5 <b>kr</b>', '1,234.5 \\<b\\>kr\\</b\\>', '1,234.5 <b>kr</b>'],
+    ['sv-SE', '![a](b.png) 2,5', '![a\\](b.png) 2.5', '![a](b.png) 2.5'],
+    ['en-US', '1,234 \\*', '1·234 *', '1·234 \\*'],
+    ['en-US', '1,234 <https://example.com/a>', '1·234 [https://example.com/a](https://example.com/a)', '1·234 <https://example.com/a>'],
+    ['sv-SE', '[](https://example.com) 1,5', '&#32;1.5', '[](https://example.com) 1.5'],
+    ['sv-SE', '` 1,5 `', '`1.5`', '` 1.5 `'],
+    // Core writes two code spans left beside each other as one fence's words, which it reads as `1``·234`.
+    ['en-US', '`1`,`234`', '`1``·234`', '`1·234`'],
+    // An address the number runs through is written as its words, so it doesn't link to another address.
+    ['sv-SE', 'https://example.com/1,234', 'https://example.com/1.234', 'https\\://example.com/1.234']
+];
+
+test("a respelled cell keeps its marks, links and code around its number's runs, as MarkdownPoint core respells it", () => {
+    for (const [locale, cell, core, plugin = core] of respelledByCore) {
+        const [from, to] = locale === 'en-US' ? [english, swedish] : [swedish, english];
+        assert.equal(respellChartCells(table(`| Sales | ${cell} |`), from, to), table(`| Sales | ${spaced(plugin)} |`), cell);
+    }
 });
 
-test('the words a respelled cell is written as read back as spelled, every mark that could open Markdown or a link escaped', () => {
+test('a cell whose marks would read otherwise once respelled is written as its words', () => {
+    assert.equal(respellChartCells(table('| Sales | *1**,2**34.5* |'), english, swedish), table(spaced('| Sales | 1·234,5 |')));
+});
+
+test('the words a respelled run is written as read back as spelled, every mark that could open Markdown or a link escaped', () => {
     const marks = '\\*\\|\\<\\&\\[\\=\\~\\{\\`\\\\ .,%()+:;/?"$#!>@^\'';
     const written = respellChartCells(table(`| Sales | ${marks} 1,5 \\_\\]\\} | 2 |`), swedish, english);
     const cell = written.split('\n')[2]!.split(' | ')[1]!;
@@ -66,8 +119,7 @@ test('the words a respelled cell is written as read back as spelled, every mark 
     for (const [address, spelled] of [
         ['https://example.com/1,234', String.raw`https\://example.com/1.234`],
         ['<https://example.com/1,234>', String.raw`https\://example.com/1.234`],
-        ['www.example.com/1,234', String.raw`www\.example.com/1.234`],
-        ['mail@example.com 1,5', String.raw`mail\@example.com 1.5`]
+        ['www.example.com/1,234', String.raw`www\.example.com/1.234`]
     ] as const) {
         const respelled = respellChartCells(table(`| Sales | ${address} | 2 |`), swedish, english);
         assert.equal(respelled, table(`| Sales | ${spelled} | 2 |`));
@@ -76,18 +128,22 @@ test('the words a respelled cell is written as read back as spelled, every mark 
 });
 
 test("a cell's escaped pipe is a pipe, a code span's too, as a table reads it", () => {
-    assert.equal(respellChartCells(table('| Sales | `1,5\\| kr` | 2\\|5 |'), swedish, english), table('| Sales | 1.5\\| kr | 2\\|5 |'));
+    assert.equal(
+        respellChartCells(table('| Sales | `1,5\\| kr` | 2\\|5 |', '| Loss | 1,5 \\| kr | 2 |'), swedish, english),
+        table('| Sales | `1.5\\| kr` | 2\\|5 |', '| Loss | 1.5 \\| kr | 2 |')
+    );
 });
 
-test("a cell's HTML and pictures count as their characters, as a chart reads them, and its notes as nothing", () => {
+test("a cell's HTML and pictures count as their characters, as a chart reads them, and its notes as nothing, each written as it was", () => {
     assert.equal(
         respellChartCells(
             table('| Sales | 1<br>,234 | 1,5 <b>kr</b> |', '| Loss | 1,5<!-- note --> | ![a](b.png) 2,5 |'),
             swedish,
             english
         ),
-        table('| Sales | 1<br>,234 | 1.5 \\<b>kr\\</b> |', '| Loss | 1.5 | !\\[a\\](b.png) 2.5 |')
+        table('| Sales | 1<br>,234 | 1.5 <b>kr</b> |', '| Loss | 1.5<!-- note --> | ![a](b.png) 2.5 |')
     );
+    assert.equal(respellChartCells(table('| Sales | ![1,5](b.png) |'), swedish, english), table('| Sales | !\\[1.5\\](b.png) |'));
 });
 
 test('a table of any line ending is respelled', () => {
