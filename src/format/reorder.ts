@@ -38,6 +38,8 @@ export type SlideReorder =
  * Plan one Markdown replacement from the current shared source index. Complete
  * slide slices carry every field, note, and unknown word. The companion is not
  * part of ordering. A section start is one step; the first section stays first.
+ * A composition stands in no section, so one placed by hand among the slides
+ * stays after the block it follows, as MarkdownPoint keeps it when it saves.
  */
 export function reorderSlideSource(
     markdown: string,
@@ -50,24 +52,43 @@ export function reorderSlideSource(
     if (!chosen.size || [...chosen].some(id => !known.has(id))) return null;
     const blocks = [
         ...document.slides.map(slide => ({ kind: 'slide' as const, id: slide.id, from: slide.from, to: slide.to })),
-        ...document.sections.map(section => ({ kind: 'section' as const, id: section.id, from: section.from, to: section.to }))
+        ...document.sections.map(section => ({ kind: 'section' as const, id: section.id, from: section.from, to: section.to })),
+        ...document.compositions.map(composition => ({
+            kind: 'composition' as const,
+            id: composition.id,
+            from: composition.from,
+            to: composition.to
+        }))
     ].sort((a, b) => a.from - b.from);
+    type Block = (typeof blocks)[number];
+    const ordered = blocks.filter(block => block.kind !== 'composition');
     if (
-        !blocks.length ||
-        (document.sections.length > 0 && blocks[0]!.kind !== 'section') ||
+        !ordered.length ||
+        (document.sections.length > 0 && ordered[0]!.kind !== 'section') ||
         blocks.some((block, index) => index > 0 && blocks[index - 1]!.to !== block.from)
     )
         return null;
-    const selected = blocks.filter(block => block.kind === 'slide' && chosen.has(block.id));
+    const selected = ordered.filter(block => block.kind === 'slide' && chosen.has(block.id));
     const target =
-        action.kind === 'drop' ? blocks.find(block => block.kind === action.target.kind && block.id === action.target.id) : undefined;
-    const next =
+        action.kind === 'drop' ? ordered.find(block => block.kind === action.target.kind && block.id === action.target.id) : undefined;
+    const moved =
         action.kind === 'step'
-            ? steppedOrder(blocks, blocks[0]!.kind === 'section' ? blocks.slice(1) : blocks, selected, action.direction)
+            ? steppedOrder(ordered, ordered[0]!.kind === 'section' ? ordered.slice(1) : ordered, selected, action.direction)
             : target
-              ? gatheredOrder(blocks, selected, target, action.target.kind === 'section' ? 'after' : action.target.edge)
+              ? gatheredOrder(ordered, selected, target, action.target.kind === 'section' ? 'after' : action.target.edge)
               : null;
-    if (!next || (blocks[0]!.kind === 'section' && next[0] !== blocks[0])) return null;
+    if (!moved || (ordered[0]!.kind === 'section' && moved[0] !== ordered[0])) return null;
+    // A composition placed by hand among the blocks goes back after the block it followed. Those before every block stay
+    // first, and those after every block, where MarkdownPoint writes them, stay last.
+    const following = new Map<Block | null, Block[]>();
+    let before: Block | null = null;
+    for (const block of blocks) {
+        if (block.kind !== 'composition') before = block;
+        else following.set(before, [...(following.get(before) ?? []), block]);
+    }
+    const trailing = following.get(before) ?? [];
+    following.delete(before);
+    const next = [...(following.get(null) ?? []), ...moved.flatMap(block => [block, ...(following.get(block) ?? [])]), ...trailing];
     let first = 0;
     let last = blocks.length - 1;
     while (next[first] === blocks[first]) first++;
@@ -87,14 +108,16 @@ export function reorderSlideSource(
     // In particular, a final unfinished code fence cannot swallow a slide when
     // moved earlier. Validate once per explicit move, never during idle rendering.
     const indexed = indexPresentation(proposed, blocks[0]!.from);
+    const planned = (kind: Block['kind']): string =>
+        next
+            .filter(block => block.kind === kind)
+            .map(block => block.id)
+            .join('\n');
     if (
         !indexed ||
-        indexed.slides.map(slide => slide.id).join('\n') !==
-            next
-                .filter(block => block.kind === 'slide')
-                .map(block => block.id)
-                .join('\n') ||
-        indexed.sections.map(section => section.id).join('\n') !== document.sections.map(section => section.id).join('\n')
+        indexed.slides.map(slide => slide.id).join('\n') !== planned('slide') ||
+        indexed.sections.map(section => section.id).join('\n') !== planned('section') ||
+        indexed.compositions.map(composition => composition.id).join('\n') !== planned('composition')
     )
         return null;
     return { from, to, insert, document: indexed };

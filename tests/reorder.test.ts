@@ -123,15 +123,39 @@ test('a final unfinished fence cannot swallow another slide when moved earlier',
     assert.ok(stepSlideSource(markdown + '```\n', indexPresentation(markdown + '```\n', 0)!, ['bravo'], 'up'));
 });
 
-test('section and slide IDs can match, while missing targets and interleaved compositions cannot move', () => {
+test('section and slide IDs can match, while missing targets cannot move', () => {
     const markdown = section('same') + slide('same') + slide('bravo');
     assert.equal(moved(markdown, ['same'], 'down'), section('same') + slide('bravo') + slide('same'));
     const document = indexPresentation(markdown, 0)!;
     assert.equal(stepSlideSource(markdown, document, [], 'down'), null);
     assert.equal(stepSlideSource(markdown, document, ['missing'], 'down'), null);
     assert.equal(stepSlideSource(markdown, document, ['same', 'missing'], 'down'), null);
-    const interleaved = slide('alpha') + '<!-- composition: shared -->\n<!-- control: body -->\nWords.\n' + slide('bravo');
-    assert.equal(stepSlideSource(interleaved, indexPresentation(interleaved, 0)!, ['bravo'], 'up'), null);
+});
+
+test('a composition placed by hand among the slides stays after the block it follows, its bytes as written', () => {
+    const composition = (id: string): string => `<!-- composition: ${id} -->\n<!-- control: body -->\nWords  kept\tas typed.\n\n`;
+    const markdown = slide('alpha') + composition('shared') + slide('bravo');
+    assert.equal(moved(markdown, ['bravo'], 'up'), slide('bravo') + slide('alpha') + composition('shared'));
+    assert.equal(moved(markdown, ['alpha'], 'down'), slide('bravo') + slide('alpha') + composition('shared'));
+    // Each goes with the block before it, as MarkdownPoint's save keeps them.
+    const two = slide('alpha') + composition('first') + slide('bravo') + composition('second') + slide('charlie');
+    assert.equal(
+        moved(two, ['charlie'], 'up'),
+        slide('alpha') + composition('first') + slide('charlie') + slide('bravo') + composition('second')
+    );
+    // One before every block, under a section's heading, or after every block, where MarkdownPoint writes them, stays where it is.
+    const leading = composition('shared') + slide('alpha') + slide('bravo');
+    assert.equal(moved(leading, ['bravo'], 'up'), composition('shared') + slide('bravo') + slide('alpha'));
+    const trailing = slide('alpha') + slide('bravo') + composition('shared');
+    assert.equal(moved(trailing, ['bravo'], 'up'), slide('bravo') + slide('alpha') + composition('shared'));
+    const sectioned = section('intro') + composition('shared') + slide('alpha') + slide('bravo') + section('outro') + slide('charlie');
+    assert.equal(
+        dropped(sectioned, ['charlie'], { kind: 'slide', id: 'alpha', edge: 'before' }),
+        section('intro') + composition('shared') + slide('charlie') + slide('alpha') + slide('bravo') + section('outro')
+    );
+    // The last block keeps its source unterminated where the file ends without a newline.
+    const unterminated = slide('alpha') + slide('bravo') + composition('shared').trimEnd();
+    assert.equal(moved(unterminated, ['alpha'], 'down'), slide('bravo') + slide('alpha') + composition('shared').trimEnd());
 });
 
 test('a drop gathers split selections in source order before or after the target slide', () => {
