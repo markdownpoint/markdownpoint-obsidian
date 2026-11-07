@@ -59,16 +59,20 @@ export function remapMarkdownSlideLinks(
     while (used.has(`mdp-copy-${serial}-`)) serial++;
     // A flat bracket label is words or a reference identifier, not a stable-ID
     // destination. Keep labels intact so probes cannot break reference resolution.
+    // With no reference definition in the words no label is one, and an autolink's
+    // address in a label, which is a link there too, is probed as anywhere else.
+    const definitions = source.includes(']:');
     const labels = [...source.matchAll(/\[(?:\\[\s\S]|[^[\]\\])*\]/g)].map(match => ({
         from: match.index,
         to: match.index + match[0].length
     }));
     let labelIndex = 0;
-    const candidates: { from: number; to: number; probe: string; replacement: string }[] = [];
+    const candidates: { from: number; to: number; probe: string; replacement: string; literal: boolean }[] = [];
     for (const match of source.matchAll(/(?:\\[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]|[a-z0-9:;&#-])+/gi)) {
         while (labelIndex < labels.length && labels[labelIndex]!.to <= match.index) labelIndex++;
         const label = labels[labelIndex];
-        if (label && label.from <= match.index && match.index < label.to) continue;
+        const autolink = source[match.index - 1] === '<' && source[match.index + match[0].length] === '>';
+        if ((definitions || !autolink) && label && label.from <= match.index && match.index < label.to) continue;
         const href = decode(match[0]);
         const next = href.startsWith('slide:') ? ids.get(href.slice(6)) : undefined;
         if (next === undefined || href === `slide:${next}`) continue;
@@ -76,7 +80,8 @@ export function remapMarkdownSlideLinks(
             from: match.index,
             to: match.index + match[0].length,
             probe: `slide:mdp-copy-${serial}-${candidates.length}`,
-            replacement: `slide:${next}`
+            replacement: `slide:${next}`,
+            literal: href === match[0]
         });
     }
     if (!candidates.length) return source;
@@ -92,16 +97,21 @@ export function remapMarkdownSlideLinks(
     if (schema === 'table' && !table) return source;
     const tokens = table ? [table] : linkTokens(annotated);
     const found = new Set<string>();
-    const probes = new Set(candidates.map(candidate => candidate.probe));
+    const probes = new Map(candidates.map(candidate => [candidate.probe, candidate]));
     const pending: Token[] = [...tokens];
     while (pending.length) {
         const token = pending.pop()!;
         if (token.type === 'link') {
-            if (token.raw.startsWith('[') && token.raw.endsWith(')') && typeof token.href === 'string') {
+            // An inline link, or an autolink, `<slide:…>`, which MarkdownPoint reads as a link too.
+            const inline = token.raw.startsWith('[') && token.raw.endsWith(')');
+            if ((inline || (token.raw.startsWith('<') && token.raw.endsWith('>'))) && typeof token.href === 'string') {
                 // Marked already removed punctuation escapes while reading the href.
-                const target = decodeHTMLStrict(token.href);
-                if (probes.has(target)) found.add(target);
+                const probe = probes.get(decodeHTMLStrict(token.href));
+                // An autolink's address is read as written: an escaped or referenced one is words, which only its probe made a link.
+                if (probe && (inline || probe.literal)) found.add(probe.probe);
             }
+            // A link's words may hold another, which MarkdownPoint reads as the link of those words.
+            if (inline) pending.push(...(token as Tokens.Link).tokens);
         } else if (token.type === 'table') {
             if (schema === 'table') {
                 const table = token as Tokens.Table;

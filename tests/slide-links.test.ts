@@ -36,7 +36,7 @@ test('copied slide links follow their new identities without rewriting labels, t
     assert.equal(remapMarkdownSlideLinks(source, new Map([['two', 'two']])), source);
 });
 
-test('literal code, images, escaped links, reference syntax and autolinks remain unchanged', () => {
+test('literal code, images, escaped links, reference syntax and plain words remain unchanged', () => {
     for (const source of [
         '`[code](slide:two)`',
         '```md\n[code](slide:two)\n```\n',
@@ -45,12 +45,31 @@ test('literal code, images, escaped links, reference syntax and autolinks remain
         '![picture](slide:two)',
         '![alt [link](slide:two)](media/picture.png)',
         '[reference][two]\n\n[two]: slide:two "Title"\n',
-        '<slide:two>',
         'slide:two',
+        '`<slide:two>`',
+        '\\<slide:two>',
+        '<slide\\:two>',
+        '<slide&#58;two>',
+        '![alt][<slide:two>]\n\n[<slide:two>]: image.png\n',
+        '<slide:elsewhere>',
+        '<div>\n<slide:two>\n</div>\n',
         '<div>\n[inside HTML](slide:two)\n</div>\n',
         '<!-- [comment](slide:two) -->'
     ])
         assert.equal(rewrite(source), source, source);
+});
+
+test('an autolink to a copied slide follows it wherever MarkdownPoint reads it as a link', () => {
+    for (const source of [
+        '<slide:two>',
+        'See <slide:two> and [back](slide:one).',
+        '**<slide:two>** in a <span><slide:two></span>',
+        '> - [see <slide:two>]',
+        '[A <slide:two> label](slide:elsewhere)'
+    ])
+        assert.equal(rewrite(source), source.replace(/slide:two/g, 'slide:copy-two').replace('(slide:one)', '(slide:copy-one)'), source);
+    const table = '| Header |\n| --- |\n| <slide:two> |\n';
+    assert.equal(remapMarkdownSlideLinks(table, ids, 'table'), table.replace('slide:two', 'slide:copy-two'));
 });
 
 test('nested Markdown uses exact source offsets through lists, quotes, tables and CRLF', () => {
