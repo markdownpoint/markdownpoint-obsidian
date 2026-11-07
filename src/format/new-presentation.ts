@@ -41,12 +41,17 @@ export function presentationFolderName(value: string): string | null {
         : name;
 }
 
+/** The layout a new presentation starts on, as MarkdownPoint picks it: the first of these the theme has, else its first. */
+export function firstSlideLayout(theme: EmbeddedTheme): string | undefined {
+    return ['title', 'content-with-header', 'content', 'blank'].find(key => theme.layouts.has(key)) ?? orderedLayouts(theme)[0];
+}
+
 /** One empty slide and one matching pair, without copying the theme's sample words. */
 export function prepareNewPresentation(
     theme: EmbeddedTheme,
     id: string,
     slideId: string,
-    layoutKey: string | undefined = orderedLayouts(theme)[0]
+    layoutKey: string | undefined = firstSlideLayout(theme)
 ): NewPresentation | null {
     if (!isUuid(id) || !isThemeKey(theme.key) || !layoutKey) return null;
     const slide = prepareNewSlide(theme, layoutKey, slideId);

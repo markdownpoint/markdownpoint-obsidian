@@ -20,7 +20,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
 import { basicTheme, basicThemeFiles } from '../src/themes/basic.ts';
-import { prepareNewPresentation } from '../src/format/new-presentation.ts';
+import { firstSlideLayout, prepareNewPresentation } from '../src/format/new-presentation.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { readJsonObject } from '../src/format/json.ts';
 import { presentationIdentity } from '../src/format/recognition.ts';
@@ -36,6 +36,12 @@ test('the bundled licensed theme has a valid master, every ordered layout and th
         assert.ok(themeDocument(layout.source, 'layout'), key);
         assert.equal(basicThemeFiles.get(`${key}.json`), layout.source);
     }
+});
+
+test("Basic's theme files are MarkdownPoint's, byte for byte, so a slide pastes between a presentation the app made and one the plugin made", () => {
+    for (const [file, contents] of basicThemeFiles)
+        if (typeof contents === 'string')
+            assert.equal(contents, readFileSync(new URL(`../src/themes/basic/${file}`, import.meta.url), 'utf8'), file);
 });
 
 test('a new presentation holds every file its Basic theme references, the layouts’ preview as the picture’s bytes', () => {
@@ -60,6 +66,25 @@ test('a new presentation has matching identity, the chosen theme, and a first sl
         `---\nmarkdownpoint: "1.0"\nid: ${presentationId}\n---\n\n<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n`
     );
     assert.doesNotMatch(made.markdown, /Presentation title|Presentation subtitle|Author and date/);
+});
+
+test('a new presentation starts on the first of title, content-with-header, content and blank its theme has, else its first, as MarkdownPoint picks it', () => {
+    const order = ['section', 'blank', 'content', 'content-with-header', 'title'];
+    const ordered = { ...basicTheme, master: { ...basicTheme.master, value: { ...basicTheme.master.value, 'layout-order': order } } };
+    const starts = (without: readonly string[]) => {
+        const theme = { ...ordered, layouts: new Map([...ordered.layouts].filter(([key]) => !without.includes(key))) };
+        const layout = firstSlideLayout(theme);
+        // The theme chooser previews the layout the new presentation starts on.
+        assert.deepEqual(readJsonObject(prepareNewPresentation(theme, presentationId, 'opening')!.companion)?.slides, {
+            opening: { layout }
+        });
+        return layout;
+    };
+    assert.equal(starts([]), 'title');
+    assert.equal(starts(['title']), 'content-with-header');
+    assert.equal(starts(['title', 'content-with-header']), 'content');
+    assert.equal(starts(['title', 'content-with-header', 'content']), 'blank');
+    assert.equal(starts(['title', 'content-with-header', 'content', 'blank']), 'section');
 });
 
 test('each bundled layout can start a presentation without altering the template', () => {

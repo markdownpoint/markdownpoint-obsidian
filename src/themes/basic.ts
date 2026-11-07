@@ -17,21 +17,22 @@
  */
 
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
-import blank from './basic/blank.json' with { type: 'json' };
-import contentWithHeader from './basic/content-with-header.json' with { type: 'json' };
-import content from './basic/content.json' with { type: 'json' };
-import imageTextWithHeader from './basic/image-text-with-header.json' with { type: 'json' };
-import imageText from './basic/image-text.json' with { type: 'json' };
-import imageWithHeader from './basic/image-with-header.json' with { type: 'json' };
-import image from './basic/image.json' with { type: 'json' };
-import master from './basic/master.json' with { type: 'json' };
+import { themeDocument } from '../format/embedded-theme.ts';
+import blank from './basic/blank.json?raw';
+import contentWithHeader from './basic/content-with-header.json?raw';
+import content from './basic/content.json?raw';
+import imageTextWithHeader from './basic/image-text-with-header.json?raw';
+import imageText from './basic/image-text.json?raw';
+import imageWithHeader from './basic/image-with-header.json?raw';
+import image from './basic/image.json?raw';
+import master from './basic/master.json?raw';
 import layoutPreview from './basic/media/layout-preview.jpg';
-import oneLiner from './basic/one-liner.json' with { type: 'json' };
-import section from './basic/section.json' with { type: 'json' };
-import solidColor from './basic/solid-color.json' with { type: 'json' };
-import textImageWithHeader from './basic/text-image-with-header.json' with { type: 'json' };
-import textImage from './basic/text-image.json' with { type: 'json' };
-import title from './basic/title.json' with { type: 'json' };
+import oneLiner from './basic/one-liner.json?raw';
+import section from './basic/section.json?raw';
+import solidColor from './basic/solid-color.json?raw';
+import textImageWithHeader from './basic/text-image-with-header.json?raw';
+import textImage from './basic/text-image.json?raw';
+import title from './basic/title.json?raw';
 
 const layouts = {
     blank,
@@ -49,8 +50,10 @@ const layouts = {
     title
 };
 
+// Each file as MarkdownPoint ships it, byte for byte, so a slide pasted between a presentation the app made and one the
+// plugin made finds the same theme.
 const documents: ReadonlyMap<string, string> = new Map(
-    Object.entries({ master, ...layouts }).map(([key, value]) => [`${key}.json`, JSON.stringify(value, null, 2) + '\n'])
+    Object.entries({ master, ...layouts }).map(([key, source]) => [`${key}.json`, source])
 );
 
 /**
@@ -63,15 +66,15 @@ export const basicThemeFiles: ReadonlyMap<string, string | Uint8Array> = new Map
 ]);
 
 const root = 'themes/basic';
-const embeddedDocument = (key: string, value: Record<string, unknown>) => ({
-    path: `${root}/${key}.json`,
-    source: documents.get(`${key}.json`)!,
-    value
-});
+const embeddedDocument = (key: string, type: 'master' | 'layout') => {
+    const source = documents.get(`${key}.json`)!;
+    return { path: `${root}/${key}.json`, source, value: themeDocument(source, type)! };
+};
+const masterDocument = embeddedDocument('master', 'master');
 export const basicTheme: EmbeddedTheme = {
     key: 'basic',
-    id: master.id,
+    id: masterDocument.value.id as string,
     root,
-    master: embeddedDocument('master', master),
-    layouts: new Map(Object.entries(layouts).map(([key, value]) => [key, embeddedDocument(key, value)]))
+    master: masterDocument,
+    layouts: new Map(Object.keys(layouts).map(key => [key, embeddedDocument(key, 'layout')]))
 };

@@ -19,8 +19,7 @@
 import { Component, Modal, Notice, TFile, TFolder, getFrontMatterInfo } from 'obsidian';
 import type { App } from 'obsidian';
 import { mintId } from '../format/id-allocation.ts';
-import { prepareNewPresentation, presentationFolderName } from '../format/new-presentation.ts';
-import { orderedLayouts } from '../format/new-slide.ts';
+import { firstSlideLayout, prepareNewPresentation, presentationFolderName } from '../format/new-presentation.ts';
 import { slideStructure } from '../format/structure.ts';
 import { presentationCompanionPath } from '../format/recognition.ts';
 import { indexPresentation } from '../format/document.ts';
@@ -178,7 +177,7 @@ class CreationModal extends Modal {
             });
             button.tabIndex = choice === selected ? 0 : -1;
             const preview = button.createSpan({ cls: 'markdownpoint-creation-preview markdownpoint-thumbnail' });
-            const schematic = () => renderThumbnail(preview, slideStructure({ layout: orderedLayouts(choice.theme)[0] }, choice.theme));
+            const schematic = () => renderThumbnail(preview, slideStructure({ layout: firstSlideLayout(choice.theme) }, choice.theme));
             if (choice.preview) {
                 const image = preview.createEl('img', { attr: { src: choice.preview, alt: '', loading: 'lazy', draggable: 'false' } });
                 image.addEventListener(

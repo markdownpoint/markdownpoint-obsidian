@@ -18,6 +18,7 @@
 
 import { build, context } from 'esbuild';
 import { copyFile, readFile, stat } from 'node:fs/promises';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const stylesheet = await build({ entryPoints: ['styles.css'], write: false, logLevel: 'warning' });
@@ -45,6 +46,23 @@ const deployToTestVault = {
     }
 };
 
+// A file imported with ?raw is its text, byte for byte, as Vite gives it to the tests: Basic's theme files travel as
+// MarkdownPoint ships them.
+const rawText = {
+    name: 'raw-text',
+    setup(builder) {
+        builder.onResolve({ filter: /\?raw$/ }, args => ({
+            path: path.join(args.resolveDir, args.path.slice(0, -'?raw'.length)),
+            namespace: 'raw-text'
+        }));
+        builder.onLoad({ filter: /.*/, namespace: 'raw-text' }, async args => ({
+            contents: await readFile(args.path),
+            loader: 'text',
+            watchFiles: [args.path]
+        }));
+    }
+};
+
 const options = {
     entryPoints: ['src/main.ts'],
     outfile: 'main.js',
@@ -60,7 +78,7 @@ const options = {
     legalComments: 'inline',
     // Obsidian installs the bundle without npm's package license files.
     banner: { js: `/*\n${notices}\n*/` },
-    plugins: [deployToTestVault]
+    plugins: [rawText, deployToTestVault]
 };
 
 if (process.argv.includes('--watch')) {
