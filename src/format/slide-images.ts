@@ -73,7 +73,7 @@ export function assignedSlideImages(
         'light';
     const definition = ownEntry(schemes, scheme);
     const appearance = isRecord(definition) && definition.appearance === 'dark' ? 'dark' : scheme === 'dark' ? 'dark' : 'light';
-    const picture = (value: unknown) => (isRecord(value) ? (value[scheme] ?? value[appearance] ?? value.light) : value);
+    const picture = (value: unknown) => (isRecord(value) ? (ownEntry(value, scheme) ?? value[appearance] ?? value.light) : value);
     const objects = new Map<string, ImageObject>();
     const addLevel = (level: Record<string, unknown>, scope: string, inherited: boolean) => {
         const held = new Set(objects.keys());

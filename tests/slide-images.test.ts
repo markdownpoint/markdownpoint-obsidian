@@ -115,7 +115,7 @@ test("a slide shows the scheme MarkdownPoint shows: its own, else its layout's, 
             path: 'master.json',
             source: '{}',
             value: {
-                schemes: { light: {}, dark: { appearance: 'dark' }, evening: { appearance: 'dark' } },
+                schemes: { light: {}, dark: { appearance: 'dark' }, evening: { appearance: 'dark' }, constructor: { appearance: 'dark' } },
                 objects: [{ id: 'logo', type: 'image', file: { light: 'art/light.svg', dark: 'art/dark.svg', retired: 'art/retired.svg' } }]
             }
         },
@@ -129,6 +129,11 @@ test("a slide shows the scheme MarkdownPoint shows: its own, else its layout's, 
     assert.deepEqual(shown({ layout: 'gone' }), [root + 'themes/field-notes/art/light.svg']);
     assert.deepEqual(shown({ layout: 'gone', scheme: 'dark' }), [root + 'themes/field-notes/art/dark.svg']);
     assert.deepEqual(shown({ layout: 'gone', scheme: 'toString' }), [root + 'themes/field-notes/art/light.svg']);
+    assert.deepEqual(
+        shown({ layout: 'gone', scheme: 'constructor' }),
+        [root + 'themes/field-notes/art/dark.svg'],
+        'a custom scheme named as an object built-in reads its own entry'
+    );
 });
 
 test('repeated files are shown once and video assignments are not treated as images', () => {
