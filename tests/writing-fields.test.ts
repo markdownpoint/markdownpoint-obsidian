@@ -87,7 +87,7 @@ test('numbered fields, allocated copies and composition controls retain independ
             ['Title', 'title'],
             ['Body 2', 'body'],
             ['Body 3', 'body'],
-            ['caption', 'body'],
+            ['Caption', 'body'],
             ['Text', 'body'],
             ['Notes', 'body']
         ]
@@ -97,18 +97,17 @@ test('numbered fields, allocated copies and composition controls retain independ
     assert.ok(fields.every(field => field.markerText === markdown.slice(field.from, field.contentFrom)));
 });
 
-test("a control's field keeps its whole name after the instance's first dot, and only the name title is a title", () => {
-    const ids = ['badge.Step 1.5', 'badge.Intro.title', 'badge.title', 'badge.body-2', 'badge.見出し'];
+test("a control's field is named after its control's id, and only the id title is a title", () => {
+    const ids = ['badge.intro-title', 'badge.title', 'badge.body-2', 'badge.label-id-b7d9e1'];
     const markdown = '<!-- slide: first -->\n' + ids.map(id => `<!-- text: ${id} -->\nWords.\n\n`).join('');
     const fields = writingFields(markdown, indexPresentation(markdown, 0)!, labels);
     assert.deepEqual(
         fields.map(field => [field.key, field.label, field.role]),
         [
-            ['first:text:badge.Step 1.5', 'Step 1.5', 'body'],
-            ['first:text:badge.Intro.title', 'Intro.title', 'body'],
-            ['first:text:badge.title', 'title', 'title'],
-            ['first:text:badge.body-2', 'body-2', 'body'],
-            ['first:text:badge.見出し', '見出し', 'body']
+            ['first:text:badge.intro-title', 'Intro title', 'body'],
+            ['first:text:badge.title', 'Title', 'title'],
+            ['first:text:badge.body-2', 'Body 2', 'body'],
+            ['first:text:badge.label-id-b7d9e1', 'Label', 'body']
         ]
     );
 });

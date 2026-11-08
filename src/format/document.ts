@@ -57,17 +57,12 @@ export function slideAtPosition(document: PresentationDocument, position: number
     return document.slides.find(slide => position >= slide.from && position < slide.to) ?? null;
 }
 
-// A control's name is the author's words, so a control marker, and an instance's text marker after its first dot, name
-// words: one line, one space between them, no control character and no `-->`, as MarkdownPoint reads them.
 const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*((?:(?!-->).)+?))?\s*-->[ \t]*$/;
-const controlName = /^(?!.*-->)[^\s\p{Cc}]+(?: [^\s\p{Cc}]+)*$/u;
 
-/** A marker's id as its kind reads it: a control's name, an instance's id and its text control's name, or a stable id. */
+/** A marker's id as its kind reads it: a stable id, or for a text marker an instance's id, a dot and its text control's id. */
 function markerId(kind: string, id: string): boolean {
-    if (kind === 'control') return controlName.test(id);
-    const dot = id.indexOf('.');
-    if (kind !== 'text' || dot < 0) return isStableId(id);
-    return isStableId(id.slice(0, dot)) && controlName.test(id.slice(dot + 1));
+    const parts = kind === 'text' ? id.split('.') : [id];
+    return parts.length <= 2 && parts.every(isStableId);
 }
 /**
  * A line that reads as one of the markers, misspelled or closing, which MarkdownPoint refuses rather than keeps as words: a
@@ -149,13 +144,12 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
         hasFence ||= line.includes('```') || line.includes('~~~');
         // Each field is its own Markdown block. HTML or a fence-like line in one
         // field must not change how the next field is interpreted.
-        // As MarkdownPoint reads a line: a control marker, or a text marker naming an instance's control, is a marker
-        // whatever its words, and words it can't name refuse the file; another line of words, as `text: ask Anna`, is a comment.
+        // As MarkdownPoint reads a line: a marker names its block by ids, a line shaped as one with a word that is no id
+        // refuses the file, and a line of more words, as `text: ask Anna`, is a comment.
         // A marker is read without the spaces or tabs before it, as after it.
         const bare = line.replace(/^[ \t]+/, '');
         const found = marker.exec(bare);
-        const claimed = found !== null && (found[1] === 'control' || (found[1] === 'text' && /^[a-z][a-z0-9-]*\./.test(found[2] ?? '')));
-        const match = found && (found[2] === undefined || claimed || markerId(found[1]!, found[2])) ? found : null;
+        const match = found && (found[2] === undefined || markerId(found[1]!, found[2])) ? found : null;
         if (match || markerLike.test(bare)) {
             const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), bare) : undefined;
             if (code) {

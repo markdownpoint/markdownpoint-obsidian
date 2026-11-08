@@ -123,9 +123,9 @@ export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | n
             ) {
                 const controls = definitions.get(object.composition)?.controls;
                 if (!isRecord(controls)) continue;
-                for (const [name, value] of Object.entries(object.controls)) {
-                    const declaration = ownEntry(controls, name);
-                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'controls', name]);
+                for (const [id, value] of Object.entries(object.controls)) {
+                    const declaration = ownEntry(controls, id);
+                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'controls', id]);
                 }
             }
         }

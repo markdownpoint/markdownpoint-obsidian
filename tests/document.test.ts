@@ -341,32 +341,42 @@ test('composition definitions retain complete control and text ranges wherever t
     assert.equal(slideAtPosition(document, markdown.length - 1), null);
 });
 
-test("a control is named in the author's words, in its marker and after an instance's first dot, and other words are a comment", () => {
+test("a control is named by its id, in its marker and after an instance's dot, and other words are a comment", () => {
     const notes = '<!-- text: ask Anna -->\nRemember.\n\n';
+    const control = 'Default words.\n<!-- control: Headline text -->\n\n';
     const markdown =
-        '<!-- slide: actual -->\n<!-- text: badge.Headline text -->\nInstance words.\n\n<!-- text: badge.Step 1.5 -->\nMore.\n\n<!-- notes -->\n' +
+        '<!-- slide: actual -->\n<!-- text: badge.headline -->\nInstance words.\n\n<!-- text: badge.step-1-id-k3j9x2 -->\nMore.\n\n<!-- notes -->\n' +
         notes +
-        '<!-- composition: shared -->\n<!-- control: Headline text -->\nDefault words.\n\n<!-- control: 見出し -->\nWords.\n';
+        '<!-- composition: shared -->\n<!-- control: headline -->\n' +
+        control +
+        '<!-- control: label-id-b7d9e1 -->\nWords.\n';
     const document = indexPresentation(markdown, 0)!;
     const slide = document.slides[0]!;
     assert.deepEqual(
         slide.blocks.map(block => [block.kind, block.id]),
         [
-            ['text', 'badge.Headline text'],
-            ['text', 'badge.Step 1.5'],
+            ['text', 'badge.headline'],
+            ['text', 'badge.step-1-id-k3j9x2'],
             ['notes', null]
         ]
     );
     assert.equal(markdown.slice(slide.blocks[2]!.contentFrom, slide.blocks[2]!.to), notes, 'words that name no instance stay notes');
+    const blocks = document.compositions[0]!.blocks;
     assert.deepEqual(
-        document.compositions[0]!.blocks.map(block => [block.kind, block.id]),
+        blocks.map(block => [block.kind, block.id]),
         [
-            ['control', 'Headline text'],
-            ['control', '見出し']
+            ['control', 'headline'],
+            ['control', 'label-id-b7d9e1']
         ]
     );
-    // A control's marker, or an instance's text marker, whose words are no name refuses the file, as MarkdownPoint reports it.
-    for (const line of ['<!-- control: Headline  text -->', '<!-- text: badge.Headline  text -->', '<!-- control: a --> b -->'])
+    assert.equal(markdown.slice(blocks[0]!.contentFrom, blocks[0]!.to), control, "a comment of several words is the block's own words");
+    // A control's marker, or an instance's text marker, whose word is no id refuses the file, as MarkdownPoint reports it.
+    for (const line of [
+        '<!-- control: Headline -->',
+        '<!-- text: badge.Headline -->',
+        '<!-- text: badge.a.b -->',
+        '<!-- control: a --> b -->'
+    ])
         assert.equal(indexPresentation(`<!-- composition: shared -->\n${line}\nWords.\n`, 0), null, line);
 });
 

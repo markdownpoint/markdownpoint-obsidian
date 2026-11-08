@@ -37,22 +37,19 @@ test('only the explicit allocation suffix is hidden; authored names and numbers 
     for (const [id, expected] of cases) assert.equal(textBindingLabel(textBindingName(id), en.fields), expected, id);
 });
 
-test("an instance's text control is named after its first dot, in the author's words as written", () => {
-    // MarkdownPoint reads `instance.control` so: the instance's id, then after the first dot the control's name.
-    const cases = new Map([
-        ['badge.Step 1.5', 'Step 1.5'],
-        ['badge.Intro.title', 'Intro.title'],
-        ['card-id-f9h2k4.caption-2', 'caption-2'],
-        ['badge.caption-id-b7d9e1', 'caption-id-b7d9e1'],
-        ['badge.title', 'title'],
-        ['badge.text', 'text'],
-        ['badge.見出し', '見出し']
-    ]);
-    for (const [id, expected] of cases) {
-        const name = textBindingName(id);
-        assert.deepEqual([name.name, name.number, name.control], [expected, null, true], id);
-        assert.equal(textBindingLabel(name, en.fields), expected, id);
-    }
+test("an instance's text control is named after its control's id, as an object's field is after its own", () => {
+    // MarkdownPoint reads `instance.control` so: the instance's id, a dot, and the control's id.
+    for (const control of ['label', 'caption-2', 'caption-id-b7d9e1', 'title', 'text', 'step-1-id-k3j9x2'])
+        for (const instance of ['badge', 'card-id-f9h2k4']) {
+            const id = `${instance}.${control}`;
+            assert.deepEqual(textBindingName(id), textBindingName(control), id);
+            assert.equal(textBindingLabel(textBindingName(id), en.fields), textBindingLabel(textBindingName(control), en.fields), id);
+        }
+    assert.equal(
+        textBindingLabel(textBindingName('badge.caption-id-b7d9e1'), en.fields),
+        'Caption',
+        'an allocated control id reads as its words'
+    );
 });
 
 test('the catalog owns known field names and the complete numbered phrase', () => {
@@ -64,5 +61,5 @@ test('the catalog owns known field names and the complete numbered phrase', () =
     assert.equal(textBindingLabel(textBindingName('body-3-id-b7d9e1'), labels), '3: Localized body');
     assert.equal(textBindingLabel(textBindingName('id-b7d9e1'), labels), 'Generic');
     assert.equal(textBindingLabel(textBindingName('custom-field-2'), labels), '2: Custom field');
-    assert.equal(textBindingLabel(textBindingName('card.body'), labels), 'body', "a control's name is not translated");
+    assert.equal(textBindingLabel(textBindingName('card.body'), labels), 'Localized body', "a control's field is labeled as an object's");
 });

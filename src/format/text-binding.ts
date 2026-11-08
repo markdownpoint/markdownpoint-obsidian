@@ -21,21 +21,17 @@ import { ALLOCATED_TAIL } from './id-allocation.ts';
 export interface TextBindingName {
     readonly name: string;
     readonly number: string | null;
-    /** The name is a composition control's: the author's words, shown as written. */
-    readonly control: boolean;
 }
 
-/** A text object's readable name, or a composition instance's control name. */
+/** The readable name of a text object's id, or of a composition instance's text control's id. */
 export function textBindingName(binding: string): TextBindingName {
-    // An instance's text control is `instance.control`: after the first dot, the control's name, dots included.
-    const dot = binding.indexOf('.');
-    if (dot >= 0) return { name: binding.slice(dot + 1), number: null, control: true };
-    const parts = binding.split('-');
+    // An instance's text control is `instance.control`, each an id: the control's id names the field.
+    const parts = binding.slice(binding.indexOf('.') + 1).split('-');
     // Only the MarkdownPoint app's explicit allocation spelling is technical: id- plus a letter
     // and five letters/digits. A similarly sized authored word stays intact.
     if (parts.at(-2) === 'id' && ALLOCATED_TAIL.test(parts.at(-1) ?? '')) parts.splice(-2);
     const number = parts.length > 1 && /^\d+$/.test(parts.at(-1)!) ? parts.pop()! : null;
-    return { name: parts.join('-') || 'text', number, control: false };
+    return { name: parts.join('-') || 'text', number };
 }
 
 export interface TextFieldLabels {
@@ -44,9 +40,8 @@ export interface TextFieldLabels {
     readonly numbered: (values: { name: string; number: string }) => string;
 }
 
-/** Known field types are translated; custom authored names and a control's name keep their own words. */
+/** Known field types are translated; other names are their words, capitalized. */
 export function textBindingLabel(binding: TextBindingName, labels: TextFieldLabels): string {
-    if (binding.control) return binding.name;
     const authored = binding.name.replaceAll('-', ' ');
     const name =
         binding.name === 'text'

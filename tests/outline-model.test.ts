@@ -60,8 +60,8 @@ test('a numbered or duplicated Title keeps priority over earlier body text', () 
     }
 });
 
-test("a control is a Title only by its whole name, never by the words after its name's last dot", () => {
-    for (const id of ['card.Intro.title', 'card.Step 1.title']) {
+test("a control is a Title only by its whole id, never by a word at its id's end", () => {
+    for (const id of ['card.intro-title', 'card.step-1-title']) {
         const markdown = `<!-- slide: first -->\n<!-- text: body -->\nEarlier body\n<!-- text: ${id} -->\nNot the title\n`;
         assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, 'Title', new Set())[0]!.title, 'Earlier body', id);
     }
