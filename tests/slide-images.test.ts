@@ -61,7 +61,7 @@ test('assigned images prioritize background, named layout placeholders, then oth
                         id: 'own',
                         type: 'image',
                         file: 'media/own.jpg',
-                        'image-result': { record: '0f5b3c1e-7d1a-4c55-9d3a-7d3f8a2b9c01', original: { file: 'media/history.jpg' } }
+                        generation: { id: '0f5b3c1e-7d1a-4c55-9d3a-7d3f8a2b9c01', original: { file: 'media/history.jpg' } }
                     }
                 ]
             }

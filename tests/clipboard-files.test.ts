@@ -33,14 +33,14 @@ const [STYLED, SOURCE, BACKGROUND] = ['01', '02', '03'].map(end => `0f5b3c1e-7d1
 test('all declared slide media locations are collected once, including posters and original images, and the records the pictures name', () => {
     const value = captured(
         JSON.stringify({
-            background: { image: 'media/back.png', 'image-result': { record: BACKGROUND, original: { file: 'generated/original.png' } } },
+            background: { image: 'media/back.png', generation: { id: BACKGROUND, original: { file: 'generated/original.png' } } },
             objects: [
                 'inherited',
                 {
                     id: 'photo',
                     type: 'image',
                     file: 'media/picture.png',
-                    'image-result': { record: STYLED, original: { file: 'generated/original.png', record: SOURCE } }
+                    generation: { id: STYLED, original: { file: 'generated/original.png', generation: { id: SOURCE } } }
                 },
                 { id: 'movie', type: 'video', file: 'media/movie.mp4', poster: 'media/poster.jpg', 'poster-frame': 2.5 },
                 { id: 'web', type: 'web-video', url: 'https://example.com/watch', poster: 'media/web.webp' },
@@ -79,8 +79,8 @@ test('all declared slide media locations are collected once, including posters a
     const unnamed = captured(
         JSON.stringify({
             overrides: {
-                image: { 'image-result': { record: STYLED } },
-                other: { file: 'media/a.png', 'image-result': { record: 'media/x' } }
+                image: { generation: { id: STYLED } },
+                other: { file: 'media/a.png', generation: { id: 'media/x' } }
             }
         })
     );

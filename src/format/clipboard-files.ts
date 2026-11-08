@@ -86,17 +86,17 @@ export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | n
         };
         const nested = (value: unknown, name: string): unknown => (isRecord(value) ? value[name] : undefined);
         // A picture's record, and a restyle's original's, each by the file of the picture it made.
-        const made = (result: unknown, picture: unknown) => {
+        const made = (generation: unknown, picture: unknown) => {
             const name = (id: unknown, file: unknown) => {
                 if (typeof id === 'string' && RECORD_ID.test(id) && typeof file === 'string' && !records.has(id)) records.set(id, file);
             };
-            name(nested(result, 'record'), picture);
-            name(nested(nested(result, 'original'), 'record'), nested(nested(result, 'original'), 'file'));
+            name(nested(generation, 'id'), picture);
+            name(nested(nested(nested(generation, 'original'), 'generation'), 'id'), nested(nested(generation, 'original'), 'file'));
         };
         if (isRecord(record.background)) {
             add(record.background.image, ['background', 'image']);
-            add(nested(nested(record.background['image-result'], 'original'), 'file'), ['background', 'image-result', 'original', 'file']);
-            made(record.background['image-result'], record.background.image);
+            add(nested(nested(record.background.generation, 'original'), 'file'), ['background', 'generation', 'original', 'file']);
+            made(record.background.generation, record.background.image);
         }
         if (definitions.has(part.id) && isRecord(record.controls))
             for (const [key, control] of Object.entries(record.controls)) {
@@ -112,8 +112,8 @@ export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | n
         for (const [object, base] of objects) {
             add(object.file, [...base, 'file']);
             add(object.poster, [...base, 'poster']);
-            add(nested(nested(object['image-result'], 'original'), 'file'), [...base, 'image-result', 'original', 'file']);
-            made(object['image-result'], object.file);
+            add(nested(nested(object.generation, 'original'), 'file'), [...base, 'generation', 'original', 'file']);
+            made(object.generation, object.file);
             add(nested(object.model, 'file'), [...base, 'model', 'file']);
             if (
                 base[0] === 'objects' &&

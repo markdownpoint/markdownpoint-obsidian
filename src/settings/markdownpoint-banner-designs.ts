@@ -32,7 +32,7 @@ interface MarkdownPointBannerDesign {
         muted: string;
         accent: string;
     };
-    /** The slide's two text boxes as presentation.md has them, with ==highlights== and <br> */
+    /** The slide's two text boxes as slides.md has them, with ==highlights== and <br> */
     eyebrow: string;
     statement: string;
     /** The slide as a standalone SVG document, its text outlined */

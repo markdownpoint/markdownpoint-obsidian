@@ -137,7 +137,7 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
             id: `image-${index}`,
             type: 'image',
             file,
-            ...(generated && index === 0 ? { 'image-result': { record: made } } : {})
+            ...(generated && index === 0 ? { generation: { id: made } } : {})
         }))
     });
     const packet = decodeSlideClipboard(
