@@ -79,9 +79,17 @@ test('assigned images prioritize background, named layout placeholders, then oth
 test('cleared backgrounds, removed objects and empty placeholders do not show samples or prior generations', () => {
     const companion = {
         background: { image: 'media/back.svg' },
-        slides: { one: { layout: 'title', background: { image: 'none' }, overrides: { logo: null, hero: { file: null } } } }
+        slides: { one: { layout: 'title', background: {}, overrides: { logo: null, hero: { file: null } } } }
     };
     assert.deepEqual(paths(companion), []);
+    // A slide's own background replaces the presentation's whole: its fill alone shows no picture of the presentation's.
+    assert.deepEqual(
+        paths({
+            ...companion,
+            slides: { one: { layout: 'title', background: { fill: 'accent' }, overrides: { logo: null, hero: { file: null } } } }
+        }),
+        []
+    );
     assert.deepEqual(paths({ slides: { one: { background: { image: 'media/own.png' }, objects: [] } } }, null), [root + 'media/own.png']);
 });
 

@@ -112,9 +112,9 @@ export function assignedSlideImages(
     }
     addLevel(slide, root, false);
     const references: SlideImageReference[] = [];
-    const ownBackground = isRecord(slide.background) ? slide.background.image : undefined;
-    const background =
-        ownBackground !== undefined ? ownBackground : isRecord(companion.background) ? companion.background.image : undefined;
+    // A slide's own background replaces the presentation's whole: without its own picture it shows none.
+    const shownBackground = isRecord(slide.background) ? slide.background : companion.background;
+    const background = isRecord(shownBackground) ? shownBackground.image : undefined;
     const backgroundPath = imagePath(background, root, true);
     if (backgroundPath) references.push({ path: backgroundPath, name: null, category: 'background' });
     const pending = [...objects.values()].map(object => ({ object, parent: null as Ancestor | null }));
