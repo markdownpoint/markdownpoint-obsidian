@@ -18,10 +18,14 @@
 
 import { TFile } from 'obsidian';
 import type { Vault } from 'obsidian';
-import { presentationPairNames } from '../format/recognition.ts';
+import { inSavedVersions, presentationMember, presentationPairNames } from '../format/recognition.ts';
 
-/** Resolve both files from the live folder inventory for readers and the last write guard. */
+/**
+ * Resolve both files from the live folder inventory for readers and the last write guard. A pair under a presentation's
+ * `versions/` has none, as the app opens it only from its presentation.
+ */
 export function presentationFiles(vault: Vault, memberPath: string): { markdown: TFile; companion: TFile } | null {
+    if (inSavedVersions(memberPath, path => holdsPresentationFile(vault, path))) return null;
     const slash = memberPath.lastIndexOf('/');
     const folder = slash < 0 ? vault.getRoot() : vault.getFolderByPath(memberPath.slice(0, slash));
     if (!folder) return null;
@@ -29,4 +33,10 @@ export function presentationFiles(vault: Vault, memberPath: string): { markdown:
     const names = presentationPairNames(files.map(file => file.name));
     if (!names) return null;
     return { markdown: files.find(file => file.name === names.markdown)!, companion: files.find(file => file.name === names.companion)! };
+}
+
+/** Whether the vault's folder at `path`, the root at '', holds a presentation file, under any name a sync or a copy gives it. */
+function holdsPresentationFile(vault: Vault, path: string): boolean {
+    const folder = path ? vault.getFolderByPath(path) : vault.getRoot();
+    return !!folder?.children.some(entry => entry instanceof TFile && presentationMember(entry.name) === 'companion');
 }

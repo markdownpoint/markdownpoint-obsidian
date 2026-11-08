@@ -18,7 +18,16 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { newerFormat, presentationCompanionPath, presentationIdentity, presentationPairNames } from '../src/format/recognition.ts';
+import type { Vault } from 'obsidian';
+import {
+    inSavedVersions,
+    newerFormat,
+    presentationCompanionPath,
+    presentationIdentity,
+    presentationPairNames
+} from '../src/format/recognition.ts';
+import { presentationFiles } from '../src/presentation/presentation-files.ts';
+import { TFile, TFolder } from './support/obsidian.ts';
 
 const presentationId = '12345678-1234-7234-9234-123456789abc';
 const frontmatter = { markdownpoint: '1.0', id: presentationId };
@@ -57,6 +66,50 @@ test('a saved version stays ordinary Markdown, as MarkdownPoint opens one only f
         '2026-10-30T16.20.60Z'
     ])
         assert.equal(presentationCompanionPath(`versions/${time}-k3pz/slides.md`), `versions/${time}-k3pz/presentation.mdpoint`, time);
+});
+
+test('anything under the versions/ of a folder holding a presentation is no presentation of its own, as the app refuses it', () => {
+    const holds =
+        (...folders: string[]) =>
+        (folder: string) =>
+            folders.includes(folder);
+    // A Finder or File Explorer copy of a version's folder, and any other folder there, beside the presentation they belong to.
+    for (const path of [
+        'Talk/versions/2026-10-30T16.20.05Z-k3pz copy/slides.md',
+        'Talk/versions/draft/slides.md',
+        'Talk/versions/slides.md'
+    ])
+        assert.equal(inSavedVersions(path, holds('Talk')), true, path);
+    assert.equal(inSavedVersions('versions/draft/slides.md', holds('')), true, 'at the vault root');
+    assert.equal(inSavedVersions('Talk/versions/a/versions/b/slides.md', holds('Talk/versions/a')), true, 'the nearer versions/');
+    // A folder named versions in a folder holding no presentation is the author's own.
+    assert.equal(inSavedVersions('Talk/versions/draft/slides.md', holds('Other')), false);
+    assert.equal(inSavedVersions('Talk/Versions/draft/slides.md', holds('Talk')), false, 'the format spells versions/ in lowercase');
+    // A version's own folder is one by its name, whether or not its presentation's files are there.
+    assert.equal(inSavedVersions('Talk/versions/2026-10-30T16.20.05Z-k3pz/slides.md'), true);
+    assert.equal(inSavedVersions('Talk/versions/2026-10-30T16.20.05Z-k3pz/media/slides.md'), true);
+    assert.equal(inSavedVersions('Talk/slides.md', holds('Talk')), false);
+});
+
+test("a pair under a presentation folder's versions/ resolves to no files, so the plugin neither opens nor writes it", () => {
+    const folders = new Map<string, TFolder>();
+    const folder = (path: string, names: string[]): void => {
+        const entry = new TFolder(path);
+        entry.children = names.map(name => new TFile(path ? `${path}/${name}` : name, new Uint8Array(), 0));
+        folders.set(path, entry);
+    };
+    folder('Talk', ['slides.md', 'presentation.mdpoint']);
+    folder('Talk/versions/2026-10-30T16.20.05Z-k3pz copy', ['slides.md', 'presentation.mdpoint']);
+    folder('Notes', ['todo.md']);
+    folder('Notes/versions/draft', ['slides.md', 'presentation.mdpoint']);
+    const vault = {
+        getRoot: () => folders.get('') ?? new TFolder(''),
+        getFolderByPath: (path: string) => folders.get(path) ?? null
+    } as unknown as Vault;
+    assert.equal(presentationFiles(vault, 'Talk/versions/2026-10-30T16.20.05Z-k3pz copy/slides.md'), null);
+    assert.equal(presentationFiles(vault, 'Talk/versions/2026-10-30T16.20.05Z-k3pz copy/presentation.mdpoint'), null);
+    assert.equal(presentationFiles(vault, 'Talk/slides.md')?.companion.path, 'Talk/presentation.mdpoint');
+    assert.equal(presentationFiles(vault, 'Notes/versions/draft/slides.md')?.companion.path, 'Notes/versions/draft/presentation.mdpoint');
 });
 
 test('pair discovery keeps actual filename case and leaves unrelated notes alone', () => {

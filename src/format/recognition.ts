@@ -23,15 +23,25 @@ const CALENDAR_DAY =
     '(?!0000)(?:[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))' +
     '|(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)';
 
+/** A saved version's folder name: its save time in UTC to the second on a day the calendar has, then its tail. */
+const VERSION_ID = new RegExp(`^${CALENDAR_DAY}T(?:[01][0-9]|2[0-3])\\.[0-5][0-9]\\.[0-5][0-9]Z-[a-z0-9]{4}$`);
+
 /**
- * A saved version's folder, `versions/` and its save time in UTC to the second on a day the calendar has, then its
- * tail, which MarkdownPoint opens only from its presentation.
+ * Whether the file at `path` lies under a presentation's `versions/`, which MarkdownPoint never opens as a presentation of
+ * its own, as the app refuses it: in a folder there named by a save time, or anywhere below it where the folder around
+ * `versions/` holds a presentation file, as it does around a Finder or File Explorer copy of a version's folder.
+ * `holdsPresentation` says whether the vault's folder at a path holds one; without it, only a save time's name counts.
  */
-const SAVED_VERSION = new RegExp(`(?:^|/)versions/${CALENDAR_DAY}T(?:[01][0-9]|2[0-3])\\.[0-5][0-9]\\.[0-5][0-9]Z-[a-z0-9]{4}/[^/]*$`);
+export function inSavedVersions(path: string, holdsPresentation: (folder: string) => boolean = () => false): boolean {
+    const folders = path.split('/').slice(0, -1);
+    return folders.some(
+        (name, at) => name === 'versions' && (VERSION_ID.test(folders[at + 1] ?? '') || holdsPresentation(folders.slice(0, at).join('/')))
+    );
+}
 
 export function presentationCompanionPath(markdownPath: string): string | null {
     const slash = markdownPath.lastIndexOf('/');
-    if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md' || SAVED_VERSION.test(markdownPath)) return null;
+    if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md' || inSavedVersions(markdownPath)) return null;
     return markdownPath.slice(0, slash + 1) + 'presentation.mdpoint';
 }
 
