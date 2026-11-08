@@ -24,7 +24,7 @@
     {
       "id": "title-shade",
       "type": "shape",
-      "shape": "rectangle",
+      "shape-type": "rectangle",
       "locked": true,
       "frame": {
         "x": 0,
