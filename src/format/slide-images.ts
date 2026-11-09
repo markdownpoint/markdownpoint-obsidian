@@ -66,7 +66,8 @@ export function assignedSlideImages(
         [slide.scheme, layout?.scheme].find((name): name is string => typeof name === 'string' && isRecord(ownEntry(schemes, name))) ??
         'light';
     const definition = ownEntry(schemes, scheme);
-    const appearance = isRecord(definition) && definition.appearance === 'dark' ? 'dark' : scheme === 'dark' ? 'dark' : 'light';
+    // Every scheme states its appearance, light and dark included.
+    const appearance = isRecord(definition) && definition.appearance === 'dark' ? 'dark' : 'light';
     // Only a theme's own object holds a file per scheme; a slide's object and every override name one file.
     const picture = (value: unknown) => (isRecord(value) ? (ownEntry(value, scheme) ?? value[appearance] ?? value.light) : value);
     const objects = new Map<string, ImageObject>();

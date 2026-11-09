@@ -115,7 +115,12 @@ test("a slide shows the scheme MarkdownPoint shows: its own, else its layout's, 
             path: 'master.json',
             source: '{}',
             value: {
-                schemes: { light: {}, dark: { appearance: 'dark' }, evening: { appearance: 'dark' }, constructor: { appearance: 'dark' } },
+                schemes: {
+                    light: { appearance: 'light' },
+                    dark: { appearance: 'dark' },
+                    evening: { appearance: 'dark' },
+                    constructor: { appearance: 'dark' }
+                },
                 objects: [{ id: 'logo', type: 'image', file: { light: 'art/light.svg', dark: 'art/dark.svg', retired: 'art/retired.svg' } }]
             }
         },

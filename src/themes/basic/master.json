@@ -17,6 +17,7 @@
   },
   "schemes": {
     "light": {
+      "appearance": "light",
       "colors": {
         "background": "#FFFFFF",
         "text": "#17120F",
@@ -27,6 +28,7 @@
       }
     },
     "dark": {
+      "appearance": "dark",
       "colors": {
         "background": "#17120F",
         "text": "#FFF6EA",
