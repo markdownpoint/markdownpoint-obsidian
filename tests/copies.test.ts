@@ -23,10 +23,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'vitest';
 
-test("what the plugin carries of MarkdownPoint, Basic and core's chart number rules, is MarkdownPoint's own, file for file, as the manifest written with it names each by its digest", () => {
+test("what the plugin carries of MarkdownPoint, Basic and core's chart number rules with their CLDR walk, is MarkdownPoint's own, file for file, as the manifest written with it names each by its digest", () => {
     const root = fileURLToPath(new URL('../', import.meta.url));
     const copies = Object.fromEntries(
-        ['src/core', 'src/themes/basic'].flatMap(folder =>
+        ['src/core', 'src/common', 'src/themes/basic'].flatMap(folder =>
             readdirSync(path.join(root, folder), { recursive: true, withFileTypes: true })
                 .filter(entry => entry.isFile())
                 .map(entry => {

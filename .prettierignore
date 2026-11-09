@@ -6,5 +6,6 @@ LICENSE
 src/themes/basic/*.json
 # MarkdownPoint core's own files, byte for byte
 src/core/
+src/common/
 # Verbatim third-party license texts, embedded in main.js
 THIRD_PARTY_NOTICES.md

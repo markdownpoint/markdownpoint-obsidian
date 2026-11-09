@@ -1,5 +1,8 @@
 /** How a presentation writes a chart's numbers: the rule its language reads cells by, and a cell's number read, spelled and respelled by it. */
 import { CHART_NUMBER_LOCALES, CHART_NUMBER_PARENTS, CHART_NUMBER_PROFILES, CHART_NUMBER_SCRIPTS } from "./chart-number-rules.js";
+import { cldrProfile } from "../common/cldr-chain.js";
+
+const CHART_NUMBER_TABLE = { locales: CHART_NUMBER_LOCALES, parents: CHART_NUMBER_PARENTS, scripts: CHART_NUMBER_SCRIPTS };
 
 /**
  * How a presentation writes a number in Latin digits, from Unicode CLDR: its decimal mark, its group mark, and how many digits
@@ -7,24 +10,9 @@ import { CHART_NUMBER_LOCALES, CHART_NUMBER_PARENTS, CHART_NUMBER_PROFILES, CHAR
  */
 export interface ChartNumberRule { decimal: string; group: string; primary: number; secondary: number }
 
-/**
- * The rule a presentation's cells read by, as CLDR resolves its locale (presentationLocale's). The tag is named in full, the
- * script it's likely written in filled in where it names none (de-CH as de-Latn-CH, zh-HK as zh-Hant-HK), and walks to
- * its first entry: through the parent CLDR names for it, else the tag with its last subtag gone, a language and its
- * script standing last before root. A script a language isn't likely written in has no entry and reads root's rule.
- */
+/** The rule a presentation's cells read by, as CLDR resolves its locale (presentationLocale's), by `cldrProfile`'s walk. */
 export function chartNumberRule(locale: string): ChartNumberRule {
-  const parts = locale.split("-"), singleton = parts.findIndex(part => part.length === 1);
-  const [language = "", ...subtags] = singleton < 0 ? parts : parts.slice(0, singleton);
-  const script = /^[A-Z][a-z]{3}$/.test(subtags[0] ?? "") ? subtags.shift() : undefined;
-  const region = /^(?:[A-Z]{2}|\d{3})$/.test(subtags[0] ?? "") ? subtags[0] : undefined;
-  const written = script ?? (region === undefined ? undefined : CHART_NUMBER_SCRIPTS[`${language}-${region}`]) ?? CHART_NUMBER_SCRIPTS[language];
-  let tag = [language, written, ...subtags].filter(Boolean).join("-");
-  while (!Object.hasOwn(CHART_NUMBER_LOCALES, tag)) {
-    const named = tag.split("-");
-    tag = Object.hasOwn(CHART_NUMBER_PARENTS, tag) ? CHART_NUMBER_PARENTS[tag]! : named.length > 2 ? named.slice(0, -1).join("-") : "root";
-  }
-  const [decimal, group, primary, secondary] = CHART_NUMBER_PROFILES[CHART_NUMBER_LOCALES[tag]!]!;
+  const [decimal, group, primary, secondary] = CHART_NUMBER_PROFILES[cldrProfile(locale, CHART_NUMBER_TABLE)]!;
   // A locale that writes no groups still reads a space between them, three digits apart.
   return { decimal, group, primary: primary || 3, secondary: secondary || primary || 3 };
 }
