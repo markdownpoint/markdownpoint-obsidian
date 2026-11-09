@@ -217,7 +217,7 @@ test("only a theme's own object holds a file per scheme: a slide's object and an
 test('placed compositions use assigned media controls without listing unused defaults or looping', () => {
     const companion = {
         slides: {
-            one: { objects: [{ id: 'instance', type: 'instance', composition: 'card', controls: { picture: 'media/selected.svg' } }] }
+            one: { objects: [{ id: 'instance', type: 'instance', composition: 'card', 'control-values': { picture: 'media/selected.svg' } }] }
         },
         compositions: {
             card: {

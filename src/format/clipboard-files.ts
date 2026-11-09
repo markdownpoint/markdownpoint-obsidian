@@ -109,13 +109,13 @@ export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | n
                 base[0] === 'objects' &&
                 object.type === 'instance' &&
                 typeof object.composition === 'string' &&
-                isRecord(object.controls)
+                isRecord(object['control-values'])
             ) {
                 const controls = definitions.get(object.composition)?.controls;
                 if (!Array.isArray(controls)) continue;
-                for (const [id, value] of Object.entries(object.controls)) {
+                for (const [id, value] of Object.entries(object['control-values'])) {
                     const declaration: unknown = controls.find((control: unknown) => isRecord(control) && control.id === id);
-                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'controls', id]);
+                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'control-values', id]);
                 }
             }
         }
