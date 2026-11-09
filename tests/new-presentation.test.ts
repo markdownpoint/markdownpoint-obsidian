@@ -85,6 +85,13 @@ test('a new presentation starts on the first of title, content-with-header, cont
     assert.equal(starts(['title', 'content-with-header']), 'content');
     assert.equal(starts(['title', 'content-with-header', 'content']), 'blank');
     assert.equal(starts(['title', 'content-with-header', 'content', 'blank']), 'section');
+    // With no layout-order, its first by key, whatever order the vault lists the files in.
+    const { 'layout-order': _order, ...unordered } = basicTheme.master.value;
+    const preferred = ['title', 'content-with-header', 'content', 'blank'];
+    const rest = [...basicTheme.layouts].filter(([key]) => !preferred.includes(key));
+    assert.ok(rest.length > 1);
+    const reversed = { ...basicTheme, master: { ...basicTheme.master, value: unordered }, layouts: new Map(rest.reverse()) };
+    assert.equal(firstSlideLayout(reversed), rest.map(([key]) => key).sort()[0]);
 });
 
 test('each bundled layout can start a presentation without altering the template', () => {

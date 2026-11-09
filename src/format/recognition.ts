@@ -31,11 +31,15 @@ const VERSION_ID = new RegExp(`^${CALENDAR_DAY}T(?:[01][0-9]|2[0-3])\\.[0-5][0-9
  * its own, as the app refuses it: in a folder there named by a save time, or anywhere below it where the folder around
  * `versions/` holds a presentation file, as it does around a Finder or File Explorer copy of a version's folder.
  * `holdsPresentation` says whether the vault's folder at a path holds one; without it, only a save time's name counts.
+ * `ignoresCase` says the vault's volume finds a name in another case, as a Mac's or a Windows disk does, so `Versions/`
+ * there is the folder the app reads as `versions/`.
  */
-export function inSavedVersions(path: string, holdsPresentation: (folder: string) => boolean = () => false): boolean {
+export function inSavedVersions(path: string, holdsPresentation: (folder: string) => boolean = () => false, ignoresCase = false): boolean {
     const folders = path.split('/').slice(0, -1);
     return folders.some(
-        (name, at) => name === 'versions' && (VERSION_ID.test(folders[at + 1] ?? '') || holdsPresentation(folders.slice(0, at).join('/')))
+        (name, at) =>
+            (name === 'versions' || (ignoresCase && name.toLowerCase() === 'versions')) &&
+            (VERSION_ID.test(folders[at + 1] ?? '') || holdsPresentation(folders.slice(0, at).join('/')))
     );
 }
 

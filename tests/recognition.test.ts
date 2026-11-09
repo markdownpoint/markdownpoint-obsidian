@@ -26,7 +26,7 @@ import {
     presentationIdentity,
     presentationPairNames
 } from '../src/format/recognition.ts';
-import { presentationFiles } from '../src/presentation/presentation-files.ts';
+import { learnVaultCase, presentationFiles } from '../src/presentation/presentation-files.ts';
 import { TFile, TFolder } from './support/obsidian.ts';
 
 const presentationId = '12345678-1234-7234-9234-123456789abc';
@@ -85,6 +85,10 @@ test('anything under the versions/ of a folder holding a presentation is no pres
     // A folder named versions in a folder holding no presentation is the author's own.
     assert.equal(inSavedVersions('Talk/versions/draft/slides.md', holds('Other')), false);
     assert.equal(inSavedVersions('Talk/Versions/draft/slides.md', holds('Talk')), false, 'the format spells versions/ in lowercase');
+    // On a volume that finds a name in another case, `Versions/` is the folder the app reads as `versions/`.
+    assert.equal(inSavedVersions('Talk/Versions/draft/slides.md', holds('Talk'), true), true);
+    assert.equal(inSavedVersions('Talk/VERSIONS/2026-10-30T16.20.05Z-k3pz/slides.md', undefined, true), true);
+    assert.equal(inSavedVersions('Talk/Versions/draft/slides.md', holds('Other'), true), false);
     // A version's own folder is one by its name, whether or not its presentation's files are there.
     assert.equal(inSavedVersions('Talk/versions/2026-10-30T16.20.05Z-k3pz/slides.md'), true);
     assert.equal(inSavedVersions('Talk/versions/2026-10-30T16.20.05Z-k3pz/media/slides.md'), true);
@@ -110,6 +114,37 @@ test("a pair under a presentation folder's versions/ resolves to no files, so th
     assert.equal(presentationFiles(vault, 'Talk/versions/2026-10-30T16.20.05Z-k3pz copy/presentation.mdpoint'), null);
     assert.equal(presentationFiles(vault, 'Talk/slides.md')?.companion.path, 'Talk/presentation.mdpoint');
     assert.equal(presentationFiles(vault, 'Notes/versions/draft/slides.md')?.companion.path, 'Notes/versions/draft/presentation.mdpoint');
+});
+
+test("a pair under Versions/ is a saved version where the vault's volume finds a name in another case, and the author's own elsewhere", async () => {
+    const folders = new Map<string, TFolder>();
+    const folder = (path: string, names: string[]): void => {
+        const entry = new TFolder(path);
+        entry.children = names.map(name => new TFile(path ? `${path}/${name}` : name, new Uint8Array(), 0));
+        folders.set(path, entry);
+    };
+    folder('Talk', ['slides.md', 'presentation.mdpoint']);
+    folder('Talk/Versions/draft', ['slides.md', 'presentation.mdpoint']);
+    // A volume that ignores case finds the plugins folder in another case too, unless asked for that spelling alone, though
+    // the config folder's name has no letters.
+    const vault = (ignoresCase: boolean, spelled: readonly string[] = ['.123/plugins']) =>
+        ({
+            configDir: '.123',
+            adapter: {
+                exists: async (path: string, sensitive = false) =>
+                    spelled.includes(path) || (ignoresCase && !sensitive && spelled.some(name => name.toLowerCase() === path.toLowerCase()))
+            },
+            getRoot: () => new TFolder(''),
+            getFolderByPath: (path: string) => folders.get(path) ?? null
+        }) as unknown as Vault;
+    const caseless = vault(true);
+    const cased = vault(false);
+    // A volume that keeps case can hold a second folder spelled the other way.
+    const twoFolders = vault(false, ['.123/plugins', '.123/PLUGINS']);
+    for (const each of [caseless, cased, twoFolders]) await learnVaultCase(each);
+    assert.equal(presentationFiles(caseless, 'Talk/Versions/draft/slides.md'), null);
+    for (const each of [cased, twoFolders])
+        assert.equal(presentationFiles(each, 'Talk/Versions/draft/slides.md')?.companion.path, 'Talk/Versions/draft/presentation.mdpoint');
 });
 
 test('pair discovery keeps actual filename case and leaves unrelated notes alone', () => {

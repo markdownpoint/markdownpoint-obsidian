@@ -21,7 +21,7 @@ import type { App, TAbstractFile, TFile, Vault } from 'obsidian';
 import { indexPresentation } from '../format/document.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import { isRecord, newerFormat, presentationCompanionPath, presentationIdentity, presentationMember } from '../format/recognition.ts';
-import { presentationFiles } from './presentation-files.ts';
+import { learnVaultCase, presentationFiles } from './presentation-files.ts';
 import { outlineSections, outlineSlides } from '../outline/model.ts';
 import type { OutlinePresentation } from '../outline/model.ts';
 import { uiText } from '../ui-text.ts';
@@ -216,6 +216,7 @@ export class PresentationReader extends Component {
                 return;
             }
             await this.data?.ready.catch(() => undefined);
+            await learnVaultCase(this.app.vault);
             const companionText = await this.app.vault.read(companionFile);
             // As MarkdownPoint reads it: past a byte order mark, and refused for a key written twice. A save of the words
             // alone leaves it as it was read.
@@ -428,6 +429,7 @@ const readCompanions = new WeakMap<TFile, { readonly mtime: number; readonly siz
 
 /** Whether `markdown`, at `path`, is the slides.md of a presentation the reader opens: one pair, one identity, a known format. */
 export async function readsAsPresentation(vault: Vault, path: string, markdown: string): Promise<boolean> {
+    await learnVaultCase(vault);
     const pair = presentationCompanionPath(path) ? presentationFiles(vault, path) : null;
     if (!pair || pair.markdown.path !== path) return false;
     const file = pair.companion;

@@ -93,6 +93,17 @@ test('new slide insertion keeps surrounding source and metadata intact', () => {
 
 test('layout inventory preserves declared order and rejects unsafe or duplicate writing identities', () => {
     assert.deepEqual(orderedLayouts(layouts), ['title', 'blank']);
+    // The layouts `layout-order` leaves out follow by key, not in the order the vault lists their files.
+    const unlisted = {
+        ...layouts,
+        layouts: new Map([
+            ['content-with-header', layouts.layouts.get('blank')!],
+            ['quote', layouts.layouts.get('blank')!],
+            ['content', layouts.layouts.get('blank')!],
+            ['title', layouts.layouts.get('title')!]
+        ])
+    };
+    assert.deepEqual(orderedLayouts(unlisted), ['title', 'content', 'content-with-header', 'quote']);
     assert.equal(layoutName('text-image', {}), 'Text image');
     assert.equal(layoutName('internal', { name: 'Two ideas' }), 'Two ideas');
     assert.equal(prepareNewSlide(layouts, 'missing', 'new'), null);

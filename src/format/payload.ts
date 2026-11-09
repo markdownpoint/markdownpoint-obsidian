@@ -16,12 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { blockTokens } from './block-grammar.ts';
+
 /**
  * Source through the last line of a MarkdownPoint block that holds more than spaces, its line break included. Blank
  * lines only separate blocks, however many stand there, and an empty paragraph is written `<br>`, so the blank lines at a
- * block's end are all organizational.
+ * block's end are organizational; but a code block the words leave open runs to the file's end, and its blank lines are
+ * its code, all but the last, as MarkdownPoint reads them.
  */
 export function payloadContentEnd(markdown: string, from: number, to: number): number {
+    // Only a block that runs to the file's end can leave a code block open: one would take in the marker after it.
+    const words = to === markdown.length ? markdown.slice(from) : '';
+    if (leavesCodeOpen(words)) return from + words.replace(/(^|\n)[ \t]+$/, '$1').replace(/(^|\n)[ \t]*\r?\n$/, '$1').length;
     let end = to;
     while (end > from && ' \t\r\n'.includes(markdown[end - 1]!)) end--;
     if (end === from) return from;
@@ -36,4 +42,15 @@ export function terminateSourceBlock(source: string, newline: string): string {
     // Fold an unterminated whitespace tail into the existing organizational line.
     const closed = source.replace(/(^|\n)([ \t]*)(\r?\n)([ \t]+)$/, '$1$2$4$3');
     return closed.endsWith('\n') ? closed : closed + newline;
+}
+
+const OPEN_CODE_PROBE = 'mp-open-code-probe';
+
+/** Whether Markdown words leave a fenced code block open at their end, as the grammar that draws the slide reads them. */
+function leavesCodeOpen(words: string): boolean {
+    if (!words.includes('```') && !words.includes('~~~')) return false;
+    const last = blockTokens(`${words.replace(/\r\n?/g, '\n')}\n${OPEN_CODE_PROBE}`)
+        .filter(token => token.type !== 'space')
+        .at(-1);
+    return last?.type === 'code' && last.codeBlockStyle !== 'indented' && last.raw.replace(/\n+$/, '').endsWith(OPEN_CODE_PROBE);
 }

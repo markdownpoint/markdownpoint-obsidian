@@ -377,12 +377,18 @@ test('a span inside another hides both, inner marks first where they stand', () 
     ]);
 });
 
-function vault(files: Record<string, string>, reads: string[] = []): Vault {
-    const folder = new TFolder('Talk');
-    folder.children = Object.keys(files).map(name => new TFile(`Talk/${name}`, new Uint8Array(), 0));
+function vault(files: Record<string, string>, reads: string[] = [], at = 'Talk', ignoresCase = false): Vault {
+    const folder = new TFolder(at);
+    folder.children = Object.keys(files).map(name => new TFile(`${at}/${name}`, new Uint8Array(), 0));
     return {
+        configDir: '.config',
+        // A volume that ignores case finds the plugins folder in another case too, unless asked for that spelling alone.
+        adapter: {
+            exists: (path: string, sensitive = false) =>
+                Promise.resolve(path === '.config/plugins' || (ignoresCase && !sensitive && path.toLowerCase() === '.config/plugins'))
+        },
         getRoot: () => new TFolder(''),
-        getFolderByPath: (path: string) => (path === 'Talk' ? folder : null),
+        getFolderByPath: (path: string) => (path === at ? folder : null),
         cachedRead: (file: TFile) => {
             reads.push(file.name);
             return Promise.resolve(files[file.name]!);
@@ -413,6 +419,18 @@ test("reading view drops group marks only in a presentation's slides.md, as the 
         [{ 'slides.md': markdown, 'presentation.mdpoint': '{' }, 'Talk/slides.md']
     ] as const)
         assert.equal(await readsAsPresentation(vault(files), path, markdown), false, JSON.stringify(Object.keys(files)) + path);
+});
+
+test('a saved version under Versions/ never reads as a presentation where the volume ignores case, from the first read on', async () => {
+    const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
+    const markdown = `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n<!-- slide: a -->\n`;
+    const files = {
+        'slides.md': markdown,
+        'presentation.mdpoint': JSON.stringify({ markdownpoint: '1.0', type: 'presentation', id, theme: 'basic', slides: {} })
+    };
+    const at = 'Talk/Versions/2026-10-30T16.20.05Z-k3pz';
+    assert.equal(await readsAsPresentation(vault(files, [], at, true), `${at}/slides.md`, markdown), false);
+    assert.equal(await readsAsPresentation(vault(files, [], at, false), `${at}/slides.md`, markdown), true);
 });
 
 test('a companion reads as MarkdownPoint reads it: past a byte order mark, and refused for a key written twice', async () => {

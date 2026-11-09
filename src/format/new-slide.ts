@@ -27,10 +27,11 @@ export function layoutName(key: string, value: Record<string, unknown>): string 
     return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** The theme's layouts in its master's `layout-order`, then those it doesn't list, sorted by key, as the format publishes. */
 export function orderedLayouts(theme: EmbeddedTheme): string[] {
     const order = theme.master.value['layout-order'];
     const first = Array.isArray(order) ? order.filter((key): key is string => typeof key === 'string' && theme.layouts.has(key)) : [];
-    return [...new Set([...first, ...theme.layouts.keys()])];
+    return [...new Set([...first, ...[...theme.layouts.keys()].sort()])];
 }
 
 interface NewField {

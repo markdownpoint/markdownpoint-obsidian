@@ -71,3 +71,22 @@ test('an empty text is blank lines alone, all organizational, and keeps its sour
     assert.equal(payloadContentEnd(words, 0, words.length), words.length);
     assert.equal(payloadContentEnd('\n\n', 2, 2), 2);
 });
+
+test("a code block left open at the file's end keeps its blank lines as code, all but the last, as MarkdownPoint reads it", () => {
+    for (const newline of ['\n', '\r\n']) {
+        const code = ['```txt', 'x', '', '', ''].join(newline);
+        const source = code + newline;
+        assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), code, JSON.stringify(source));
+        // Spaces no line feed ends are no line of their own.
+        const spaced = source + '  ';
+        assert.equal(spaced.slice(0, payloadContentEnd(spaced, 0, spaced.length)), code);
+    }
+    const prefix = '<!-- notes -->\n';
+    const notes = prefix + '~~~\nx\n\n\n';
+    assert.equal(notes.slice(prefix.length, payloadContentEnd(notes, prefix.length, notes.length)), '~~~\nx\n\n');
+    // A closed one, and one a list item holds, end at their last line with words.
+    for (const text of ['```\nx\n```', '- One\n\n  ```\n  x']) {
+        const source = text + '\n\n\n';
+        assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), text + '\n', JSON.stringify(source));
+    }
+});
