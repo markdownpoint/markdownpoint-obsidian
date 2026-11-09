@@ -140,7 +140,7 @@ test('theme creation inventories media variants, overrides and embedded fonts wi
                 value: {
                     ...basicTheme.master.value,
                     objects: [
-                        { type: 'video', 'poster-frame': 2.5 },
+                        { type: 'video', 'poster-time': 2.5 },
                         { type: 'web-video', poster: 'media/poster.png' }
                     ]
                 }

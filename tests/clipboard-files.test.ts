@@ -42,7 +42,7 @@ test('all declared slide media locations are collected once, including posters a
                     file: 'media/picture.png',
                     generation: { id: STYLED, original: { file: 'generated/original.png', generation: { id: SOURCE } } }
                 },
-                { id: 'movie', type: 'video', file: 'media/movie.mp4', poster: 'media/poster.jpg', 'poster-frame': 2.5 },
+                { id: 'movie', type: 'video', file: 'media/movie.mp4', poster: 'media/poster.jpg', 'poster-time': 2.5 },
                 { id: 'web', type: 'web-video', url: 'https://example.com/watch', poster: 'media/web.webp' },
                 { id: 'words', type: 'text', model: { file: 'generated/letters.glb' } }
             ],
