@@ -97,9 +97,9 @@ test('malformed replacement records refuse without changing source', () => {
 test('copy references change in own objects and overrides without rewriting other JSON', () => {
     const source = String.raw`{ "layout":"title", "future":900719925474099312345, "escaped":"\u00e9",
     "objects":["title",{"id":"picture","type":"image","file":"media/one.png","link":"slide:one","extra":{"link":"slide:one"}},
-      {"id":"card","type":"composition","composition":"card","link":"slide:two","controls":{"label":"slide:one"}}],
+      {"id":"card","type":"instance","composition":"card","link":"slide:two","controls":{"label":"slide:one"}}],
     "overrides":{"title":{"link":"slide:one","name":"slide:one"},"removed":null,"other":{"link":"https://example.com/slide:one"}},
-    "link":"slide:one", "composition":"card", "controls":{"caption":{"type":"text","default":"[Go](slide:one)"}} }`;
+    "link":"slide:one", "composition":"card", "controls":[{"id":"caption","type":"text","default":"[Go](slide:one)"}] }`;
     const expected = source
         .replace('"link":"slide:one","extra"', '"link":"slide:copy-one","extra"')
         .replace('"composition":"card","link":"slide:two"', '"composition":"copy-card","link":"slide:copy-two"')
@@ -120,7 +120,7 @@ test('copy references change in own objects and overrides without rewriting othe
 
 test('composition references change only for composition instances and only when mapped', () => {
     const source =
-        '{"objects":[{"type":"composition","composition":"card"},{"type":"composition","composition":"other"},{"type":"video","composition":"card"}],"overrides":{"card":{"composition":"card"}}}';
+        '{"objects":[{"type":"instance","composition":"card"},{"type":"instance","composition":"other"},{"type":"video","composition":"card"}],"overrides":{"card":{"composition":"card"}}}';
     assert.equal(
         remapRecordReferences(source, new Map(), new Map([['card', 'copy-card']])),
         source.replace('"composition":"card"', '"composition":"copy-card"')

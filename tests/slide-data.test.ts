@@ -498,8 +498,8 @@ test('copied slides and definitions share recovery, one disk write and native un
     const before = '<!-- slide: a -->\n<!-- slide: b -->\n';
     const inserted =
         '<!-- slide: copy -->\n<!-- text: card.caption -->\nCopied words\n<!-- composition: card -->\n<!-- control: caption -->\nDefault words\n';
-    const slide = '{"objects":[{"id":"card","type":"composition","composition":"card"}],"future":9007199254740993}';
-    const definition = '{"controls":{"caption":{"type":"text"}},"future":9007199254740995}';
+    const slide = '{"objects":[{"id":"card","type":"instance","composition":"card"}],"future":9007199254740993}';
+    const definition = '{"controls":[{"id":"caption","type":"text"}],"future":9007199254740995}';
     let prepared = CompanionDocument.read(disk.disk)!.change(new Map([['copy', slide]]))!;
     prepared = CompanionDocument.ensure(prepared, 'compositions')!.change(new Map([['card', definition]]))!;
     let data = new SlideData(host);
@@ -566,7 +566,7 @@ test('copied slides and definitions share recovery, one disk write and native un
 
 test('definition write failure preserves both recoveries and a retry restores the complete pair', async () => {
     const { state: disk, host } = device();
-    const prepared = source('"copy":{"objects":[{"type":"composition","composition":"card"}]}').replace(
+    const prepared = source('"copy":{"objects":[{"type":"instance","composition":"card"}]}').replace(
         '"unrelated":true',
         '"unrelated":true,"compositions":{"card":{"name":"Kept"}}'
     );

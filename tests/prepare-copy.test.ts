@@ -34,7 +34,7 @@ const schemas = new Map<string, 'rich-text' | 'table'>([
 test('complete slide preparation changes only identity and actual Markdown/JSON references', () => {
     const markdown =
         '<!--  slide: one  --> \r\n<!-- author comment -->\r\n<!-- text: body -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n\r\n<!-- text: card.caption -->\r\n[Back](slide:one).\r\n<!-- notes -->\r\n[Next](slide:two).\r\n\r\n \t';
-    const record = String.raw`{ "layout":"title", "future":9007199254740993, "escaped":"\u0061", "objects":["title",{"id":"card","type":"composition","composition":"card","link":"slide:two"}] }`;
+    const record = String.raw`{ "layout":"title", "future":9007199254740993, "escaped":"\u0061", "objects":["title",{"id":"card","type":"instance","composition":"card","link":"slide:two"}] }`;
     const result = prepareCopiedPart({ id: 'one', markdown, record }, 'slide', slides, compositions, schemas)!;
     assert.ok(result);
     assert.equal(result.id, 'copy-one');
@@ -79,7 +79,7 @@ test('a copied slide keeps its groups and spans as written and remaps the links 
 test('composition defaults and text use copied slide destinations without changing controls or bindings', () => {
     const markdown = '<!--composition:card-->\n<!-- control: caption -->\n[Default](slide:two)\n<!-- text: body -->\n[Words](slide:one)\n';
     const record =
-        '{"controls":{"caption":{"type":"text"},"link":{"type":"color","default":"accent"}},"objects":[{"id":"label","type":"text","bind":{"text":"caption"},"link":"slide:two"}]}';
+        '{"controls":[{"id":"caption","type":"text"}, {"id":"link","type":"color","default":"accent"}],"objects":[{"id":"label","type":"text","bind":{"text":"caption"},"link":"slide:two"}]}';
     const result = prepareCopiedPart({ id: 'card', markdown, record }, 'composition', slides, compositions, schemas)!;
     assert.ok(result);
     assert.equal(result.id, 'copy-card');

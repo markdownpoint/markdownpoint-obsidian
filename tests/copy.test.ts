@@ -29,7 +29,7 @@ const part = (kind: 'slide' | 'composition', id: string, record = '{}', words = 
     record,
     markdown: `<!-- ${kind}: ${id} -->\n<!-- ${kind === 'slide' ? 'text: body' : 'control: caption'} -->\n${words}\n`
 });
-const placement = (source: string) => `{"objects":[{"id":"placed","type":"composition","composition":"${source}"}]}`;
+const placement = (source: string) => `{"objects":[{"id":"placed","type":"instance","composition":"${source}"}]}`;
 const inner = part('composition', 'inner');
 const outer = part('composition', 'outer', placement('inner'));
 const captured = {
@@ -204,7 +204,7 @@ test('large definition chains are prepared iteratively and shared dependencies a
             'composition',
             `c${index}`,
             index + 1 < count
-                ? `{"objects":[{"type":"composition","composition":"c${index + 1}"},{"type":"composition","composition":"c${index + 1}"}]}`
+                ? `{"objects":[{"type":"instance","composition":"c${index + 1}"},{"type":"instance","composition":"c${index + 1}"}]}`
                 : '{}'
         )
     );

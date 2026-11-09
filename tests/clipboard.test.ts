@@ -48,14 +48,14 @@ const captured = {
         {
             id: 'two',
             markdown: '<!-- slide: two -->\n<!-- text: instance.caption -->\nOwn words.\n',
-            record: '{"layout":"title","objects":[{"id":"instance","type":"composition","composition":"card"}]}'
+            record: '{"layout":"title","objects":[{"id":"instance","type":"instance","composition":"card"}]}'
         }
     ],
     compositions: [
         {
             id: 'card',
             markdown: '<!-- composition: card -->\n<!-- control: caption -->\nDefault words.\n',
-            record: '{"controls":{"caption":{"type":"text"}}}'
+            record: '{"controls":[{"id":"caption","type":"text"}]}'
         }
     ]
 };

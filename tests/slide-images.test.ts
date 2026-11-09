@@ -175,17 +175,17 @@ test('image references cannot escape their declared vault folder or load a remot
 test('placed compositions use assigned media controls without listing unused defaults or looping', () => {
     const companion = {
         slides: {
-            one: { objects: [{ id: 'instance', type: 'composition', composition: 'card', controls: { picture: 'media/selected.svg' } }] }
+            one: { objects: [{ id: 'instance', type: 'instance', composition: 'card', controls: { picture: 'media/selected.svg' } }] }
         },
         compositions: {
             card: {
-                controls: {
-                    picture: { type: 'media', default: 'media/default.svg' },
-                    unused: { type: 'media', default: 'media/unused.svg' }
-                },
+                controls: [
+                    { id: 'picture', type: 'media', default: 'media/default.svg' },
+                    { id: 'unused', type: 'media', default: 'media/unused.svg' }
+                ],
                 objects: [
                     { id: 'photo', type: 'image', file: 'media/original.svg', bind: { file: 'picture' } },
-                    { id: 'loop', type: 'composition', composition: 'card' }
+                    { id: 'loop', type: 'instance', composition: 'card' }
                 ]
             }
         }
@@ -196,9 +196,9 @@ test('placed compositions use assigned media controls without listing unused def
 test('a media control may be named as JavaScript names its own, and an instance that sets no value for it shows its default', () => {
     // presentation.mdpoint reads as JSON, whose records hold JavaScript's own names unless the file names them itself.
     const companion = JSON.parse(`{
-        "slides": { "one": { "objects": [{ "id": "instance", "type": "composition", "composition": "card" }] } },
+        "slides": { "one": { "objects": [{ "id": "instance", "type": "instance", "composition": "card" }] } },
         "compositions": { "card": {
-            "controls": { "__proto__": { "type": "media", "default": "media/default.svg" } },
+            "controls": [{"id":"__proto__","type": "media", "default": "media/default.svg" }],
             "objects": [
                 { "id": "photo", "type": "image", "file": "media/original.svg", "bind": { "file": "__proto__" } },
                 { "id": "loose", "type": "image", "file": "media/loose.svg", "bind": { "file": "toString" } }

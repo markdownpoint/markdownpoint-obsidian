@@ -166,7 +166,7 @@ test('one large insertion retains the selected order and complete raw records', 
 const definition = (id: string): PreparedPart => ({
     id,
     markdown: `<!-- composition: ${id} -->\n<!-- control: caption -->\nDefault ${id}.\n`,
-    record: '{"controls":{"caption":{"type":"text"}},"future":9007199254740993}'
+    record: '{"controls":[{"id":"caption","type":"text"}],"future":9007199254740993}'
 });
 
 test('a group and its new definitions enter different source positions without replacing intervening content', () => {

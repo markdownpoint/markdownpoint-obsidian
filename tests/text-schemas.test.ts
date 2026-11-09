@@ -125,7 +125,7 @@ test('definitions use their own types while instance controls and unbound text r
     const record = {
         objects: [
             { id: 'grid', type: 'table' },
-            { id: 'callout', type: 'composition', composition: 'inner' }
+            { id: 'callout', type: 'instance', composition: 'inner' }
         ]
     };
     assert.deepEqual(

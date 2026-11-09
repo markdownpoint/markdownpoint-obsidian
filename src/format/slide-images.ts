@@ -131,7 +131,7 @@ export function assignedSlideImages(
                     category: object.placeholder ? 'placeholder' : 'image'
                 });
         }
-        if (raw.type !== 'composition' || typeof raw.composition !== 'string' || !isRecord(companion.compositions)) continue;
+        if (raw.type !== 'instance' || typeof raw.composition !== 'string' || !isRecord(companion.compositions)) continue;
         let cycle = false;
         for (let ancestor = parent; ancestor; ancestor = ancestor.parent)
             if (ancestor.composition === raw.composition) {
@@ -141,7 +141,7 @@ export function assignedSlideImages(
         if (cycle) continue;
         const composition = companion.compositions[raw.composition];
         if (!isRecord(composition) || !Array.isArray(composition.objects)) continue;
-        const controls = isRecord(composition.controls) ? composition.controls : {};
+        const controls: unknown[] = Array.isArray(composition.controls) ? composition.controls : [];
         const values = isRecord(raw.controls) ? raw.controls : {};
         const instance = JSON.stringify([raw.composition, values]);
         if (expanded.has(instance)) continue;
@@ -149,7 +149,7 @@ export function assignedSlideImages(
         for (const member of composition.objects) {
             if (!isRecord(member)) continue;
             const binding = isRecord(member.bind) && typeof member.bind.file === 'string' ? member.bind.file : null;
-            const control = binding ? ownEntry(controls, binding) : undefined;
+            const control = binding ? controls.find(each => isRecord(each) && each.id === binding) : undefined;
             const bound = binding !== null && isRecord(control) && control.type === 'media';
             const file = bound ? (ownEntry(values, binding) ?? control.default) : member.file;
             pending.push({

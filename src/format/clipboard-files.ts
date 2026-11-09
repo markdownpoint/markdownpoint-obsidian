@@ -20,7 +20,7 @@ import { applyEdits, findNodeAtLocation, parseTree } from 'jsonc-parser';
 import type { Edit } from 'jsonc-parser';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { readJsonObject } from './json.ts';
-import { isRecord, ownEntry } from './recognition.ts';
+import { isRecord } from './recognition.ts';
 
 const mediaExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|mp4|m4v|mov|webm|ogv|mp3|m4a|wav|ogg|flac|glb)$/i;
 
@@ -98,10 +98,10 @@ export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | n
             add(nested(nested(record.background.generation, 'original'), 'file'), ['background', 'generation', 'original', 'file']);
             made(record.background.generation, record.background.image);
         }
-        if (definitions.has(part.id) && isRecord(record.controls))
-            for (const [key, control] of Object.entries(record.controls)) {
-                if (isRecord(control) && control.type === 'media') add(control.default, ['controls', key, 'default']);
-            }
+        if (definitions.has(part.id) && Array.isArray(record.controls))
+            record.controls.forEach((control: unknown, index) => {
+                if (isRecord(control) && control.type === 'media') add(control.default, ['controls', index, 'default']);
+            });
         const objects: [Record<string, unknown>, (string | number)[]][] = [];
         if (Array.isArray(record.objects))
             record.objects.forEach((object: unknown, index) => {
@@ -117,14 +117,14 @@ export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | n
             add(nested(object.model, 'file'), [...base, 'model', 'file']);
             if (
                 base[0] === 'objects' &&
-                object.type === 'composition' &&
+                object.type === 'instance' &&
                 typeof object.composition === 'string' &&
                 isRecord(object.controls)
             ) {
                 const controls = definitions.get(object.composition)?.controls;
-                if (!isRecord(controls)) continue;
+                if (!Array.isArray(controls)) continue;
                 for (const [id, value] of Object.entries(object.controls)) {
-                    const declaration = ownEntry(controls, id);
+                    const declaration: unknown = controls.find((control: unknown) => isRecord(control) && control.id === id);
                     if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'controls', id]);
                 }
             }

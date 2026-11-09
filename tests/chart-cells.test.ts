@@ -186,7 +186,7 @@ const theme = {
 const definitionRecord = '{"objects":[{"id":"figures","type":"chart"}]}';
 const definition = (cell: string) => `<!-- composition: card -->\n<!-- text: figures -->\n${table(`| Sales | ${cell} | 2 |`)}\n`;
 const slideRecord =
-    '{"layout":"title","objects":[{"id":"sales","type":"chart"},{"id":"grid","type":"table"},{"id":"instance","type":"composition","composition":"card"}]}';
+    '{"layout":"title","objects":[{"id":"sales","type":"chart"},{"id":"grid","type":"table"},{"id":"instance","type":"instance","composition":"card"}]}';
 const slide = `<!-- slide: first -->\n<!-- text: sales -->\n${table('| Sales | 1,234 | 1 234,5 |')}\n<!-- text: grid -->\n${table('| Sales | 1,234 | 1 234,5 |')}\n`;
 
 test("a paste from a Swedish presentation into an English one respells its own charts, slides' and definitions', before a definition is matched against the destination's", () => {

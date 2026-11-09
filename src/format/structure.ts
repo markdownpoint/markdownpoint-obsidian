@@ -133,7 +133,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
         // Theme labels and decorative shapes do not describe the slide's writing areas.
         // Slide-owned text remains editable even without the theme placeholder flag.
         if (text && object.placeholder !== true && !ownIds.has(String(object.id))) continue;
-        if (!text && !['image', 'video', 'web-video', 'composition'].includes(object.type)) continue;
+        if (!text && !['image', 'video', 'web-video', 'instance'].includes(object.type)) continue;
         // A text style has no columns: an object states its own.
         const count = object['column-count'] ?? 1;
         const gap = object['column-gutter'] ?? 48;

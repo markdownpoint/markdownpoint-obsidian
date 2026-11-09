@@ -100,10 +100,10 @@ test('only declared media controls authorize files, not text that resembles a pa
         id: 'card',
         markdown: '<!-- composition: card -->\n',
         record: JSON.stringify({
-            controls: {
-                photo: { type: 'media', default: 'media/default.png' },
-                words: { type: 'text', default: 'media/not-a-file.png' }
-            },
+            controls: [
+                { id: 'photo', type: 'media', default: 'media/default.png' },
+                { id: 'words', type: 'text', default: 'media/not-a-file.png' }
+            ],
             objects: [{ id: 'bound', type: 'image', bind: { file: 'photo' } }]
         })
     };
@@ -114,7 +114,7 @@ test('only declared media controls authorize files, not text that resembles a pa
                     objects: [
                         {
                             id: 'instance',
-                            type: 'composition',
+                            type: 'instance',
                             composition: 'card',
                             controls: { photo: 'media/selected.png', words: 'media/still-text.png' }
                         }
