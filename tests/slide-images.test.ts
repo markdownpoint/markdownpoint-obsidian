@@ -172,6 +172,43 @@ test('image references cannot escape their declared vault folder or load a remot
     ]);
 });
 
+test('a picture shows only where MarkdownPoint reads its path, and an override with a path it refuses leaves the inherited one', () => {
+    for (const file of ['media/a#b.png', 'media/.cache/picture.png', 'media/con.png', 'media/dir./picture.png', 'media/a|b.png'])
+        assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', file }] } } }, null), [], file);
+    const themed = (file: string): EmbeddedTheme => ({
+        ...theme,
+        master: { path: 'master.json', source: '{}', value: { objects: [{ id: 'logo', type: 'image', file }] } }
+    });
+    for (const file of ['art/.hidden.png', 'previews/cover.png', 'example/media/picture.png'])
+        assert.deepEqual(paths({ slides: { one: {} } }, themed(file)), [], file);
+    assert.deepEqual(paths({ slides: { one: {} } }, themed('art/logo.png')), [root + 'themes/field-notes/art/logo.png']);
+    assert.deepEqual(paths({ slides: { one: { overrides: { logo: { file: 'media/a#b.png' } } } } }, themed('art/logo.png')), [
+        root + 'themes/field-notes/art/logo.png'
+    ]);
+});
+
+test("only a theme's own object holds a file per scheme: a slide's object and an override at any level name one file", () => {
+    const schemed = { light: 'media/light.png', dark: 'media/dark.png' };
+    assert.deepEqual(paths({ slides: { one: { objects: [{ id: 'picture', type: 'image', file: schemed }] } } }, null), []);
+    assert.deepEqual(paths({ slides: { one: { layout: 'title', overrides: { logo: { file: schemed } } } } }), [
+        root + 'themes/field-notes/art/dark.svg'
+    ]);
+    const overridden: EmbeddedTheme = {
+        ...theme,
+        layouts: new Map([
+            [
+                'title',
+                {
+                    path: 'title.json',
+                    source: '{}',
+                    value: { ...layout, overrides: { logo: { file: { light: 'art/other.svg', dark: 'art/other-dark.svg' } } } }
+                }
+            ]
+        ])
+    };
+    assert.deepEqual(paths({ slides: { one: { layout: 'title' } } }, overridden), [root + 'themes/field-notes/art/dark.svg']);
+});
+
 test('placed compositions use assigned media controls without listing unused defaults or looping', () => {
     const companion = {
         slides: {

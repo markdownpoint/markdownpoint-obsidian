@@ -154,7 +154,11 @@ test('theme creation inventories media variants, overrides and embedded fonts wi
         'media/../outside.svg',
         'https://example.com/file.svg',
         'previews/cover.jpg',
-        'example/media/file.jpg'
+        'example/media/file.jpg',
+        // A theme's file follows MarkdownPoint's one path rule.
+        'media/a#b.svg',
+        'media/con.svg',
+        'media/dir./file.svg'
     ]) {
         assert.equal(themeFilePaths(make(path)), null, path);
     }

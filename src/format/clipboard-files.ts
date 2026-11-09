@@ -19,6 +19,7 @@
 import { applyEdits, findNodeAtLocation, parseTree } from 'jsonc-parser';
 import type { Edit } from 'jsonc-parser';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
+import { isPresentationFilePath } from './file-paths.ts';
 import { readJsonObject } from './json.ts';
 import { isRecord } from './recognition.ts';
 
@@ -26,18 +27,7 @@ const mediaExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|mp4|m4v|mov|webm|og
 
 /** Only presentation-owned media paths may authorize a cross-presentation file read. */
 export function isPresentationMediaPath(value: string): boolean {
-    const parts = value.split('/');
-    return (
-        parts.length > 1 &&
-        ['media', 'generated'].includes(parts[0]!) &&
-        mediaExtension.test(value) &&
-        !/[\\<>:"|?*#]/.test(value) &&
-        !/\p{Cc}/u.test(value) &&
-        parts.every(
-            part =>
-                part && !part.startsWith('.') && !/[ .]$/.test(part) && !/^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(part)
-        )
-    );
+    return mediaExtension.test(value) && isPresentationFilePath(value);
 }
 
 interface Location {

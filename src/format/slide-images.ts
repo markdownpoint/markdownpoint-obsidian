@@ -17,6 +17,7 @@
  */
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
+import { isAuthoredFilePath, isPresentationFilePath, isThemeFilePath } from './file-paths.ts';
 import { isRecord, ownEntry, presentationCompanionPath } from './recognition.ts';
 
 export interface SlideImageReference {
@@ -38,18 +39,11 @@ const imageExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp)$/i;
 const videoExtension = /\.(?:mp4|m4v|mov|webm|ogv)$/i;
 
 function imagePath(value: unknown, scope: string, presentation: boolean): string | null {
-    if (
-        typeof value !== 'string' ||
-        !imageExtension.test(value) ||
-        value.includes('\\') ||
-        value.includes(':') ||
-        [...value].some(character => character.charCodeAt(0) < 32)
-    )
-        return null;
-    const parts = value.split('/');
-    if (parts.some(part => !part || part === '.' || part === '..') || (presentation && !['media', 'generated'].includes(parts[0]!)))
-        return null;
-    return scope + value;
+    return typeof value === 'string' &&
+        imageExtension.test(value) &&
+        (presentation ? isPresentationFilePath(value) : isThemeFilePath(value))
+        ? scope + value
+        : null;
 }
 
 /** List assigned pictures, not generation history or unused composition defaults. */
@@ -73,6 +67,7 @@ export function assignedSlideImages(
         'light';
     const definition = ownEntry(schemes, scheme);
     const appearance = isRecord(definition) && definition.appearance === 'dark' ? 'dark' : scheme === 'dark' ? 'dark' : 'light';
+    // Only a theme's own object holds a file per scheme; a slide's object and every override name one file.
     const picture = (value: unknown) => (isRecord(value) ? (ownEntry(value, scheme) ?? value[appearance] ?? value.light) : value);
     const objects = new Map<string, ImageObject>();
     const addLevel = (level: Record<string, unknown>, scope: string, inherited: boolean) => {
@@ -85,11 +80,11 @@ export function assignedSlideImages(
                 else if (isRecord(override)) {
                     // As MarkdownPoint applies an override: a picture's or a video's file takes the inherited one's place,
                     // null clears it, and anything else leaves it.
-                    const file = picture(override.file);
+                    const file = override.file;
                     const shown =
-                        override.file === null
+                        file === null
                             ? { file: undefined }
-                            : typeof file === 'string' && (imageExtension.test(file) || videoExtension.test(file))
+                            : isAuthoredFilePath(file) && (imageExtension.test(file) || videoExtension.test(file))
                               ? { file, scope }
                               : {};
                     objects.set(id, { ...current, raw: { ...current.raw, ...override, type: current.raw.type }, ...shown });
@@ -102,7 +97,7 @@ export function assignedSlideImages(
                     raw: object,
                     scope,
                     placeholder: inherited && object.placeholder === true,
-                    file: inherited && object.placeholder === true ? undefined : picture(object.file)
+                    file: !inherited ? object.file : object.placeholder === true ? undefined : picture(object.file)
                 });
             }
     };

@@ -18,6 +18,7 @@
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { isThemeKey } from './embedded-theme.ts';
+import { isPortableName } from './file-paths.ts';
 import { FORMAT_VERSION } from './format-version.ts';
 import { isUuid } from './recognition.ts';
 import { orderedLayouts, prepareNewSlide } from './new-slide.ts';
@@ -31,14 +32,7 @@ export interface NewPresentation {
 /** A presentation folder keeps its human name on both desktop platforms. */
 export function presentationFolderName(value: string): string | null {
     const name = value.trim().normalize('NFC');
-    return !name ||
-        name.startsWith('.') ||
-        name.endsWith('.') ||
-        /[\\/<>:"|?*]/.test(name) ||
-        /\p{Cc}/u.test(name) ||
-        /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(name)
-        ? null
-        : name;
+    return isPortableName(name) && !name.startsWith('.') ? name : null;
 }
 
 /** The layout a new presentation starts on, as MarkdownPoint picks it: the first of these the theme has, else its first. */

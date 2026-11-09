@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { isThemeFilePath } from './file-paths.ts';
 import { readJsonObject } from './json.ts';
 import { opensFormatVersion } from './format-version.ts';
 import { isRecord, isStableId, isUuid, presentationCompanionPath } from './recognition.ts';
@@ -81,15 +82,7 @@ export function themeFilePaths(theme: EmbeddedTheme): readonly string[] | null {
     const paths = new Set<string>();
     const add = (value: unknown): boolean => {
         if (value === undefined || value === null) return true;
-        if (
-            typeof value !== 'string' ||
-            !value ||
-            value.includes('\\') ||
-            value.includes(':') ||
-            value.split('/').some(part => !part || part.startsWith('.')) ||
-            ['manifest.json', 'previews', 'example'].includes(value.split('/')[0]!)
-        )
-            return false;
+        if (!isThemeFilePath(value)) return false;
         paths.add(value);
         return true;
     };
