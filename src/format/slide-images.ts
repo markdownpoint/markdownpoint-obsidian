@@ -144,7 +144,7 @@ export function assignedSlideImages(
         expanded.add(instance);
         for (const member of composition.objects) {
             if (!isRecord(member)) continue;
-            const binding = isRecord(member.bind) && typeof member.bind.file === 'string' ? member.bind.file : null;
+            const binding = isRecord(member.bindings) && typeof member.bindings.file === 'string' ? member.bindings.file : null;
             const control = binding ? controls.find(each => isRecord(each) && each.id === binding) : undefined;
             const bound = binding !== null && isRecord(control) && control.type === 'media';
             const file = bound ? (ownEntry(values, binding) ?? control.default) : member.file;

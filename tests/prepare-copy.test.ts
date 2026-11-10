@@ -79,7 +79,7 @@ test('a copied slide keeps its groups and spans as written and remaps the links 
 test('composition defaults and text use copied slide destinations without changing controls or bindings', () => {
     const markdown = '<!--composition:card-->\n<!-- control: caption -->\n[Default](slide:two)\n<!-- text: body -->\n[Words](slide:one)\n';
     const record =
-        '{"controls":[{"id":"caption","type":"text"}, {"id":"link","type":"color","default":"accent"}],"objects":[{"id":"label","type":"text","bind":{"text":"caption"},"link":"slide:two"}]}';
+        '{"controls":[{"id":"caption","type":"text"}, {"id":"link","type":"color","default":"accent"}],"objects":[{"id":"label","type":"text","bindings":{"text":"caption"},"link":"slide:two"}]}';
     const result = prepareCopiedPart({ id: 'card', markdown, record }, 'composition', slides, compositions, schemas)!;
     assert.ok(result);
     assert.equal(result.id, 'copy-card');

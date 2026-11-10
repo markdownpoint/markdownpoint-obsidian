@@ -90,7 +90,9 @@ test('cleared backgrounds, removed objects and empty placeholders do not show sa
         }),
         []
     );
-    assert.deepEqual(paths({ slides: { one: { background: { image: { file: 'media/own.png' } }, objects: [] } } }, null), [root + 'media/own.png']);
+    assert.deepEqual(paths({ slides: { one: { background: { image: { file: 'media/own.png' } }, objects: [] } } }, null), [
+        root + 'media/own.png'
+    ]);
 });
 
 test("an override's null file clears the inherited picture, and a value that names no picture or video leaves it, as MarkdownPoint applies one", () => {
@@ -228,7 +230,7 @@ test('placed compositions use assigned media controls without listing unused def
                     { id: 'unused', type: 'media', default: 'media/unused.svg' }
                 ],
                 objects: [
-                    { id: 'photo', type: 'image', file: 'media/original.svg', bind: { file: 'picture' } },
+                    { id: 'photo', type: 'image', file: 'media/original.svg', bindings: { file: 'picture' } },
                     { id: 'loop', type: 'instance', composition: 'card' }
                 ]
             }
@@ -244,8 +246,8 @@ test('a media control may be named as JavaScript names its own, and an instance 
         "compositions": { "card": {
             "controls": [{"id":"__proto__","type": "media", "default": "media/default.svg" }],
             "objects": [
-                { "id": "photo", "type": "image", "file": "media/original.svg", "bind": { "file": "__proto__" } },
-                { "id": "loose", "type": "image", "file": "media/loose.svg", "bind": { "file": "toString" } }
+                { "id": "photo", "type": "image", "file": "media/original.svg", "bindings": { "file": "__proto__" } },
+                { "id": "loose", "type": "image", "file": "media/loose.svg", "bindings": { "file": "toString" } }
             ]
         } }
     }`) as Record<string, unknown>;

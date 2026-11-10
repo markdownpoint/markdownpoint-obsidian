@@ -104,7 +104,7 @@ test('only declared media controls authorize files, not text that resembles a pa
                 { id: 'photo', type: 'media', default: 'media/default.png' },
                 { id: 'words', type: 'text', default: 'media/not-a-file.png' }
             ],
-            objects: [{ id: 'bound', type: 'image', bind: { file: 'photo' } }]
+            objects: [{ id: 'bound', type: 'image', bindings: { file: 'photo' } }]
         })
     };
     const value = {
