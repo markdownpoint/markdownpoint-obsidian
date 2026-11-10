@@ -23,6 +23,7 @@ import { FORMAT_VERSION } from './format-version.ts';
 import { isUuid } from './recognition.ts';
 import { orderedLayouts, prepareNewSlide } from './new-slide.ts';
 import { readJsonObject } from './json.ts';
+import { NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE } from '../core/new-presentation-style.ts';
 
 export interface NewPresentation {
     readonly markdown: string;
@@ -40,7 +41,10 @@ export function firstSlideLayout(theme: EmbeddedTheme): string | undefined {
     return ['title', 'content-with-header', 'content', 'blank'].find(key => theme.layouts.has(key)) ?? orderedLayouts(theme)[0];
 }
 
-/** One empty slide and one matching pair, without copying the theme's sample words. */
+/**
+ * One empty slide and one matching pair, without copying the theme's sample words. As MarkdownPoint's New does, a new
+ * text box starts in the theme's body style where it has one, and backgrounds are generated in MarkdownPoint's own style.
+ */
 export function prepareNewPresentation(
     theme: EmbeddedTheme,
     id: string,
@@ -55,9 +59,23 @@ export function prepareNewPresentation(
         markdown: `---\nmarkdownpoint: "${FORMAT_VERSION}"\nid: ${id}\n---\n\n${slide.markdown}`,
         companion:
             JSON.stringify(
-                { markdownpoint: FORMAT_VERSION, type: 'presentation', id, theme: theme.key, slides: { [slideId]: record } },
+                {
+                    markdownpoint: FORMAT_VERSION,
+                    type: 'presentation',
+                    id,
+                    theme: theme.key,
+                    ...(hasBodyStyle(theme) ? { 'default-text-style': { 'text-style': 'body' } } : {}),
+                    'background-image-style': NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE,
+                    slides: { [slideId]: record }
+                },
                 null,
                 2
             ) + '\n'
     };
+}
+
+/** Whether the theme's master has the body text style, which a new presentation's text boxes start in. */
+function hasBodyStyle(theme: EmbeddedTheme): boolean {
+    const styles = theme.master.value['text-styles'];
+    return typeof styles === 'object' && styles !== null && Object.hasOwn(styles, 'body');
 }

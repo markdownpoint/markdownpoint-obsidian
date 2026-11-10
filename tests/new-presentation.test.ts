@@ -21,6 +21,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
 import { basicTheme, basicThemeFiles } from '../src/themes/basic.ts';
 import { firstSlideLayout, prepareNewPresentation } from '../src/format/new-presentation.ts';
+import { NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE } from '../src/core/new-presentation-style.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { readJsonObject } from '../src/format/json.ts';
 import { presentationIdentity } from '../src/format/recognition.ts';
@@ -66,6 +67,19 @@ test('a new presentation has matching identity, the chosen theme, and a first sl
         `---\nmarkdownpoint: "1.0"\nid: ${presentationId}\n---\n\n<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n`
     );
     assert.doesNotMatch(made.markdown, /Presentation title|Presentation subtitle|Author and date/);
+});
+
+test('a new presentation starts its text boxes in the body style where the theme has one, and its backgrounds in MarkdownPoint\'s style, as New does', () => {
+    const companion = readJsonObject(prepareNewPresentation(basicTheme, presentationId, 'opening')!.companion)!;
+    assert.deepEqual(companion['default-text-style'], { 'text-style': 'body' });
+    assert.equal(companion['background-image-style'], NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE);
+    // The keys stand where MarkdownPoint writes them, between the theme and the slides.
+    assert.deepEqual(Object.keys(companion), ['markdownpoint', 'type', 'id', 'theme', 'default-text-style', 'background-image-style', 'slides']);
+    const { body: _body, ...styles } = basicTheme.master.value['text-styles'] as Record<string, unknown>;
+    const bodiless = { ...basicTheme, master: { ...basicTheme.master, value: { ...basicTheme.master.value, 'text-styles': styles } } };
+    const plain = readJsonObject(prepareNewPresentation(bodiless, presentationId, 'opening')!.companion)!;
+    assert.equal(Object.hasOwn(plain, 'default-text-style'), false);
+    assert.equal(plain['background-image-style'], NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE);
 });
 
 test('a new presentation starts on the first of title, content-with-header, content and blank its theme has, else its first, as MarkdownPoint picks it', () => {
