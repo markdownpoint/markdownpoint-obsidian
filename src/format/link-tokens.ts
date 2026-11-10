@@ -252,9 +252,30 @@ export function inlineText(tokens: readonly unknown[]): string {
             const rows: unknown = token.rows;
             if (Array.isArray(header) && Array.isArray(rows)) return inlineText(header) + inlineText(rows.flat() as unknown[]);
             if (typeof token.text !== 'string') return '';
-            return token.type === 'text' ? decodeHTMLStrict(token.text) : token.text;
+            return token.type === 'text' ? decodeCharacterReferences(token.text) : token.text;
         })
         .join('');
+}
+
+/**
+ * A character reference, as CommonMark reads one: a name HTML defines, or a decimal number of up to seven digits or a
+ * hexadecimal one of up to six, ended by `;`. A longer number, or a name HTML does not define, stays as written.
+ */
+const characterReference = /&(?:#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z][A-Za-z0-9]*);/g;
+
+/**
+ * Text with each character reference read as the character it names, as MarkdownPoint reads it: a number names its
+ * code point, or U+FFFD where it names none, and a name is read as HTML defines it.
+ */
+export function decodeCharacterReferences(text: string): string {
+    return text.includes('&')
+        ? text.replace(characterReference, reference => {
+              if (reference[1] !== '#') return decodeHTMLStrict(reference);
+              const hex = reference[2] === 'x' || reference[2] === 'X';
+              const code = Number.parseInt(reference.slice(hex ? 3 : 2, -1), hex ? 16 : 10);
+              return code === 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff) ? '\ufffd' : String.fromCodePoint(code);
+          })
+        : text;
 }
 
 /** The words of a block of Markdown, as a reader reads them, without their marks. */

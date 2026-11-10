@@ -16,12 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { linkTokens } from './link-tokens.ts';
+import { decodeCharacterReferences, linkTokens } from './link-tokens.ts';
 import type { Token, Tokens } from 'marked';
-import { decodeHTMLStrict } from 'entities';
 
 const punctuation = /\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])/g;
-const decode = (value: string): string => decodeHTMLStrict(value.replace(punctuation, '$1'));
+const decode = (value: string): string => decodeCharacterReferences(value.replace(punctuation, '$1'));
 
 /** Each cell of a table row's line, by where it starts and ends in the line, the pipes at the row's ends set aside. */
 export function rowCells(line: string): { from: number; to: number }[] {
@@ -106,7 +105,7 @@ export function remapMarkdownSlideLinks(
             const inline = token.raw.startsWith('[') && token.raw.endsWith(')');
             if ((inline || (token.raw.startsWith('<') && token.raw.endsWith('>'))) && typeof token.href === 'string') {
                 // Marked already removed punctuation escapes while reading the href.
-                const probe = probes.get(decodeHTMLStrict(token.href));
+                const probe = probes.get(decodeCharacterReferences(token.href));
                 // An autolink's address is read as written: an escaped or referenced one is words, which only its probe made a link.
                 if (probe && (inline || probe.literal)) found.add(probe.probe);
             }

@@ -149,6 +149,9 @@ test("a link in a span's words reads as one, with its destination, as no other l
         'q',
         'https://example.com/?a=1&b=2'
     ]);
+    // A destination's numbers are read CommonMark's way, as MarkdownPoint reads them.
+    assert.equal(linked('[[q](x&#128;y)]{}')[1]![2], 'x\u0080y');
+    assert.equal(linked('[[q](x&#00000065;y)]{}')[1]![2], 'x&#00000065;y');
     // A link without words, or with a destination past its line, keeps its source: Live Preview can't hide it.
     for (const source of [
         '[a ![i](p.png) b]{color=accent}',

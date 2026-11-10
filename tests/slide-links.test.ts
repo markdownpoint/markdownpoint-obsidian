@@ -115,6 +115,9 @@ test('decoded destinations change while angle brackets, source encoding elsewher
     assert.equal(rewrite('[A](<slide:two> "Label")'), '[A](<slide:copy-two> "Label")');
     assert.equal(rewrite('[A](slide&#58;two "Keep &amp; here")'), '[A](slide:copy-two "Keep &amp; here")');
     assert.equal(rewrite('[A](sl&#105;de:two)'), '[A](slide:copy-two)');
+    // A number of more digits than CommonMark reads names no character: the destination is no slide link.
+    assert.equal(rewrite('[A](slide&#00000058;two)'), '[A](slide&#00000058;two)');
+    assert.equal(rewrite('<slide&#x000003A;two>'), '<slide&#x000003A;two>');
     assert.equal(rewrite('[A](slide\\:two)'), '[A](slide:copy-two)');
     assert.equal(rewrite('[A](slide%3Atwo)'), '[A](slide%3Atwo)');
     assert.equal(rewrite('[Go](slide:two\r\n "Title")'), '[Go](slide:copy-two\r\n "Title")');

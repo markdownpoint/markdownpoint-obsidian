@@ -23,7 +23,7 @@ import { presentationLocale, respellChartCells } from '../src/format/chart-cells
 import { decodeSlideClipboard, encodeSlideClipboard } from '../src/format/clipboard.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.ts';
-import { inlineText, wordTokens } from '../src/format/link-tokens.ts';
+import { inlineText, markdownWords, wordTokens } from '../src/format/link-tokens.ts';
 import { prepareClipboardPaste } from '../src/format/paste.ts';
 
 const swedish = chartNumberRule('sv-SE');
@@ -76,6 +76,10 @@ const respelledByCore: readonly (readonly [locale: string, cell: string, core: s
     ['en-US', '1`,234`', '1`·234`'],
     ['en-US', '1\\,234', '1·234'],
     ['en-US', '1&#44;234', '1·234'],
+    // A number of more digits than CommonMark reads names no character, so the cell holds no number and stays.
+    ['en-US', '1&#00000044;234', '1&#00000044;234'],
+    ['en-US', '1&#x000002C;234', '1&#x000002C;234'],
+    ['en-US', '&#00000065;1,234.50', '&#00000065;1,234.50'],
     ['en-US', '1,234&nbsp;kr', '1·234·kr'],
     ['sv-SE', '-1 234,5 %', '-1,234.5 %'],
     ['en-US', '$1,234.50', '$1·234,50'],
@@ -103,6 +107,24 @@ test("a respelled cell keeps its marks, links and code around its number's runs,
         const [from, to] = locale === 'en-US' ? [english, swedish] : [swedish, english];
         assert.equal(respellChartCells(table(`| Sales | ${cell} |`), from, to), table(`| Sales | ${spaced(plugin)} |`), cell);
     }
+});
+
+test("a cell's words read a character reference as MarkdownPoint core reads it, CommonMark's way", () => {
+    // Each beside core's `plainWords` (`format/markdown-text.ts`) at its c57919aa72.
+    const read: readonly (readonly [source: string, words: string])[] = [
+        ["It's 1 & 2 &lt; 3", "It's 1 & 2 < 3"],
+        ['&#65;&#x42;', 'AB'],
+        ['&#38;#65;', '&#65;'],
+        ['&#00000065;', '&#00000065;'],
+        ['&#x0000041;', '&#x0000041;'],
+        ['&#12345678;', '&#12345678;'],
+        ['&#128;', '\u0080'],
+        ['&#0;', '\ufffd'],
+        ['&#xD800;', '\ufffd'],
+        ['&#x110000;', '\ufffd'],
+        ['&notaname;', '&notaname;']
+    ];
+    for (const [source, words] of read) assert.equal(markdownWords(source), words, source);
 });
 
 test('a cell whose marks would read otherwise once respelled is written as its words', () => {

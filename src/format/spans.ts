@@ -17,9 +17,8 @@
  */
 
 import type { Token } from 'marked';
-import { decodeHTMLStrict } from 'entities';
 import { blockTokens } from './block-grammar.ts';
-import { destinationEnd, literalEnd, presentationSpan, wordTokens } from './link-tokens.ts';
+import { decodeCharacterReferences, destinationEnd, literalEnd, presentationSpan, wordTokens } from './link-tokens.ts';
 
 /**
  * A span, `[words]{color=accent}`: words with a color, a weight or both, or a group with neither, `[words]{}`, which the
@@ -84,7 +83,7 @@ function linkAt(source: string, from: number, close: number, to: number): WordSp
     const link = tokens.length === 1 ? tokens[0]! : null;
     if (link?.type !== 'link' || link.raw.length !== to - from || typeof link.href !== 'string') return null;
     // Marked already removed punctuation escapes while reading the href.
-    return { from, to, wordsFrom: from + 1, wordsTo: close, href: decodeHTMLStrict(link.href) };
+    return { from, to, wordsFrom: from + 1, wordsTo: close, href: decodeCharacterReferences(link.href) };
 }
 
 /**
