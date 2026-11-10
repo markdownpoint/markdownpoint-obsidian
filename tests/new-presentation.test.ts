@@ -69,12 +69,20 @@ test('a new presentation has matching identity, the chosen theme, and a first sl
     assert.doesNotMatch(made.markdown, /Presentation title|Presentation subtitle|Author and date/);
 });
 
-test('a new presentation starts its text boxes in the body style where the theme has one, and its backgrounds in MarkdownPoint\'s style, as New does', () => {
+test("a new presentation starts its text boxes in the body style where the theme has one, and its backgrounds in MarkdownPoint's style, as New does", () => {
     const companion = readJsonObject(prepareNewPresentation(basicTheme, presentationId, 'opening')!.companion)!;
     assert.deepEqual(companion['default-text-style'], { 'text-style': 'body' });
     assert.equal(companion['background-image-style'], NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE);
     // The keys stand where MarkdownPoint writes them, between the theme and the slides.
-    assert.deepEqual(Object.keys(companion), ['markdownpoint', 'type', 'id', 'theme', 'default-text-style', 'background-image-style', 'slides']);
+    assert.deepEqual(Object.keys(companion), [
+        'markdownpoint',
+        'type',
+        'id',
+        'theme',
+        'default-text-style',
+        'background-image-style',
+        'slides'
+    ]);
     const { body: _body, ...styles } = basicTheme.master.value['text-styles'] as Record<string, unknown>;
     const bodiless = { ...basicTheme, master: { ...basicTheme.master, value: { ...basicTheme.master.value, 'text-styles': styles } } };
     const plain = readJsonObject(prepareNewPresentation(bodiless, presentationId, 'opening')!.companion)!;
