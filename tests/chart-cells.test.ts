@@ -43,7 +43,7 @@ const spaced = (words: string) => words.replaceAll('·', String.fromCharCode(0xa
 
 /**
  * Cells respelled from the locale named into the other of en-US and sv-SE, beside what MarkdownPoint core's
- * `respellChartTable` (`scene/chart-respelling.ts`) writes for each at its 151a2b201, and what the plugin writes where it
+ * `respellChartTable` (`scene/chart-respelling.ts`) writes for each at its c57919aa72, and what the plugin writes where it
  * writes otherwise.
  */
 const respelledByCore: readonly (readonly [locale: string, cell: string, core: string, plugin?: string])[] = [
@@ -93,8 +93,7 @@ const respelledByCore: readonly (readonly [locale: string, cell: string, core: s
     ['en-US', '1,234 <https://example.com/a>', '1·234 [https://example.com/a](https://example.com/a)', '1·234 <https://example.com/a>'],
     ['sv-SE', '[](https://example.com) 1,5', '&#32;1.5', '[](https://example.com) 1.5'],
     ['sv-SE', '` 1,5 `', '`1.5`', '` 1.5 `'],
-    // Core writes two code spans left beside each other as one fence's words, which it reads as `1``·234`.
-    ['en-US', '`1`,`234`', '`1``·234`', '`1·234`'],
+    ['en-US', '`1`,`234`', '`1·234`'],
     // An address the number runs through is written as its words, so it doesn't link to another address.
     ['sv-SE', 'https://example.com/1,234', 'https://example.com/1.234', 'https\\://example.com/1.234']
 ];
