@@ -1,4 +1,4 @@
-/** A table of what Unicode CLDR resolves for each locale, short as its chain allows, as scripts/generate-cldr-rules.mjs writes one. */
+/** A table of what Unicode CLDR resolves for each locale, short as its chain allows, as scripts/generate-cldr-rules.ts writes one. */
 export interface CldrTable {
   /** Each tag, named in full with its script, that resolves otherwise than the chain before it, by its profile's index. */
   readonly locales: Readonly<Record<string, number>>;
