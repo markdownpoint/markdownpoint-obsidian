@@ -22,7 +22,7 @@
         "background": "#FFFFFF",
         "text": "#17120F",
         "muted": "#6B605A",
-        "accent": "{brand.orange}",
+        "accent": "{brand.colors.orange}",
         "stroke": "#E6DED5",
         "link": "#17120F"
       }
@@ -33,7 +33,7 @@
         "background": "#17120F",
         "text": "#FFF6EA",
         "muted": "#BDB2A9",
-        "accent": "{brand.orange}",
+        "accent": "{brand.colors.orange}",
         "stroke": "#3A302A",
         "link": "#FFF6EA"
       }
@@ -44,7 +44,7 @@
         "background": "#FECAA3",
         "text": "#17120F",
         "muted": "#524843",
-        "accent": "{brand.ember}",
+        "accent": "{brand.colors.ember}",
         "stroke": "#17120F1F",
         "link": "#17120F"
       }
@@ -55,7 +55,7 @@
         "background": "#FBE991",
         "text": "#17120F",
         "muted": "#524843",
-        "accent": "{brand.ember}",
+        "accent": "{brand.colors.ember}",
         "stroke": "#17120F1F",
         "link": "#17120F"
       }
@@ -66,7 +66,7 @@
         "background": "#AFF3D4",
         "text": "#17120F",
         "muted": "#524843",
-        "accent": "{brand.ember}",
+        "accent": "{brand.colors.ember}",
         "stroke": "#17120F1F",
         "link": "#17120F"
       }
@@ -77,7 +77,7 @@
         "background": "#B4E0FF",
         "text": "#17120F",
         "muted": "#524843",
-        "accent": "{brand.ember}",
+        "accent": "{brand.colors.ember}",
         "stroke": "#17120F1F",
         "link": "#17120F"
       }
@@ -88,7 +88,7 @@
         "background": "#D1C4FE",
         "text": "#17120F",
         "muted": "#524843",
-        "accent": "{brand.ember}",
+        "accent": "{brand.colors.ember}",
         "stroke": "#17120F1F",
         "link": "#17120F"
       }
