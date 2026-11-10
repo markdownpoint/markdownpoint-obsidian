@@ -110,7 +110,7 @@ export function assignedSlideImages(
     const references: SlideImageReference[] = [];
     // A slide's own background replaces the presentation's whole: without its own picture it shows none.
     const shownBackground = isRecord(slide.background) ? slide.background : companion.background;
-    const background = isRecord(shownBackground) ? shownBackground.image : undefined;
+    const background = isRecord(shownBackground) && isRecord(shownBackground.image) ? shownBackground.image.file : undefined;
     const backgroundPath = imagePath(background, root, true);
     if (backgroundPath) references.push({ path: backgroundPath, name: null, category: 'background' });
     const pending = [...objects.values()].map(object => ({ object, parent: null as Ancestor | null }));

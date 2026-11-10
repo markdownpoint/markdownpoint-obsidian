@@ -51,7 +51,7 @@ const paths = (value: unknown, embedded: EmbeddedTheme | null = theme) =>
 
 test('assigned images prioritize background, named layout placeholders, then other pictures', () => {
     const companion = {
-        background: { image: 'media/back.svg' },
+        background: { image: { file: 'media/back.svg' } },
         slides: {
             one: {
                 layout: 'title',
@@ -78,7 +78,7 @@ test('assigned images prioritize background, named layout placeholders, then oth
 
 test('cleared backgrounds, removed objects and empty placeholders do not show samples or prior generations', () => {
     const companion = {
-        background: { image: 'media/back.svg' },
+        background: { image: { file: 'media/back.svg' } },
         slides: { one: { layout: 'title', background: {}, overrides: { logo: null, hero: { file: null } } } }
     };
     assert.deepEqual(paths(companion), []);
@@ -90,7 +90,7 @@ test('cleared backgrounds, removed objects and empty placeholders do not show sa
         }),
         []
     );
-    assert.deepEqual(paths({ slides: { one: { background: { image: 'media/own.png' }, objects: [] } } }, null), [root + 'media/own.png']);
+    assert.deepEqual(paths({ slides: { one: { background: { image: { file: 'media/own.png' } }, objects: [] } } }, null), [root + 'media/own.png']);
 });
 
 test("an override's null file clears the inherited picture, and a value that names no picture or video leaves it, as MarkdownPoint applies one", () => {
@@ -143,7 +143,7 @@ test("a slide shows the scheme MarkdownPoint shows: its own, else its layout's, 
 
 test('repeated files are shown once and video assignments are not treated as images', () => {
     const companion = {
-        background: { image: 'media/same.png' },
+        background: { image: { file: 'media/same.png' } },
         slides: {
             one: {
                 layout: 'title',

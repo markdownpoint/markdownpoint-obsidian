@@ -83,10 +83,11 @@ export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | n
             name(nested(generation, 'id'), picture);
             name(nested(nested(nested(generation, 'original'), 'generation'), 'id'), nested(nested(generation, 'original'), 'file'));
         };
-        if (isRecord(record.background)) {
-            add(record.background.image, ['background', 'image']);
-            add(nested(nested(record.background.generation, 'original'), 'file'), ['background', 'generation', 'original', 'file']);
-            made(record.background.generation, record.background.image);
+        const backgroundImage = nested(record.background, 'image');
+        if (isRecord(backgroundImage)) {
+            add(backgroundImage.file, ['background', 'image', 'file']);
+            add(nested(nested(backgroundImage.generation, 'original'), 'file'), ['background', 'image', 'generation', 'original', 'file']);
+            made(backgroundImage.generation, backgroundImage.file);
         }
         if (definitions.has(part.id) && Array.isArray(record.controls))
             record.controls.forEach((control: unknown, index) => {

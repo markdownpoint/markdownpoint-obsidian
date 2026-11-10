@@ -33,7 +33,7 @@ const [STYLED, SOURCE, BACKGROUND] = ['01', '02', '03'].map(end => `0f5b3c1e-7d1
 test('all declared slide media locations are collected once, including posters and original images, and the records the pictures name', () => {
     const value = captured(
         JSON.stringify({
-            background: { image: 'media/back.png', generation: { id: BACKGROUND, original: { file: 'generated/original.png' } } },
+            background: { image: { file: 'media/back.png', generation: { id: BACKGROUND, original: { file: 'generated/original.png' } } } },
             objects: [
                 'inherited',
                 {
@@ -178,7 +178,7 @@ test('unsafe or non-media source references cannot authorize a vault read', () =
 });
 
 test('empty and cleared assignments need no files; malformed JSON is refused', () => {
-    const value = captured('{"background":{"image":"none"},"objects":[{"file":""},{"file":null}]}');
+    const value = captured('{"background":{"image":{"file":"none"}},"objects":[{"file":""},{"file":null}]}');
     assert.deepEqual(planClipboardFiles(value)?.files, []);
     assert.deepEqual(planClipboardFiles(value)?.remap(new Map()), value);
     assert.equal(planClipboardFiles(captured('{"objects":[{"file":"media/a.png","file":"media/b.png"}]}')), null);
