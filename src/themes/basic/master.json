@@ -118,7 +118,7 @@
       "line-height": 1.15,
       "tracking": -0.01,
       "color": "text",
-      "inset-top": 32
+      "padding-top": 32
     },
     "body": {
       "font-family": "body",
@@ -126,7 +126,7 @@
       "font-weight": 400,
       "line-height": 1.38,
       "color": "text",
-      "inset-top": 14
+      "padding-top": 14
     },
     "figure": {
       "font-family": "display",
