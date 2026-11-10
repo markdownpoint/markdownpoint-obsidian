@@ -106,6 +106,7 @@ test('layout inventory preserves declared order and rejects unsafe or duplicate 
     assert.deepEqual(orderedLayouts(unlisted), ['title', 'content', 'content-with-header', 'quote']);
     assert.equal(layoutName('text-image', {}), 'Text image');
     assert.equal(layoutName('internal', { name: 'Two ideas' }), 'Two ideas');
+    assert.equal(layoutName('internal', { name: ' Two ideas ' }), ' Two ideas ', 'as the file spells it');
     assert.equal(prepareNewSlide(layouts, 'missing', 'new'), null);
     assert.equal(prepareNewSlide(layouts, 'title', 'bad -->'), null);
     assert.equal(

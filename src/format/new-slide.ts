@@ -22,7 +22,7 @@ import { isRecord, isStableId } from './recognition.ts';
 import { standingFrame } from './text-growth.ts';
 
 export function layoutName(key: string, value: Record<string, unknown>): string {
-    if (typeof value.name === 'string' && value.name.trim()) return value.name.trim();
+    if (typeof value.name === 'string' && value.name.trim()) return value.name;
     const words = key.replace(/[-_]+/g, ' ');
     return words.charAt(0).toUpperCase() + words.slice(1);
 }
