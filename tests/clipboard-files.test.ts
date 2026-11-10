@@ -169,7 +169,9 @@ test('unsafe or non-media source references cannot authorize a vault read', () =
         'https://example.com/image.png',
         'media/picture.png ',
         // A font is a theme's, never a presentation's media file.
-        'media/font.eot'
+        'media/font.eot',
+        // No key takes none for no file: a picture without one leaves file out.
+        'none'
     ]) {
         assert.equal(isPresentationMediaPath(path), false, path);
         assert.equal(planClipboardFiles(captured(JSON.stringify({ objects: [{ file: path }] }))), null, path);
@@ -178,7 +180,7 @@ test('unsafe or non-media source references cannot authorize a vault read', () =
 });
 
 test('empty and cleared assignments need no files; malformed JSON is refused', () => {
-    const value = captured('{"background":{"image":{"file":"none"}},"objects":[{"file":""},{"file":null}]}');
+    const value = captured('{"objects":[{"file":""},{"file":null}]}');
     assert.deepEqual(planClipboardFiles(value)?.files, []);
     assert.deepEqual(planClipboardFiles(value)?.remap(new Map()), value);
     assert.equal(planClipboardFiles(captured('{"objects":[{"file":"media/a.png","file":"media/b.png"}]}')), null);

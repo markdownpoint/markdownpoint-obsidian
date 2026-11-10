@@ -72,7 +72,7 @@ export function planClipboardFiles(captured: CapturedSlides): ClipboardFiles | n
         if (!record || !tree) return null;
         const locations: Location[] = [];
         const add = (value: unknown, path: readonly (string | number)[]) => {
-            if (typeof value === 'string' && value !== '' && value !== 'none') locations.push({ path, value });
+            if (typeof value === 'string' && value !== '') locations.push({ path, value });
         };
         const nested = (value: unknown, name: string): unknown => (isRecord(value) ? value[name] : undefined);
         // A picture's record, and a restyle's original's, each by the file of the picture it made.
