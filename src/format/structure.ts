@@ -98,9 +98,13 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
                                 : Object.hasOwn(override, 'scale')
                                   ? override.scale
                                   : base.scale,
-                            // A level's parts of an anchor point stand over the one the box turns about without one.
+                            // A level's parts of an anchor point stand over the one the box turns about without
+                            // them, as the level's other keys, such as its auto-size, leave it.
                             'anchor-point': isRecord(override['anchor-point'])
-                                ? { ...heldAnchor(base), ...override['anchor-point'] }
+                                ? {
+                                      ...heldAnchor({ ...base, ...override, 'anchor-point': base['anchor-point'] }),
+                                      ...override['anchor-point']
+                                  }
                                 : Object.hasOwn(override, 'anchor-point')
                                   ? override['anchor-point']
                                   : base['anchor-point']

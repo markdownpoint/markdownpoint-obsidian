@@ -61,13 +61,13 @@ function keptFraction(record: Readonly<Record<string, unknown>>): number {
 }
 
 /**
- * The anchor point a record turns and scales about, as MarkdownPoint reads it: its own, a part it leaves out at the
- * center; or with none, a text that grows's point it grows from, the point its alignment holds along a width that grows
- * and the top along a height that grows, and any other object's center.
+ * The anchor point a record turns and scales about, as MarkdownPoint reads it: its own, which has both parts; or with
+ * none, a text that grows's point it grows from, the point its alignment holds along a width that grows and the top along
+ * a height that grows, and any other object's center.
  */
 export function heldAnchor(record: Readonly<Record<string, unknown>>): { x: number; y: number } {
     const own = record['anchor-point'];
-    if (isRecord(own)) return { x: finite(own.x) ? own.x : 0.5, y: finite(own.y) ? own.y : 0.5 };
+    if (isRecord(own) && finite(own.x) && finite(own.y)) return { x: own.x, y: own.y };
     const grows = grownSides(record);
     return { x: grows.width ? keptFraction(record) : 0.5, y: grows.height ? 0 : 0.5 };
 }
