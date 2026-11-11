@@ -62,6 +62,10 @@ export const en = {
         cancel: 'Cancel',
         invalidName: 'Enter a name without slashes or reserved characters.',
         exists: 'A file or folder with this name already exists.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint can’t create a presentation inside “${presentation}”. Choose a folder outside it.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint can’t open “${presentation}” while it is inside “${outer}”. Move the “${presentation}” folder out of “${outer}”, then open it.`,
         failed: 'Couldn’t create the presentation. Check the folder and try again.',
         openFailed: 'The presentation was created but couldn’t be opened. Open slides.md in its folder.',
         openChanged: 'The presentation changed or couldn’t be read. Try again.',

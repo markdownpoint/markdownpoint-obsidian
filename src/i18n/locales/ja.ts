@@ -64,6 +64,10 @@ export const ja: Translations = {
         cancel: 'キャンセル',
         invalidName: 'スラッシュや使用できない文字を含まない名前を入力してください。',
         exists: '同じ名前のファイルまたはフォルダがすでにあります。',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPointは“${presentation}”の中にプレゼンテーションを作成できません。“${presentation}”の外にあるフォルダを選んでください。`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `“${presentation}”が“${outer}”の中にある間は、MarkdownPointは開けません。フォルダ“${presentation}”を“${outer}”の外に移動してから、開いてください。`,
         failed: 'プレゼンテーションを作成できませんでした。フォルダを確認して、もう一度お試しください。',
         openFailed: 'プレゼンテーションは作成されましたが、開けませんでした。そのフォルダのslides.mdを開いてください。',
         openChanged: 'プレゼンテーションが変更されたか、読み込めませんでした。もう一度お試しください。',

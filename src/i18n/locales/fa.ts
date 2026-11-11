@@ -65,6 +65,10 @@ export const fa: Translations = {
         cancel: 'لغو',
         invalidName: 'نامی بدون خط مورب یا نویسه‌های غیرمجاز وارد کنید.',
         exists: 'پرونده یا پوشه‌ای به همین نام از قبل وجود دارد.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `ساختن ارائه داخل «${presentation}» با MarkdownPoint ممکن نیست. پوشه‌ای بیرون از «${presentation}» انتخاب کنید.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `باز کردن «${presentation}» با MarkdownPoint تا وقتی داخل «${outer}» است ممکن نیست. پوشهٔ «${presentation}» را به بیرون از «${outer}» منتقل کنید، سپس آن را باز کنید.`,
         failed: 'ارائه ساخته نشد. پوشه را بررسی کنید و دوباره تلاش کنید.',
         openFailed: 'ارائه ساخته شد اما باز نشد. پروندهٔ slides.md را در پوشهٔ آن باز کنید.',
         openChanged: 'ارائه تغییر کرده یا خوانده نشد. دوباره تلاش کنید.',

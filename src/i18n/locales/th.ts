@@ -60,6 +60,10 @@ export const th: Translations = {
         cancel: 'ยกเลิก',
         invalidName: 'กรอกชื่อที่ไม่มีเครื่องหมายทับหรืออักขระที่สงวนไว้',
         exists: 'มีไฟล์หรือโฟลเดอร์ชื่อนี้อยู่แล้ว',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint ไม่สามารถสร้างงานนำเสนอภายใน “${presentation}” ได้ เลือกโฟลเดอร์ที่อยู่นอก “${presentation}”`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint ไม่สามารถเปิด “${presentation}” ได้ขณะที่อยู่ภายใน “${outer}” ย้ายโฟลเดอร์ “${presentation}” ออกจาก “${outer}” แล้วจึงเปิด`,
         failed: 'ไม่สามารถสร้างงานนำเสนอได้ ตรวจสอบโฟลเดอร์แล้วลองอีกครั้ง',
         openFailed: 'สร้างงานนำเสนอแล้วแต่เปิดไม่ได้ เปิด slides.md ในโฟลเดอร์ของงานนำเสนอ',
         openChanged: 'งานนำเสนอมีการเปลี่ยนแปลงหรืออ่านไม่ได้ ลองอีกครั้ง',

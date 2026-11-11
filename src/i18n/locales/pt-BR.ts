@@ -64,6 +64,10 @@ export const ptBR: Translations = {
         cancel: 'Cancelar',
         invalidName: 'Digite um nome sem barras nem caracteres reservados.',
         exists: 'Já existe um arquivo ou uma pasta com este nome.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `O MarkdownPoint não pode criar uma apresentação dentro de “${presentation}”. Escolha uma pasta fora de “${presentation}”.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `O MarkdownPoint não pode abrir a apresentação “${presentation}” enquanto ela estiver dentro de “${outer}”. Mova a pasta “${presentation}” para fora de “${outer}” e abra-a.`,
         failed: 'Não foi possível criar a apresentação. Verifique a pasta e tente novamente.',
         openFailed: 'A apresentação foi criada, mas não pôde ser aberta. Abra o slides.md na pasta dela.',
         openChanged: 'A apresentação mudou ou não pôde ser lida. Tente novamente.',

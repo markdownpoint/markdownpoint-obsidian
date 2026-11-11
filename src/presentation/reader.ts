@@ -21,7 +21,7 @@ import type { App, TAbstractFile, TFile, Vault } from 'obsidian';
 import { indexPresentation } from '../format/document.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import { isRecord, newerFormat, presentationCompanionPath, presentationIdentity, presentationMember } from '../format/recognition.ts';
-import { learnVaultCase, presentationFiles } from './presentation-files.ts';
+import { learnVaultCase, presentationAround, presentationFiles } from './presentation-files.ts';
 import { outlineSections, outlineSlides } from '../outline/model.ts';
 import type { OutlinePresentation } from '../outline/model.ts';
 import { uiText } from '../ui-text.ts';
@@ -66,6 +66,8 @@ export class PresentationReader extends Component {
     private running = false;
     // Presentations a newer format keeps closed, told once each session
     private readonly newer = new Set<string>();
+    // Presentations inside another's folder, which open as notes, told once each session
+    private readonly nested = new Set<string>();
 
     constructor(
         private readonly app: App,
@@ -212,6 +214,7 @@ export class PresentationReader extends Component {
         const companionPath = companionFile?.path;
         try {
             if (!companionPath || !companionFile) {
+                this.tellNested(path);
                 this.forget(file);
                 return;
             }
@@ -357,6 +360,15 @@ export class PresentationReader extends Component {
 
     private identity(source: PresentationSource, markdown: string): { id: string; bodyStart: number } | null {
         return presentationHeader(markdown, source.companion);
+    }
+
+    /** A presentation inside another's folder opens as an ordinary note, as the app opens none there; its author learns why once. */
+    private tellNested(path: string): void {
+        const around = presentationCompanionPath(path) ? presentationAround(this.app.vault, path) : null;
+        if (!around || this.nested.has(path)) return;
+        this.nested.add(path);
+        const folder = path.slice(0, path.lastIndexOf('/'));
+        new Notice(uiText.presentations.nested({ presentation: folder.slice(folder.lastIndexOf('/') + 1), outer: around.name }));
     }
 
     /** A presentation of a newer format opens as an ordinary note; its author learns why once. */

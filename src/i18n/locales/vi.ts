@@ -64,6 +64,10 @@ export const vi: Translations = {
         cancel: 'Hủy',
         invalidName: 'Hãy nhập tên không có dấu gạch chéo hoặc ký tự dành riêng.',
         exists: 'Đã có tệp hoặc thư mục cùng tên.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint không thể tạo bài thuyết trình bên trong “${presentation}”. Hãy chọn một thư mục bên ngoài “${presentation}”.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint không thể mở “${presentation}” khi nó nằm bên trong “${outer}”. Hãy di chuyển thư mục “${presentation}” ra khỏi “${outer}”, rồi mở lại.`,
         failed: 'Không thể tạo bài thuyết trình. Hãy kiểm tra thư mục và thử lại.',
         openFailed: 'Đã tạo bài thuyết trình nhưng không thể mở. Hãy mở slides.md trong thư mục của bài thuyết trình.',
         openChanged: 'Bài thuyết trình đã thay đổi hoặc không đọc được. Hãy thử lại.',

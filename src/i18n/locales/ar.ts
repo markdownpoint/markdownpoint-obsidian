@@ -65,6 +65,10 @@ export const ar: Translations = {
         cancel: 'إلغاء',
         invalidName: 'أدخل اسمًا بلا شرطات مائلة أو أحرف محجوزة.',
         exists: 'يوجد ملف أو مجلد بهذا الاسم بالفعل.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `يتعذّر على MarkdownPoint إنشاء عرض تقديمي داخل «${presentation}». اختر مجلدًا خارج «${presentation}».`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `يتعذّر على MarkdownPoint فتح العرض التقديمي «${presentation}» ما دام موجودًا داخل «${outer}». انقل مجلد «${presentation}» إلى خارج «${outer}»، ثم افتحه.`,
         failed: 'تعذّر إنشاء العرض التقديمي. تحقق من المجلد وحاول مرة أخرى.',
         openFailed: 'تم إنشاء العرض التقديمي لكن تعذّر فتحه. افتح slides.md في مجلده.',
         openChanged: 'تغيّر العرض التقديمي أو تعذّرت قراءته. حاول مرة أخرى.',

@@ -64,6 +64,10 @@ export const ko: Translations = {
         cancel: '취소',
         invalidName: '슬래시나 예약 문자가 없는 이름을 입력하세요.',
         exists: '같은 이름의 파일이나 폴더가 이미 존재합니다.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint는 ‘${presentation}’ 안에 프레젠테이션을 만들 수 없습니다. ‘${presentation}’ 밖에 있는 폴더를 선택하세요.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint는 ‘${outer}’ 안에 있는 ‘${presentation}’ 프레젠테이션을 열 수 없습니다. ‘${presentation}’ 폴더를 ‘${outer}’ 밖으로 이동한 다음 여세요.`,
         failed: '프레젠테이션을 생성하지 못했습니다. 폴더를 확인하고 다시 시도하세요.',
         openFailed: '프레젠테이션을 생성했지만 열지 못했습니다. 해당 폴더에서 slides.md를 여세요.',
         openChanged: '프레젠테이션이 변경되었거나 읽을 수 없습니다. 다시 시도하세요.',

@@ -65,6 +65,10 @@ export const de: Translations = {
         cancel: 'Abbrechen',
         invalidName: 'Gib einen Namen ohne Schrägstriche oder reservierte Zeichen ein.',
         exists: 'Eine Datei oder ein Ordner mit diesem Namen existiert bereits.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint kann in „${presentation}“ keine Präsentation erstellen. Wähle einen Ordner außerhalb davon.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint kann die Präsentation „${presentation}“ nicht öffnen, solange sie in „${outer}“ liegt. Verschiebe den Ordner „${presentation}“ aus „${outer}“ und öffne dann „${presentation}“.`,
         failed: 'Die Präsentation konnte nicht erstellt werden. Prüfe den Ordner und versuche es erneut.',
         openFailed: 'Die Präsentation wurde erstellt, konnte aber nicht geöffnet werden. Öffne slides.md in ihrem Ordner.',
         openChanged: 'Die Präsentation hat sich geändert oder konnte nicht gelesen werden. Versuche es erneut.',

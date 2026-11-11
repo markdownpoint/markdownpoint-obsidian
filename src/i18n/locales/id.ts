@@ -65,6 +65,10 @@ export const id: Translations = {
         cancel: 'Batal',
         invalidName: 'Masukkan nama tanpa garis miring atau karakter yang tidak diizinkan.',
         exists: 'Berkas atau folder dengan nama ini sudah ada.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint tidak dapat membuat presentasi di dalam “${presentation}”. Pilih folder di luar “${presentation}”.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint tidak dapat membuka “${presentation}” selama berada di dalam “${outer}”. Pindahkan folder “${presentation}” ke luar “${outer}”, lalu buka presentasinya.`,
         failed: 'Tidak dapat membuat presentasi. Periksa folder dan coba lagi.',
         openFailed: 'Presentasi telah dibuat, tetapi tidak dapat dibuka. Buka slides.md di foldernya.',
         openChanged: 'Presentasi berubah atau tidak dapat dibaca. Coba lagi.',

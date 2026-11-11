@@ -64,6 +64,10 @@ export const tr: Translations = {
         cancel: 'İptal',
         invalidName: 'Eğik çizgi veya ayrılmış karakter içermeyen bir ad girin.',
         exists: 'Bu adda bir dosya veya klasör zaten var.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint, “${presentation}” içinde sunu oluşturamaz. “${presentation}” dışında bir klasör seçin.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint, “${presentation}” sunusunu “${outer}” içindeyken açamaz. “${presentation}” klasörünü “${outer}” dışına taşıyın, ardından sunuyu açın.`,
         failed: 'Sunu oluşturulamadı. Klasörü kontrol edip tekrar deneyin.',
         openFailed: 'Sunu oluşturuldu ama açılamadı. Klasöründeki slides.md dosyasını açın.',
         openChanged: 'Sunu değişti veya okunamadı. Tekrar deneyin.',

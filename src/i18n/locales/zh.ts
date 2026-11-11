@@ -60,6 +60,10 @@ export const zh: Translations = {
         cancel: '取消',
         invalidName: '请输入不含斜杠或保留字符的名称。',
         exists: '已存在同名文件或文件夹。',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint 无法在“${presentation}”中创建演示文稿。请选取“${presentation}”之外的文件夹。`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint 无法打开“${presentation}”，因为它位于“${outer}”中。请把“${presentation}”文件夹移出“${outer}”，然后打开它。`,
         failed: '无法创建演示文稿。请检查文件夹，然后重试。',
         openFailed: '演示文稿已创建，但无法打开。请打开其文件夹中的 slides.md。',
         openChanged: '演示文稿已更改或无法读取。请重试。',

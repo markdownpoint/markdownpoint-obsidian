@@ -21,11 +21,11 @@ import type { App } from 'obsidian';
 import { mintId } from '../format/id-allocation.ts';
 import { firstSlideLayout, prepareNewPresentation, presentationFolderName } from '../format/new-presentation.ts';
 import { slideStructure } from '../format/structure.ts';
-import { presentationCompanionPath } from '../format/recognition.ts';
 import { indexPresentation } from '../format/document.ts';
 import { basicThemeFiles } from '../themes/basic.ts';
 import { renderThumbnail } from '../outline/thumbnail.ts';
 import { createPresentationFiles } from './create-files.ts';
+import { enclosingPresentation } from './presentation-files.ts';
 import { creationThemes, inFolder, readCreationTheme } from './theme-catalog.ts';
 import type { CreationTheme } from './theme-catalog.ts';
 import { uiText } from '../ui-text.ts';
@@ -52,8 +52,10 @@ export class PresentationCreation extends Component {
         void creationThemes(this.app.vault)
             .then(themes => {
                 if (!this.running || revision !== this.revision) return;
-                const active = this.app.workspace.getActiveFile();
-                const parent = active && presentationCompanionPath(active.path) ? active.parent?.parent : active?.parent;
+                // Beside the outermost presentation around the active note, as none is made inside one.
+                const folder = this.app.workspace.getActiveFile()?.parent;
+                const around = folder && enclosingPresentation(folder);
+                const parent = around ? around.parent : folder;
                 this.modal = new CreationModal(
                     this.app,
                     themes,
@@ -242,6 +244,14 @@ class CreationModal extends Modal {
             }
             if (!destination) {
                 error.setText(uiText.presentations.failed);
+                return;
+            }
+            const around = enclosingPresentation(destination);
+            if (around) {
+                error.setText(
+                    uiText.presentations.insidePresentation({ presentation: around.isRoot() ? this.app.vault.getName() : around.name })
+                );
+                folder.focus();
                 return;
             }
             if (this.app.vault.getAbstractFileByPath(inFolder(destination.path, cleaned))) {

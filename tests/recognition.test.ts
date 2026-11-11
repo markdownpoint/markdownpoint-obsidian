@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import type { Vault } from 'obsidian';
+import type { TFolder as ObsidianFolder, Vault } from 'obsidian';
 import {
     inSavedVersions,
     newerFormat,
@@ -26,7 +26,7 @@ import {
     presentationIdentity,
     presentationPairNames
 } from '../src/format/recognition.ts';
-import { learnVaultCase, presentationFiles } from '../src/presentation/presentation-files.ts';
+import { enclosingPresentation, learnVaultCase, presentationAround, presentationFiles } from '../src/presentation/presentation-files.ts';
 import { TFile, TFolder } from './support/obsidian.ts';
 
 const presentationId = '12345678-1234-7234-9234-123456789abc';
@@ -114,6 +114,48 @@ test("a pair under a presentation folder's versions/ resolves to no files, so th
     assert.equal(presentationFiles(vault, 'Talk/versions/2026-10-30T16.20.05Z-k3pz copy/presentation.mdpoint'), null);
     assert.equal(presentationFiles(vault, 'Talk/slides.md')?.companion.path, 'Talk/presentation.mdpoint');
     assert.equal(presentationFiles(vault, 'Notes/versions/draft/slides.md')?.companion.path, 'Notes/versions/draft/presentation.mdpoint');
+});
+
+test("a pair inside another presentation's folder resolves to no files and names the outermost presentation around it, while a lone presentation file makes none", () => {
+    const folders = new Map<string, TFolder>();
+    const folder = (path: string, names: string[]): void => {
+        const entry = new TFolder(path);
+        entry.children = names.map(name =>
+            Object.assign(new TFile(path ? `${path}/${name}` : name, new Uint8Array(), 0), { parent: entry })
+        );
+        entry.parent = path ? folders.get(path.slice(0, Math.max(0, path.lastIndexOf('/'))))! : null;
+        entry.parent?.children.push(entry);
+        folders.set(path, entry);
+    };
+    folder('', []);
+    folder('Talk', ['Slides.md', 'presentation.mdpoint']);
+    folder('Talk/media', []);
+    folder('Talk/media/Middle', ['slides.md', 'presentation.mdpoint']);
+    folder('Talk/media/Middle/Inner', ['slides.md', 'presentation.mdpoint']);
+    folder('Loose', ['presentation.mdpoint']);
+    folder('Loose/Deck', ['slides.md', 'presentation.mdpoint']);
+    const vault = { getRoot: () => folders.get('')!, getFolderByPath: (path: string) => folders.get(path) ?? null } as unknown as Vault;
+    assert.equal(
+        presentationFiles(vault, 'Talk/Slides.md')?.companion.path,
+        'Talk/presentation.mdpoint',
+        'a presentation holding others opens'
+    );
+    assert.equal(presentationAround(vault, 'Talk/Slides.md'), null);
+    for (const path of ['Talk/media/Middle/slides.md', 'Talk/media/Middle/Inner/presentation.mdpoint']) {
+        assert.equal(presentationFiles(vault, path), null, path);
+        assert.equal(presentationAround(vault, path)?.path, 'Talk', path);
+    }
+    assert.equal(
+        enclosingPresentation(folders.get('Talk/media') as unknown as ObsidianFolder)?.path,
+        'Talk',
+        'from a folder at any depth, the outermost'
+    );
+    assert.equal(presentationFiles(vault, 'Loose/Deck/slides.md')?.companion.path, 'Loose/Deck/presentation.mdpoint');
+    assert.equal(
+        enclosingPresentation(folders.get('Loose') as unknown as ObsidianFolder),
+        null,
+        'a lone presentation file makes no folder a presentation'
+    );
 });
 
 test("a pair under Versions/ is a saved version where the vault's volume finds a name in another case, and the author's own elsewhere", async () => {

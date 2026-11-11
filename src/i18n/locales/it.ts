@@ -64,6 +64,10 @@ export const it: Translations = {
         cancel: 'Annulla',
         invalidName: 'Inserisci un nome senza barre né caratteri riservati.',
         exists: 'Esiste già un file o una cartella con questo nome.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint non può creare una presentazione all’interno di “${presentation}”. Scegli una cartella fuori da “${presentation}”.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint non può aprire la presentazione “${presentation}” finché si trova all’interno di “${outer}”. Sposta la cartella “${presentation}” fuori da “${outer}”, poi aprila.`,
         failed: 'Impossibile creare la presentazione. Controlla la cartella e riprova.',
         openFailed: 'Presentazione creata, ma impossibile aprirla. Apri slides.md nella sua cartella.',
         openChanged: 'La presentazione è stata modificata o non è leggibile. Riprova.',
