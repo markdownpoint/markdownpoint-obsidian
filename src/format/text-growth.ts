@@ -61,9 +61,22 @@ function keptFraction(record: Readonly<Record<string, unknown>>): number {
 }
 
 /**
+ * The anchor point a record turns and scales about, as MarkdownPoint reads it: its own, a part it leaves out at the
+ * center; or with none, a text that grows's point it grows from, the point its alignment holds along a width that grows
+ * and the top along a height that grows, and any other object's center.
+ */
+export function heldAnchor(record: Readonly<Record<string, unknown>>): { x: number; y: number } {
+    const own = record['anchor-point'];
+    if (isRecord(own)) return { x: finite(own.x) ? own.x : 0.5, y: finite(own.y) ? own.y : 0.5 };
+    const grows = grownSides(record);
+    return { x: grows.width ? keptFraction(record) : 0.5, y: grows.height ? 0 : 0.5 };
+}
+
+/**
  * A record's frame as MarkdownPoint stands it before it measures any words. A text whose words give its frame a side
  * holds no length of it: its x and y place the box with none, and the box grows from that box's center, the point its
- * turn and scale pivot on, to a line tall and a width no page measured yet, or its least height where that is taller.
+ * turn and scale pivot on unless it has an anchor point, to a line tall and a width no page measured yet, or its least
+ * height where that is taller. With an anchor point it grows in its own frame, and turns and scales about the anchor.
  * That point is its alignment's at mid-height for a width that grows, the middle of its top for a height, and its
  * alignment's on its top for both. Any other frame as written.
  */
@@ -81,12 +94,16 @@ export function standingFrame(record: Readonly<Record<string, unknown>>): unknow
     return { ...frame, x: point.x - held.x - width / 2, y: point.y - held.y - height / 2, width, height };
 }
 
-/** Where the point a text's growth holds stands from the center of a box it draws `width` by `height`, carried by its turn and scale. */
+/**
+ * Where the point a text's growth holds stands from the center of a box it draws `width` by `height`, carried by its turn
+ * and scale; with an anchor point, which its turn and scale pivot on instead, by neither.
+ */
 function heldOffset(record: Readonly<Record<string, unknown>>, width: number, height: number): { x: number; y: number } {
     const grows = grownSides(record);
     // Where that point stands on the box, from its center, before the box's turn and scale carry it.
     const dx = grows.width ? (keptFraction(record) - 0.5) * width : 0;
     const dy = grows.height ? -height / 2 : 0;
+    if (isRecord(record['anchor-point'])) return { x: dx, y: dy };
     const scale = isRecord(record.scale) ? record.scale : {};
     const ox = dx * (finite(scale.x) ? scale.x : 1);
     const oy = dy * (finite(scale.y) ? scale.y : 1);
@@ -96,7 +113,7 @@ function heldOffset(record: Readonly<Record<string, unknown>>, width: number, he
     return { x: ox * cos - oy * sin, y: ox * sin + oy * cos };
 }
 
-/** The keys of a text record that decide which point its frame's x and y name: which sides grow, the point their growth holds, and the turn and scale it pivots on. */
+/** The keys of a text record that decide which point its frame's x and y name: which sides grow, the point their growth holds, the turn and scale it pivots on, and the anchor point that sets them aside. */
 export const TEXT_POINT_KEYS: ReadonlySet<string> = new Set([
     'auto-size',
     'align',
@@ -104,7 +121,8 @@ export const TEXT_POINT_KEYS: ReadonlySet<string> = new Set([
     'column-count',
     'text-path',
     'rotation',
-    'scale'
+    'scale',
+    'anchor-point'
 ]);
 
 /** Two lengths a side that grows to its words is judged at: a point is linear in each length, so two decide it for all. */
@@ -119,7 +137,7 @@ function pointFromCenter(record: Readonly<Record<string, unknown>>, width: numbe
 
 /**
  * Which of an inherited text record's frame x and y name another point under `merged`'s keys, as MarkdownPoint judges a
- * level's change of its growth, alignment, direction, columns, path, turn or scale: at every length its words could
+ * level's change of its growth, alignment, direction, columns, path, turn, scale or anchor point: at every length its words could
  * give a side that grows. A level states each that moves; one it leaves out keeps what the record inherits.
  */
 export function pointMoved(

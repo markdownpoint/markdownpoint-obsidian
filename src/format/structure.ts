@@ -18,7 +18,7 @@
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { isRecord } from './recognition.ts';
-import { columnCountAsRead, pointMoved, standingFrame, TEXT_POINT_KEYS } from './text-growth.ts';
+import { columnCountAsRead, heldAnchor, pointMoved, standingFrame, TEXT_POINT_KEYS } from './text-growth.ts';
 
 export interface StructureRegion {
     readonly x: number;
@@ -26,6 +26,8 @@ export interface StructureRegion {
     readonly width: number;
     readonly height: number;
     readonly rotation: number;
+    /** The point it turns about: its anchor point on its frame, or the frame's center. */
+    readonly pivot: { readonly x: number; readonly y: number };
     readonly kind: 'text' | 'media';
     readonly columns: number;
     readonly gutter: number;
@@ -95,7 +97,13 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
                                 ? { x: 1, y: 1, ...(isRecord(base.scale) ? base.scale : {}), ...override.scale }
                                 : Object.hasOwn(override, 'scale')
                                   ? override.scale
-                                  : base.scale
+                                  : base.scale,
+                            // A level's parts of an anchor point stand over the one the box turns about without one.
+                            'anchor-point': isRecord(override['anchor-point'])
+                                ? { ...heldAnchor(base), ...override['anchor-point'] }
+                                : Object.hasOwn(override, 'anchor-point')
+                                  ? override['anchor-point']
+                                  : base['anchor-point']
                         })
                     );
             }
@@ -142,12 +150,15 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
         if (!finite(columns) || !Number.isInteger(columns) || columns < 1 || columns > 12) continue;
         const gutter = finite(gap) && gap >= 0 ? gap : 48;
         if (frame.width <= gutter * (columns - 1)) continue;
+        // Without an anchor point it turns about its center, a text that grows about the point it grows from, which its frame already holds.
+        const anchor = isRecord(object['anchor-point']) ? heldAnchor(object) : { x: 0.5, y: 0.5 };
         regions.push({
             x: frame.x,
             y: frame.y,
             width: frame.width,
             height: frame.height,
             rotation: finite(object.rotation) ? object.rotation : 0,
+            pivot: { x: frame.x + anchor.x * frame.width, y: frame.y + anchor.y * frame.height },
             kind: text ? 'text' : 'media',
             columns,
             gutter

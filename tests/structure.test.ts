@@ -42,7 +42,25 @@ test('structural preview resolves actual frame dimensions and partial inherited 
     const preview = slideStructure({ layout: 'title', overrides: { title: { frame: { x: 300 } }, footer: null } }, theme)!;
     assert.equal(preview.width, 1600);
     assert.equal(preview.height, 900);
-    assert.deepEqual(preview.regions, [{ x: 300, y: 100, width: 800, height: 180, rotation: 0, kind: 'text', columns: 1, gutter: 48 }]);
+    assert.deepEqual(preview.regions, [{ x: 300, y: 100, width: 800, height: 180, rotation: 0, pivot: { x: 700, y: 190 }, kind: 'text', columns: 1, gutter: 48 }]);
+});
+
+test('a turned area turns about its anchor point, a part a level leaves out over the point a growing text grows from, as MarkdownPoint turns it', () => {
+    const regions = (title: Record<string, unknown>, overrides: Record<string, unknown> = {}) => {
+        const own = { ...layout, objects: [title] };
+        const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
+        return slideStructure({ layout: 'title', overrides: { footer: null, ...overrides } }, shown)!.regions.map(({ x, y, width, height, pivot }) => ({ x, y, width, height, pivot }));
+    };
+    const turned = { ...field, rotation: 30, frame: { x: 100, y: 100, width: 400, height: 200 } };
+    assert.deepEqual(regions(turned), [{ x: 100, y: 100, width: 400, height: 200, pivot: { x: 300, y: 200 } }], 'without one it turns about its center');
+    assert.deepEqual(regions({ ...turned, 'anchor-point': { x: 0 } }), [{ x: 100, y: 100, width: 400, height: 200, pivot: { x: 100, y: 200 } }], 'a part left out is at the center');
+    // A text that grows down from its top, turned, grows in its own frame once it has an anchor point, and turns about it.
+    const grows = { ...field, 'auto-size': 'height', rotation: 90, frame: { x: 100, y: 100, width: 400 } };
+    assert.deepEqual(regions({ ...grows, 'anchor-point': { x: 0.5, y: 0.5 } }), [{ x: 100, y: 100, width: 400, height: 48, pivot: { x: 300, y: 124 } }]);
+    // An anchor point a level gives moves the point its x and y name, so it waits until the level gives them too.
+    assert.deepEqual(regions(grows, { title: { 'anchor-point': { x: 0.1 } } }), [{ x: 76, y: 76, width: 400, height: 48, pivot: { x: 276, y: 100 } }]);
+    assert.deepEqual(regions(grows, { title: { 'anchor-point': { x: 0.1 }, frame: { x: 100, y: 100 } } }), [{ x: 100, y: 100, width: 400, height: 48, pivot: { x: 140, y: 100 } }],
+        "a level's x stands over the top it grows from");
 });
 
 test("a master that declares no size lays its slides out at 1920 × 1080, as MarkdownPoint reads it, and one it can't read gives none", () => {
