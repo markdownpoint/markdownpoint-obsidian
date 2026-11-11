@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { DocumentSlide } from './document.ts';
+import type { DocumentBlock, DocumentSlide } from './document.ts';
 import { opensFormatVersion } from './format-version.ts';
 import { isRecord, isStableId } from './recognition.ts';
 
@@ -31,6 +31,43 @@ export interface TextSchemaTheme {
  * its presentation's language, where a theme's chart writes them in en-US.
  */
 export type TextSchema = 'rich-text' | 'table' | 'chart';
+
+/**
+ * How each block of a part reads, by its kind and id (`blockField`): the grammars its words are read in, each in turn.
+ * A composition's text control can be shown by a table and a text at once, and its words then read as each.
+ */
+export type PartTextSchemas = ReadonlyMap<string, readonly TextSchema[]>;
+
+/** A block's key among its part's blocks, its kind and id, such as `text:body`, `control:caption` or `notes:`. */
+export function blockField(block: Pick<DocumentBlock, 'kind' | 'id'>): string {
+    return `${block.kind}:${block.id ?? ''}`;
+}
+
+/**
+ * How each composition's text controls' words read, by the composition's id and the control's: as each member bound to
+ * show them reads its own words, a table's as a table, or as rich text when no member shows them. A chart's words can't
+ * be a control's, and only a part's own chart reads its cells by its presentation's language.
+ */
+export type ControlTextSchemas = ReadonlyMap<string, ReadonlyMap<string, readonly TextSchema[]>>;
+
+export function controlTextSchemas(definitions: ReadonlyMap<string, Record<string, unknown>>): ControlTextSchemas {
+    const schemas = new Map<string, ReadonlyMap<string, readonly TextSchema[]>>();
+    for (const [id, record] of definitions) {
+        const controls = new Map<string, TextSchema[]>();
+        for (const control of Array.isArray(record.controls) ? record.controls : [])
+            if (isRecord(control) && control.type === 'text' && typeof control.id === 'string') controls.set(control.id, []);
+        for (const member of Array.isArray(record.objects) ? record.objects : []) {
+            const name = isRecord(member) && isRecord(member.bindings) ? member.bindings.text : undefined;
+            const shown = typeof name === 'string' ? controls.get(name) : undefined;
+            const schema = isRecord(member) && (member.type === 'table' || member.type === 'chart') ? 'table' : 'rich-text';
+            if (shown && !shown.includes(schema)) shown.push(schema);
+        }
+        schemas.set(id, new Map([...controls].map(([name, shown]) => [name, shown.length ? shown : RICH_TEXT])));
+    }
+    return schemas;
+}
+
+const RICH_TEXT: readonly TextSchema[] = ['rich-text'];
 
 /**
  * Read object types only. No geometry, styles, files or rendering are evaluated. Returns the IDs of the objects this
@@ -70,13 +107,18 @@ function applyTypes(types: Map<string, string>, record: Record<string, unknown>,
     return own;
 }
 
-/** Resolve how every text block's words read, its link grammar among it, from the objects its part actually uses. */
+/**
+ * Resolve how every block's words read, its link grammar among it: an object's from the objects its part actually uses,
+ * a composition's text control's, its default and an instance's value, from the members bound to show it, and notes as
+ * rich text.
+ */
 export function copyTextSchemas(
     part: DocumentSlide,
     kind: 'slide' | 'composition',
     record: unknown,
-    theme: TextSchemaTheme | null
-): ReadonlyMap<string, TextSchema> | null {
+    theme: TextSchemaTheme | null,
+    controls: ControlTextSchemas
+): PartTextSchemas | null {
     if (!isRecord(record)) return null;
     const types = new Map<string, string>();
     if (kind === 'slide') {
@@ -97,15 +139,22 @@ export function copyTextSchemas(
     }
     const own = applyTypes(types, record, kind === 'slide');
     if (!own) return null;
-    const schemas = new Map<string, TextSchema>();
-    for (const block of part.blocks) {
-        if (block.kind !== 'text' || block.id === null) continue;
-        const type = types.get(block.id);
-        // Instance controls and retained unbound blocks use rich text in the MarkdownPoint app too.
-        schemas.set(
-            block.id,
-            type === 'chart' && own.has(block.id) ? 'chart' : type === 'table' || type === 'chart' ? 'table' : 'rich-text'
-        );
-    }
-    return schemas;
+    // The composition each of the part's instances places, by the instance's id, for the words it gives its controls.
+    const placed = new Map<string, string>();
+    for (const object of Array.isArray(record.objects) ? record.objects : [])
+        if (isRecord(object) && object.type === 'instance' && typeof object.id === 'string' && typeof object.composition === 'string')
+            placed.set(object.id, object.composition);
+    const schemasOf = (block: DocumentBlock): readonly TextSchema[] => {
+        if (block.kind === 'notes' || block.id === null) return RICH_TEXT;
+        if (block.kind === 'control') return controls.get(part.id)?.get(block.id) ?? RICH_TEXT;
+        const [id = '', control] = block.id.split('.');
+        if (control !== undefined) {
+            const composition = placed.get(id);
+            return (composition === undefined ? undefined : controls.get(composition)?.get(control)) ?? RICH_TEXT;
+        }
+        // Retained unbound blocks use rich text in the MarkdownPoint app too.
+        const type = types.get(id);
+        return [type === 'chart' && own.has(id) ? 'chart' : type === 'table' || type === 'chart' ? 'table' : 'rich-text'];
+    };
+    return new Map(part.blocks.map(block => [blockField(block), schemasOf(block)]));
 }

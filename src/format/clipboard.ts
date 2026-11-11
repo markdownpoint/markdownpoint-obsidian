@@ -19,12 +19,13 @@
 import { compositionSources } from './capture.ts';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { indexPresentation } from './document.ts';
+import type { DocumentSlide } from './document.ts';
 import { embeddedThemePaths, isThemeKey, themeDocument } from './embedded-theme.ts';
 import { readJsonObject } from './json.ts';
 import { isRecord, isStableId, isUuid } from './recognition.ts';
-import { copyTextSchemas } from './text-schemas.ts';
+import { blockField, controlTextSchemas, copyTextSchemas } from './text-schemas.ts';
 import type { EmbeddedTheme } from './embedded-theme.ts';
-import type { TextSchema } from './text-schemas.ts';
+import type { PartTextSchemas } from './text-schemas.ts';
 
 export const SLIDE_CLIPBOARD_MIME = 'web application/x-markdownpoint-obsidian-slides+json';
 
@@ -44,7 +45,7 @@ export interface SlideClipboard {
     readonly locale: string;
     readonly captured: CapturedSlides;
     readonly theme: EmbeddedTheme;
-    readonly schemas: ReadonlyMap<string, ReadonlyMap<string, TextSchema>>;
+    readonly schemas: ReadonlyMap<string, PartTextSchemas>;
 }
 
 /** Only this plugin's versioned custom format carries whole slides. */
@@ -117,7 +118,8 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
     const compositions: CapturedPart[] = [];
     const seen = new Set<string>();
     const referenced = new Set<string>();
-    const schemas = new Map<string, ReadonlyMap<string, TextSchema>>();
+    // Each part as read: its words' grammars are resolved once every definition is, since an instance's read as its members'.
+    const read: { kind: 'slide' | 'composition'; id: string; indexed: DocumentSlide; record: Record<string, unknown> }[] = [];
     for (const [kind, incoming, target] of [
         ['slide', value.slides, slides],
         ['composition', value.compositions, compositions]
@@ -147,22 +149,28 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
                 indexed.id !== part.id
             )
                 return null;
-            const fields = indexed.blocks.map(block => `${block.kind}:${block.id ?? ''}`);
+            const fields = indexed.blocks.map(blockField);
             if (new Set(fields).size !== fields.length) return null;
             const sources = compositionSources(record, kind === 'slide');
             if (!sources) return null;
             for (const id of sources) referenced.add(id);
-            const layout = typeof record.layout === 'string' ? layouts.get(record.layout) : undefined;
-            const resolved = copyTextSchemas(
-                indexed,
-                kind,
-                record,
-                layout ? { master, layout: layout.value, layoutKey: String(record.layout) } : null
-            );
-            if (!resolved) return null;
-            schemas.set(part.id, resolved);
+            read.push({ kind, id: part.id, indexed, record });
             target.push({ id: part.id, markdown: part.markdown, record: part.record });
         }
+    }
+    const controls = controlTextSchemas(new Map(read.flatMap(part => (part.kind === 'composition' ? [[part.id, part.record]] : []))));
+    const schemas = new Map<string, PartTextSchemas>();
+    for (const { kind, id, indexed, record } of read) {
+        const layout = typeof record.layout === 'string' ? layouts.get(record.layout) : undefined;
+        const resolved = copyTextSchemas(
+            indexed,
+            kind,
+            record,
+            layout ? { master, layout: layout.value, layoutKey: String(record.layout) } : null,
+            controls
+        );
+        if (!resolved) return null;
+        schemas.set(id, resolved);
     }
     const available = new Set(compositions.map(part => part.id));
     if ([...referenced].some(id => !available.has(id))) return null;

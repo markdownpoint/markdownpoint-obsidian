@@ -19,7 +19,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
-import { copyTextSchemas } from '../src/format/text-schemas.ts';
+import { controlTextSchemas, copyTextSchemas } from '../src/format/text-schemas.ts';
 import { prepareCopiedPart } from '../src/format/prepare-copy.ts';
 
 const master = {
@@ -32,6 +32,7 @@ const master = {
 };
 const layout = { markdownpoint: '1.0', type: 'layout', objects: [{ id: 'title', type: 'text', placeholder: true }] };
 const theme = { master, layout, layoutKey: 'title' };
+const noControls = new Map();
 const fields = (ids: string[], kind = 'slide', id = 'one') =>
     indexPresentation(`<!-- ${kind}: ${id} -->\n` + ids.map(id => `<!-- text: ${id} -->\n`).join(''), 0)![
         kind === 'slide' ? 'slides' : 'compositions'
@@ -52,18 +53,19 @@ test('field schemas come from actual own and inherited object types, never their
         fields(['title', 'inherited-grid', 'caption', 'body', 'data', 'chart', 'shape']),
         'slide',
         record,
-        theme
+        theme,
+        noControls
     )!;
     assert.deepEqual(
         [...result],
         [
-            ['title', 'rich-text'],
-            ['inherited-grid', 'table'],
-            ['caption', 'rich-text'],
-            ['body', 'table'],
-            ['data', 'rich-text'],
-            ['chart', 'chart'],
-            ['shape', 'rich-text']
+            ['text:title', ['rich-text']],
+            ['text:inherited-grid', ['table']],
+            ['text:caption', ['rich-text']],
+            ['text:body', ['table']],
+            ['text:data', ['rich-text']],
+            ['text:chart', ['chart']],
+            ['text:shape', ['rich-text']]
         ]
     );
     assert.deepEqual(record.objects[0], 'title');
@@ -79,24 +81,26 @@ test('removed objects and same-level collisions follow the effective inherited t
         ]
     };
     assert.deepEqual(
-        [...copyTextSchemas(part, 'slide', collision, theme)!],
+        [...copyTextSchemas(part, 'slide', collision, theme, noControls)!],
         [
-            ['inherited-grid', 'table'],
-            ['title', 'rich-text'],
-            ['caption', 'rich-text']
+            ['text:inherited-grid', ['table']],
+            ['text:title', ['rich-text']],
+            ['text:caption', ['rich-text']]
         ]
     );
     const removed = { ...theme, layout: { ...layout, overrides: { 'inherited-grid': null } } };
     const replacement = { layout: 'title', objects: [{ id: 'inherited-grid', type: 'chart' }] };
-    assert.equal(copyTextSchemas(part, 'slide', replacement, removed)!.get('inherited-grid'), 'chart');
-    assert.equal(
-        copyTextSchemas(part, 'slide', { layout: 'title', overrides: { 'inherited-grid': null } }, theme)!.get('inherited-grid'),
-        'rich-text'
+    assert.deepEqual(copyTextSchemas(part, 'slide', replacement, removed, noControls)!.get('text:inherited-grid'), ['chart']);
+    assert.deepEqual(
+        copyTextSchemas(part, 'slide', { layout: 'title', overrides: { 'inherited-grid': null } }, theme, noControls)!.get(
+            'text:inherited-grid'
+        ),
+        ['rich-text']
     );
     for (const type of ['camera', 'world']) {
         const kept = { ...theme, master: { ...master, objects: [{ id: type, type }] }, layout: { ...layout, overrides: { [type]: null } } };
         const collision = { layout: 'title', objects: [{ id: type, type: 'table' }] };
-        assert.equal(copyTextSchemas(fields([type]), 'slide', collision, kept)!.get(type), 'rich-text');
+        assert.deepEqual(copyTextSchemas(fields([type]), 'slide', collision, kept, noControls)!.get(`text:${type}`), ['rich-text']);
     }
 });
 
@@ -110,17 +114,20 @@ test("only a part's own chart reads its cells by its presentation's language: a 
         ]
     };
     assert.deepEqual(
-        [...copyTextSchemas(fields(['sales', 'costs']), 'slide', record, charted)!],
+        [...copyTextSchemas(fields(['sales', 'costs']), 'slide', record, charted, noControls)!],
         [
-            ['sales', 'table'],
-            ['costs', 'chart']
+            ['text:sales', ['table']],
+            ['text:costs', ['chart']]
         ]
     );
     const definition = fields(['costs'], 'composition', 'card');
-    assert.equal(copyTextSchemas(definition, 'composition', { objects: [{ id: 'costs', type: 'chart' }] }, null)!.get('costs'), 'chart');
+    assert.deepEqual(
+        copyTextSchemas(definition, 'composition', { objects: [{ id: 'costs', type: 'chart' }] }, null, noControls)!.get('text:costs'),
+        ['chart']
+    );
 });
 
-test('definitions use their own types while instance controls and unbound text remain rich text', () => {
+test('definitions use their own types while an instance control of a definition not copied and unbound text remain rich text', () => {
     const part = fields(['grid', 'inherited-grid', 'callout.caption', 'unbound'], 'composition', 'card');
     const record = {
         objects: [
@@ -129,12 +136,63 @@ test('definitions use their own types while instance controls and unbound text r
         ]
     };
     assert.deepEqual(
-        [...copyTextSchemas(part, 'composition', record, theme)!],
+        [...copyTextSchemas(part, 'composition', record, theme, noControls)!],
         [
-            ['grid', 'table'],
-            ['inherited-grid', 'rich-text'],
-            ['callout.caption', 'rich-text'],
-            ['unbound', 'rich-text']
+            ['text:grid', ['table']],
+            ['text:inherited-grid', ['rich-text']],
+            ['text:callout.caption', ['rich-text']],
+            ['text:unbound', ['rich-text']]
+        ]
+    );
+});
+
+test("a text control's words read as each member bound to show them, its default and an instance's value alike, apart from an object of its id", () => {
+    const grid = {
+        controls: [
+            { id: 'rows', type: 'text' },
+            { id: 'caption', type: 'text' },
+            { id: 'both', type: 'text' },
+            { id: 'loose', type: 'text' },
+            { id: 'tint', type: 'color' }
+        ],
+        objects: [
+            { id: 'cells', type: 'table', bindings: { text: 'rows' } },
+            { id: 'caption', type: 'chart' },
+            { id: 'label', type: 'text', bindings: { text: 'caption' } },
+            { id: 'mirror', type: 'table', bindings: { text: 'both' } },
+            { id: 'echo', type: 'text', bindings: { text: 'both' } },
+            { id: 'swatch', type: 'shape', bindings: { fill: 'tint' } }
+        ]
+    };
+    const controls = controlTextSchemas(new Map([['grid', grid]]));
+    assert.deepEqual(
+        [...controls.get('grid')!],
+        [
+            ['rows', ['table']],
+            ['caption', ['rich-text']],
+            ['both', ['table', 'rich-text']],
+            ['loose', ['rich-text']]
+        ]
+    );
+    const markers = ['control: rows', 'control: caption', 'control: both', 'text: caption'].map(marker => `<!-- ${marker} -->\n`);
+    const definition = indexPresentation('<!-- composition: grid -->\n' + markers.join(''), 0)!.compositions[0]!;
+    assert.deepEqual(
+        [...copyTextSchemas(definition, 'composition', grid, null, controls)!],
+        [
+            ['control:rows', ['table']],
+            ['control:caption', ['rich-text']],
+            ['control:both', ['table', 'rich-text']],
+            ['text:caption', ['chart']]
+        ]
+    );
+    const slide = { layout: 'title', objects: [{ id: 'card', type: 'instance', composition: 'grid' }] };
+    assert.deepEqual(
+        [...copyTextSchemas(fields(['card.rows', 'card.both', 'card.loose', 'gone.rows']), 'slide', slide, theme, controls)!],
+        [
+            ['text:card.rows', ['table']],
+            ['text:card.both', ['table', 'rich-text']],
+            ['text:card.loose', ['rich-text']],
+            ['text:gone.rows', ['rich-text']]
         ]
     );
 });
@@ -142,14 +200,14 @@ test('definitions use their own types while instance controls and unbound text r
 test('missing or mismatched Theme data and malformed object structures refuse schema resolution', () => {
     const part = fields(['title']);
     const record = { layout: 'title' };
-    assert.equal(copyTextSchemas(part, 'slide', record, null), null);
+    assert.equal(copyTextSchemas(part, 'slide', record, null, noControls), null);
     for (const badTheme of [
         { ...theme, layoutKey: 'other' },
         { ...theme, master: {} },
         { ...theme, layout: null },
         { ...theme, layout: { ...layout, markdownpoint: 2 } }
     ]) {
-        assert.equal(copyTextSchemas(part, 'slide', record, badTheme), null);
+        assert.equal(copyTextSchemas(part, 'slide', record, badTheme, noControls), null);
     }
     for (const bad of [
         null,
@@ -160,8 +218,8 @@ test('missing or mismatched Theme data and malformed object structures refuse sc
         { layout: 'title', overrides: { title: { type: 'table' } } },
         { layout: 'title', overrides: { title: 4 } }
     ])
-        assert.equal(copyTextSchemas(part, 'slide', bad, theme), null);
-    assert.equal(copyTextSchemas(part, 'composition', { objects: ['title'] }, null), null);
+        assert.equal(copyTextSchemas(part, 'slide', bad, theme, noControls), null);
+    assert.equal(copyTextSchemas(part, 'composition', { objects: ['title'] }, null, noControls), null);
 });
 
 test('resolved schemas drive complete-copy preparation for visually identical table-shaped fields', () => {
@@ -175,7 +233,7 @@ test('resolved schemas drive complete-copy preparation for visually identical ta
         ]
     };
     const part = indexPresentation(markdown, 0)!.slides[0]!;
-    const schemas = copyTextSchemas(part, 'slide', record, theme)!;
+    const schemas = copyTextSchemas(part, 'slide', record, theme, noControls)!;
     const copied = prepareCopiedPart(
         { id: 'one', markdown, record: JSON.stringify(record) },
         'slide',

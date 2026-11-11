@@ -19,16 +19,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { prepareCopiedPart } from '../src/format/prepare-copy.ts';
+import type { TextSchema } from '../src/format/text-schemas.ts';
 
 const slides = new Map([
     ['one', 'copy-one'],
     ['two', 'copy-two']
 ]);
 const compositions = new Map([['card', 'copy-card']]);
-const schemas = new Map<string, 'rich-text' | 'table'>([
-    ['body', 'rich-text'],
-    ['card.caption', 'rich-text'],
-    ['data', 'table']
+const schemas = new Map<string, readonly TextSchema[]>([
+    ['text:body', ['rich-text']],
+    ['text:card.caption', ['rich-text']],
+    ['text:data', ['table']],
+    ['control:caption', ['rich-text']],
+    ['notes:', ['rich-text']]
 ]);
 
 test('complete slide preparation changes only identity and actual Markdown/JSON references', () => {
@@ -110,6 +113,29 @@ test('the caller supplies real field schemas while literal tables and code retai
         prepareCopiedPart({ id: 'one', markdown: fenced, record: '{}' }, 'slide', slides, compositions, schemas)!.markdown,
         fenced.replace('slide: one', 'slide: copy-one')
     );
+});
+
+test('words a table and a text both show have their links remapped as each reads them, in either order', () => {
+    const table = '| Heading |\n| --- |\n| [Go](slide:two) |\n';
+    const markdown = '<!-- slide: one -->\n<!-- text: card.caption -->\n' + table + '\n<!-- text: card.label -->\n[Back](slide:one)\n';
+    const record = '{"layout":"title"}';
+    for (const both of [
+        ['table', 'rich-text'],
+        ['rich-text', 'table']
+    ] as const) {
+        const fields = new Map([
+            ['text:card.caption', both],
+            ['text:card.label', both]
+        ]);
+        assert.equal(
+            prepareCopiedPart({ id: 'one', markdown, record }, 'slide', slides, compositions, fields)!.markdown,
+            markdown
+                .replace('slide: one', 'slide: copy-one')
+                .replace('slide:two', 'slide:copy-two')
+                .replace('slide:one)', 'slide:copy-one)'),
+            both.join()
+        );
+    }
 });
 
 test('preparation refuses mismatched or incomplete captured parts without producing partial copies', () => {

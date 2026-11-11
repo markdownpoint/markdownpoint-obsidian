@@ -21,19 +21,19 @@ import { remapRecordReferences } from './companion.ts';
 import { indexPresentation } from './document.ts';
 import { isStableId } from './recognition.ts';
 import { remapMarkdownSlideLinks } from './slide-links.ts';
-import type { TextSchema } from './text-schemas.ts';
+import { blockField, type PartTextSchemas } from './text-schemas.ts';
 
 /**
  * Prepare one complete captured part using destination IDs and verified text
- * schemas. Identity allocation, dependency reuse and clipboard validation belong
- * to the caller. Notes and control defaults are always rich text.
+ * schemas, each block's words read in each of its block's grammars in turn. Identity
+ * allocation, dependency reuse and clipboard validation belong to the caller.
  */
 export function prepareCopiedPart(
     part: CapturedPart,
     kind: 'slide' | 'composition',
     slides: ReadonlyMap<string, string>,
     compositions: ReadonlyMap<string, string>,
-    textSchemas: ReadonlyMap<string, TextSchema>
+    textSchemas: PartTextSchemas
 ): CapturedPart | null {
     const document = indexPresentation(part.markdown, 0);
     const parts = kind === 'slide' ? document?.slides : document?.compositions;
@@ -59,12 +59,13 @@ export function prepareCopiedPart(
     const pieces = [match[1]! + id + match[3]!];
     let position = indexed.markerTo;
     for (const block of indexed.blocks) {
-        const schema = block.kind === 'text' ? textSchemas.get(block.id!) : 'rich-text';
-        if (schema === undefined) return null;
-        pieces.push(
-            part.markdown.slice(position, block.contentFrom),
-            remapMarkdownSlideLinks(part.markdown.slice(block.contentFrom, block.to), slides, schema === 'chart' ? 'table' : schema)
-        );
+        const schemas = textSchemas.get(blockField(block));
+        if (schemas === undefined) return null;
+        // A rich text reads a table as one block it doesn't look into, and a table refuses any words but one table, so
+        // at most one grammar finds links in any words, and each leaves the words it finds none in as written.
+        let words = part.markdown.slice(block.contentFrom, block.to);
+        for (const schema of schemas) words = remapMarkdownSlideLinks(words, slides, schema === 'chart' ? 'table' : schema);
+        pieces.push(part.markdown.slice(position, block.contentFrom), words);
         position = block.to;
     }
     pieces.push(part.markdown.slice(position));

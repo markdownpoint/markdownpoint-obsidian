@@ -23,7 +23,7 @@ import { indexPresentation } from './document.ts';
 import { inlineText, wordTokens } from './link-tokens.ts';
 import { isRecord } from './recognition.ts';
 import { blockTable, rowCells } from './slide-links.ts';
-import type { TextSchema } from './text-schemas.ts';
+import { blockField, type PartTextSchemas } from './text-schemas.ts';
 
 /**
  * The language a presentation's own chart cells are written in, as the MarkdownPoint app reads its `locale`: in its
@@ -45,7 +45,7 @@ export function presentationLocale(presentation: Readonly<Record<string, unknown
  */
 export function respellCopiedCharts(
     captured: CapturedSlides,
-    schemas: ReadonlyMap<string, ReadonlyMap<string, TextSchema>>,
+    schemas: ReadonlyMap<string, PartTextSchemas>,
     from: string,
     to: string
 ): CapturedSlides {
@@ -60,7 +60,7 @@ export function respellCopiedCharts(
         let markdown = part.markdown;
         // From the last block, so each earlier block keeps its place.
         for (const block of [...indexed.blocks].reverse()) {
-            if (block.kind !== 'text' || block.id === null || charts.get(block.id) !== 'chart') continue;
+            if (!charts.get(blockField(block))?.includes('chart')) continue;
             const words = markdown.slice(block.contentFrom, block.to);
             markdown = markdown.slice(0, block.contentFrom) + respellChartCells(words, written, read) + markdown.slice(block.to);
         }

@@ -38,7 +38,13 @@ const captured = {
 };
 const fields = (value: CapturedSlides) =>
     new Map(
-        [...value.slides, ...value.compositions].map(part => [part.id, new Map<string, 'rich-text' | 'table'>([['body', 'rich-text']])])
+        [...value.slides, ...value.compositions].map(part => [
+            part.id,
+            new Map([
+                ['text:body', ['rich-text'] as const],
+                ['control:caption', ['rich-text'] as const]
+            ])
+        ])
     );
 const allocator = (start = 0) => {
     let count = start;

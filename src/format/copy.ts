@@ -23,7 +23,7 @@ import { indexPresentation } from './document.ts';
 import { payloadContentEnd, terminateSourceBlock } from './payload.ts';
 import { prepareCopiedPart } from './prepare-copy.ts';
 import { isStableId } from './recognition.ts';
-import type { TextSchema } from './text-schemas.ts';
+import type { PartTextSchemas } from './text-schemas.ts';
 
 /** Reuse exact contents apart from structural identity, line endings and the terminal organizational gap. */
 function definitionKey(part: CapturedPart): string | null {
@@ -54,7 +54,7 @@ export function prepareSlideCopies(
     captured: CapturedSlides,
     held: readonly CapturedPart[],
     occupied: ReadonlySet<string>,
-    schemas: ReadonlyMap<string, ReadonlyMap<string, TextSchema>>,
+    schemas: ReadonlyMap<string, PartTextSchemas>,
     mint: (used: ReadonlySet<string>) => string,
     preserveSlideIds = false
 ): CapturedSlides | null {

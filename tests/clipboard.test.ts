@@ -85,8 +85,8 @@ test('whole-slide clipboard round trips keep complete raw fields, records, Theme
     assert.equal(result.theme.master.source, masterSource);
     assert.equal(result.theme.layouts.get('title')!.source, layoutSource);
     assert.equal(result.theme.root, paths.root);
-    assert.equal(result.schemas.get('one')!.get('body'), 'rich-text');
-    assert.equal(result.schemas.get('two')!.get('instance.caption'), 'rich-text');
+    assert.deepEqual(result.schemas.get('one')!.get('text:body'), ['rich-text']);
+    assert.deepEqual(result.schemas.get('two')!.get('text:instance.caption'), ['rich-text']);
     assert.notEqual(SLIDE_CLIPBOARD_MIME, 'web application/x-markdownpoint-slides');
 });
 
@@ -195,7 +195,7 @@ test('supplied schema claims cannot change the grammar derived from the copied T
     const source = mutate(value => {
         value.schemas = { one: { body: 'table' } };
     });
-    assert.equal(decodeSlideClipboard(source)!.schemas.get('one')!.get('body'), 'rich-text');
+    assert.deepEqual(decodeSlideClipboard(source)!.schemas.get('one')!.get('text:body'), ['rich-text']);
     const decoded = decodeSlideClipboard(source)!;
     let next = 0;
     const copies = prepareSlideCopies(
@@ -208,6 +208,31 @@ test('supplied schema claims cannot change the grammar derived from the copied T
     assert.ok(copies);
     assert.equal(copies.compositions.length, 0);
     assert.ok(copies.slides[0]!.markdown.includes('[Go](slide:new-2) and `[No](slide:two)`'));
+});
+
+test("a text control a table shows keeps its links aimed at the copied slides, its default and an instance's value alike", () => {
+    const table = (cell: string) => `| Go |\n| --- |\n| ${cell} |\n`;
+    const grid = '{"controls":[{"id":"rows","type":"text"}],"objects":[{"id":"cells","type":"table","bindings":{"text":"rows"}}]}';
+    const copied = {
+        slides: [
+            {
+                id: 'one',
+                markdown: `<!-- slide: one -->\n<!-- text: card.rows -->\n${table('[Cell](slide:two)')}`,
+                record: '{"layout":"title","objects":[{"id":"card","type":"instance","composition":"grid"}]}'
+            },
+            { id: 'two', markdown: '<!-- slide: two -->\n', record: '{"layout":"title"}' }
+        ],
+        compositions: [
+            { id: 'grid', markdown: `<!-- composition: grid -->\n<!-- control: rows -->\n${table('<slide:one>')}`, record: grid }
+        ]
+    };
+    const decoded = decodeSlideClipboard(encodeSlideClipboard(uuid, origin, 'sv-SE', copied, theme)!)!;
+    let next = 0;
+    const copies = prepareSlideCopies(decoded.captured, [], new Set(['one', 'two', 'grid']), decoded.schemas, () => `new-${++next}`)!;
+    const [one, two] = copies.slides.map(part => part.id);
+    const placed = copies.compositions[0]!.id;
+    assert.equal(copies.slides[0]!.markdown, `<!-- slide: ${one} -->\n<!-- text: card.rows -->\n${table(`[Cell](slide:${two})`)}`);
+    assert.equal(copies.compositions[0]!.markdown, `<!-- composition: ${placed} -->\n<!-- control: rows -->\n${table(`<slide:${one}>`)}`);
 });
 
 test('encoding carries only declared transport fields while raw presentation metadata stays complete', () => {
