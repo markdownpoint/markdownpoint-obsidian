@@ -25,7 +25,7 @@ import { indexPresentation } from '../format/document.ts';
 import { basicThemeFiles } from '../themes/basic.ts';
 import { renderThumbnail } from '../outline/thumbnail.ts';
 import { createPresentationFiles } from './create-files.ts';
-import { enclosingPresentation } from './presentation-files.ts';
+import { creationParent, enclosingPresentation } from './presentation-files.ts';
 import { creationThemes, inFolder, readCreationTheme } from './theme-catalog.ts';
 import type { CreationTheme } from './theme-catalog.ts';
 import { uiText } from '../ui-text.ts';
@@ -52,10 +52,8 @@ export class PresentationCreation extends Component {
         void creationThemes(this.app.vault)
             .then(themes => {
                 if (!this.running || revision !== this.revision) return;
-                // Beside the outermost presentation around the active note, as none is made inside one.
                 const folder = this.app.workspace.getActiveFile()?.parent;
-                const around = folder && enclosingPresentation(folder);
-                const parent = around ? around.parent : folder;
+                const parent = folder && creationParent(folder);
                 this.modal = new CreationModal(
                     this.app,
                     themes,

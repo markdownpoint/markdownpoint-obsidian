@@ -26,7 +26,13 @@ import {
     presentationIdentity,
     presentationPairNames
 } from '../src/format/recognition.ts';
-import { enclosingPresentation, learnVaultCase, presentationAround, presentationFiles } from '../src/presentation/presentation-files.ts';
+import {
+    creationParent,
+    enclosingPresentation,
+    learnVaultCase,
+    presentationAround,
+    presentationFiles
+} from '../src/presentation/presentation-files.ts';
 import { TFile, TFolder } from './support/obsidian.ts';
 
 const presentationId = '12345678-1234-7234-9234-123456789abc';
@@ -116,7 +122,7 @@ test("a pair under a presentation folder's versions/ resolves to no files, so th
     assert.equal(presentationFiles(vault, 'Notes/versions/draft/slides.md')?.companion.path, 'Notes/versions/draft/presentation.mdpoint');
 });
 
-test("a pair inside another presentation's folder resolves to no files and names the outermost presentation around it, while a lone presentation file makes none", () => {
+test("a pair inside another presentation's folder resolves to no files and names the outermost presentation around it, while a lone presentation file makes none, and New makes none inside one", () => {
     const folders = new Map<string, TFolder>();
     const folder = (path: string, names: string[]): void => {
         const entry = new TFolder(path);
@@ -156,6 +162,12 @@ test("a pair inside another presentation's folder resolves to no files and names
         null,
         'a lone presentation file makes no folder a presentation'
     );
+    // New refuses a presentation's own folder, as it does a folder inside one, and suggests the folder beside the outermost.
+    const at = (path: string): ObsidianFolder => folders.get(path) as unknown as ObsidianFolder;
+    assert.equal(enclosingPresentation(at('Talk'))?.path, 'Talk', "New refuses a presentation's own folder");
+    assert.equal(creationParent(at('Talk/media/Middle/Inner'))?.path, '', 'New suggests the folder beside the outermost presentation');
+    assert.equal(creationParent(at('Loose/Deck'))?.path, 'Loose');
+    assert.equal(creationParent(at('Loose'))?.path, 'Loose', 'New suggests a folder in no presentation as it is');
 });
 
 test("a pair under Versions/ is a saved version where the vault's volume finds a name in another case, and the author's own elsewhere", async () => {

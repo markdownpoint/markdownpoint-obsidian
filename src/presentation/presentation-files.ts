@@ -72,6 +72,12 @@ export function enclosingPresentation(folder: TFolder): TFolder | null {
     return outermost;
 }
 
+/** The folder New suggests for a note in `folder`: beside the outermost presentation around it, as none is made inside one. */
+export function creationParent(folder: TFolder): TFolder | null {
+    const around = enclosingPresentation(folder);
+    return around ? around.parent : folder;
+}
+
 /** The vaults whose volume finds a name in another case, and each vault's one look at it. */
 const caselessVaults = new WeakSet<Vault>();
 const vaultCases = new WeakMap<Vault, Promise<void>>();
