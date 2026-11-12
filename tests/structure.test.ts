@@ -65,8 +65,17 @@ test('a turned area turns about its anchor point, a part a level leaves out over
         { x: 100, y: 100, width: 400, height: 200, pivot: { x: 100, y: 200 } }
     ]);
     assert.deepEqual(regions({ ...turned, 'anchor-point': { x: 0 } }), regions(turned), 'an own anchor point needs both parts');
+    // As far as MarkdownPoint reads an anchor, 2³³ frames either way, and past it none.
+    assert.deepEqual(regions({ ...turned, 'anchor-point': { x: 2 ** 33, y: 0.5 } })[0]?.pivot, { x: 100 + 2 ** 33 * 400, y: 200 });
+    for (const x of [1e308, -1e308, 2 ** 33 + 1])
+        assert.deepEqual(regions({ ...turned, 'anchor-point': { x, y: 0.5 } }), regions(turned), `${x} is past the reach`);
     // A text that grows down from its top, turned, grows in its own frame once it has an anchor point, and turns about it.
     const grows = { ...field, 'auto-size': 'height', rotation: 90, frame: { x: 100, y: 100, width: 400 } };
+    assert.deepEqual(
+        regions({ ...grows, 'anchor-point': { x: 1e308, y: 0.5 } }),
+        regions(grows),
+        'a growing text with one past the reach has none'
+    );
     assert.deepEqual(regions({ ...grows, 'anchor-point': { x: 0.5, y: 0.5 } }), [
         { x: 100, y: 100, width: 400, height: 48, pivot: { x: 300, y: 124 } }
     ]);

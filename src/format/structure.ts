@@ -18,7 +18,7 @@
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { isRecord } from './recognition.ts';
-import { columnCountAsRead, heldAnchor, pointMoved, standingFrame, TEXT_POINT_KEYS } from './text-growth.ts';
+import { columnCountAsRead, heldAnchor, ownAnchor, pointMoved, standingFrame, TEXT_POINT_KEYS } from './text-growth.ts';
 
 export interface StructureRegion {
     readonly x: number;
@@ -155,7 +155,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
         const gutter = finite(gap) && gap >= 0 ? gap : 48;
         if (frame.width <= gutter * (columns - 1)) continue;
         // Without an anchor point it turns about its center, a text that grows about the point it grows from, which its frame already holds.
-        const anchor = isRecord(object['anchor-point']) ? heldAnchor(object) : { x: 0.5, y: 0.5 };
+        const anchor = ownAnchor(object) ?? { x: 0.5, y: 0.5 };
         regions.push({
             x: frame.x,
             y: frame.y,

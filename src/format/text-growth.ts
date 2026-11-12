@@ -61,13 +61,26 @@ function keptFraction(record: Readonly<Record<string, unknown>>): number {
 }
 
 /**
+ * How far an anchor point reaches either way, in fractions of its frame, as MarkdownPoint reads one: 2³³. Past it MarkdownPoint
+ * refuses the anchor, and a frame times it could be no finite length.
+ */
+const ANCHOR_REACH = 2 ** 33;
+const withinReach = (value: unknown): value is number => finite(value) && Math.abs(value) <= ANCHOR_REACH;
+
+/** A record's own anchor point, both of whose parts MarkdownPoint reads, or none. */
+export function ownAnchor(record: Readonly<Record<string, unknown>>): { x: number; y: number } | undefined {
+    const own = record['anchor-point'];
+    return isRecord(own) && withinReach(own.x) && withinReach(own.y) ? { x: own.x, y: own.y } : undefined;
+}
+
+/**
  * The anchor point a record turns and scales about, as MarkdownPoint reads it: its own, which has both parts; or with
  * none, a text that grows's point it grows from, the point its alignment holds along a width that grows and the top along
  * a height that grows, and any other object's center.
  */
 export function heldAnchor(record: Readonly<Record<string, unknown>>): { x: number; y: number } {
-    const own = record['anchor-point'];
-    if (isRecord(own) && finite(own.x) && finite(own.y)) return { x: own.x, y: own.y };
+    const own = ownAnchor(record);
+    if (own) return own;
     const grows = grownSides(record);
     return { x: grows.width ? keptFraction(record) : 0.5, y: grows.height ? 0 : 0.5 };
 }
@@ -103,7 +116,7 @@ function heldOffset(record: Readonly<Record<string, unknown>>, width: number, he
     // Where that point stands on the box, from its center, before the box's turn and scale carry it.
     const dx = grows.width ? (keptFraction(record) - 0.5) * width : 0;
     const dy = grows.height ? -height / 2 : 0;
-    if (isRecord(record['anchor-point'])) return { x: dx, y: dy };
+    if (ownAnchor(record)) return { x: dx, y: dy };
     const scale = isRecord(record.scale) ? record.scale : {};
     const ox = dx * (finite(scale.x) ? scale.x : 1);
     const oy = dy * (finite(scale.y) ? scale.y : 1);
