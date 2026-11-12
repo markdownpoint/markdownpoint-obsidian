@@ -55,6 +55,12 @@ test('complete slide preparation changes only identity and actual Markdown/JSON 
     );
 });
 
+test('a copied slide whose marker ends in a bare CR keeps it and takes its new id', () => {
+    const markdown = '<!-- slide: one -->\r<!-- text: body -->\rWords.\r';
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, 'slide', slides, compositions, schemas);
+    assert.equal(result?.markdown, markdown.replace('slide: one', 'slide: copy-one'));
+});
+
 test('a copied slide whose marker has spaces or tabs before it keeps them and takes its new id', () => {
     for (const indent of [' ', '\t', '    ']) {
         const markdown = `${indent}<!-- slide: one -->\n${indent}<!-- text: body -->\nWords.\n`;

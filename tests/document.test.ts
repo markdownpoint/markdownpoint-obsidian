@@ -53,6 +53,56 @@ test('CRLF positions and frontmatter offsets still refer to the original documen
     assert.equal(text.slice(slide.blocks[0]!.contentFrom), 'Words.\r\n');
 });
 
+test('a marker ended by a bare CR opens its slide, as MarkdownPoint reads it, with its range through the CR', () => {
+    const front = '---\nmarkdownpoint: "1.0"\nid: 318494ee-4e44-456f-818a-ec761b41fec2\n---\n';
+    const ranges = (text: string) =>
+        indexPresentation(text, front.length)?.slides.map(({ id, from, markerTo, line, to }) => ({ id, from, markerTo, line, to }));
+    const one = front + '<!-- slide: a -->\r';
+    assert.deepEqual(ranges(one), [{ id: 'a', from: front.length, markerTo: one.length, line: 4, to: one.length }]);
+    const two = front + '<!-- slide: a -->\r<!-- slide: b -->\r';
+    const second = front.length + '<!-- slide: a -->\r'.length;
+    assert.deepEqual(ranges(two), [
+        { id: 'a', from: front.length, markerTo: second, line: 4, to: second },
+        { id: 'b', from: second, markerTo: two.length, line: 5, to: two.length }
+    ]);
+});
+
+test('CR, LF and CRLF line ends give one structure, a bare CR at the offsets LF gives', () => {
+    const lines = [
+        '<!-- slide: opening -->',
+        '',
+        '<!-- text: body -->',
+        '```md',
+        '<!-- slide: literal -->',
+        '```',
+        'Words.',
+        '<!-- notes -->',
+        'A reminder.',
+        '',
+        '<!-- slide: closing -->',
+        ''
+    ];
+    const lf = indexPresentation(lines.join('\n'), 0)!;
+    assert.deepEqual(
+        lf.slides.map(slide => [slide.id, slide.line, slide.blocks.map(block => block.kind)]),
+        [
+            ['opening', 0, ['text', 'notes']],
+            ['closing', 10, []]
+        ]
+    );
+    assert.deepEqual(indexPresentation(lines.join('\r'), 0), lf);
+    const text = lines.join('\r\n');
+    const crlf = indexPresentation(text, 0)!;
+    assert.deepEqual(
+        crlf.slides.map(slide => [slide.id, slide.line, slide.blocks.map(block => block.kind)]),
+        lf.slides.map(slide => [slide.id, slide.line, slide.blocks.map(block => block.kind)])
+    );
+    assert.deepEqual(
+        crlf.slides.map(slide => text.slice(slide.from, slide.markerTo)),
+        ['<!-- slide: opening -->\r\n', '<!-- slide: closing -->\r\n']
+    );
+});
+
 test('marker-shaped lines in backtick and tilde code remain field content', () => {
     for (const fence of ['```', '~~~~']) {
         const text = `<!-- slide: actual -->\n\n<!-- text: example -->\n${fence}md\n<!-- slide: example -->\n<!-- text: fake -->\n<!-- notes -->\n${fence}\n\n<!-- slide: next -->\n`;
@@ -257,7 +307,7 @@ test('multiline link titles retain the lexical context before a fence-like line'
     );
 });
 
-test('bare carriage returns keep the full lexer context', () => {
+test('a bare carriage return ends a line within code as a line feed does', () => {
     const source = '<!-- slide: first -->\n<!-- text: body -->\n```md\n<!-- slide: literal -->\n  \r```\n<!-- slide: second -->\n';
     assert.deepEqual(
         indexPresentation(source, 0)!.slides.map(slide => slide.id),

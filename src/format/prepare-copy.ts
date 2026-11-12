@@ -54,7 +54,7 @@ export function prepareCopiedPart(
     const record = remapRecordReferences(part.record, slides, compositions);
     if (record === null) return null;
     const marker = part.markdown.slice(0, indexed.markerTo);
-    const match = /^([ \t]*<!--\s*(?:slide|composition):\s*)([^\s]+)(\s*-->[ \t]*\r?\n)$/.exec(marker);
+    const match = /^([ \t]*<!--\s*(?:slide|composition):\s*)([^\s]+)(\s*-->[ \t]*(?:\r\n|\r|\n))$/.exec(marker);
     if (!match || match[2] !== part.id) return null;
     const pieces = [match[1]! + id + match[3]!];
     let position = indexed.markerTo;

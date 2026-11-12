@@ -18,10 +18,10 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { payloadContentEnd } from '../src/format/payload.ts';
+import { payloadContentEnd, terminateSourceBlock } from '../src/format/payload.ts';
 
 test('every terminal blank line is organizational: blank lines only separate, and an empty paragraph is <br>', () => {
-    for (const newline of ['\n', '\r\n']) {
+    for (const newline of ['\n', '\r\n', '\r']) {
         for (let blanks = 0; blanks < 5; blanks++) {
             const raw = 'Words.' + newline.repeat(blanks + 1);
             const expected = 'Words.' + newline;
@@ -47,7 +47,7 @@ test('leading and interior lines, empty paragraphs, lists, quotes, and code stay
 });
 
 test('horizontal whitespace counts as a blank line only when terminated', () => {
-    for (const newline of ['\n', '\r\n']) {
+    for (const newline of ['\n', '\r\n', '\r']) {
         const text = 'Words.' + newline;
         for (const tail of [' \t', ' \t' + newline, ' \t' + newline + '  ']) {
             const source = text + tail;
@@ -73,7 +73,7 @@ test('an empty text is blank lines alone, all organizational, and keeps its sour
 });
 
 test("a code block left open at the file's end keeps its blank lines as code, all but the last, as MarkdownPoint reads it", () => {
-    for (const newline of ['\n', '\r\n']) {
+    for (const newline of ['\n', '\r\n', '\r']) {
         const code = ['```txt', 'x', '', '', ''].join(newline);
         const source = code + newline;
         assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), code, JSON.stringify(source));
@@ -88,5 +88,15 @@ test("a code block left open at the file's end keeps its blank lines as code, al
     for (const text of ['```\nx\n```', '- One\n\n  ```\n  x']) {
         const source = text + '\n\n\n';
         assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), text + '\n', JSON.stringify(source));
+    }
+});
+
+test('a block ends at its own line end, CR, LF or CRLF, and a tail of spaces moves before it, onto the blank line', () => {
+    for (const newline of ['\n', '\r\n', '\r']) {
+        const words = 'Words.' + newline;
+        assert.equal(terminateSourceBlock(words, '\n'), words, JSON.stringify(words));
+        assert.equal(terminateSourceBlock('Words.', newline), words);
+        const tail = words + newline + ' \t';
+        assert.equal(terminateSourceBlock(tail, '\n'), words + ' \t' + newline, JSON.stringify(tail));
     }
 });

@@ -57,6 +57,16 @@ export function slideAtPosition(document: PresentationDocument, position: number
     return document.slides.find(slide => position >= slide.from && position < slide.to) ?? null;
 }
 
+/** A line end as MarkdownPoint reads one: CRLF, a bare LF or a bare CR. */
+const LINE_END = /\r\n|\r|\n/g;
+
+/** The first line end at or after `from` in the source as written: where it starts and where the next line starts. */
+export function lineEnd(source: string, from: number): { at: number; next: number } | null {
+    LINE_END.lastIndex = from;
+    const found = LINE_END.exec(source);
+    return found ? { at: found.index, next: found.index + found[0].length } : null;
+}
+
 const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*((?:(?!-->).)+?))?\s*-->[ \t]*$/;
 
 /** A marker's id as its kind reads it: a stable id, or for a text marker an instance's id, a dot and its text control's id. */
@@ -118,15 +128,13 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     // Where, in the current field's normalized text, the code block that last took in a marker begins
     let swallowedFrom: number | null = null;
     let openFence: string | null = null;
-    // Bare CR can introduce lexer lines inside one source line. Keep full context there.
-    const scanFences = !/\r(?!\n)/.test(markdown);
     let offset = bodyStart;
-    let lineNumber = markdown.slice(0, bodyStart).split('\n').length - 1;
+    let lineNumber = markdown.slice(0, bodyStart).split(LINE_END).length - 1;
 
     while (offset < markdown.length) {
-        const newline = markdown.indexOf('\n', offset);
-        const end = newline < 0 ? markdown.length : newline + 1;
-        const line = markdown.slice(offset, newline < 0 ? end : newline).replace(/\r$/, '');
+        const ending = lineEnd(markdown, offset);
+        const end = ending?.next ?? markdown.length;
+        const line = markdown.slice(offset, ending?.at ?? end);
         // A leading fence cannot later become part of a preceding link definition.
         // Once Marked identifies it, scan to its closing line once.
         // Retokenizing its growing payload at every example marker is quadratic.
@@ -155,12 +163,12 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
             if (code) {
                 swallowedFrom = code.start;
                 const fence = /^ {0,3}(`{3,}|~{3,})/.exec(code.raw)?.[1];
-                if (fence && code.leading && scanFences) openFence = fence;
+                if (fence && code.leading) openFence = fence;
                 offset = end;
                 lineNumber++;
                 continue;
             }
-            if (!match || newline < 0) return null;
+            if (!match || !ending) return null;
             const kind = match[1];
             const id = match[2];
             if (kind === 'notes' ? id !== undefined : !id || !markerId(kind!, id)) return null;

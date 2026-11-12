@@ -17,6 +17,7 @@
  */
 
 import { blockTokens } from './block-grammar.ts';
+import { lineEnd } from './document.ts';
 
 /**
  * Source through the last line of a MarkdownPoint block that holds more than spaces, its line break included. Blank
@@ -27,21 +28,23 @@ import { blockTokens } from './block-grammar.ts';
 export function payloadContentEnd(markdown: string, from: number, to: number): number {
     // Only a block that runs to the file's end can leave a code block open: one would take in the marker after it.
     const words = to === markdown.length ? markdown.slice(from) : '';
-    if (leavesCodeOpen(words)) return from + words.replace(/(^|\n)[ \t]+$/, '$1').replace(/(^|\n)[ \t]*\r?\n$/, '$1').length;
+    // A line end is CRLF, a bare LF or a bare CR, and the LF of a CRLF starts no line of its own.
+    if (leavesCodeOpen(words))
+        return from + words.replace(/(^|[\r\n])[ \t]+$/, '$1').replace(/(^|\r\n|\n|\r(?!\n))[ \t]*(?:\r\n|\r|\n)$/, '$1').length;
     let end = to;
     while (end > from && ' \t\r\n'.includes(markdown[end - 1]!)) end--;
     if (end === from) return from;
     // The line break that ends the last line with words is its own; an unterminated tail of spaces is not.
-    const feed = markdown.indexOf('\n', end);
-    return feed < 0 || feed >= to ? end : feed + 1;
+    const ending = lineEnd(markdown, end);
+    return !ending || ending.at >= to ? end : ending.next;
 }
 
 /** Close a block before its next neighbor without creating another authored blank line. */
 export function terminateSourceBlock(source: string, newline: string): string {
-    if (!source || source.endsWith('\n')) return source;
+    if (!source || /[\r\n]$/.test(source)) return source;
     // Fold an unterminated whitespace tail into the existing organizational line.
-    const closed = source.replace(/(^|\n)([ \t]*)(\r?\n)([ \t]+)$/, '$1$2$4$3');
-    return closed.endsWith('\n') ? closed : closed + newline;
+    const closed = source.replace(/(^|\r\n|\n|\r(?!\n))([ \t]*)(\r\n|\r|\n)([ \t]+)$/, '$1$2$4$3');
+    return /[\r\n]$/.test(closed) ? closed : closed + newline;
 }
 
 const OPEN_CODE_PROBE = 'mp-open-code-probe';
