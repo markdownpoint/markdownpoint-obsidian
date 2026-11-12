@@ -36,14 +36,39 @@ export function rowCells(line: string): { from: number; to: number }[] {
     return cells.slice(pipes[0] === from ? 1 : 0, pipes.at(-1) === to - 1 ? -1 : undefined);
 }
 
-/** The one table a table block's words hold, no row wider than its header, or null when they hold anything else. */
+/**
+ * The one table a table block's words hold, no row wider than its header and no cell's words holding a line feed or a
+ * carriage return by a character reference, or null when they hold anything else, as MarkdownPoint reads a table.
+ */
 export function blockTable(source: string): Tokens.Table | null {
     const trimmed = source.replace(/\r\n?/g, '\n').trim();
     const blocks = linkTokens(trimmed).filter(token => token.type !== 'space');
-    const table = blocks[0];
+    const table = blocks[0] as Tokens.Table | undefined;
     if (blocks.length !== 1 || table?.type !== 'table' || table.raw.trim() !== trimmed) return null;
-    const width = (table as Tokens.Table).header.length;
-    return width && !trimmed.split('\n').some(line => rowCells(line).length > width) ? (table as Tokens.Table) : null;
+    const width = table.header.length;
+    if (!width || trimmed.split('\n').some(line => rowCells(line).length > width)) return null;
+    return [...table.header, ...table.rows.flat()].some(cell => breaksLine(cell.tokens)) ? null : table;
+}
+
+/**
+ * Whether words hold a line feed or a carriage return by a character reference. MarkdownPoint reads references over each
+ * run of plain words, a bare address among them, and never in code, an escaped character, a picture, an autolink or
+ * HTML, which it keeps as written.
+ */
+function breaksLine(tokens: readonly Token[]): boolean {
+    let words = '';
+    const broken = (): boolean => /[\r\n]/.test(decodeCharacterReferences(words));
+    for (const token of tokens) {
+        const nested = 'tokens' in token && token.tokens?.length ? token.tokens : undefined;
+        if ((token.type === 'text' && !nested) || (token.type === 'link' && !/^[[<]/.test(token.raw))) {
+            words += token.type === 'text' ? ((token as Tokens.Text).text ?? token.raw) : token.raw;
+            continue;
+        }
+        if (broken()) return true;
+        words = '';
+        if (nested && token.type !== 'image' && !token.raw.startsWith('<') && breaksLine(nested)) return true;
+    }
+    return broken();
 }
 
 /** Trace actual link destinations through a parse-only copy; saved source never receives probe text. */

@@ -111,6 +111,23 @@ test('identical table source stays literal in rich text and relinks only in a ta
         assert.equal(remapMarkdownSlideLinks(source, ids, 'table'), source.replace('slide:two', 'slide:copy-two'));
 });
 
+test('a table whose cell holds a line feed or a carriage return by a character reference is no table to relink', () => {
+    const table = (words: string) => `| Header |\n| --- |\n| ${words} |\n`;
+    for (const words of ['a&#10;b', 'a&#13;b', 'a&#xA;b', 'a&#x0d;b', 'a&NewLine;b', '**a&#10;b**', 'b&#10;']) {
+        const source = table(`[Go](slide:two) ${words}`);
+        assert.equal(remapMarkdownSlideLinks(source, ids, 'table'), source, words);
+    }
+    const linked = table('[Go&#10;now](slide:two)');
+    assert.equal(remapMarkdownSlideLinks(linked, ids, 'table'), linked);
+    const header = '| a&#10;b |\n| --- |\n| [Go](slide:two) |\n';
+    assert.equal(remapMarkdownSlideLinks(header, ids, 'table'), header);
+    // Code and Markdown kept as written keep their characters, and an escaped or spelled ampersand starts no reference.
+    for (const words of ['`a&#10;b`', '<abbr title="a&#10;b">x</abbr>', '\\&#10;', '&amp;#10;']) {
+        const source = table(`[Go](slide:two) ${words}`);
+        assert.equal(remapMarkdownSlideLinks(source, ids, 'table'), source.replace('slide:two', 'slide:copy-two'), words);
+    }
+});
+
 test('decoded destinations change while angle brackets, source encoding elsewhere and link titles survive', () => {
     assert.equal(rewrite('[A](<slide:two> "Label")'), '[A](<slide:copy-two> "Label")');
     assert.equal(rewrite('[A](slide&#58;two "Keep &amp; here")'), '[A](slide:copy-two "Keep &amp; here")');
