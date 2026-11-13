@@ -56,9 +56,9 @@ test('Live Preview hides each paragraph id, the space before it included, until 
     );
 });
 
-test('an id written with any spaces or tabs around and inside its comment is hidden as one; a misspelled one or one alone on its line is a note', () => {
+test('an id written with any spaces or tabs around and inside its comment is hidden as one; a misspelled one or one alone on its line after a blank line is a note', () => {
     const loose = deckOf(
-        'One<!-- id: a7k2p9 -->\n\nTwo\t<!--id:k3x9a2-->\t\n\nThree <!-- ID: p7m2q1 -->\n\nFour <!-- id: K3X9A2 -->\n\nFive\n<!-- id: b8c4d0 -->\n\nSix \\<!-- id: c5d6e7 -->\n\nSeven \\\\<!-- id: d6e7f8 -->'
+        'One<!-- id: a7k2p9 -->\n\nTwo\t<!--id:k3x9a2-->\t\n\nThree <!-- ID: p7m2q1 -->\n\nFour <!-- id: K3X9A2 -->\n\nFive\n\n<!-- id: b8c4d0 -->\n\nSix \\<!-- id: c5d6e7 -->\n\nSeven \\\\<!-- id: d6e7f8 -->'
     );
     const state = EditorState.create({ doc: loose, selection: { anchor: 0 } });
     assert.deepEqual(
@@ -199,6 +199,39 @@ test("a join of two blocks keeps the first one's id and drops the second's, or k
         edited(heading, { from: line, to: line + 1 }, 'delete'),
         heading.replace('# A <!-- id: a7k2p9 -->\nB <!-- id: k3x9a2 -->', '# AB <!-- id: a7k2p9 -->')
     );
+});
+
+test("an id alone on the line right after a block's words, as a formatter wraps it, is hidden on its line, and Enter and a join move it whole", () => {
+    const wrapped = deckOf(
+        'One\n<!-- id: a7k2p9 -->\n\n# Two\n<!-- id: k3x9a2 -->\n\nThree\n===\n  <!-- id: p7m2q1 -->\n\n- Four\n  <!-- id: b8c4d0 -->\n\n> Five\n> <!-- id: c5d6e7 -->\n\nSix\n\n<!-- id: d6e7f8 -->\n\n<br>\n<!-- id: e7f8a9 -->'
+    );
+    const state = EditorState.create({ doc: wrapped, selection: { anchor: 0 } });
+    assert.deepEqual(
+        covered(paragraphIdDecorations(state, new ParagraphIdIndex().read(state, indexPresentation(wrapped, 0)!)), wrapped),
+        ['<!-- id: a7k2p9 -->', '<!-- id: k3x9a2 -->', '<!-- id: p7m2q1 -->', '<!-- id: b8c4d0 -->', '<!-- id: c5d6e7 -->'],
+        'one after a blank line, or after a block with no words, is a note'
+    );
+    // Enter leaves it on the first part, written on its line.
+    const item = deckOf('- Item\n  <!-- id: a7k2p9 -->');
+    assert.equal(edited(item, { from: item.indexOf('em\n'), insert: '\n- ' }), deckOf('- It <!-- id: a7k2p9 -->\n- em'));
+    const heading = deckOf('# Heading\n<!-- id: a7k2p9 -->');
+    assert.equal(edited(heading, { from: heading.indexOf('ding'), insert: '\n' }), deckOf('# Hea <!-- id: a7k2p9 -->\nding'));
+    // A join drops the second block's and keeps the first one's, or none; a heading's underline stays.
+    const joins: Array<[string, string, string]> = [
+        ['One <!-- id: a7k2p9 -->', 'Two', 'One\nTwo <!-- id: a7k2p9 -->'],
+        ['One', 'Two', 'One\nTwo'],
+        ['One', 'Two\n===', 'One\nTwo\n==='],
+        ['One <!-- id: a7k2p9 -->', 'Two\n---', 'One\nTwo <!-- id: a7k2p9 -->\n---']
+    ];
+    for (const [first, second, joined] of joins) {
+        const doc = deckOf(`${first}\n\n${second}\n<!-- id: k3x9a2 -->`);
+        const blank = doc.indexOf('\n\nTwo');
+        assert.equal(edited(doc, { from: blank, to: blank + 1 }, 'delete'), deckOf(joined), `${first} and ${second}`);
+    }
+    // Delete at the end of words whose id is on the line after joins the next words to them through it: the id is kept once.
+    const first = deckOf('One\n<!-- id: a7k2p9 -->\nTwo <!-- id: k3x9a2 -->');
+    const end = first.indexOf('\n<!-- id: a7k2p9');
+    assert.equal(edited(first, { from: end, to: end + 1 }, 'delete'), deckOf('One\nTwo <!-- id: a7k2p9 -->'));
 });
 
 test('Enter and a join read an id written loosely, and write the one they keep as MarkdownPoint writes it', () => {

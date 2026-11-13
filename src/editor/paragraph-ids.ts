@@ -31,6 +31,8 @@ import { blockFields } from './span-marks.ts';
 const PARAGRAPH_ID = /<!--[ \t]*id:[ \t]*([a-z](?:[a-z0-9]|-(?!-))*[a-z0-9]|[a-z])[ \t]*-->[ \t]*$/;
 /** Words with a line that ends as a paragraph's id does: only their blocks can hold one. */
 const ANY_PARAGRAPH_ID = new RegExp(PARAGRAPH_ID.source, 'm');
+/** An HTML block of a paragraph's id alone, which names the block on the line before it. */
+const WRAPPED_ID = new RegExp(`^${PARAGRAPH_ID.source}`);
 const hiddenId = Decoration.replace({});
 
 /**
@@ -47,24 +49,30 @@ function idOnLine(text: string): { id: string; comment: string; index: number } 
     return slashes % 2 === 0 && /\S/.test(text.slice(0, index)) ? { id: id[1]!, comment: text.slice(index), index } : null;
 }
 /**
- * Where each block of a field's words, from its first line's start, ends its last line with a paragraph's id. Words
- * whose lines the grammar has rewritten, as a quote's can, are read a line at a time: each line that ends with an id.
+ * Where each block of a field's words, from its first line's start, ends its last line with a paragraph's id, or has
+ * one alone on the line after, where it is hidden on that line. Words whose lines the grammar has rewritten, as a
+ * quote's can, are read a line at a time: each line that ends with an id.
  */
 function fieldIds(source: string): Range[] {
     const doc = Text.of(source.split('\n'));
     const blocks = blocksOf(doc, 0, doc.length);
-    const ends = blocks
-        ? blocks.filter(block => block.words).map(block => doc.lineAt(block.to))
-        : [...Array(doc.lines).keys()].map(at => doc.line(at + 1));
-    return ends.flatMap(line => {
+    if (blocks) {
+        return blocks.flatMap(block => {
+            const id = block.words ? idOf(doc, block) : null;
+            return id ? [id.shown] : [];
+        });
+    }
+    return [...Array(doc.lines).keys()].flatMap(at => {
+        const line = doc.line(at + 1);
         const id = idOnLine(line.text);
         return id ? [{ from: line.from + id.index, to: line.to }] : [];
     });
 }
 
 /**
- * Where each block of a presentation's words ends its last line with a paragraph's id, as MarkdownPoint reads one: a
- * block with no words, as a line break or a note alone, holds none, and a comment on another line is a note. A
+ * Where each block of a presentation's words ends its last line with a paragraph's id, or has one alone on the line
+ * right after, as MarkdownPoint reads one: a block with no words, as a line break or a note alone, holds none, and a
+ * comment on another line is a note. A
  * section's heading holds none either: MarkdownPoint refuses one there, so it stays in sight. Each field is read again
  * only when its words changed.
  */
@@ -114,6 +122,8 @@ interface Range {
 interface Block extends Range {
     start: number;
     words: boolean;
+    /** An id alone on the line right after the block, as a formatter that wraps the last line leaves it: from its `<!--`. */
+    wrapped?: Range & { id: string };
 }
 
 /** A token the block grammar reads, as far as the blocks of words need. */
@@ -137,6 +147,17 @@ function startOf(line: string, at: number): number {
 }
 
 /**
+ * The id `next` gives the block before it, on `doc`'s line `at`: an HTML block of nothing but an id, right after the
+ * block's last line with no blank line between, as a formatter that wraps a long last line leaves it.
+ */
+function wrappedId(doc: Text, block: WordToken, next: WordToken | undefined, at: number): Pick<Block, 'wrapped'> {
+    const id = next?.type === 'html' && /(?:^|[^\n])\n$/.test(block.raw) ? WRAPPED_ID.exec(next.raw.trim()) : null;
+    const line = id && at <= doc.lines ? doc.line(at) : null;
+    const opens = line ? line.text.indexOf('<!--') : -1;
+    return id && line && opens >= 0 ? { wrapped: { id: id[1]!, from: line.from + opens, to: line.to } } : {};
+}
+
+/**
  * The blocks of words of the lines from `from` up to `to`, as the block grammar reads them: each heading, paragraph and
  * list item's opening words, in quotes and list items too, and never code. A token's lines stand as the words' lines do,
  * a quote's marks and an item's indent taken off each, so each block is the lines its token reads. Null where a token's
@@ -148,7 +169,7 @@ function blocksOf(doc: Text, from: number, to: number): Block[] | null {
     const first = doc.lineAt(from);
     let read = true;
     const walk = (tokens: readonly WordToken[], line: number): void => {
-        for (const token of tokens) {
+        for (const [at, token] of tokens.entries()) {
             if (token.type === 'paragraph' || token.type === 'heading' || token.type === 'text') {
                 // A heading underlined with `===` or `---` ends on its words' line, the underline after it.
                 const last = line + linesIn(token.type === 'heading' ? (token.text ?? '') : token.raw.trimEnd());
@@ -168,7 +189,8 @@ function blocksOf(doc: Text, from: number, to: number): Block[] | null {
                     to: doc.line(last).to,
                     start: source.from + startOf(source.text, Math.min(source.length, prefix + Math.max(0, firstLine.indexOf(text)) + box)),
                     // A paragraph of a line break alone is an empty one.
-                    words: /\S/.test((token.text ?? '').replace(TASK, '').replace(/<!--[\s\S]*?-->|<br[ \t]*\/?>/gi, ''))
+                    words: /\S/.test((token.text ?? '').replace(TASK, '').replace(/<!--[\s\S]*?-->|<br[ \t]*\/?>/gi, '')),
+                    ...wrappedId(doc, token, tokens[at + 1], line + linesIn(token.raw))
                 });
             } else if (token.type === 'blockquote') walk(token.tokens ?? [], line);
             else if (token.type === 'list') {
@@ -199,11 +221,29 @@ function blockAt(blocks: readonly Block[], at: number): number {
     return -1;
 }
 
-/** The id ending a block's last line, and its comment as written, the spaces before it included. */
-function idOf(doc: Text, block: Block): { id: string; comment: string; from: number; to: number } | null {
+/**
+ * The id ending a block's last line, and its comment as written, the spaces before it included; else the one alone on
+ * the line after, `wrapped`, from the line break before it, the line's indent and marks included. `shown` is where
+ * Live Preview hides it, which is never across a line break.
+ */
+function idOf(doc: Text, block: Block): { id: string; comment: string; from: number; to: number; shown: Range; wrapped: boolean } | null {
     const line = doc.lineAt(block.to);
-    const id = idOnLine(line.text);
-    return id ? { id: id.id, comment: id.comment, from: line.from + id.index, to: line.to } : null;
+    const own = idOnLine(line.text);
+    if (own) {
+        const from = line.from + own.index;
+        return { id: own.id, comment: own.comment, from, to: line.to, shown: { from, to: line.to }, wrapped: false };
+    }
+    const wrapped = block.wrapped;
+    if (!wrapped) return null;
+    const from = doc.lineAt(wrapped.from).from - 1;
+    return {
+        id: wrapped.id,
+        comment: doc.sliceString(from, wrapped.to),
+        from,
+        to: wrapped.to,
+        shown: { from: wrapped.from, to: wrapped.to },
+        wrapped: true
+    };
 }
 
 /** What Obsidian writes for Enter in a block: a line break, and the marks that carry a quote or a list on. */
@@ -260,12 +300,20 @@ function gestureChanges(transaction: Transaction, document: PresentationDocument
     const kept = first.words ? idOf(before, first) : null;
     const dropped = second.words ? idOf(before, second) : null;
     const changes: ChangeSpec[] = [];
-    const keptAt = kept && commentAt(after, map(kept.from, 1), kept.comment);
+    // One on the line after the first block's words loses its line break where the join deletes that one.
+    const keptAt =
+        kept &&
+        (commentAt(after, map(kept.from, 1), kept.comment) ??
+            (kept.wrapped ? commentAt(after, map(kept.from + 1, 1), kept.comment.slice(1)) : null));
     if (keptAt) changes.push({ from: keptAt.from, to: keptAt.to });
     const droppedAt = dropped && commentAt(after, map(dropped.from, 1), dropped.comment);
     const comment = kept ? ` <!-- id: ${kept.id} -->` : '';
-    if (droppedAt) changes.push({ from: droppedAt.from, to: droppedAt.to, insert: comment });
-    else if (comment) changes.push({ from: blocks[joined]!.to, insert: comment });
+    // One on the line after the words, as below a heading's underline, goes, and the kept one ends the words' line.
+    if (droppedAt && !dropped.wrapped) changes.push({ from: droppedAt.from, to: droppedAt.to, insert: comment });
+    else {
+        if (droppedAt) changes.push({ from: droppedAt.from, to: droppedAt.to });
+        if (comment) changes.push({ from: blocks[joined]!.to, insert: comment });
+    }
     return changes;
 }
 
