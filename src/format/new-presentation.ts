@@ -64,7 +64,6 @@ export function prepareNewPresentation(
                     type: 'presentation',
                     id,
                     theme: theme.key,
-                    ...(hasBodyStyle(theme) ? { 'default-text-style': { 'text-style': 'body' } } : {}),
                     'background-image-style': NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE,
                     slides: { [slideId]: record }
                 },
@@ -72,10 +71,4 @@ export function prepareNewPresentation(
                 2
             ) + '\n'
     };
-}
-
-/** Whether the theme's master has the body text style, which a new presentation's text boxes start in. */
-function hasBodyStyle(theme: EmbeddedTheme): boolean {
-    const styles = theme.master.value['text-styles'];
-    return typeof styles === 'object' && styles !== null && Object.hasOwn(styles, 'body');
 }
