@@ -23,7 +23,7 @@
         "text": "#17120F",
         "muted": "#6B605A",
         "accent": "{brand.colors.orange}",
-        "stroke": "#E6DED5",
+        "separator": "#E6DED5",
         "link": "#17120F"
       }
     },
@@ -34,7 +34,7 @@
         "text": "#FFF6EA",
         "muted": "#BDB2A9",
         "accent": "{brand.colors.orange}",
-        "stroke": "#3A302A",
+        "separator": "#3A302A",
         "link": "#FFF6EA"
       }
     },
@@ -45,7 +45,7 @@
         "text": "#17120F",
         "muted": "#524843",
         "accent": "{brand.colors.ember}",
-        "stroke": "#17120F1F",
+        "separator": "#17120F1F",
         "link": "#17120F"
       }
     },
@@ -56,7 +56,7 @@
         "text": "#17120F",
         "muted": "#524843",
         "accent": "{brand.colors.ember}",
-        "stroke": "#17120F1F",
+        "separator": "#17120F1F",
         "link": "#17120F"
       }
     },
@@ -67,7 +67,7 @@
         "text": "#17120F",
         "muted": "#524843",
         "accent": "{brand.colors.ember}",
-        "stroke": "#17120F1F",
+        "separator": "#17120F1F",
         "link": "#17120F"
       }
     },
@@ -78,7 +78,7 @@
         "text": "#17120F",
         "muted": "#524843",
         "accent": "{brand.colors.ember}",
-        "stroke": "#17120F1F",
+        "separator": "#17120F1F",
         "link": "#17120F"
       }
     },
@@ -89,7 +89,7 @@
         "text": "#17120F",
         "muted": "#524843",
         "accent": "{brand.colors.ember}",
-        "stroke": "#17120F1F",
+        "separator": "#17120F1F",
         "link": "#17120F"
       }
     }
@@ -144,7 +144,7 @@
       "color": "muted"
     }
   },
-  "default-text-style": {"text-style":"body"},
+  "default-text-box": {"text-style":"body"},
   "layout-order": [
     "title",
     "section",

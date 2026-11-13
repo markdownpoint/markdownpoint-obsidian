@@ -71,8 +71,8 @@ test('a new presentation has matching identity, the chosen theme, and a first sl
 
 test("a new presentation's text boxes start as its theme's master says, and its backgrounds in MarkdownPoint's style, as New does", () => {
     const companion = readJsonObject(prepareNewPresentation(basicTheme, presentationId, 'opening')!.companion)!;
-    assert.deepEqual(basicTheme.master.value['default-text-style'], { 'text-style': 'body' }, "Basic's master starts new text boxes in its body style");
-    assert.equal(Object.hasOwn(companion, 'default-text-style'), false, 'the presentation holds no default of its own');
+    assert.deepEqual(basicTheme.master.value['default-text-box'], { 'text-style': 'body' }, "Basic's master starts new text boxes in its body style");
+    assert.equal(Object.hasOwn(companion, 'default-text-box'), false, 'the presentation holds no default of its own');
     assert.equal(companion['background-image-style'], NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE);
     // The keys stand where MarkdownPoint writes them, between the theme and the slides.
     assert.deepEqual(Object.keys(companion), [
