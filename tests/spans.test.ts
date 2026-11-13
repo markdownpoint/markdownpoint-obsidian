@@ -17,13 +17,13 @@
  */
 
 import assert from 'node:assert/strict';
-import { test } from 'vitest';
+import { test, vi } from 'vitest';
 import { EditorSelection, EditorState } from '@codemirror/state';
 import type { DecorationSet } from '@codemirror/view';
 import { indexPresentation } from '../src/format/document.ts';
 import { fieldSpans } from '../src/format/spans.ts';
 import { presentationSpan } from '../src/format/link-tokens.ts';
-import { SpanIndex, spanDecorations, hideRenderedSpans } from '../src/editor/span-marks.ts';
+import { SpanIndex, spanDecorations, hideRenderedSpans, pressLinkWords } from '../src/editor/span-marks.ts';
 import { outlineSections, outlineSlides } from '../src/outline/model.ts';
 import { readsAsPresentation } from '../src/presentation/reader.ts';
 import { TFile, TFolder } from './support/obsidian.ts';
@@ -313,6 +313,30 @@ test("Live Preview reads a link whose words hold a span as a link, which Obsidia
         fieldSpans(coded).map(span => span.href ?? null),
         ['https://example.com', null]
     );
+});
+
+test("a press on a link's words in Live Preview keeps the caret off them, so the click opens the link", () => {
+    // Obsidian's Element test, `instanceOf`, stands in for the DOM these tests run without.
+    class Element {}
+    const press = (classes: readonly string[], keys: { shiftKey?: boolean; altKey?: boolean; button?: number } = {}) => {
+        const target = {
+            instanceOf: (type: unknown) => type === Element,
+            closest: (selectors: string) => (selectors.split(', ').some(selector => classes.includes(selector.slice(1))) ? target : null)
+        };
+        let prevented = false;
+        const event = { button: 0, altKey: false, shiftKey: false, ...keys, targetNode: target, preventDefault: () => (prevented = true) };
+        vi.stubGlobal('Element', Element);
+        try {
+            return [pressLinkWords(event as unknown as MouseEvent), prevented];
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    };
+    assert.deepEqual(press(['markdownpoint-span-link']), [true, true]);
+    // A span's other words, and a press that selects, take the caret as Obsidian places it.
+    assert.deepEqual(press(['markdownpoint-span', 'markdownpoint-span-linked']), [false, false]);
+    assert.deepEqual(press(['markdownpoint-span-link'], { shiftKey: true }), [false, false]);
+    assert.deepEqual(press(['markdownpoint-span-link'], { button: 2 }), [false, false]);
 });
 
 interface FakeNode {

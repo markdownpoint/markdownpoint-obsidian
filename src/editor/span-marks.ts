@@ -101,6 +101,23 @@ export function spanDecorations(state: EditorState, spans: readonly WordSpan[]):
     return { hidden: Decoration.set(hidden, true), words: Decoration.set(words, true) };
 }
 
+/** The element a press or click of the main button lands on, or none with Option or Shift, which select. */
+function pressedElement(event: MouseEvent): Element | null | undefined {
+    if (event.button !== 0 || event.altKey || event.shiftKey) return null;
+    const node = event.targetNode;
+    return node?.instanceOf(Element) ? node : node?.parentElement;
+}
+
+/**
+ * A press on a link's words keeps the caret where it is, as on Obsidian's own links: a caret in the words would show
+ * their source before the click could open the link. Whether the press was the link's.
+ */
+export function pressLinkWords(event: MouseEvent): boolean {
+    if (!pressedElement(event)?.closest('.markdownpoint-span-link')) return false;
+    event.preventDefault();
+    return true;
+}
+
 /** Live Preview's span marks, for the presentation `document` reads from the editor's state. */
 export function spanMarks(document: (state: EditorState) => PresentationDocument | null): Extension {
     const plugin = ViewPlugin.fromClass(
@@ -134,15 +151,8 @@ export function spanMarks(document: (state: EditorState) => PresentationDocument
              * the span's other words take the caret.
              */
             click(event: MouseEvent, view: EditorView): boolean {
-                const node = event.targetNode;
-                const element = node?.instanceOf(Element) ? node : node?.parentElement;
-                if (
-                    event.button !== 0 ||
-                    event.altKey ||
-                    event.shiftKey ||
-                    !element?.closest('.markdownpoint-span-linked, .markdownpoint-span-link')
-                )
-                    return false;
+                const element = pressedElement(event);
+                if (!element?.closest('.markdownpoint-span-linked, .markdownpoint-span-link')) return false;
                 const link = element.closest('.markdownpoint-span-link');
                 // A link's words break into a mark for each line they run over.
                 const at = link ? view.posAtDOM(link) : -1;
@@ -163,6 +173,7 @@ export function spanMarks(document: (state: EditorState) => PresentationDocument
             // Outside every other mark, so the words' own highlighting, such as Obsidian's link color, sits inside it.
             provide: plugin => EditorView.outerDecorations.of(view => view.plugin(plugin)?.words ?? Decoration.none),
             eventHandlers: {
+                mousedown: pressLinkWords,
                 click(event, view) {
                     return this.click(event, view);
                 }
