@@ -45,7 +45,7 @@
         "width": 1680,
         "height": 360
       },
-      "drop-shadow": {"size":0.06,"offset":{"x":0,"y":0.024},"color":"#000000","opacity":0.35},
+      "drop-shadow": {"size":2,"spread":0.17,"offset":{"x":0,"y":0},"color":"#000000","opacity":0.3},
       "text-style": "display",
       "color": "#FFFFFF",
       "vertical-align": "center"
