@@ -16,7 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { decodeCharacterReferences, linkTokens } from './link-tokens.ts';
+import { decodeCharacterReferences } from '../core/character-references.ts';
+import { linkTokens } from './link-tokens.ts';
 import type { Token, Tokens } from 'marked';
 
 const punctuation = /\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])/g;

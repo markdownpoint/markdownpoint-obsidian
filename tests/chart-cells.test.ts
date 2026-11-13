@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { chartNumberRule } from '../src/core/chart-numbers.ts';
+import { chartNumberRule, parseChartNumber } from '../src/core/chart-numbers.ts';
 import { presentationLocale, respellChartCells } from '../src/format/chart-cells.ts';
 import { decodeSlideClipboard, encodeSlideClipboard } from '../src/format/clipboard.ts';
 import { indexPresentation } from '../src/format/document.ts';
@@ -110,9 +110,13 @@ test("a respelled cell keeps its marks, links and code around its number's runs,
 });
 
 test("a cell's words read a character reference as MarkdownPoint core reads it, CommonMark's way", () => {
-    // Each beside core's `plainWords` (`format/markdown-text.ts`) at its c57919aa72.
+    // Each beside core's reading (`format/character-references.ts`, which the plugin carries), over a run of plain words
+    // as a whole: a bare address's token ends before the `;` of a numeric reference at its end.
     const read: readonly (readonly [source: string, words: string])[] = [
         ["It's 1 & 2 &lt; 3", "It's 1 & 2 < 3"],
+        ['https://x.co/1,234&#37;', 'https://x.co/1,234%'],
+        ['Visit https://x.co/a&#38;', 'Visit https://x.co/a&'],
+        ['www.x.co/50&#x25;', 'www.x.co/50%'],
         ['&#65;&#x42;', 'AB'],
         ['&#38;#65;', '&#65;'],
         ['&#00000065;', '&#00000065;'],
@@ -125,6 +129,17 @@ test("a cell's words read a character reference as MarkdownPoint core reads it, 
         ['&notaname;', '&notaname;']
     ];
     for (const [source, words] of read) assert.equal(markdownWords(source), words, source);
+});
+
+test('a number whose character reference ends a bare address keeps its value when pasted into another language', () => {
+    for (const cell of ['https://x.co/1,234&#37;', 'www.x.co/1,234&#37;']) {
+        assert.equal(parseChartNumber(markdownWords(cell), english)?.value, 1234, cell);
+        const respelled = respellChartCells(table(`| Sales | ${cell} | 2 |`), english, swedish)
+            .split('\n')[2]!
+            .split(' | ')[1]!;
+        assert.notEqual(respelled, cell);
+        assert.equal(parseChartNumber(markdownWords(respelled), swedish)?.value, 1234, respelled);
+    }
 });
 
 test('a cell whose marks would read otherwise once respelled is written as its words', () => {

@@ -20,7 +20,7 @@ import { chartNumberRule, respellChartNumber, sameRule } from '../core/chart-num
 import type { ChartNumberRule } from '../core/chart-numbers.ts';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { indexPresentation } from './document.ts';
-import { inlineText, wordTokens } from './link-tokens.ts';
+import { inlineText, tokenRuns, wordTokens } from './link-tokens.ts';
 import { isRecord } from './recognition.ts';
 import { blockTable, rowCells } from './slide-links.ts';
 import { blockField, type PartTextSchemas } from './text-schemas.ts';
@@ -155,10 +155,14 @@ function respelledLeaves(leaves: readonly Leaf[], spelled: string): string | nul
 /**
  * A cell's runs in reading order, as a chart reads its words (`chartWords`): its words, escapes and code under the marks,
  * spans and links around them, while an address written as itself, HTML and a picture are each a run of the characters
- * that write them, and a note a run of none.
+ * that write them, and a note a run of none; but where a character reference spans an address and the words after it,
+ * they are one run (`tokenRuns`).
  */
 function cellLeaves(tokens: readonly unknown[], containers: readonly Container[] = []): Leaf[] {
-    return tokens.flatMap((token): Leaf[] => {
+    return tokenRuns(tokens).flatMap((part): Leaf[] => {
+        // A run of plain words is a leaf a piece, two tokens a reference spans one.
+        if ('words' in part) return part.pieces.map(piece => ({ text: piece.words, raw: piece.raw, containers }));
+        const { token } = part;
         if (!isRecord(token) || typeof token.raw !== 'string') return [];
         const { raw } = token;
         const code = token.type === 'codespan' ? chartWords([token]) : '';
@@ -281,8 +285,10 @@ function alignedDigits(before: string, after: string): string[] | null {
  * and any other HTML, a picture and a break as the characters that write them.
  */
 function chartWords(tokens: readonly unknown[]): string {
-    return tokens
-        .map(token => {
+    return tokenRuns(tokens)
+        .map(part => {
+            if ('words' in part) return part.words;
+            const { token } = part;
             if (!isRecord(token)) return '';
             const raw = typeof token.raw === 'string' ? token.raw : '';
             if (token.type === 'html') return raw.startsWith('<!--') ? '' : raw;

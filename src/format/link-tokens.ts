@@ -19,7 +19,7 @@
 import { Lexer, Marked, Tokenizer } from 'marked';
 import type { Token } from 'marked';
 import { blockRules } from './block-grammar.ts';
-import { decodeHTMLStrict } from 'entities';
+import { decodeCharacterReferences, plainWords } from '../core/character-references.ts';
 import { isRecord, isStableId } from './recognition.ts';
 
 interface EmphasisMask {
@@ -239,43 +239,80 @@ export function holdsHtml(tokens: readonly unknown[]): boolean {
     return tokens.some(token => isRecord(token) && (token.type === 'html' || (Array.isArray(token.tokens) && holdsHtml(token.tokens))));
 }
 
-/** The words tokens read as, without their marks: a list's items and a table's cells included. */
-export function inlineText(tokens: readonly unknown[]): string {
-    return tokens
-        .map(token => {
-            if (!isRecord(token)) return '';
-            if (token.type === 'html' || token.type === 'def') return '';
-            if (token.type === 'br') return '\n';
-            const children: unknown = token.tokens ?? token.items;
-            if (Array.isArray(children)) return inlineText(children);
-            const header: unknown = token.header;
-            const rows: unknown = token.rows;
-            if (Array.isArray(header) && Array.isArray(rows)) return inlineText(header) + inlineText(rows.flat() as unknown[]);
-            if (typeof token.text !== 'string') return '';
-            return token.type === 'text' ? decodeCharacterReferences(token.text) : token.text;
-        })
-        .join('');
+/** Whether a token is one marked gives, which may be plain words. */
+const wordsToken = (token: unknown): token is Parameters<typeof plainWords>[0] =>
+    isRecord(token) && typeof token.type === 'string' && typeof token.raw === 'string';
+
+/** A token's words as written and the Markdown that writes them, where it is plain words (`plainWords`). */
+function plainToken(token: unknown): { words: string; raw: string } | undefined {
+    if (!wordsToken(token)) return undefined;
+    const words = plainWords(token);
+    return words === undefined ? undefined : { words, raw: token.raw };
 }
 
 /**
- * A character reference, as CommonMark reads one: a name HTML defines, or a decimal number of up to seven digits or a
- * hexadecimal one of up to six, ended by `;`. A longer number, or a name HTML does not define, stays as written.
+ * A run of plain words: its words, each character reference read over the run as a whole, as MarkdownPoint reads them,
+ * and the Markdown that writes them; and its pieces, each token's words and Markdown, but for two tokens a reference
+ * spans, as one at a bare address's end does, whose token ends before its `;`, which stand as one piece.
  */
-const characterReference = /&(?:#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z][A-Za-z0-9]*);/g;
+interface WordsRun {
+    words: string;
+    raw: string;
+    pieces: { words: string; raw: string }[];
+}
 
-/**
- * Text with each character reference read as the character it names, as MarkdownPoint reads it: a number names its
- * code point, or U+FFFD where it names none, and a name is read as HTML defines it.
- */
-export function decodeCharacterReferences(text: string): string {
-    return text.includes('&')
-        ? text.replace(characterReference, reference => {
-              if (reference[1] !== '#') return decodeHTMLStrict(reference);
-              const hex = reference[2] === 'x' || reference[2] === 'X';
-              const code = Number.parseInt(reference.slice(hex ? 3 : 2, -1), hex ? 16 : 10);
-              return code === 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff) ? '\ufffd' : String.fromCodePoint(code);
-          })
-        : text;
+/** Tokens in reading order, each run of plain words joined as one (`WordsRun`), and any other token as it is. */
+export function tokenRuns(tokens: readonly unknown[]): (WordsRun | { token: unknown })[] {
+    const parts: (WordsRun | { token: unknown })[] = [];
+    let pieces: { words: string; raw: string }[] = [];
+    const close = (): void => {
+        if (!pieces.length) return;
+        parts.push({
+            words: decodeCharacterReferences(pieces.map(piece => piece.words).join('')),
+            raw: pieces.map(piece => piece.raw).join(''),
+            pieces: pieces.map(piece => ({ words: decodeCharacterReferences(piece.words), raw: piece.raw }))
+        });
+        pieces = [];
+    };
+    for (const token of tokens) {
+        const plain = plainToken(token);
+        if (!plain) {
+            close();
+            parts.push({ token });
+            continue;
+        }
+        const last = pieces.at(-1);
+        const spanned =
+            last !== undefined &&
+            decodeCharacterReferences(last.words + plain.words) !==
+                decodeCharacterReferences(last.words) + decodeCharacterReferences(plain.words);
+        if (last && spanned) {
+            last.words += plain.words;
+            last.raw += plain.raw;
+        } else pieces.push(plain);
+    }
+    close();
+    return parts;
+}
+
+/** The words tokens read as, without their marks: a list's items and a table's cells included. */
+export function inlineText(tokens: readonly unknown[]): string {
+    return tokenRuns(tokens)
+        .map(part => ('words' in part ? part.words : tokenText(part.token)))
+        .join('');
+}
+
+/** The words of a token that isn't plain words, without its marks. */
+function tokenText(token: unknown): string {
+    if (!isRecord(token)) return '';
+    if (token.type === 'html' || token.type === 'def') return '';
+    if (token.type === 'br') return '\n';
+    const children: unknown = token.tokens ?? token.items;
+    if (Array.isArray(children)) return inlineText(children);
+    const header: unknown = token.header;
+    const rows: unknown = token.rows;
+    if (Array.isArray(header) && Array.isArray(rows)) return inlineText(header) + inlineText(rows.flat() as unknown[]);
+    return typeof token.text === 'string' ? token.text : '';
 }
 
 /** The words of a block of Markdown, as a reader reads them, without their marks. */

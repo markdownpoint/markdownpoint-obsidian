@@ -18,7 +18,8 @@
 
 import type { Token } from 'marked';
 import { blockTokens } from './block-grammar.ts';
-import { decodeCharacterReferences, destinationEnd, literalEnd, presentationSpan, wordTokens } from './link-tokens.ts';
+import { decodeCharacterReferences } from '../core/character-references.ts';
+import { destinationEnd, literalEnd, presentationSpan, wordTokens } from './link-tokens.ts';
 
 /**
  * A span, `[words]{color=accent}`: words with a color, a weight or both, or a group with neither, `[words]{}`, which the
