@@ -175,6 +175,11 @@
     color: var(--link-external-color-hover);
 }
 
+/* Code the plugin draws in a link's words takes the link's color, as Obsidian's own code there does */
+.markdownpoint-presentation .markdownpoint-span-link span.cm-inline-code {
+    color: inherit;
+}
+
 .markdownpoint-field-header {
     padding-top: var(--size-4-4);
     color: var(--markdownpoint-muted);
