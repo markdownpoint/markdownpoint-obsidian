@@ -39,7 +39,24 @@ export interface WordSpan {
      * brackets it reads as an unresolved link in view, a code span's backticks among them, while it styles the code.
      */
     readonly code?: readonly { readonly from: number; readonly to: number }[];
+    /**
+     * The styles the delimiters it hides draw, outermost first. Obsidian reads no emphasis and no code inside brackets
+     * inside brackets, so for a span in another span or a link the plugin draws them.
+     */
+    readonly styles?: readonly SpanStyle[];
 }
+
+/** A style an enclosing delimiter draws, by the name of Obsidian's class for it, `cm-em` for `*`. */
+export type SpanStyle = 'em' | 'strong' | 'highlight' | 'strikethrough';
+
+const delimiterStyles: Readonly<Record<string, SpanStyle>> = {
+    '*': 'em',
+    _: 'em',
+    '**': 'strong',
+    __: 'strong',
+    '==': 'highlight',
+    '~~': 'strikethrough'
+};
 
 /** Code, HTML and a reference definition keep their characters as written; so does a block that holds one. */
 function keepsSource(token: Token): boolean {
@@ -50,20 +67,27 @@ function keepsSource(token: Token): boolean {
     return children.some(keepsSource);
 }
 
-/** How many of `lead`'s delimiters pair around all of `content`'s words, as the lexer pairs them: all, or none. */
-function enclosingWidth(content: string, lead: string): number {
+/**
+ * How many of `lead`'s delimiters pair around all of `content`'s words, as the lexer pairs them, all or none, and the
+ * style each pair draws. The lexer reads `==` and `~~` as containers, so their characters name their style.
+ */
+function enclosing(content: string, lead: string): { width: number; styles: SpanStyle[] } {
+    const none = { width: 0, styles: [] };
     let words = content;
     let width = 0;
+    const styles: SpanStyle[] = [];
     while (width < lead.length) {
         const tokens = wordTokens(words);
         const token = tokens.length === 1 ? tokens[0]! : null;
-        if (!token || token.raw !== words || (token.type !== 'em' && token.type !== 'strong') || typeof token.text !== 'string') return 0;
+        if (!token || token.raw !== words || (token.type !== 'em' && token.type !== 'strong') || typeof token.text !== 'string')
+            return none;
         const delimiter = (words.length - token.text.length) / 2;
-        if (!(delimiter >= 1) || words.slice(delimiter, words.length - delimiter) !== token.text) return 0;
+        if (!(delimiter >= 1) || words.slice(delimiter, words.length - delimiter) !== token.text) return none;
+        styles.push(delimiterStyles[words.slice(0, delimiter)]!);
         width += delimiter;
         words = token.text;
     }
-    return width === lead.length && words.length > 0 ? width : 0;
+    return width === lead.length && words.length > 0 ? { width, styles } : none;
 }
 
 function spanAt(source: string, at: number): WordSpan | null {
@@ -71,8 +95,14 @@ function spanAt(source: string, at: number): WordSpan | null {
     if (!span) return null;
     const content = span.content;
     // Delimiters that enclose the words read as their style; any other run stays where the author can see it.
-    const inner = enclosingWidth(content, /^(?:==|~~|[*_])*/.exec(content)![0]);
-    return { from: at, to: at + span.length, wordsFrom: at + 1 + inner, wordsTo: at + 1 + content.length - inner };
+    const { width, styles } = enclosing(content, /^(?:==|~~|[*_])*/.exec(content)![0]);
+    return {
+        from: at,
+        to: at + span.length,
+        wordsFrom: at + 1 + width,
+        wordsTo: at + 1 + content.length - width,
+        ...(styles.length ? { styles } : {})
+    };
 }
 
 /**

@@ -286,23 +286,28 @@ test("Live Preview hides the backticks of code in a span's words, which Obsidian
     assert.equal(ranges(near.hidden, doc).length, 16);
 });
 
+/** The words Live Preview marks in `doc` with the caret at its start, and each mark's classes. */
+function wordClasses(doc: string): [string, string][] {
+    const found: [string, string][] = [];
+    const { words } = spanDecorations(EditorState.create({ doc, selection: { anchor: 0 } }), fieldSpans(doc));
+    for (const cursor = words.iter(); cursor.value; cursor.next())
+        found.push([doc.slice(cursor.from, cursor.to), String((cursor.value.spec as { class?: string }).class)]);
+    return found;
+}
+
 test("Live Preview reads a link whose words hold a span as a link, which Obsidian reads only up to the span's `]`", () => {
-    const classes = (doc: string): [string, string][] => {
-        const found: [string, string][] = [];
-        const { words } = spanDecorations(EditorState.create({ doc, selection: { anchor: 0 } }), fieldSpans(doc));
-        for (const cursor = words.iter(); cursor.value; cursor.next())
-            found.push([doc.slice(cursor.from, cursor.to), String((cursor.value.spec as { class?: string }).class)]);
-        return found;
-    };
     const grouped = 'A [[*a*]{}b](slide:one) c';
     assert.deepEqual(
         ranges(spanDecorations(EditorState.create({ doc: grouped, selection: { anchor: 0 } }), fieldSpans(grouped)).hidden, grouped),
         [...['[', '[*', '*]{}', '](slide:one)']]
     );
-    assert.deepEqual(classes(grouped), [
-        ['[*a*]{}b', 'markdownpoint-span-link'],
-        ['a', 'markdownpoint-span']
-    ]);
+    assert.deepEqual(
+        wordClasses(grouped).filter(([, classes]) => classes.startsWith('markdownpoint')),
+        [
+            ['[*a*]{}b', 'markdownpoint-span-link'],
+            ['a', 'markdownpoint-span']
+        ]
+    );
     // Code cut into a group in a link, as MarkdownPoint writes a pipe after an odd run of backslashes in a table cell.
     const coded = 'see [` x\\ `[`\\|`]{}](https://example.com) now';
     assert.deepEqual(
@@ -313,6 +318,28 @@ test("Live Preview reads a link whose words hold a span as a link, which Obsidia
         fieldSpans(coded).map(span => span.href ?? null),
         ['https://example.com', null]
     );
+});
+
+test('Live Preview draws the styles and code a span inside another span or a link hides, which Obsidian reads nowhere there', () => {
+    const drawn = (doc: string) => wordClasses(doc).filter(([, classes]) => classes.startsWith('cm-'));
+    // A group in a link, as MarkdownPoint writes a style change inside a link's word.
+    assert.deepEqual(drawn('A [[*a*]{}b](slide:one) c'), [['a', 'cm-em']]);
+    // A span in a span, each style its delimiters draw, outermost first.
+    assert.deepEqual(drawn('A [[*c*]{}d]{color=accent}'), [['c', 'cm-em']]);
+    assert.deepEqual(drawn('A [x[**b**]{}[==h==]{}[~~s~~]{}[***bi***]{}[**==bh==**]{}]{color=accent}'), [
+        ['b', 'cm-strong'],
+        ['h', 'cm-highlight'],
+        ['s', 'cm-strikethrough'],
+        ['bi', 'cm-em cm-strong'],
+        ['bh', 'cm-strong cm-highlight']
+    ]);
+    // The code of a group in a link or in a color span; the link's and the span's own code is Obsidian's.
+    assert.deepEqual(drawn('see [` x\\ `[`\\|`]{}](https://example.com) now'), [['\\|', 'cm-inline-code']]);
+    assert.deepEqual(drawn('A [` x\\ `[`` \\|` ``]{}]{color=accent}'), [[' \\|` ', 'cm-inline-code']]);
+    // Obsidian draws a span's own styles and code outside other brackets, and the source shows them with the caret in it.
+    assert.deepEqual(drawn('A [**Mark**]{}[***do***]{}[*wn*]{} [`a\\|b`]{} [**ink**]{color=accent}'), []);
+    const near = '[[*c*]{}d]{color=accent}';
+    assert.deepEqual(spanDecorations(EditorState.create({ doc: near, selection: { anchor: 3 } }), fieldSpans(near)).words.size, 0);
 });
 
 test("a press on a link's words in Live Preview keeps the caret off them, so the click opens the link", () => {
@@ -477,7 +504,8 @@ test('a span inside another hides both, inner marks first where they stand', () 
     const colored = 'A [[*c*]{}d]{color=accent} e';
     const away = spanDecorations(EditorState.create({ doc: colored, selection: { anchor: colored.length } }), fieldSpans(colored));
     assert.deepEqual(ranges(away.hidden, colored), ['[', '[*', '*]{}', ']{color=accent}']);
-    assert.deepEqual(ranges(away.words, colored), ['[*c*]{}d', 'c']);
+    // The inner group's `c` is marked twice: as a span's words, and with the italic it draws inside another span.
+    assert.deepEqual(ranges(away.words, colored), ['[*c*]{}d', 'c', 'c']);
     // The spans inside a span and those right after it make one word, so the caret on any of them shows all of them.
     const joined = 'A [[b]{font-weight=600}c]{color=accent}[d]{} e';
     const spans = fieldSpans(joined);

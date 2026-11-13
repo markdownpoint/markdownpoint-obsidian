@@ -24,13 +24,16 @@ import type { PresentationDocument } from '../format/document.ts';
 import { markdownWords, spanAttributesLength } from '../format/link-tokens.ts';
 import { readsAsPresentation } from '../presentation/reader.ts';
 import { fieldSpans } from '../format/spans.ts';
-import type { WordSpan } from '../format/spans.ts';
+import type { SpanStyle, WordSpan } from '../format/spans.ts';
 
 const hiddenMark = Decoration.replace({});
 const spanWords = Decoration.mark({ class: 'markdownpoint-span' });
 // Obsidian draws all of the words of a span that holds a link as one link, with no destination of its own.
 const linkedWords = Decoration.mark({ class: 'markdownpoint-span markdownpoint-span-linked' });
 const linkWords = Decoration.mark({ class: 'markdownpoint-span-link' });
+// Obsidian's own classes for the styles and code it reads nowhere inside brackets inside brackets.
+const codeWords = Decoration.mark({ class: 'cm-inline-code' });
+const styleMarks = new Map<string, Decoration>();
 
 /** Every stretch of a presentation's source that holds words: text, notes, controls and section headings. */
 function wordFields(document: PresentationDocument): { from: number; to: number }[] {
@@ -74,8 +77,9 @@ export class SpanIndex {
 /**
  * Hide each span's brackets, attributes and enclosing delimiters, and the backticks of code in its words, so its word
  * reads as styled words, and the brackets and destination of a link in its words, so only the link's words read as a
- * link. A selection on any span of a word shows the whole word's source, as Obsidian shows its own marks where the caret
- * is.
+ * link. A span inside another span or a link draws the styles of the delimiters it hides and its code's look itself, as
+ * Obsidian reads neither there. A selection on any span of a word shows the whole word's source, as Obsidian shows its
+ * own marks where the caret is.
  */
 export function spanDecorations(state: EditorState, spans: readonly WordSpan[]): { hidden: DecorationSet; words: DecorationSet } {
     const hidden: Range<Decoration>[] = [];
@@ -93,12 +97,25 @@ export function spanDecorations(state: EditorState, spans: readonly WordSpan[]):
                 for (const run of span.code ?? []) hidden.push(hiddenMark.range(run.from, run.to));
                 const linked = word.some(link => link.href !== undefined && span.wordsFrom <= link.from && link.to <= span.wordsTo);
                 words.push((span.href !== undefined ? linkWords : linked ? linkedWords : spanWords).range(span.wordsFrom, span.wordsTo));
+                if (!span.styles && !span.code) continue;
+                if (!word.some(other => other !== span && other.wordsFrom <= span.from && span.to <= other.wordsTo)) continue;
+                if (span.styles) words.push(styleMark(span.styles).range(span.wordsFrom, span.wordsTo));
+                const code = span.code ?? [];
+                for (let run = 0; run + 1 < code.length; run += 2) words.push(codeWords.range(code[run]!.to, code[run + 1]!.from));
             }
         }
         first = last + 1;
     }
     // A span inside another closes before the outer one does.
     return { hidden: Decoration.set(hidden, true), words: Decoration.set(words, true) };
+}
+
+/** The mark that draws `styles` with Obsidian's classes, one for each set of them. */
+function styleMark(styles: readonly SpanStyle[]): Decoration {
+    const classes = styles.map(style => `cm-${style}`).join(' ');
+    let mark = styleMarks.get(classes);
+    if (!mark) styleMarks.set(classes, (mark = Decoration.mark({ class: classes })));
+    return mark;
 }
 
 /** The element a press or click of the main button lands on, or none with Option or Shift, which select. */
