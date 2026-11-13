@@ -129,13 +129,20 @@ export function spanMarks(document: (state: EditorState) => PresentationDocument
             }
 
             /**
-             * Obsidian finds no link to open in words it draws as a span's own link, and keeps the click from placing the
-             * caret: a link's words open its destination, as Obsidian opens a link, and the span's other words take the caret.
+             * Obsidian finds no link to open in words it draws as a span's own link, or in a link whose words hold a span,
+             * and keeps the click from placing the caret: a link's words open its destination, as Obsidian opens a link, and
+             * the span's other words take the caret.
              */
             click(event: MouseEvent, view: EditorView): boolean {
                 const node = event.targetNode;
                 const element = node?.instanceOf(Element) ? node : node?.parentElement;
-                if (event.button !== 0 || event.altKey || event.shiftKey || !element?.closest('.markdownpoint-span-linked')) return false;
+                if (
+                    event.button !== 0 ||
+                    event.altKey ||
+                    event.shiftKey ||
+                    !element?.closest('.markdownpoint-span-linked, .markdownpoint-span-link')
+                )
+                    return false;
                 const link = element.closest('.markdownpoint-span-link');
                 // A link's words break into a mark for each line they run over.
                 const at = link ? view.posAtDOM(link) : -1;

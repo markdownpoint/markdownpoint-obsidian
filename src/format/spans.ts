@@ -26,6 +26,7 @@ import { decodeCharacterReferences, destinationEnd, literalEnd, presentationSpan
  * `wordsFrom` and `wordsTo` bound what an author reads: the words without the brackets, the attributes and the emphasis
  * delimiters that enclose all of the span's words. A link in a span's words, `[words](https://example.com)`, reads as one
  * too, with its destination as `href`: Obsidian takes the span's brackets for a link of their own and the link for words.
+ * So does a link whose words hold a span, `[[*a*]{}b](slide:one)`: Obsidian's link ends at the first `]`, the span's.
  */
 export interface WordSpan {
     readonly from: number;
@@ -94,7 +95,8 @@ function linkAt(source: string, from: number, close: number, to: number): WordSp
 /**
  * The spans in one field's Markdown, at offsets into it, as the MarkdownPoint app reads them: never in code, HTML, a
  * reference definition or a link's destination, and inside another span or a link's words too, with the links in a
- * span's words. A block that holds a code block anywhere keeps all of its source in view.
+ * span's words and those whose words hold a span. A block that holds a code block anywhere keeps all of its source in
+ * view.
  */
 export function fieldSpans(source: string): WordSpan[] {
     if (!source.includes(']{')) return [];
@@ -136,7 +138,8 @@ export function fieldSpans(source: string): WordSpan[] {
             }
         from = to;
     }
-    for (const link of links) if (spans.some(span => span.wordsFrom <= link.from && link.to <= span.wordsTo)) spans.push(link);
+    const within = (inner: WordSpan, outer: WordSpan): boolean => outer.wordsFrom <= inner.from && inner.to <= outer.wordsTo;
+    for (const link of links) if (spans.some(span => within(link, span) || within(span, link))) spans.push(link);
     // Each code span's runs go with the innermost span whose words hold it, which starts its words last.
     const runs = new Map<WordSpan, { from: number; to: number }[]>();
     for (const code of codes) {

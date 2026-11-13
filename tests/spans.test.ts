@@ -90,6 +90,7 @@ test("a span's words drop the delimiters that enclose all of them, and keep any 
 
 test('spans stand outside code, HTML and destinations, and inside links and other spans', () => {
     assert.deepEqual(read('[[*a*]{}b](slide:one) and [[*c*]{}d]{color=accent}'), [
+        ['[[*a*]{}b](slide:one)', '[*a*]{}b'],
         ['[*a*]{}', 'a'],
         ['[[*c*]{}d]{color=accent}', '[*c*]{}d'],
         ['[*c*]{}', 'c']
@@ -158,7 +159,7 @@ test("a link in a span's words reads as one, with its destination, as no other l
         '[a \\\\![i](p.png) b]{color=accent}',
         '[`[x](u)`]{color=accent}',
         '[[a](b c)]{color=accent}',
-        '[go](https://example.com) and [[*c*]{}d](slide:one) [e]{}',
+        '[go](https://example.com) and [e]{}',
         'See [the [](https://example.com) plan]{} now',
         'See [the [plan](https://example.com\n"Title") now]{} and [[it](\nhttps://example.com)]{}'
     ])
@@ -283,6 +284,35 @@ test("Live Preview hides the backticks of code in a span's words, which Obsidian
     const near = spanDecorations(EditorState.create({ doc, selection: { anchor: doc.indexOf('b`]') } }), spans);
     assert.deepEqual(ranges(near.hidden, doc).slice(0, 4), ['[', ']{color=accent}', '[', '``']);
     assert.equal(ranges(near.hidden, doc).length, 16);
+});
+
+test("Live Preview reads a link whose words hold a span as a link, which Obsidian reads only up to the span's `]`", () => {
+    const classes = (doc: string): [string, string][] => {
+        const found: [string, string][] = [];
+        const { words } = spanDecorations(EditorState.create({ doc, selection: { anchor: 0 } }), fieldSpans(doc));
+        for (const cursor = words.iter(); cursor.value; cursor.next())
+            found.push([doc.slice(cursor.from, cursor.to), String((cursor.value.spec as { class?: string }).class)]);
+        return found;
+    };
+    const grouped = 'A [[*a*]{}b](slide:one) c';
+    assert.deepEqual(
+        ranges(spanDecorations(EditorState.create({ doc: grouped, selection: { anchor: 0 } }), fieldSpans(grouped)).hidden, grouped),
+        [...['[', '[*', '*]{}', '](slide:one)']]
+    );
+    assert.deepEqual(classes(grouped), [
+        ['[*a*]{}b', 'markdownpoint-span-link'],
+        ['a', 'markdownpoint-span']
+    ]);
+    // Code cut into a group in a link, as MarkdownPoint writes a pipe after an odd run of backslashes in a table cell.
+    const coded = 'see [` x\\ `[`\\|`]{}](https://example.com) now';
+    assert.deepEqual(
+        ranges(spanDecorations(EditorState.create({ doc: coded, selection: { anchor: 0 } }), fieldSpans(coded)).hidden, coded),
+        [...['[', '`', '`', '[', '`', '`', ']{}', '](https://example.com)']]
+    );
+    assert.deepEqual(
+        fieldSpans(coded).map(span => span.href ?? null),
+        ['https://example.com', null]
+    );
 });
 
 interface FakeNode {
