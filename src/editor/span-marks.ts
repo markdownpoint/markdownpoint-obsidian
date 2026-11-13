@@ -62,7 +62,8 @@ export class SpanIndex {
                     from: field.from + span.from,
                     to: field.from + span.to,
                     wordsFrom: field.from + span.wordsFrom,
-                    wordsTo: field.from + span.wordsTo
+                    wordsTo: field.from + span.wordsTo,
+                    ...(span.code ? { code: span.code.map(run => ({ from: field.from + run.from, to: field.from + run.to })) } : {})
                 });
         }
         this.known = next;
@@ -71,9 +72,10 @@ export class SpanIndex {
 }
 
 /**
- * Hide each span's brackets, attributes and enclosing delimiters, so its word reads as styled words, and the brackets and
- * destination of a link in its words, so only the link's words read as a link. A selection on any span of a word shows
- * the whole word's source, as Obsidian shows its own marks where the caret is.
+ * Hide each span's brackets, attributes and enclosing delimiters, and the backticks of code in its words, so its word
+ * reads as styled words, and the brackets and destination of a link in its words, so only the link's words read as a
+ * link. A selection on any span of a word shows the whole word's source, as Obsidian shows its own marks where the caret
+ * is.
  */
 export function spanDecorations(state: EditorState, spans: readonly WordSpan[]): { hidden: DecorationSet; words: DecorationSet } {
     const hidden: Range<Decoration>[] = [];
@@ -88,6 +90,7 @@ export function spanDecorations(state: EditorState, spans: readonly WordSpan[]):
             const word = spans.slice(first, last + 1);
             for (const span of word) {
                 hidden.push(hiddenMark.range(span.from, span.wordsFrom), hiddenMark.range(span.wordsTo, span.to));
+                for (const run of span.code ?? []) hidden.push(hiddenMark.range(run.from, run.to));
                 const linked = word.some(link => link.href !== undefined && span.wordsFrom <= link.from && link.to <= span.wordsTo);
                 words.push((span.href !== undefined ? linkWords : linked ? linkedWords : spanWords).range(span.wordsFrom, span.wordsTo));
             }
@@ -176,7 +179,8 @@ interface RenderedTextLocation {
 /**
  * Take a span's `[` and `]{…}` out of the words reading view rendered from `source`, Obsidian having read them as plain
  * characters: only when the words then read as the source's own do, whichever brackets the rendering pairs. Otherwise
- * the words keep every character.
+ * the words keep every character. A table cell's code also drops the backslash Obsidian keeps of each `\|`, which GFM
+ * and MarkdownPoint read as `|`.
  */
 export function hideRenderedSpans(element: HTMLElement, source: string): void {
     // Reading view renders a link in a span's words as a link.
@@ -185,7 +189,8 @@ export function hideRenderedSpans(element: HTMLElement, source: string): void {
     let words = '';
     const opened: RenderedTextLocation[] = [];
     const removals: (RenderedTextLocation & { readonly length: number })[] = [];
-    const visit = (node: Node, code: boolean): void => {
+    const escaped: Text[] = [];
+    const visit = (node: Node, code: boolean, cell: boolean): void => {
         if (node.nodeType === TEXT_NODE) {
             const text = node as Text;
             for (let at = 0; !code && at < text.data.length; at++) {
@@ -198,12 +203,13 @@ export function hideRenderedSpans(element: HTMLElement, source: string): void {
                     at += attributes;
                 }
             }
-            words += text.data;
+            if (code && cell && text.data.includes('\\|')) escaped.push(text);
+            words += code && cell ? text.data.replaceAll('\\|', '|') : text.data;
         }
-        const inCode = code || (node.nodeType === ELEMENT_NODE && (node.nodeName === 'CODE' || node.nodeName === 'PRE'));
-        node.childNodes.forEach(child => visit(child, inCode));
+        const name = node.nodeType === ELEMENT_NODE ? node.nodeName : '';
+        node.childNodes.forEach(child => visit(child, code || name === 'CODE' || name === 'PRE', cell || name === 'TD' || name === 'TH'));
     };
-    visit(element, false);
+    visit(element, false, false);
     if (removals.length !== count * 2) return;
     // From the end, so an earlier offset in the same text stays where it was.
     removals.sort((a, b) => b.offset - a.offset);
@@ -212,6 +218,7 @@ export function hideRenderedSpans(element: HTMLElement, source: string): void {
     const bare = (text: string) => text.replace(/\s+/g, '');
     if (bare(shown) !== bare(markdownWords(source))) return;
     for (const removal of removals) removal.node.deleteData(removal.at, removal.length);
+    for (const text of escaped) text.data = text.data.replaceAll('\\|', '|');
 }
 
 /** Lines `first` to `last` of `text`, as a section's source. */

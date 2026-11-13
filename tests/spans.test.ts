@@ -190,6 +190,14 @@ test("the index finds a presentation's spans in text, notes, controls and sectio
         .read(EditorState.create({ doc: linked }), indexPresentation(linked, 0)!)
         .find(span => span.href !== undefined);
     assert.deepEqual(link && [linked.slice(link.wordsFrom, link.wordsTo), link.href], ['here', 'https://example.com']);
+    // A code span's backticks in a span's words stand where the presentation has them.
+    const coded = deck.replace('[here]{color=accent}', '[`he`re]{color=accent}');
+    const code = coded.indexOf('`he`');
+    const runs = new SpanIndex().read(EditorState.create({ doc: coded }), indexPresentation(coded, 0)!).flatMap(span => span.code ?? []);
+    assert.deepEqual(runs, [
+        { from: code, to: code + 1 },
+        { from: code + 3, to: code + 4 }
+    ]);
 });
 
 function ranges(set: DecorationSet, doc: string): string[] {
@@ -255,6 +263,26 @@ test("Live Preview hides a link's marks in a span's words with the span's, and o
         ranges(spanDecorations(EditorState.create({ doc: empty, selection: { anchor: 0 } }), fieldSpans(empty)).words, empty),
         ['the [](https://example.com) plan']
     );
+});
+
+test("Live Preview hides the backticks of code in a span's words, which Obsidian keeps in view inside brackets, and only there", () => {
+    // Code outside a span, code in a group, a longer run, code in a color span and in a group inside it, and a backtick
+    // no run closes.
+    const doc = 'Code [table]{color=accent}, and ` a\\ `[`\\|b`]{} out ``a`b`` [x``c`d``]{} [` x\\ `[`\\|`]{}]{color=accent} [a`b]{}';
+    const spans = fieldSpans(doc);
+    const away = spanDecorations(EditorState.create({ doc, selection: { anchor: 0 } }), spans);
+    // Each run once, with the innermost span that holds it; the padding stays, as Obsidian keeps it outside brackets.
+    assert.deepEqual(ranges(away.hidden, doc), [
+        ...['[', ']{color=accent}'],
+        ...['[', '`', '`', ']{}'],
+        ...['[', '``', '``', ']{}'],
+        ...['[', '`', '`', '[', '`', '`', ']{}', ']{color=accent}'],
+        ...['[', ']{}']
+    ]);
+    // The caret on the word shows its backticks with the rest of its source.
+    const near = spanDecorations(EditorState.create({ doc, selection: { anchor: doc.indexOf('b`]') } }), spans);
+    assert.deepEqual(ranges(near.hidden, doc).slice(0, 4), ['[', ']{color=accent}', '[', '``']);
+    assert.equal(ranges(near.hidden, doc).length, 16);
 });
 
 interface FakeNode {
@@ -337,6 +365,41 @@ test('reading view drops the marks of color and weight spans as it does a group,
     // Reading view renders a link in a span's words as a link: only the span's marks remain as characters.
     const linked = element('P', text('Read the ['), element('A', text('launch notes')), text(']{color=accent} first.'));
     assert.equal(hidden('Read the [[launch notes](https://example.com)]{color=accent} first.', linked), 'Read the launch notes first.');
+});
+
+test("reading view drops a table's span marks, and the backslash Obsidian keeps of each pipe's escape in a cell's code", () => {
+    // Code whose pipe follows an odd run of backslashes, cut into groups as MarkdownPoint writes it, and rendered as
+    // Obsidian 1.15 renders it: GFM reads `\|` in a cell as `|`, code included, and Obsidian keeps code's backslash.
+    const source =
+        [
+            '| Case | Cell |',
+            '| :--- | :--- |',
+            '| one cut | ` \\ `[`\\|`]{} |',
+            '| inside | ` a\\ `[`\\|b`]{} |',
+            '| two cuts | ` \\ `[` \\|\\ `]{}`\\|` |',
+            '| link | see [` x\\ `[`\\|`]{}](https://example.com) now |',
+            '| color | [` x\\ `[`\\|`]{}]{color=accent} |',
+            '| control | [plain]{color=accent} words |'
+        ].join('\n') + '\n';
+    const code = (data: string) => element('CODE', text(data));
+    const row = (name: string, ...cell: FakeNode[]) => element('TR', element('TD', text(name)), element('TD', ...cell));
+    const rows = [
+        row('one cut', code('\\'), text('['), code('\\|'), text(']{}')),
+        row('inside', code('a\\'), text('['), code('\\|b'), text(']{}')),
+        row('two cuts', code('\\'), text('['), code('\\|\\'), text(']{}'), code('\\|')),
+        row('link', text('see '), element('A', code('x\\'), text('['), code('\\|'), text(']{}')), text(' now')),
+        row('color', text('['), code('x\\'), text('['), code('\\|'), text(']{}]{color=accent}')),
+        row('control', text('[plain]{color=accent} words'))
+    ];
+    const head = element('THEAD', element('TR', element('TH', text('Case')), element('TH', text('Cell'))));
+    hideRenderedSpans(element('DIV', element('TABLE', head, element('TBODY', ...rows))) as unknown as HTMLElement, source);
+    assert.deepEqual(
+        rows.map(each => shown(each.childNodes[1]!)),
+        ['\\|', 'a\\|b', '\\|\\|', 'see x\\| now', 'x\\|', 'plain words']
+    );
+    // Outside a table, code keeps its backslash, as it reads.
+    const paragraph = element('P', code('a\\'), text('['), code('\\|b'), text(']{}'));
+    assert.equal(hidden('` a\\ `[`\\|b`]{}', paragraph), 'a\\\\|b');
 });
 
 test('outline titles read the words of groups and spans, not their marks', () => {

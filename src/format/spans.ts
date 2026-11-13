@@ -33,6 +33,11 @@ export interface WordSpan {
     readonly wordsFrom: number;
     readonly wordsTo: number;
     readonly href?: string;
+    /**
+     * The backtick runs of each code span in its own words, not in a span inside them. Obsidian keeps every mark inside
+     * brackets it reads as an unresolved link in view, a code span's backticks among them, while it styles the code.
+     */
+    readonly code?: readonly { readonly from: number; readonly to: number }[];
 }
 
 /** Code, HTML and a reference definition keep their characters as written; so does a block that holds one. */
@@ -89,7 +94,7 @@ function linkAt(source: string, from: number, close: number, to: number): WordSp
 /**
  * The spans in one field's Markdown, at offsets into it, as the MarkdownPoint app reads them: never in code, HTML, a
  * reference definition or a link's destination, and inside another span or a link's words too, with the links in a
- * span's words. A block that holds code anywhere keeps all of its source in view.
+ * span's words. A block that holds a code block anywhere keeps all of its source in view.
  */
 export function fieldSpans(source: string): WordSpan[] {
     if (!source.includes(']{')) return [];
@@ -97,6 +102,7 @@ export function fieldSpans(source: string): WordSpan[] {
     if (tokens.map(token => token.raw).join('') !== source) return [];
     const spans: WordSpan[] = [];
     const links: WordSpan[] = [];
+    const codes: { from: number; to: number; run: number }[] = [];
     let from = 0;
     for (const token of tokens) {
         const to = from + token.raw.length;
@@ -107,6 +113,9 @@ export function fieldSpans(source: string): WordSpan[] {
             for (let at = from; at < to;) {
                 const end = literalEnd(block, at);
                 if (end > at) {
+                    // A run of backticks no run of its length closes is no code span.
+                    const run = block[at] === '`' ? /^`+/.exec(block.slice(at))![0].length : 0;
+                    if (run && end - at > run) codes.push({ from: at, to: end, run });
                     at = end;
                     continue;
                 }
@@ -128,5 +137,15 @@ export function fieldSpans(source: string): WordSpan[] {
         from = to;
     }
     for (const link of links) if (spans.some(span => span.wordsFrom <= link.from && link.to <= span.wordsTo)) spans.push(link);
-    return spans.sort((a, b) => a.from - b.from);
+    // Each code span's runs go with the innermost span whose words hold it, which starts its words last.
+    const runs = new Map<WordSpan, { from: number; to: number }[]>();
+    for (const code of codes) {
+        let holder: WordSpan | undefined;
+        for (const span of spans)
+            if (span.wordsFrom <= code.from && code.to <= span.wordsTo && (!holder || span.wordsFrom > holder.wordsFrom)) holder = span;
+        if (!holder) continue;
+        if (!runs.has(holder)) runs.set(holder, []);
+        runs.get(holder)!.push({ from: code.from, to: code.from + code.run }, { from: code.to - code.run, to: code.to });
+    }
+    return spans.map(span => (runs.has(span) ? { ...span, code: runs.get(span)! } : span)).sort((a, b) => a.from - b.from);
 }
