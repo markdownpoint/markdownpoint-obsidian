@@ -95,12 +95,50 @@ test('a turned area turns about its anchor point, a part a level leaves out over
     });
 });
 
-test("a master that declares no size lays its slides out at 1920 × 1080, as MarkdownPoint reads it, and one it can't read gives none", () => {
+test("a master's size lays its slides out as MarkdownPoint reads it, and a size MarkdownPoint refuses gives no schematic", () => {
     const { size: _size, ...sizeless } = master;
     const at = (value: Record<string, unknown>) =>
         slideStructure({ layout: 'title' }, { ...theme, master: { ...theme.master, source: JSON.stringify(value), value } });
     assert.deepEqual([at(sizeless)?.width, at(sizeless)?.height], [1920, 1080]);
-    assert.equal(at({ ...master, size: { width: 1600 } }), null);
+    // [the master's version, its size, MarkdownPoint core's reading (`masterJsonSize`)]
+    const readings: [string, unknown, [number, number] | null][] = [
+        ['1.0', { width: 1280, height: 720 }, [1280, 720]],
+        ['1.0', { width: 1920.0000004, height: 1080 }, [1920, 1080]],
+        ['1.0', { width: 1919.9999996, height: 1080 }, [1920, 1080]],
+        ['1.0', { width: 8192.0000004, height: 1080 }, [8192, 1080]],
+        ['1.0', { width: 1920.4, height: 1080 }, null],
+        ['1.0', { width: 8193, height: 1080 }, null],
+        ['1.0', { width: 0, height: 1080 }, null],
+        ['1.0', { width: 0.0000004, height: 1080 }, null],
+        ['1.0', { width: 1280, height: 720, depth: 1 }, null],
+        ['1.0', { width: '1280', height: 720 }, null],
+        ['1.0', { width: 1600 }, null],
+        ['1.0', 'wide', null],
+        ['1.0', null, null],
+        // JSON.parse reads 1e999 as Infinity, which MarkdownPoint refuses.
+        ['1.0', { width: Infinity, height: 1080 }, null],
+        ['1.1', { width: 8193, height: 1080 }, [1920, 1080]],
+        ['1.1', { width: 1280, height: 720.5 }, [1920, 1080]],
+        ['1.1', { width: -5, height: 1080 }, [1920, 1080]],
+        ['1.1', { width: 1280.0000004, height: 720 }, [1280, 720]],
+        ['1.1', { width: 1280, height: 720, depth: 1 }, [1280, 720]],
+        ['1.10', { width: 1280, height: 720 }, [1280, 720]],
+        // The width is read first, and a side outside the range decides before the next is read.
+        ['1.1', { width: 720.5, height: null }, [1920, 1080]],
+        ['1.1', { width: 1280.5, height: '720' }, [1920, 1080]],
+        ['1.1', { height: 720.5, width: 'x' }, null],
+        ['1.1', { width: Infinity, height: 720.5 }, null],
+        ['1.1', { width: null, height: 720 }, null],
+        ['1.1', { width: '1280', height: 720 }, null],
+        ['1.1', { width: 1280 }, null],
+        ['1.1', { height: 720.5 }, null],
+        ['1.1', [], null],
+        ['1.1', 'wide', null]
+    ];
+    for (const [markdownpoint, size, reading] of readings) {
+        const preview = at({ ...master, markdownpoint, size });
+        assert.deepEqual(preview ? [preview.width, preview.height] : null, reading, `${markdownpoint} ${String(JSON.stringify(size))}`);
+    }
 });
 
 test('text areas retain their whole frame and column divisions', () => {

@@ -17,6 +17,7 @@
  */
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
+import { formatStanding } from './format-version.ts';
 import { isRecord } from './recognition.ts';
 import { columnCountAsRead, heldAnchor, ownAnchor, pointMoved, standingFrame, TEXT_POINT_KEYS } from './text-growth.ts';
 
@@ -40,6 +41,34 @@ export interface SlideStructure {
 }
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
+// The longest side a slide has, in canvas units.
+const MAX_SLIDE_SIDE = 8192;
+
+/**
+ * The slide size a master gives, as MarkdownPoint reads it, or null where MarkdownPoint refuses it. A master that
+ * declares no size gives 1920 × 1080. Each side is read to the millionth and must then be a whole number from 1 to
+ * 8192, width first. A version the plugin reads fully refuses any other side and any key beside width and height. A
+ * newer minor gives 1920 × 1080 for the whole size from the first side outside that range, and passes other keys over.
+ * Every version refuses a size that isn't a record and a side that is left out or isn't a finite number.
+ */
+function masterSlideSize(master: Record<string, unknown>): { width: number; height: number } | null {
+    const size = master.size;
+    if (size === undefined) return { width: 1920, height: 1080 };
+    if (!isRecord(size) || !Object.hasOwn(size, 'width') || !Object.hasOwn(size, 'height')) return null;
+    const newerMinor = formatStanding(master.markdownpoint) === 'newer-minor';
+    if (!newerMinor && Object.keys(size).some(key => key !== 'width' && key !== 'height')) return null;
+    const sides: number[] = [];
+    for (const side of [size.width, size.height]) {
+        if (!finite(side)) return null;
+        // To the millionth, as MarkdownPoint keeps every number a file holds.
+        const value = Number(side.toFixed(6));
+        if (!Number.isInteger(value) || value < 1 || value > MAX_SLIDE_SIDE) return newerMinor ? { width: 1920, height: 1080 } : null;
+        sides.push(value);
+    }
+    const [width = 0, height = 0] = sides;
+    return { width, height };
+}
 
 /**
  * A text's override as MarkdownPoint applies it: one that changes what decides the point its frame's x and y name, and
@@ -69,9 +98,8 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
     if (!theme || !isRecord(record) || typeof record.layout !== 'string') return null;
     const master = theme.master.value;
     const layout = theme.layouts.get(record.layout)?.value;
-    // A master that declares no size has MarkdownPoint's, 1920 × 1080.
-    const size = master.size === undefined ? { width: 1920, height: 1080 } : master.size;
-    if (!layout || !isRecord(size) || !finite(size.width) || !finite(size.height) || size.width <= 0 || size.height <= 0) return null;
+    const size = masterSlideSize(master);
+    if (!layout || !size) return null;
     const objects = new Map<string, Record<string, unknown>>();
     const ownIds = new Set<string>();
     for (const level of [master, layout, record]) {
