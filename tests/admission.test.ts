@@ -30,15 +30,20 @@ import type { PresentationEditor } from '../src/editor/presentation-editor.ts';
 import { getTranslations } from '../src/i18n/index.ts';
 import type * as Readers from '../src/readers/markdownpoint-readers.js';
 
-// Each pair MarkdownPoint's readers read, counted, read as they read it
+// Each pair MarkdownPoint's readers read, and each presentation file they read for it, counted, read as they read them
 const pairsRead = vi.hoisted(() => ({ count: 0 }));
+const filesRead = vi.hoisted(() => ({ count: 0 }));
 vi.mock('../src/readers/markdownpoint-readers.js', async importOriginal => {
     const readers = await importOriginal<typeof Readers>();
     return {
         ...readers,
-        readPresentationPair: (...pair: Parameters<typeof readers.readPresentationPair>) => {
+        readPresentationFile: (...file: Parameters<typeof readers.readPresentationFile>) => {
+            filesRead.count++;
+            return readers.readPresentationFile(...file);
+        },
+        readPresentationMarkdown: (...pair: Parameters<typeof readers.readPresentationMarkdown>) => {
             pairsRead.count++;
-            return readers.readPresentationPair(...pair);
+            return readers.readPresentationMarkdown(...pair);
         }
     };
 });
@@ -333,11 +338,42 @@ test("files unchanged since their last read aren't read as a pair again, by the 
         [companionPath, companion(['a', 'b'])]
     ] as const) {
         const before = pairsRead.count;
+        const filesBefore = filesRead.count;
         app.vault.write(file, contents);
         await settle();
         assert.equal(await readsAsPresentation(app.vault as unknown as Vault, path), false, file);
         assert.equal(pairsRead.count, before + 1, file);
+        // The presentation file is read anew only when it changed
+        assert.equal(filesRead.count, filesBefore + (file === companionPath ? 1 : 0), file);
     }
+});
+
+test('a save of the words alone reads the presentation file no more, and a change Obsidian reports to it reads it anew', async () => {
+    const { app, reader } = vault({ [path]: markdown(['a', 'b']), [companionPath]: companion(['a', 'b']) });
+    const view = app.open(path);
+    await settle();
+    assert.equal(opens(reader, view), true);
+    const files = filesRead.count;
+    const pairs = pairsRead.count;
+    // Saves as Obsidian makes them while the author types
+    for (let index = 0; index < 3; index++) {
+        app.type(view, `${markdown(['a', 'b'])}\n<!-- notes -->\nNotes ${index}.\n`);
+        app.save(view);
+        await settle();
+        assert.equal(opens(reader, view), true);
+    }
+    assert.ok(pairsRead.count >= pairs + 3, 'each save reads the pair');
+    assert.equal(filesRead.count, files, 'and none reads the presentation file');
+    assert.equal(await readsAsPresentation(app.vault as unknown as Vault, path), true);
+    assert.equal(filesRead.count, files, 'nor does the reading view');
+    // A change to the presentation file, then one that keeps its time and size: each reads it anew
+    app.vault.write(companionPath, companion(['a', 'b', 'c']));
+    await settle();
+    assert.equal(filesRead.count, files + 1);
+    app.vault.write(companionPath, companion(['a', 'b', 'd']), true);
+    await settle();
+    assert.equal(filesRead.count, files + 2);
+    assert.equal(await readsAsPresentation(app.vault as unknown as Vault, path), false, 'a record no marker names refuses the pair');
 });
 
 test("a change Obsidian reports reads the pair anew, though the write kept both files' time and size", async () => {
