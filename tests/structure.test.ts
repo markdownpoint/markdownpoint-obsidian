@@ -186,6 +186,15 @@ test('a repeated object stays out of the schematic, since only the MarkdownPoint
     assert.equal(regions({ ...dots, repeater: { copies: 3, position: { x: 120, y: 0 } } }), 0);
 });
 
+test('a chart scaled by its own one number stays out of the schematic, as a scaled shape does, and stands at a scale of 1', () => {
+    const chart = { ...field, id: 'figure', type: 'chart', placeholder: false, frame: { x: 100, y: 540, width: 800, height: 140 } };
+    const regions = (object: Record<string, unknown>) =>
+        slideStructure({ layout: 'title', overrides: { footer: null, title: null }, objects: [object] }, theme)!.regions.length;
+    assert.equal(regions(chart), 1);
+    assert.equal(regions({ ...chart, scale: 0.05 }), 0);
+    assert.equal(regions({ ...chart, scale: 1 }), 1);
+});
+
 test('an own object cannot replace an inherited frame by colliding with its identity', () => {
     const preview = slideStructure({ layout: 'title', objects: [{ ...field, frame: { x: 0, y: 0, width: 10, height: 10 } }] }, theme)!;
     assert.equal(preview.regions[0]!.width, 800);

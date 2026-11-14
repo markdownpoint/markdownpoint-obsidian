@@ -93,6 +93,13 @@ function heldPoint(
     return held;
 }
 
+/** Whether a scale draws an object at another size: a single object's along its axes, or an instance's or a chart's one number. */
+function scaled(scale: unknown): boolean {
+    if (scale == null) return false;
+    if (typeof scale === 'number') return scale !== 1;
+    return !isRecord(scale) || scale.x !== 1 || scale.y !== 1;
+}
+
 /** Resolve only directly framed, flat objects. Unknown geometry stays out of the schematic. */
 export function slideStructure(record: unknown, theme: EmbeddedTheme | null): SlideStructure | null {
     if (!theme || !isRecord(record) || typeof record.layout !== 'string') return null;
@@ -157,7 +164,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
             object.parent ||
             object['auto-layout'] ||
             object.repeater ||
-            (object.scale != null && (!isRecord(object.scale) || object.scale.x !== 1 || object.scale.y !== 1)) ||
+            scaled(object.scale) ||
             !isRecord(frame) ||
             !finite(frame.x) ||
             !finite(frame.y) ||
