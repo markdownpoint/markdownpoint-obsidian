@@ -287,16 +287,24 @@ test('an unfinished later fence still refuses swallowed markers after a closed e
     );
 });
 
-test('fence closure follows the lexer for mixed closing runs and trailing tabs', () => {
+test('a fence closes on a run of its own character with spaces or tabs after it, as MarkdownPoint reads it', () => {
     for (const prefix of ['', 'Before.\n']) {
         const first = `<!-- slide: first -->\n<!-- text: body -->\n${prefix}\`\`\`md\n<!-- slide: literal -->\n`;
         const rest = '<!-- slide: second -->\n<!-- text: body -->\n```md\n<!-- text: literal -->\n```\n<!-- slide: third -->\n';
+        // A run of the other character after the closing run leaves the block open, its markers code, to the next closer.
         assert.deepEqual(
             indexPresentation(first + '```~\n' + rest, 0)!.slides.map(slide => slide.id),
-            ['first', 'second', 'third']
+            ['first', 'third']
         );
-        assert.equal(indexPresentation(first + '```\t\n<!-- slide: second -->\n', 0), null);
-        assert.equal(indexPresentation(first + '```\t\n', 0), null);
+        assert.deepEqual(
+            indexPresentation(first + '```\t\n<!-- slide: second -->\n', 0)!.slides.map(slide => slide.id),
+            ['first', 'second']
+        );
+        assert.deepEqual(
+            indexPresentation(first + '```\t\n', 0)!.slides.map(slide => slide.id),
+            ['first']
+        );
+        assert.equal(indexPresentation(first + '```~\n', 0), null);
     }
 });
 

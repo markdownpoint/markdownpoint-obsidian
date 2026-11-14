@@ -54,10 +54,27 @@ function keptDefinition(lexer: Lexer, token: Tokens.Def): Tokens.Def {
 }
 
 /**
+ * Marked's fenced code block, closed as CommonMark closes one: by a run of its opening character at least as long, then
+ * only spaces or tabs. Marked's own closer takes either character after the run, and spaces alone.
+ */
+const FENCES =
+    /^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1(?:(?<=`)`*|(?<=~)~*)[ \t]*(?=\n|$)|$)/;
+
+/**
  * Block rules where the MarkdownPoint app reads Markdown differently from Marked's defaults. They decide where code
  * and HTML blocks are, and so which marker lines are slide boundaries; every block-level lexer here uses them.
  */
 export const blockRules: TokenizerObject = {
+    fences(source) {
+        // Marked reads the block's info and code, with CommonMark's closer
+        const { rules } = this;
+        this.rules = { ...rules, block: { ...rules.block, fences: FENCES } };
+        try {
+            return Tokenizer.prototype.fences.call(this, source);
+        } finally {
+            this.rules = rules;
+        }
+    },
     list(source) {
         return nested(this.lexer, () => {
             // An empty item's marker is read without the space after it, so the list ends where the app's list ends

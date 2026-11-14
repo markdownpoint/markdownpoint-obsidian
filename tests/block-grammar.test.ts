@@ -95,3 +95,20 @@ test('a later definition of a label already defined stays as written, so every b
         markdown
     );
 });
+
+test('a code fence closes as MarkdownPoint closes one: a run of its own character, as long, then spaces or tabs', () => {
+    for (const [lines, closed] of [
+        [['```', '```\t'], true],
+        [['~~~~', '~~~~~ \t'], true],
+        [['```', '```~'], false],
+        [['~~~', '~~~`'], false],
+        [['```', '``'], false]
+    ] as const) {
+        const tokens = blockTokens([...lines, '<!-- slide: x -->'].join('\n')).filter(token => token.type !== 'space');
+        assert.deepEqual(
+            tokens.map(token => token.type),
+            closed ? ['code', 'html'] : ['code'],
+            JSON.stringify(lines)
+        );
+    }
+});
