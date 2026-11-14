@@ -76,6 +76,20 @@ test('assigned images prioritize background, named layout placeholders, then oth
     ]);
 });
 
+test("a placeholder's picture a layout left to the slide shows as the slide's own, its mark on it", () => {
+    const companion = {
+        slides: { one: { objects: [{ id: 'hero', type: 'image', placeholder: true, file: 'media/hero.svg' }] } }
+    };
+    const images = assignedSlideImages(path, companion, 'one', theme);
+    assert.deepEqual(
+        images.map(image => [image.path, image.category]),
+        [
+            [root + 'themes/field-notes/art/light.svg', 'image'],
+            [root + 'media/hero.svg', 'image']
+        ]
+    );
+});
+
 test('cleared backgrounds, removed objects and empty placeholders do not show samples or prior generations', () => {
     const companion = {
         background: { image: { file: 'media/back.svg' } },
