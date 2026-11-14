@@ -74,7 +74,11 @@ export const pt: Translations = {
         handoffFailed: 'Não foi possível guardar e abrir a apresentação.',
         themeChanged: 'O tema foi alterado ou não está disponível. Volte a abrir esta caixa de diálogo e escolha-o novamente.',
         newerFormat: ({ version }: { version: string }) =>
-            `Esta apresentação usa um formato MarkdownPoint mais recente (${version}). Atualize o plugin MarkdownPoint para a abrir como apresentação.`
+            `Esta apresentação usa um formato MarkdownPoint mais recente (${version}). Atualize o plugin MarkdownPoint para a abrir como apresentação.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `O MarkdownPoint não consegue ler “${file}” em “${presentation}”. Abra a apresentação na aplicação MarkdownPoint para ver o que corrigir.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `O MarkdownPoint não consegue ler a apresentação em “${presentation}”. Abra-a na aplicação MarkdownPoint para ver o que corrigir.`
     },
     slides: {
         new: 'Novo diapositivo',

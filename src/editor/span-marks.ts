@@ -276,6 +276,6 @@ function sourceLines(text: string, first: number, last: number): string {
 export async function hideReadingSpans(vault: Vault, element: HTMLElement, context: MarkdownPostProcessorContext): Promise<void> {
     if (!element.textContent?.includes(']{')) return;
     const section = context.getSectionInfo(element);
-    if (!section || !(await readsAsPresentation(vault, context.sourcePath, section.text))) return;
+    if (!section || !(await readsAsPresentation(vault, context.sourcePath))) return;
     hideRenderedSpans(element, sourceLines(section.text, section.lineStart, section.lineEnd));
 }

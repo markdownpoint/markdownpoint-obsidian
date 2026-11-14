@@ -75,7 +75,11 @@ export const uk: Translations = {
         handoffFailed: 'Не вдалося зберегти й відкрити презентацію.',
         themeChanged: 'Тема змінилася або недоступна. Відкрийте це вікно знову й виберіть її ще раз.',
         newerFormat: ({ version }: { version: string }) =>
-            `Ця презентація використовує новіший формат MarkdownPoint (${version}). Оновіть додаток MarkdownPoint, щоб відкрити її як презентацію.`
+            `Ця презентація використовує новіший формат MarkdownPoint (${version}). Оновіть додаток MarkdownPoint, щоб відкрити її як презентацію.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint не може прочитати «${file}» у «${presentation}». Відкрийте презентацію в застосунку MarkdownPoint, щоб побачити, що виправити.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint не може прочитати презентацію в «${presentation}». Відкрийте її в застосунку MarkdownPoint, щоб побачити, що виправити.`
     },
     slides: {
         new: 'Новий слайд',

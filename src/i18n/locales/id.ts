@@ -75,7 +75,11 @@ export const id: Translations = {
         handoffFailed: 'Tidak dapat menyimpan dan membuka presentasi.',
         themeChanged: 'Tema berubah atau tidak tersedia. Buka kembali dialog ini dan pilih lagi.',
         newerFormat: ({ version }: { version: string }) =>
-            `Presentasi ini menggunakan format MarkdownPoint yang lebih baru (${version}). Perbarui plugin MarkdownPoint untuk membukanya sebagai presentasi.`
+            `Presentasi ini menggunakan format MarkdownPoint yang lebih baru (${version}). Perbarui plugin MarkdownPoint untuk membukanya sebagai presentasi.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint tidak dapat membaca “${file}” di “${presentation}”. Buka presentasinya di aplikasi MarkdownPoint untuk melihat apa yang perlu diperbaiki.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint tidak dapat membaca presentasi di “${presentation}”. Buka presentasinya di aplikasi MarkdownPoint untuk melihat apa yang perlu diperbaiki.`
     },
     slides: {
         new: 'Slide baru',

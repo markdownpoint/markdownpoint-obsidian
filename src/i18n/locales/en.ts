@@ -72,7 +72,11 @@ export const en = {
         handoffFailed: 'Couldn’t save and open the presentation.',
         themeChanged: 'The theme changed or is unavailable. Reopen this dialog and choose it again.',
         newerFormat: ({ version }: { version: string }) =>
-            `This presentation uses a newer MarkdownPoint format (${version}). Update the MarkdownPoint plugin to open it as a presentation.`
+            `This presentation uses a newer MarkdownPoint format (${version}). Update the MarkdownPoint plugin to open it as a presentation.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint can’t read “${file}” in “${presentation}”. Open the presentation in the MarkdownPoint app to see what to fix.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint can’t read the presentation in “${presentation}”. Open it in the MarkdownPoint app to see what to fix.`
     },
     slides: {
         new: 'New slide',

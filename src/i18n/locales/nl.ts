@@ -74,7 +74,11 @@ export const nl: Translations = {
         handoffFailed: 'Kon de presentatie niet opslaan en openen.',
         themeChanged: 'Het thema is gewijzigd of niet beschikbaar. Open dit venster opnieuw en kies het thema nogmaals.',
         newerFormat: ({ version }: { version: string }) =>
-            `Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling (${version}). Werk de MarkdownPoint-plug-in bij om deze als presentatie te openen.`
+            `Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling (${version}). Werk de MarkdownPoint-plug-in bij om deze als presentatie te openen.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint kan “${file}” in “${presentation}” niet lezen. Open de presentatie in de MarkdownPoint-app om te zien wat er hersteld moet worden.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint kan de presentatie in “${presentation}” niet lezen. Open deze in de MarkdownPoint-app om te zien wat er hersteld moet worden.`
     },
     slides: {
         new: 'Nieuwe dia',

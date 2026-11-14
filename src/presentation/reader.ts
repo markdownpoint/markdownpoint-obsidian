@@ -16,8 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Component, MarkdownView, Notice, getFrontMatterInfo, parseYaml } from 'obsidian';
-import type { App, TAbstractFile, TFile, Vault } from 'obsidian';
+import { Component, MarkdownView, Notice, TFile, getFrontMatterInfo, parseYaml } from 'obsidian';
+import type { App, TAbstractFile, Vault } from 'obsidian';
 import { indexPresentation } from '../format/document.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import { isRecord, newerFormat, presentationCompanionPath, presentationIdentity, presentationMember } from '../format/recognition.ts';
@@ -36,6 +36,8 @@ import { slideStructure } from '../format/structure.ts';
 import { slideTextPlaceholders } from '../format/new-slide.ts';
 import { CompanionDocument } from '../format/companion.ts';
 import { readJsonObject } from '../format/json.ts';
+import { readPresentationPair } from '../readers/markdownpoint-readers.js';
+import type { PairProblem, PairReading } from '../readers/markdownpoint-readers.js';
 
 interface PresentationSource {
     readonly file: TFile;
@@ -43,7 +45,8 @@ interface PresentationSource {
     readonly companionPath: string;
     readonly companion: unknown;
     readonly companionText: string;
-    theme: EmbeddedTheme | null;
+    /** Its theme as read for the layouts its slides use, which holds those MarkdownPoint reads. */
+    themeRead: { readonly theme: EmbeddedTheme; readonly layouts: ReadonlySet<string> } | null;
     markdown: string | null;
     snapshot: PresentationSnapshot | null;
 }
@@ -68,6 +71,8 @@ export class PresentationReader extends Component {
     private readonly newer = new Set<string>();
     // Presentations inside another's folder, which open as notes, told once each session
     private readonly nested = new Set<string>();
+    // Presentations MarkdownPoint can't read, which open as notes, told once each session for each file a reason names
+    private readonly refused = new Set<string>();
 
     constructor(
         private readonly app: App,
@@ -86,11 +91,10 @@ export class PresentationReader extends Component {
             })
         );
         this.registerEvent(this.app.workspace.on('file-open', () => this.refreshActive()));
+        // An edit decides nothing of whether the pair opens, which is read from its files once Obsidian saves the edit
         this.registerEvent(
             this.app.workspace.on('editor-change', (_editor, info) => {
-                if (!(info instanceof MarkdownView) || !info.file) return;
-                if (!this.syncEditor(info) && !this.reads.has(info.file) && this.app.workspace.getMostRecentLeaf() === info.leaf)
-                    this.refresh(info);
+                if (info instanceof MarkdownView && info.file) this.syncEditor(info);
             })
         );
         this.registerEvent(
@@ -126,6 +130,14 @@ export class PresentationReader extends Component {
     }
 
     private onFileChange(file: TAbstractFile, oldPath?: string): void {
+        // A change Obsidian reports to either file of a pair reads it anew, open or not, though a write left the file's time
+        // and size as they were
+        for (const changed of [file.path, oldPath]) {
+            if (changed === undefined || !presentationMember(changed.slice(changed.lastIndexOf('/') + 1))) continue;
+            const slash = changed.lastIndexOf('/');
+            const folder = slash < 0 ? this.app.vault.getRoot() : this.app.vault.getFolderByPath(changed.slice(0, slash));
+            for (const entry of folder?.children ?? []) if (entry instanceof TFile) pairReadings.delete(entry);
+        }
         // Open editors and the retained outline own the relevant sources. Each file's
         // read is independent; background saves cannot supersede another deck's read.
         const candidates = new Set([this.followed, this.requested]);
@@ -145,11 +157,12 @@ export class PresentationReader extends Component {
                     presentationMember(path.slice(path.lastIndexOf('/') + 1)) !== null &&
                     path.slice(0, path.lastIndexOf('/') + 1) === candidate.path.slice(0, candidate.path.lastIndexOf('/') + 1)
             );
-            const themeRoot = source?.theme?.root ?? candidate.path.slice(0, candidate.path.lastIndexOf('/') + 1) + 'themes';
+            const themeRoot = source?.themeRead?.theme.root ?? candidate.path.slice(0, candidate.path.lastIndexOf('/') + 1) + 'themes';
+            // The theme's folder, a file in it, or a folder around it, as a rename of its parent moves it
             const themeChange = [file.path, oldPath].some(
-                path => path !== undefined && (path === themeRoot || path.startsWith(themeRoot + '/'))
+                path => path !== undefined && (path === themeRoot || path.startsWith(themeRoot + '/') || themeRoot.startsWith(path + '/'))
             );
-            if (themeChange && source) source.theme = null;
+            if (themeChange && source) source.themeRead = null;
             const root = candidate.path.slice(0, candidate.path.lastIndexOf('/') + 1);
             const mediaChange = [file.path, oldPath].some(
                 path =>
@@ -173,18 +186,19 @@ export class PresentationReader extends Component {
         }
     }
 
+    /** The author opened or turned to a note: a presentation MarkdownPoint can't read says why as it opens. */
     private refresh(view: MarkdownView): void {
-        void this.refreshView(view).catch((error: unknown) => console.error(error));
+        void this.refreshView(view, true).catch((error: unknown) => console.error(error));
     }
 
-    async refreshView(view: MarkdownView): Promise<void> {
+    async refreshView(view: MarkdownView, opened = false): Promise<void> {
         if (!view.file || !presentationCompanionPath(view.file.path)) return;
         if (this.requested !== view.file) {
             const source = this.sources.get(view.file);
-            if (source) source.theme = null;
+            if (source) source.themeRead = null;
         }
         this.requested = view.file;
-        await this.read(view.file, view);
+        await this.read(view.file, view, opened);
     }
 
     /** Read a retained outline's closed presentation without opening a document tab. */
@@ -205,13 +219,22 @@ export class PresentationReader extends Component {
         void this.read(file, view).catch((error: unknown) => console.error(error));
     }
 
-    private async read(file: TFile, view: MarkdownView | null): Promise<void> {
+    private async read(file: TFile, view: MarkdownView | null, opened = false): Promise<void> {
         const request = { view };
         this.reads.set(file, request);
         const path = file.path;
         const pair = presentationCompanionPath(path) && presentationFiles(this.app.vault, path);
         const companionFile = pair && pair.markdown === file ? pair.companion : null;
         const companionPath = companionFile?.path;
+        // The file's newest request owns its metadata. A reused editor is never a
+        // source for that earlier file, and unloading invalidates every request.
+        const current = () =>
+            this.running &&
+            this.reads.get(file) === request &&
+            file.path === path &&
+            this.app.vault.getAbstractFileByPath(path) === file &&
+            presentationFiles(this.app.vault, path)?.companion === companionFile &&
+            (!view || view.file === file);
         try {
             if (!companionPath || !companionFile) {
                 this.tellNested(path);
@@ -220,23 +243,35 @@ export class PresentationReader extends Component {
             }
             await this.data?.ready.catch(() => undefined);
             await learnVaultCase(this.app.vault);
-            const companionText = await this.app.vault.read(companionFile);
-            // As MarkdownPoint reads it: past a byte order mark, and refused for a key written twice. A save of the words
-            // alone leaves it as it was read.
+            // Taken before the read, so the files read are at least as new as it says
+            const stamp = pairStamp(companionFile, file);
+            const [companionBytes, markdownBytes] = await Promise.all([
+                this.app.vault.readBinary(companionFile),
+                this.app.vault.readBinary(file)
+            ]);
+            if (!current()) return;
+            const companionText = fileText(companionBytes);
+            const markdown = fileText(markdownBytes);
+            const { reading, repairs } = await this.admit(
+                path,
+                stamp,
+                companionFile,
+                companionBytes,
+                companionText,
+                file,
+                markdownBytes,
+                markdown
+            );
+            if (!current()) return;
+            if (!reading.opens) {
+                this.forget(file);
+                if (opened) this.tellRefused(path, reading.problem, markdown, companionText);
+                return;
+            }
+            // Held as it is on disk, so the plugin's saves write back what its records restore. A save of the words alone
+            // leaves it as it was read.
             const known = this.sources.get(file);
             const companion = known?.companionText === companionText ? known.companion : readJsonObject(companionText);
-            const markdown = view ? view.getViewData() : await this.app.vault.read(file);
-            // The file's newest request owns its metadata. A reused editor is never a
-            // source for that earlier file, and unloading invalidates every request.
-            if (
-                !this.running ||
-                this.reads.get(file) !== request ||
-                file.path !== path ||
-                this.app.vault.getAbstractFileByPath(path) !== file ||
-                presentationFiles(this.app.vault, path)?.companion !== companionFile ||
-                (view && view.file !== file)
-            )
-                return;
             if (!companion) {
                 this.forget(file);
                 return;
@@ -247,42 +282,75 @@ export class PresentationReader extends Component {
                           isRecord(record) && typeof record.layout === 'string' ? [record.layout] : []
                       )
                     : [];
-            const previous = this.sources.get(file)?.theme;
+            // The theme read before, while nothing in it changed, for every layout the slides use, read or not
+            const previous = this.sources.get(file)?.themeRead;
             const themePaths = embeddedThemePaths(path, companion, new Set(layouts));
-            const theme =
+            const themeRead =
                 previous &&
-                previous.root === themePaths?.root &&
+                previous.theme.root === themePaths?.root &&
                 isRecord(companion) &&
-                companion.theme === previous.key &&
+                companion.theme === previous.theme.key &&
                 layouts.every(key => previous.layouts.has(key))
                     ? previous
-                    : await readEmbeddedTheme(this.app.vault, path, companion, new Set(layouts));
-            if (
-                !this.running ||
-                this.reads.get(file) !== request ||
-                file.path !== path ||
-                this.app.vault.getAbstractFileByPath(path) !== file ||
-                presentationFiles(this.app.vault, path)?.companion !== companionFile ||
-                (view && view.file !== file)
-            )
-                return;
+                    : await readEmbeddedTheme(this.app.vault, path, companion, new Set(layouts)).then(
+                          theme => theme && { theme, layouts: new Set(layouts) }
+                      );
+            if (!current()) return;
             const source: PresentationSource = {
                 file,
                 path,
                 companionPath,
                 companion,
                 companionText,
-                theme,
+                themeRead,
                 markdown: null,
                 snapshot: null
             };
             this.sources.set(file, source);
             this.update(source, view ? view.getViewData() : markdown, view);
+            // Opened for the records the plugin writes back: its save writes them, whatever it saved before
+            if (repairs) this.data?.retry(path, repairs);
         } catch {
             if (this.running && this.reads.get(file) === request) this.forget(file);
         } finally {
             if (this.reads.get(file) === request) this.reads.delete(file);
         }
+    }
+
+    /**
+     * Whether a pair opens as MarkdownPoint opens it, read from its two files. The plugin's two writes of an edit, its save
+     * of the companion and Obsidian's of the words, land in either order, a moment apart or, after a write that failed,
+     * after a restart: a pair refused only until the plugin writes back the records it keeps for this presentation opens,
+     * and `repairs` names the presentation whose save writes them.
+     */
+    private async admit(
+        path: string,
+        stamp: string,
+        companionFile: TFile,
+        companionBytes: ArrayBuffer,
+        companionText: string,
+        markdownFile: TFile,
+        markdownBytes: ArrayBuffer,
+        markdown: string
+    ): Promise<{ reading: PairReading; repairs?: string }> {
+        const reading = await readPairOnce(stamp, companionFile, markdownFile, () =>
+            Promise.resolve(readPair(path, companionFile, companionBytes, markdownFile, markdownBytes))
+        );
+        const header = !reading.opens && this.data ? frontmatterOf(markdown) : null;
+        const id = header && isRecord(header.frontmatter) ? header.frontmatter.id : undefined;
+        const document = header && typeof id === 'string' ? indexPresentation(markdown, header.bodyStart) : null;
+        if (!this.data || !document || typeof id !== 'string') return { reading };
+        const saved = this.data.reconciled(
+            path,
+            id,
+            companionText,
+            new Set(document.slides.map(slide => slide.id)),
+            new Set(document.compositions.map(part => part.id))
+        );
+        if (saved === companionText) return { reading };
+        const pending = readPair(path, companionFile, new TextEncoder().encode(saved), markdownFile, markdownBytes);
+        // A refusal the plugin's writes leave in place is the one the files on disk have
+        return pending.opens ? { reading: pending, repairs: id } : { reading };
     }
 
     private forget(file: TFile): void {
@@ -371,18 +439,40 @@ export class PresentationReader extends Component {
         new Notice(uiText.presentations.nested({ presentation: folder.slice(folder.lastIndexOf('/') + 1), outer: around.name }));
     }
 
-    /** A presentation of a newer format opens as an ordinary note; its author learns why once. */
-    private tellNewer(source: PresentationSource, markdown: string): void {
+    /** A presentation of a newer format opens as an ordinary note; its author learns why once. Whether it is one. */
+    private tellNewer(path: string, markdown: string, companion: unknown): boolean {
         const header = frontmatterOf(markdown);
-        const version = header && newerFormat(header.frontmatter, source.companion);
-        if (!version || this.newer.has(source.path)) return;
-        this.newer.add(source.path);
+        const version = header && newerFormat(header.frontmatter, companion);
+        if (!version) return false;
+        if (this.newer.has(path)) return true;
+        this.newer.add(path);
         new Notice(uiText.presentations.newerFormat({ version }));
+        return true;
+    }
+
+    /**
+     * A presentation MarkdownPoint can't read opens as an ordinary note. Its author learns why while opening it, once each
+     * session for each file a reason names, and the MarkdownPoint app names the reason itself.
+     */
+    private tellRefused(path: string, problem: PairProblem, markdown: string, companionText: string): void {
+        if (this.tellNewer(path, markdown, readJsonObject(companionText))) return;
+        const told = JSON.stringify([path, problem.file ?? null]);
+        if (this.refused.has(told)) return;
+        this.refused.add(told);
+        const slash = path.lastIndexOf('/');
+        // A presentation at the vault's root is named by its vault
+        const folder = slash < 0 ? this.app.vault.getName() : path.slice(0, slash);
+        const presentation = folder.slice(folder.lastIndexOf('/') + 1);
+        new Notice(
+            problem.file
+                ? uiText.presentations.unreadableFile({ file: problem.file, presentation })
+                : uiText.presentations.unreadable({ presentation })
+        );
     }
 
     private parse(source: PresentationSource, markdown: string): PresentationSnapshot | null {
         const identity = this.identity(source, markdown);
-        if (!identity) this.tellNewer(source, markdown);
+        if (!identity) this.tellNewer(source.path, markdown, source.companion);
         if (!identity || !isRecord(source.companion) || !isRecord(source.companion.slides)) return null;
         const document = indexPresentation(markdown, identity.bodyStart);
         const slides = source.companion.slides;
@@ -400,12 +490,15 @@ export class PresentationReader extends Component {
             }
             if (!isRecord(metadata) || (metadata.skipped !== undefined && typeof metadata.skipped !== 'boolean')) return null;
             if (metadata.skipped === true) skipped.add(slide.id);
-            structures.set(slide.id, slideStructure(metadata, source.theme));
-            placeholders.set(slide.id, slideTextPlaceholders(metadata, source.theme));
+            structures.set(slide.id, slideStructure(metadata, source.themeRead?.theme ?? null));
+            placeholders.set(slide.id, slideTextPlaceholders(metadata, source.themeRead?.theme ?? null));
             const current = Object.hasOwn(slides, slide.id)
                 ? source.companion
                 : { ...source.companion, slides: { ...slides, [slide.id]: metadata } };
-            images.set(slide.id, readSlideImages(this.app.vault, assignedSlideImages(source.path, current, slide.id, source.theme)));
+            images.set(
+                slide.id,
+                readSlideImages(this.app.vault, assignedSlideImages(source.path, current, slide.id, source.themeRead?.theme ?? null))
+            );
         }
         const sections = outlineSections(markdown, document);
         if (sections.length && document.slides.some(slide => slide.from < document.sections[0]!.from)) return null;
@@ -436,23 +529,62 @@ function presentationHeader(markdown: string, companion: unknown): { id: string;
     return { id, bodyStart: header.bodyStart };
 }
 
-// Each companion as last read, so the sections of one reading view read and parse it once, together
-const readCompanions = new WeakMap<TFile, { readonly mtime: number; readonly size: number; readonly value: Promise<unknown> }>();
+/** A file's text as Obsidian reads it: past nothing, a byte order mark kept, as MarkdownPoint's readers then read it. */
+function fileText(bytes: ArrayBuffer): string {
+    return new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes);
+}
 
-/** Whether `markdown`, at `path`, is the slides.md of a presentation the reader opens: one pair, one identity, a known format. */
-export async function readsAsPresentation(vault: Vault, path: string, markdown: string): Promise<boolean> {
+/** Whether a pair opens in MarkdownPoint, read by MarkdownPoint's own readers from the bytes of its two files. */
+function readPair(
+    path: string,
+    companion: TFile,
+    companionBytes: ArrayBuffer | Uint8Array,
+    markdown: TFile,
+    markdownBytes: ArrayBuffer
+): PairReading {
+    const slash = path.lastIndexOf('/');
+    return readPresentationPair(
+        slash < 0 ? '/' : path.slice(0, slash),
+        { name: companion.name, bytes: new Uint8Array(companionBytes) },
+        { name: markdown.name, bytes: new Uint8Array(markdownBytes) }
+    );
+}
+
+/** A pair's two files as their last changes left them, each by its time and size. */
+function pairStamp(companion: TFile, markdown: TFile): string {
+    return JSON.stringify([companion.stat.mtime, companion.stat.size, markdown.stat.mtime, markdown.stat.size]);
+}
+
+// Each pair's reading, by the stamp its files had before they were read: a file that changes changes its stamp, so the
+// reader's reads and the reading view's sections read files that haven't changed once, together
+const pairReadings = new WeakMap<TFile, { readonly companion: TFile; readonly stamp: string; readonly reading: Promise<PairReading> }>();
+
+/** The pair's reading for the files as `stamp` names them: the one kept for them, else `read`'s, kept until either changes. */
+function readPairOnce(stamp: string, companion: TFile, markdown: TFile, read: () => Promise<PairReading>): Promise<PairReading> {
+    const kept = pairReadings.get(markdown);
+    if (kept?.companion === companion && kept.stamp === stamp) return kept.reading;
+    const reading = read();
+    const keeping = { companion, stamp, reading };
+    pairReadings.set(markdown, keeping);
+    // A read that failed is no answer: the next one reads the files again
+    reading.catch(() => {
+        if (pairReadings.get(markdown) === keeping) pairReadings.delete(markdown);
+    });
+    return reading;
+}
+
+/** Whether `path` is the slides.md of a presentation that opens, as MarkdownPoint opens it from its two files. */
+export async function readsAsPresentation(vault: Vault, path: string): Promise<boolean> {
     await learnVaultCase(vault);
     const pair = presentationCompanionPath(path) ? presentationFiles(vault, path) : null;
     if (!pair || pair.markdown.path !== path) return false;
-    const file = pair.companion;
-    const { mtime, size } = file.stat;
-    let read = readCompanions.get(file);
-    if (read?.mtime !== mtime || read.size !== size) {
-        read = { mtime, size, value: vault.cachedRead(file).then(readJsonObject) };
-        readCompanions.set(file, read);
-    }
+    const { markdown, companion } = pair;
+    const reading = readPairOnce(pairStamp(companion, markdown), companion, markdown, async () => {
+        const [companionBytes, markdownBytes] = await Promise.all([vault.readBinary(companion), vault.readBinary(markdown)]);
+        return readPair(path, companion, companionBytes, markdown, markdownBytes);
+    });
     try {
-        return presentationHeader(markdown, await read.value) !== null;
+        return (await reading).opens;
     } catch {
         return false;
     }

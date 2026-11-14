@@ -205,6 +205,22 @@ export class SlideData {
         return true;
     }
 
+    /**
+     * The companion as this presentation's saves leave it for the slides and compositions its Markdown holds: each record
+     * kept for it restored or removed. `companion` itself when none is kept for it or it is another presentation's.
+     */
+    reconciled(
+        path: string,
+        presentationId: string,
+        companion: string,
+        slides: ReadonlySet<string>,
+        compositions: ReadonlySet<string>
+    ): string {
+        const entry = this.entries.get(this.key(path, presentationId));
+        if (!this.running || !entry || !this.matches(companion, presentationId)) return companion;
+        return reconcile(companion, entry, { slides, compositions })?.companion ?? companion;
+    }
+
     async settled(path: string, presentationId: string): Promise<boolean> {
         const entry = this.entries.get(this.key(path, presentationId));
         while (entry?.saving) await entry.saving;

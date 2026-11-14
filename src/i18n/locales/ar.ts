@@ -75,7 +75,11 @@ export const ar: Translations = {
         handoffFailed: 'تعذّر حفظ العرض التقديمي وفتحه.',
         themeChanged: 'تغيّرت السمة أو أصبحت غير متاحة. أعد فتح هذه النافذة واخترها مرة أخرى.',
         newerFormat: ({ version }: { version: string }) =>
-            `يستخدم هذا العرض التقديمي إصدارًا أحدث من تنسيق MarkdownPoint (${version}). حدّث إضافة MarkdownPoint لفتحه كعرض تقديمي.`
+            `يستخدم هذا العرض التقديمي إصدارًا أحدث من تنسيق MarkdownPoint (${version}). حدّث إضافة MarkdownPoint لفتحه كعرض تقديمي.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `يتعذّر على MarkdownPoint قراءة «${file}» في «${presentation}». افتح العرض التقديمي في تطبيق MarkdownPoint لمعرفة ما يجب إصلاحه.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `يتعذّر على MarkdownPoint قراءة العرض التقديمي في «${presentation}». افتحه في تطبيق MarkdownPoint لمعرفة ما يجب إصلاحه.`
     },
     slides: {
         new: 'شريحة جديدة',

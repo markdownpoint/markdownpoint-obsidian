@@ -94,7 +94,7 @@ export class SlideCreation extends Component {
                 ) ?? [];
             const theme = metadata && keys.length ? await readEmbeddedTheme(this.app.vault, path, metadata, keys) : null;
             if (!current()) return;
-            if (!theme) {
+            if (!theme?.layouts.size) {
                 new Notice(uiText.slides.layoutsUnavailable);
                 return;
             }

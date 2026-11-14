@@ -93,7 +93,7 @@ function heldPoint(
     return held;
 }
 
-/** Whether a scale draws an object at another size: a single object's along its axes, or an instance's or a chart's one number. */
+/** Whether a scale draws an object at another size: a single object's along its axes, or an instance's one number. */
 function scaled(scale: unknown): boolean {
     if (scale == null) return false;
     if (typeof scale === 'number') return scale !== 1;

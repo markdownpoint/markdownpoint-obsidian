@@ -74,7 +74,11 @@ export const tr: Translations = {
         handoffFailed: 'Sunu kaydedilip açılamadı.',
         themeChanged: 'Tema değişti veya kullanılamıyor. Bu iletişim kutusunu yeniden açıp temayı tekrar seçin.',
         newerFormat: ({ version }: { version: string }) =>
-            `Bu sunu daha yeni bir MarkdownPoint biçimi (${version}) kullanıyor. Sunu olarak açmak için MarkdownPoint eklentisini güncelleyin.`
+            `Bu sunu daha yeni bir MarkdownPoint biçimi (${version}) kullanıyor. Sunu olarak açmak için MarkdownPoint eklentisini güncelleyin.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint, “${presentation}” içindeki “${file}” dosyasını okuyamaz. Neyi düzeltmeniz gerektiğini görmek için sunuyu MarkdownPoint uygulamasında açın.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint, “${presentation}” içindeki sunuyu okuyamaz. Neyi düzeltmeniz gerektiğini görmek için sunuyu MarkdownPoint uygulamasında açın.`
     },
     slides: {
         new: 'Yeni slayt',

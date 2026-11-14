@@ -74,7 +74,11 @@ export const vi: Translations = {
         handoffFailed: 'Không thể lưu và mở bài thuyết trình.',
         themeChanged: 'Chủ đề đã thay đổi hoặc không khả dụng. Hãy mở lại hộp thoại này và chọn lại chủ đề.',
         newerFormat: ({ version }: { version: string }) =>
-            `Bài thuyết trình này dùng định dạng MarkdownPoint mới hơn (${version}). Hãy cập nhật plugin MarkdownPoint để mở dưới dạng bài thuyết trình.`
+            `Bài thuyết trình này dùng định dạng MarkdownPoint mới hơn (${version}). Hãy cập nhật plugin MarkdownPoint để mở dưới dạng bài thuyết trình.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint không thể đọc “${file}” trong “${presentation}”. Hãy mở bài thuyết trình trong ứng dụng MarkdownPoint để xem cần sửa gì.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint không thể đọc bài thuyết trình trong “${presentation}”. Hãy mở nó trong ứng dụng MarkdownPoint để xem cần sửa gì.`
     },
     slides: {
         new: 'Trang chiếu mới',

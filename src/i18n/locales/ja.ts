@@ -74,7 +74,11 @@ export const ja: Translations = {
         handoffFailed: 'プレゼンテーションを保存して開くことができませんでした。',
         themeChanged: 'テーマが変更されたか、利用できません。このダイアログを開き直して、もう一度テーマを選んでください。',
         newerFormat: ({ version }: { version: string }) =>
-            `このプレゼンテーションは新しいバージョンのMarkdownPointフォーマット（${version}）を使っています。プレゼンテーションとして開くには、MarkdownPointプラグインをアップデートしてください。`
+            `このプレゼンテーションは新しいバージョンのMarkdownPointフォーマット（${version}）を使っています。プレゼンテーションとして開くには、MarkdownPointプラグインをアップデートしてください。`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPointは“${presentation}”の“${file}”を読み込めません。修正が必要な箇所を確認するには、MarkdownPointアプリでプレゼンテーションを開いてください。`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPointは“${presentation}”のプレゼンテーションを読み込めません。修正が必要な箇所を確認するには、MarkdownPointアプリで開いてください。`
     },
     slides: {
         new: '新規スライド',

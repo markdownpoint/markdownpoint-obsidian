@@ -19,13 +19,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import type { TFolder as ObsidianFolder, Vault } from 'obsidian';
-import {
-    inSavedVersions,
-    newerFormat,
-    presentationCompanionPath,
-    presentationIdentity,
-    presentationPairNames
-} from '../src/format/recognition.ts';
+import { inSavedVersions, newerFormat, presentationCompanionPath, presentationIdentity } from '../src/format/recognition.ts';
 import {
     creationParent,
     enclosingPresentation,
@@ -201,24 +195,36 @@ test("a pair under Versions/ is a saved version where the vault's volume finds a
         assert.equal(presentationFiles(each, 'Talk/Versions/draft/slides.md')?.companion.path, 'Talk/Versions/draft/presentation.mdpoint');
 });
 
-test('pair discovery keeps actual filename case and leaves unrelated notes alone', () => {
-    assert.deepEqual(
-        presentationPairNames([
-            'Slides.MD',
-            'Presentation.MDPOINT',
-            'README.md',
-            'notes.md',
-            'slideshow.md',
-            '._presentation.mdpoint',
-            '._slides.md',
-            '.mdpoint'
-        ]),
-        { markdown: 'Slides.MD', companion: 'Presentation.MDPOINT' }
-    );
-    assert.equal(presentationPairNames(['slides.md', 'old-name.mdpoint']), null);
-    assert.equal(presentationPairNames(['slides copy.md', 'presentation.mdpoint']), null);
-    assert.equal(presentationPairNames(['slides.md']), null);
-    assert.equal(presentationPairNames(['presentation.mdpoint']), null);
+/** A vault holding one folder, Talk, with files of these names. */
+function talk(names: readonly string[]): Vault {
+    const root = new TFolder('');
+    const folder = new TFolder('Talk');
+    folder.parent = root;
+    folder.children = names.map(name => Object.assign(new TFile(`Talk/${name}`, new Uint8Array(), 0), { parent: folder }));
+    root.children = [folder];
+    return { getRoot: () => root, getFolderByPath: (path: string) => (path === 'Talk' ? folder : null) } as unknown as Vault;
+}
+
+test('pair discovery keeps actual filename case and leaves unrelated notes alone, as MarkdownPoint finds the pair', () => {
+    const names = [
+        'Slides.MD',
+        'Presentation.MDPOINT',
+        'README.md',
+        'notes.md',
+        'slideshow.md',
+        '._presentation.mdpoint',
+        '._slides.md',
+        '.mdpoint'
+    ];
+    const files = presentationFiles(talk(names), 'Talk/Slides.MD');
+    assert.deepEqual([files?.markdown.name, files?.companion.name], ['Slides.MD', 'Presentation.MDPOINT']);
+    for (const pair of [
+        ['slides.md', 'old-name.mdpoint'],
+        ['slides copy.md', 'presentation.mdpoint'],
+        ['slides.md'],
+        ['presentation.mdpoint']
+    ])
+        assert.equal(presentationFiles(talk(pair), `Talk/${pair[0]}`), null, pair.join(', '));
 });
 
 test('a conflicted copy of either member makes the pair unavailable', () => {
@@ -233,7 +239,7 @@ test('a conflicted copy of either member makes the pair unavailable', () => {
         'presentation copy.mdpoint',
         'another.mdpoint'
     ]) {
-        assert.equal(presentationPairNames(['slides.md', 'presentation.mdpoint', copy]), null, copy);
+        assert.equal(presentationFiles(talk(['slides.md', 'presentation.mdpoint', copy]), 'Talk/slides.md'), null, copy);
     }
 });
 
@@ -308,4 +314,8 @@ test('a pair of a newer major states its version through the envelope keys, and 
         newerFormat({ markdownpoint: 1, document: presentationId }, { markdownpoint: 1, type: 'presentation', document: presentationId }),
         null
     );
+});
+
+test("a presentation file iCloud hasn't downloaded yet, which MarkdownPoint finds by the name it will have, is no pair yet", () => {
+    assert.equal(presentationFiles(talk(['slides.md', '.presentation.mdpoint.icloud']), 'Talk/slides.md'), null);
 });

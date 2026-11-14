@@ -17,8 +17,9 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
-import type { App, TFile as ObsidianFile } from 'obsidian';
+import type { App, TFile as ObsidianFile, Vault } from 'obsidian';
 import { TFile, TFolder } from './support/obsidian.ts';
 import { readEmbeddedTheme } from '../src/presentation/theme-reader.ts';
 import { decodeSlideClipboard, encodeSlideClipboard } from '../src/format/clipboard.ts';
@@ -72,6 +73,7 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
         },
         getAbstractFileByPath: (path: string) => nodes.get(path) ?? null,
         read: (file: TFile) => Promise.resolve(new TextDecoder().decode(file.bytes)),
+        readBinary: (file: TFile) => Promise.resolve(file.bytes.slice().buffer),
         getResourcePath: (file: TFile) => 'vault:' + encodeURIComponent(file.path),
         createFolder: (path: string) => {
             if (nodes.has(path)) throw new Error('Occupied');
@@ -103,11 +105,15 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
             return Promise.resolve(file ? new Response(file.bytes.slice().buffer) : new Response(null, { status: 404 }));
         }
     } as unknown as Window;
+    // MarkdownPoint's Basic master under its own id, with a picture of its own when asked
+    const basic = JSON.parse(readFileSync(new URL('../src/themes/basic/master.json', import.meta.url), 'utf8')) as { objects: unknown[] };
     const master = JSON.stringify({
-        markdownpoint: '1.0',
-        type: 'master',
+        ...basic,
         id: themeId,
-        objects: artwork ? [{ id: 'logo', type: 'image', file: 'media/logo.svg' }] : []
+        objects: [
+            ...basic.objects,
+            ...(artwork ? [{ id: 'logo', type: 'image', file: 'media/logo.svg', frame: { x: 0, y: 0, width: 100, height: 100 } }] : [])
+        ]
     });
     const layout = '{"markdownpoint":"1.0","type":"layout","objects":[]}';
     for (const [root, id] of [
@@ -129,8 +135,8 @@ async function fixture(media = ['media/photo.png'], artwork = false, generated =
             `source/generated/${made}.json`,
             `{\n  "markdownpoint": "1.0",\n  "output": {\n    "file": "${media[0]}",\n    "sha256": "aa"\n  }\n}\n`
         );
-    const sourceTheme = (await readEmbeddedTheme(vault, 'source/slides.md', { theme: 'basic' }, ['title']))!;
-    const theme = (await readEmbeddedTheme(vault, 'target/slides.md', { theme: 'basic' }, ['title']))!;
+    const sourceTheme = (await readEmbeddedTheme(vault as unknown as Vault, 'source/slides.md', { theme: 'basic' }, ['title']))!;
+    const theme = (await readEmbeddedTheme(vault as unknown as Vault, 'target/slides.md', { theme: 'basic' }, ['title']))!;
     const record = JSON.stringify({
         layout: 'title',
         objects: media.map((file, index) => ({

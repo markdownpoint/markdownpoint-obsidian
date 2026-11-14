@@ -21,6 +21,10 @@ import type { TFolder, Vault } from 'obsidian';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 import { isThemeKey, themeFilePaths } from '../format/embedded-theme.ts';
 import { layoutName } from '../format/new-slide.ts';
+import { mintId } from '../format/id-allocation.ts';
+import { prepareNewPresentation } from '../format/new-presentation.ts';
+import type { NewPresentation } from '../format/new-presentation.ts';
+import { readPresentationPair } from '../readers/markdownpoint-readers.js';
 import { basicTheme } from '../themes/basic.ts';
 import { readEmbeddedTheme } from './theme-reader.ts';
 import { uiText } from '../ui-text.ts';
@@ -33,6 +37,22 @@ export interface CreationTheme {
     readonly preview: string | null;
 }
 export const inFolder = (folder: string, name: string): string => (folder && folder !== '/' ? `${folder}/${name}` : name);
+
+/** Whether a new presentation's pair, made in `folder`, opens in MarkdownPoint, as MarkdownPoint checks the pair it makes. */
+export function opensAsMade(folder: string, made: NewPresentation): boolean {
+    const encoder = new TextEncoder();
+    return readPresentationPair(
+        folder,
+        { name: 'presentation.mdpoint', bytes: encoder.encode(made.companion) },
+        { name: 'slides.md', bytes: encoder.encode(made.markdown) }
+    ).opens;
+}
+
+/** Whether New offers the theme: the presentation it makes from it opens in MarkdownPoint. */
+function makesPresentation(theme: EmbeddedTheme): boolean {
+    const made = prepareNewPresentation(theme, crypto.randomUUID(), mintId());
+    return made !== null && opensAsMade(uiText.presentations.untitled, made);
+}
 
 export async function readCreationTheme(vault: Vault, folder: TFolder): Promise<EmbeddedTheme | null> {
     if (vault.getFolderByPath(folder.path) !== folder || folder.parent?.name !== 'themes' || !isThemeKey(folder.name)) return null;
@@ -78,6 +98,7 @@ export async function creationThemes(vault: Vault): Promise<CreationTheme[]> {
         builtIn,
         ...themes.filter(theme => theme !== null).sort((a, b) => a.name.localeCompare(b.name) || a.detail.localeCompare(b.detail))
     ].filter(choice => {
+        if (!makesPresentation(choice.theme)) return false;
         const fingerprint = JSON.stringify([
             choice.theme.id,
             choice.theme.master.source,

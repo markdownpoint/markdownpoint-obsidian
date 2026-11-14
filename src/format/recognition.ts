@@ -17,14 +17,7 @@
  */
 
 import { formatStanding, opensFormatVersion } from './format-version.ts';
-
-/** A day the calendar has, from year 0001 on, February 29 in leap years alone: a year divisible by 4, a century only when divisible by 400. */
-const CALENDAR_DAY =
-    '(?!0000)(?:[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))' +
-    '|(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)';
-
-/** A saved version's folder name: its save time in UTC to the second on a day the calendar has, then its tail. */
-const VERSION_ID = new RegExp(`^${CALENDAR_DAY}T(?:[01][0-9]|2[0-3])\\.[0-5][0-9]\\.[0-5][0-9]Z-[a-z0-9]{4}$`);
+import { VERSION_ID, VERSIONS_FOLDER } from '../readers/markdownpoint-readers.js';
 
 /**
  * Whether the file at `path` lies under a presentation's `versions/`, which MarkdownPoint never opens as a presentation of
@@ -38,7 +31,7 @@ export function inSavedVersions(path: string, holdsPresentation: (folder: string
     const folders = path.split('/').slice(0, -1);
     return folders.some(
         (name, at) =>
-            (name === 'versions' || (ignoresCase && name.toLowerCase() === 'versions')) &&
+            (name === VERSIONS_FOLDER || (ignoresCase && name.toLowerCase() === VERSIONS_FOLDER)) &&
             (VERSION_ID.test(folders[at + 1] ?? '') || holdsPresentation(folders.slice(0, at).join('/')))
     );
 }
@@ -54,20 +47,6 @@ export function presentationMember(name: string): 'markdown' | 'companion' | nul
     const lower = name.toLowerCase();
     if (!name.startsWith('._') && name.length > 8 && lower.endsWith('.mdpoint')) return 'companion';
     return /^slides(?![a-z])/i.test(name) && lower.endsWith('.md') ? 'markdown' : null;
-}
-
-/** Discover one unambiguous fixed pair, preserving the spelling stored by the vault. */
-export function presentationPairNames(names: readonly string[]): { markdown: string; companion: string } | null {
-    const markdown = names.filter(name => presentationMember(name) === 'markdown');
-    const companion = names.filter(name => presentationMember(name) === 'companion');
-    if (
-        markdown.length !== 1 ||
-        companion.length !== 1 ||
-        markdown[0]!.toLowerCase() !== 'slides.md' ||
-        companion[0]!.toLowerCase() !== 'presentation.mdpoint'
-    )
-        return null;
-    return { markdown: markdown[0]!, companion: companion[0]! };
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

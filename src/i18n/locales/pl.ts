@@ -74,7 +74,11 @@ export const pl: Translations = {
         handoffFailed: 'Nie udało się zapisać i otworzyć prezentacji.',
         themeChanged: 'Motyw zmienił się lub jest niedostępny. Otwórz ponownie to okno i wybierz motyw jeszcze raz.',
         newerFormat: ({ version }: { version: string }) =>
-            `Ta prezentacja używa nowszego formatu MarkdownPoint (${version}). Zaktualizuj wtyczkę MarkdownPoint, aby otworzyć ją jako prezentację.`
+            `Ta prezentacja używa nowszego formatu MarkdownPoint (${version}). Zaktualizuj wtyczkę MarkdownPoint, aby otworzyć ją jako prezentację.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint nie może odczytać pliku „${file}” w „${presentation}”. Otwórz prezentację w aplikacji MarkdownPoint, aby zobaczyć, co trzeba poprawić.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint nie może odczytać prezentacji w „${presentation}”. Otwórz ją w aplikacji MarkdownPoint, aby zobaczyć, co trzeba poprawić.`
     },
     slides: {
         new: 'Nowy slajd',

@@ -1,1 +1,2 @@
 * text=auto eol=lf
+src/readers/* -diff linguist-generated=true

@@ -26,7 +26,7 @@ import { basicThemeFiles } from '../themes/basic.ts';
 import { renderThumbnail } from '../outline/thumbnail.ts';
 import { createPresentationFiles } from './create-files.ts';
 import { creationParent, enclosingPresentation } from './presentation-files.ts';
-import { creationThemes, inFolder, readCreationTheme } from './theme-catalog.ts';
+import { creationThemes, inFolder, opensAsMade, readCreationTheme } from './theme-catalog.ts';
 import type { CreationTheme } from './theme-catalog.ts';
 import { uiText } from '../ui-text.ts';
 
@@ -91,7 +91,7 @@ export class PresentationCreation extends Component {
         const theme = choice.folder ? await readCreationTheme(this.app.vault, choice.folder) : choice.theme;
         if (!theme || theme.id !== choice.theme.id) throw new Error(uiText.presentations.themeChanged);
         const made = prepareNewPresentation(theme, crypto.randomUUID(), mintId());
-        if (!made) throw new Error(uiText.presentations.themeChanged);
+        if (!made || !opensAsMade(inFolder(parentPath, name), made)) throw new Error(uiText.presentations.themeChanged);
         const files = new Map<string, string | Uint8Array | TFile>();
         if (choice.folder) {
             const prefix = choice.folder.path + '/';

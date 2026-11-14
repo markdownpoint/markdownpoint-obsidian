@@ -17,31 +17,33 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
+import type { Vault } from 'obsidian';
 import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.ts';
 import { readEmbeddedTheme } from '../src/presentation/theme-reader.ts';
+import { memoryApp } from './support/obsidian.ts';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const companion = { theme: 'basic' };
 const markdownPath = 'Presentations/Å calm place/slides.md';
 const paths = embeddedThemePaths(markdownPath, companion, ['title'])!;
-const master =
-    '{"markdownpoint":"1.0","type":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","unknown":9007199254740993}';
-const layout = '{"markdownpoint":"1.0","type":"layout","objects":[{"id":"title","type":"text"}]}';
-function vault() {
-    const files = new Map([
-        [paths.master, { path: paths.master, source: master }],
-        [paths.layouts.get('title')!, { path: paths.layouts.get('title')!, source: layout }]
-    ]);
+/** A file of MarkdownPoint's Basic theme as the plugin ships it. */
+const basic = (name: string) => readFileSync(new URL(`../src/themes/basic/${name}`, import.meta.url), 'utf8');
+const master = basic('master.json');
+const layout = basic('title.json');
+/** A theme folder of these files, by name, in a vault whose every read is listed. */
+function vault(
+    files: Readonly<Record<string, string>> = { 'master.json': master, 'title.json': layout, 'blank.json': basic('blank.json') }
+) {
+    const app = memoryApp(Object.fromEntries(Object.entries(files).map(([name, source]) => [`${paths.root}/${name}`, source])));
     const reads: string[] = [];
-    const host = {
-        getFileByPath: (path: string) => files.get(path) ?? null,
-        read: (file: { path: string; source: string }) => {
-            reads.push(file.path);
-            return Promise.resolve(file.source);
-        }
+    const readBinary = app.vault.readBinary;
+    app.vault.readBinary = file => {
+        reads.push(file.name);
+        return readBinary(file);
     };
-    return { files, reads, host };
+    return { files: app.vault, reads, host: app.vault as unknown as Vault };
 }
 
 test('embedded Theme paths are exact vault-relative references, including spaces and Unicode', () => {
@@ -59,22 +61,45 @@ test('embedded Theme paths are exact vault-relative references, including spaces
     }
 });
 
-test('a Theme snapshot retains full source bytes and reads only required files', async () => {
+test('a Theme reads as MarkdownPoint reads its folder, every JSON file once, and keeps the bytes of the documents it uses', async () => {
     const { files, reads, host } = vault();
-    files.get(paths.master)!.source = '\uFEFF' + master;
-    files.set(paths.root + '/unused.json', { path: paths.root + '/unused.json', source: 'unreadable' });
+    files.write(`${paths.root}/master.json`, '\uFEFF' + master);
+    reads.length = 0;
     const result = await readEmbeddedTheme(host, markdownPath, companion, ['title', 'title']);
     assert.ok(result);
     assert.equal(result.master.source, '\uFEFF' + master);
-    assert.equal(result.master.value.name, 'Own test');
     assert.equal(result.key, 'basic');
-    assert.equal(result.id, id);
+    assert.equal(result.id, 'c17f2a67-54b1-492b-8ab3-838711173ab2');
+    assert.deepEqual([...result.layouts.keys()], ['title']);
     assert.equal(result.layouts.get('title')!.source, layout);
-    assert.equal(result.master.source.includes('9007199254740993'), true);
-    assert.deepEqual(reads, [paths.master, paths.layouts.get('title'), paths.master, paths.layouts.get('title')]);
+    // Each file as MarkdownPoint reads the folder, then each again, to know none changed meanwhile
+    assert.deepEqual(reads.sort(), ['blank.json', 'blank.json', 'master.json', 'master.json', 'title.json', 'title.json']);
 });
 
-test('malformed or ambiguous JSON and wrong document envelopes refuse the snapshot', async () => {
+test("a master MarkdownPoint doesn't read gives no Theme, and a layout it doesn't read is left out", async () => {
+    const named = (source: string, name: string) => JSON.stringify({ ...(JSON.parse(source) as object), name });
+    // One line that isn't blank: MarkdownPoint refuses the master, and with it every slide
+    assert.equal(
+        await readEmbeddedTheme(vault({ 'master.json': named(master, '\nBasic'), 'title.json': layout }).host, markdownPath, companion, [
+            'title'
+        ]),
+        null
+    );
+    const theme = await readEmbeddedTheme(
+        vault({ 'master.json': master, 'title.json': named(layout, '\nTitle'), 'blank.json': basic('blank.json') }).host,
+        markdownPath,
+        companion,
+        ['title', 'blank']
+    );
+    assert.deepEqual([...theme!.layouts.keys()], ['blank']);
+    // A layout file whose document is a master's, and one that isn't there, are none of the theme's layouts
+    const folders: Record<string, string>[] = [{ 'master.json': master, 'title.json': master }, { 'master.json': master }];
+    for (const files of folders)
+        assert.deepEqual([...(await readEmbeddedTheme(vault(files).host, markdownPath, companion, ['title']))!.layouts.keys()], []);
+    assert.equal(await readEmbeddedTheme(vault({ 'title.json': layout }).host, markdownPath, companion, ['title']), null);
+});
+
+test('malformed or ambiguous JSON and wrong document envelopes are no theme document', () => {
     for (const source of [
         'null',
         '{}',
@@ -86,54 +111,41 @@ test('malformed or ambiguous JSON and wrong document envelopes refuse the snapsh
         String.raw`{"markdownpoint":"1.0","type":"master","id":"11111111-1111-4111-8111-111111111111","nested":{"name":1,"na\u006de":2}}`
     ])
         assert.equal(themeDocument(source, 'master'), null, source);
-    const { files, host } = vault();
-    files.get(paths.layouts.get('title')!)!.source = master;
-    assert.equal(await readEmbeddedTheme(host, markdownPath, companion, ['title']), null);
 });
 
-test('missing files and read failures return no partial Theme', async () => {
-    const missing = vault();
-    missing.files.delete(paths.layouts.get('title')!);
-    assert.equal(await readEmbeddedTheme(missing.host, markdownPath, companion, ['title']), null);
+test('read failures and keys no theme has return no partial Theme', async () => {
     const failing = vault();
-    failing.host.read = () => Promise.reject(new Error('Unavailable'));
+    failing.files.readBinary = () => Promise.reject(new Error('Unavailable'));
     assert.equal(await readEmbeddedTheme(failing.host, markdownPath, companion, ['title']), null);
     const invalid = vault();
     assert.equal(await readEmbeddedTheme(invalid.host, markdownPath, { theme: '../bad' }, ['title']), null);
     assert.equal(invalid.reads.length, 0);
 });
 
-test('a Theme edited while its documents are read is refused without polling or retry', async () => {
-    const { files, reads, host } = vault();
-    const read = host.read;
-    host.read = async file => {
-        const source = await read(file);
-        if (reads.length === 2 && file.path.endsWith('/title.json'))
-            files.get(paths.master)!.source = master.replace('Own test', 'Changed');
-        return source;
-    };
-    assert.equal(await readEmbeddedTheme(host, markdownPath, companion, ['title']), null);
-    assert.equal(reads.length, 4);
-});
-
-test('replacement or rename of a file cannot validate an earlier file object', async () => {
-    for (const replacement of [true, false]) {
-        const { files, host } = vault();
-        const read = host.read;
-        let changed = false;
-        host.read = async file => {
-            const source = await read(file);
-            if (!changed && file.path.endsWith('/title.json')) {
-                changed = true;
-                if (replacement) files.set(paths.master, { path: paths.master, source: master });
-                else files.delete(paths.master);
+test('a Theme whose folder changes while its files are read is refused without polling or retry', async () => {
+    for (const change of ['edit', 'replace', 'remove', 'rename a layout', 'empty an unused file', 'add an empty file'] as const) {
+        const { files, reads, host } = vault();
+        const readBinary = files.readBinary;
+        files.readBinary = async file => {
+            const bytes = await readBinary(file);
+            // Once the folder's three files have been read, before they are read again
+            if (reads.length === 3) {
+                const master = `${paths.root}/master.json`;
+                if (change === 'edit') files.write(master, basic('master.json') + '\n');
+                else if (change === 'replace') {
+                    files.remove(master);
+                    files.write(master, basic('master.json'));
+                } else if (change === 'remove') files.remove(master);
+                else if (change === 'rename a layout') files.rename(`${paths.root}/title.json`, 'cover.json');
+                // An empty JSON file leaves the theme unread in MarkdownPoint, though the presentation uses none of it
+                else if (change === 'empty an unused file') files.write(`${paths.root}/blank.json`, '');
+                else files.write(`${paths.root}/extra.json`, '');
             }
-            return source;
+            return bytes;
         };
-        assert.equal(await readEmbeddedTheme(host, markdownPath, companion, ['title']), null);
+        assert.equal(await readEmbeddedTheme(host, markdownPath, companion, ['title']), null, change);
     }
 });
-
 test('Theme keys and UUID identities are independent; legacy folders are not guessed', () => {
     assert.equal(
         embeddedThemePaths(markdownPath, { theme: 'company-profile' }, [])!.root,

@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "project": ["src/**/*.ts"],
-  "ignore": ["src/core/**", "src/common/**"],
+  "ignore": ["src/core/**", "src/common/**", "src/readers/**"],
   "ignoreExportsUsedInFile": {
     "interface": true,
     "type": true,

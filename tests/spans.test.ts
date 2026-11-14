@@ -527,7 +527,8 @@ test('a span inside another hides both, inner marks first where they stand', () 
 
 function vault(files: Record<string, string>, reads: string[] = [], at = 'Talk', ignoresCase = false): Vault {
     const folder = new TFolder(at);
-    folder.children = Object.keys(files).map(name => new TFile(`${at}/${name}`, new Uint8Array(), 0));
+    const encoder = new TextEncoder();
+    folder.children = Object.entries(files).map(([name, text]) => new TFile(`${at}/${name}`, encoder.encode(text), 0));
     return {
         configDir: '.config',
         // A volume that ignores case finds the plugins folder in another case too, unless asked for that spelling alone.
@@ -537,56 +538,69 @@ function vault(files: Record<string, string>, reads: string[] = [], at = 'Talk',
         },
         getRoot: () => new TFolder(''),
         getFolderByPath: (path: string) => (path === at ? folder : null),
-        cachedRead: (file: TFile) => {
+        readBinary: (file: TFile) => {
             reads.push(file.name);
-            return Promise.resolve(files[file.name]!);
+            return Promise.resolve(file.bytes.slice().buffer);
         }
     } as unknown as Vault;
 }
 
-test("reading view drops group marks only in a presentation's slides.md, as the reader recognizes one", async () => {
-    const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
+const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
+const slideA = { a: { layout: 'title' } };
+
+test("reading view drops group marks only in a presentation's slides.md, as MarkdownPoint opens one from its two files", async () => {
     const markdown = `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n<!-- slide: a -->\n<!-- text: title -->\n${word}\n`;
     const companion = (fields: Record<string, unknown>) =>
-        JSON.stringify({ markdownpoint: '1.0', type: 'presentation', id, theme: 'basic', slides: {}, ...fields });
+        JSON.stringify({ markdownpoint: '1.0', type: 'presentation', id, theme: 'basic', slides: slideA, ...fields });
     const reads: string[] = [];
     const deck = vault({ 'slides.md': markdown, 'presentation.mdpoint': companion({}) }, reads);
-    assert.deepEqual(await Promise.all([1, 2, 3].map(() => readsAsPresentation(deck, 'Talk/slides.md', markdown))), [true, true, true]);
-    assert.equal(await readsAsPresentation(deck, 'Talk/slides.md', markdown), true);
-    assert.deepEqual(reads, ['presentation.mdpoint']);
-    const file = deck.getFolderByPath('Talk')!.children.find(file => file.name === 'presentation.mdpoint');
-    assert.ok(file instanceof TFile);
-    file.stat = { mtime: 1, size: 0 };
-    assert.equal(await readsAsPresentation(deck, 'Talk/slides.md', markdown), true);
-    assert.deepEqual(reads, ['presentation.mdpoint', 'presentation.mdpoint']);
+    assert.deepEqual(await Promise.all([1, 2, 3].map(() => readsAsPresentation(deck, 'Talk/slides.md'))), [true, true, true]);
+    assert.equal(await readsAsPresentation(deck, 'Talk/slides.md'), true);
+    assert.deepEqual(reads, ['presentation.mdpoint', 'slides.md']);
+    // A change to either file reads the pair again
+    for (const name of ['presentation.mdpoint', 'slides.md']) {
+        const file = deck.getFolderByPath('Talk')!.children.find(file => file.name === name);
+        assert.ok(file instanceof TFile);
+        file.stat = { mtime: 1, size: file.stat.size };
+        assert.equal(await readsAsPresentation(deck, 'Talk/slides.md'), true);
+    }
+    assert.deepEqual(reads, [
+        'presentation.mdpoint',
+        'slides.md',
+        'presentation.mdpoint',
+        'slides.md',
+        'presentation.mdpoint',
+        'slides.md'
+    ]);
     for (const [files, path] of [
         [{ 'slides.md': markdown, 'presentation.mdpoint': companion({}) }, 'Talk/notes.md'],
         [{ 'slides.md': markdown, 'presentation.mdpoint': companion({ id: '1c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d' }) }, 'Talk/slides.md'],
         [{ 'slides.md': markdown, 'presentation.mdpoint': companion({ markdownpoint: '2.0' }) }, 'Talk/slides.md'],
         [{ 'slides.md': markdown, 'presentation.mdpoint': companion({}), 'other.mdpoint': companion({}) }, 'Talk/slides.md'],
-        [{ 'slides.md': markdown, 'presentation.mdpoint': '{' }, 'Talk/slides.md']
+        [{ 'slides.md': markdown, 'presentation.mdpoint': '{' }, 'Talk/slides.md'],
+        // Each slide marker has its record and each record its marker, as MarkdownPoint opens a pair
+        [{ 'slides.md': markdown, 'presentation.mdpoint': companion({ slides: {} }) }, 'Talk/slides.md'],
+        [{ 'slides.md': markdown, 'presentation.mdpoint': companion({ slides: { ...slideA, b: { layout: 'title' } } }) }, 'Talk/slides.md']
     ] as const)
-        assert.equal(await readsAsPresentation(vault(files), path, markdown), false, JSON.stringify(Object.keys(files)) + path);
+        assert.equal(await readsAsPresentation(vault(files), path), false, JSON.stringify(files) + path);
 });
 
 test('a saved version under Versions/ never reads as a presentation where the volume ignores case, from the first read on', async () => {
-    const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
     const markdown = `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n<!-- slide: a -->\n`;
     const files = {
         'slides.md': markdown,
-        'presentation.mdpoint': JSON.stringify({ markdownpoint: '1.0', type: 'presentation', id, theme: 'basic', slides: {} })
+        'presentation.mdpoint': JSON.stringify({ markdownpoint: '1.0', type: 'presentation', id, theme: 'basic', slides: slideA })
     };
     const at = 'Talk/Versions/2026-10-30T16.20.05Z-k3pz';
-    assert.equal(await readsAsPresentation(vault(files, [], at, true), `${at}/slides.md`, markdown), false);
-    assert.equal(await readsAsPresentation(vault(files, [], at, false), `${at}/slides.md`, markdown), true);
+    assert.equal(await readsAsPresentation(vault(files, [], at, true), `${at}/slides.md`), false);
+    assert.equal(await readsAsPresentation(vault(files, [], at, false), `${at}/slides.md`), true);
 });
 
 test('a companion reads as MarkdownPoint reads it: past a byte order mark, and refused for a key written twice', async () => {
-    const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
     const markdown = `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n<!-- slide: a -->\n`;
-    const fields = `"markdownpoint": "1.0", "type": "presentation", "theme": "basic", "slides": {}`;
+    const fields = `"markdownpoint": "1.0", "type": "presentation", "theme": "basic", "slides": ${JSON.stringify(slideA)}`;
     const opens = (companion: string) =>
-        readsAsPresentation(vault({ 'slides.md': markdown, 'presentation.mdpoint': companion }), 'Talk/slides.md', markdown);
+        readsAsPresentation(vault({ 'slides.md': markdown, 'presentation.mdpoint': companion }), 'Talk/slides.md');
     assert.equal(await opens(`${String.fromCharCode(0xfeff)}{${fields}, "id": "${id}"}`), true);
     // The last of a key written twice would name this presentation, where MarkdownPoint refuses the file.
     assert.equal(await opens(`{${fields}, "id": "1c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d", "id": "${id}"}`), false);

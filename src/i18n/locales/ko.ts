@@ -74,7 +74,11 @@ export const ko: Translations = {
         handoffFailed: '프레젠테이션을 저장하고 열지 못했습니다.',
         themeChanged: '테마가 변경되었거나 사용할 수 없습니다. 이 대화 상자를 다시 열고 테마를 다시 선택하세요.',
         newerFormat: ({ version }: { version: string }) =>
-            `이 프레젠테이션은 더 새로운 MarkdownPoint 포맷(${version})을 사용합니다. 프레젠테이션으로 열려면 MarkdownPoint 플러그인을 업데이트하세요.`
+            `이 프레젠테이션은 더 새로운 MarkdownPoint 포맷(${version})을 사용합니다. 프레젠테이션으로 열려면 MarkdownPoint 플러그인을 업데이트하세요.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint는 ‘${presentation}’ 안에 있는 ‘${file}’ 파일을 읽을 수 없습니다. 수정할 부분을 확인하려면 MarkdownPoint 앱에서 프레젠테이션을 여세요.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint는 ‘${presentation}’ 안에 있는 프레젠테이션을 읽을 수 없습니다. 수정할 부분을 확인하려면 MarkdownPoint 앱에서 여세요.`
     },
     slides: {
         new: '새 슬라이드',

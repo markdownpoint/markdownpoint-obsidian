@@ -70,7 +70,11 @@ export const zh: Translations = {
         handoffFailed: '无法保存并打开演示文稿。',
         themeChanged: '主题已更改或不可用。请重新打开此对话框，然后再次选择它。',
         newerFormat: ({ version }: { version: string }) =>
-            `此演示文稿使用较新的 MarkdownPoint 格式（${version}）。请更新 MarkdownPoint 插件，以便作为演示文稿打开它。`
+            `此演示文稿使用较新的 MarkdownPoint 格式（${version}）。请更新 MarkdownPoint 插件，以便作为演示文稿打开它。`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint 无法读取“${presentation}”中的“${file}”。请在 MarkdownPoint 应用中打开演示文稿，以便查看需要修复的内容。`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint 无法读取“${presentation}”中的演示文稿。请在 MarkdownPoint 应用中打开它，以便查看需要修复的内容。`
     },
     slides: {
         new: '新建幻灯片',

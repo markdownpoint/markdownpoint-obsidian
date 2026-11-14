@@ -70,7 +70,11 @@ export const th: Translations = {
         handoffFailed: 'ไม่สามารถบันทึกและเปิดงานนำเสนอได้',
         themeChanged: 'ธีมมีการเปลี่ยนแปลงหรือใช้งานไม่ได้ เปิดหน้าต่างนี้ใหม่แล้วเลือกธีมอีกครั้ง',
         newerFormat: ({ version }: { version: string }) =>
-            `งานนำเสนอนี้ใช้รูปแบบไฟล์ MarkdownPoint ที่ใหม่กว่า (${version}) อัปเดตปลั๊กอิน MarkdownPoint เพื่อเปิดเป็นงานนำเสนอ`
+            `งานนำเสนอนี้ใช้รูปแบบไฟล์ MarkdownPoint ที่ใหม่กว่า (${version}) อัปเดตปลั๊กอิน MarkdownPoint เพื่อเปิดเป็นงานนำเสนอ`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint ไม่สามารถอ่าน “${file}” ใน “${presentation}” ได้ เปิดงานนำเสนอในแอป MarkdownPoint เพื่อดูว่าต้องแก้ไขอะไร`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint ไม่สามารถอ่านงานนำเสนอใน “${presentation}” ได้ เปิดงานนำเสนอในแอป MarkdownPoint เพื่อดูว่าต้องแก้ไขอะไร`
     },
     slides: {
         new: 'สไลด์ใหม่',

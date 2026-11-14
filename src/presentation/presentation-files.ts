@@ -18,7 +18,8 @@
 
 import { TFile } from 'obsidian';
 import type { TFolder, Vault } from 'obsidian';
-import { inSavedVersions, presentationMember, presentationPairNames } from '../format/recognition.ts';
+import { inSavedVersions, presentationMember } from '../format/recognition.ts';
+import { findPresentationPair, holdsPresentationPair } from '../readers/markdownpoint-readers.js';
 
 /**
  * Resolve both files from the live folder inventory for readers and the last write guard. A pair under a presentation's
@@ -41,14 +42,20 @@ function pairAt(vault: Vault, memberPath: string): { pair: { markdown: TFile; co
     const slash = memberPath.lastIndexOf('/');
     const folder = slash < 0 ? vault.getRoot() : vault.getFolderByPath(memberPath.slice(0, slash));
     if (!folder) return null;
-    const files = folder.children.filter((entry): entry is TFile => entry instanceof TFile);
-    const names = presentationPairNames(files.map(file => file.name));
-    if (!names) return null;
+    // The pair as MarkdownPoint finds it, by name in any case: a copy beside either file, or either under another name, is none
+    const found = findPresentationPair(folder.path, entries(folder));
+    if (found.kind !== 'pair') return null;
     const around = folder.parent && enclosingPresentation(folder.parent);
     if (around) return { around };
-    return {
-        pair: { markdown: files.find(file => file.name === names.markdown)!, companion: files.find(file => file.name === names.companion)! }
-    };
+    const files = folder.children.filter((entry): entry is TFile => entry instanceof TFile);
+    const [markdown, companion] = [found.markdown, found.json].map(name => files.find(file => file.name === name));
+    // MarkdownPoint finds a file iCloud hasn't downloaded yet by the name it will have, which no file of the vault has yet
+    return markdown && companion ? { pair: { markdown, companion } } : null;
+}
+
+/** A folder's entries as MarkdownPoint's readers take them. */
+function entries(folder: TFolder): { name: string; directory: boolean }[] {
+    return folder.children.map(entry => ({ name: entry.name, directory: !(entry instanceof TFile) }));
 }
 
 /**
@@ -58,17 +65,7 @@ function pairAt(vault: Vault, memberPath: string): { pair: { markdown: TFile; co
  */
 export function enclosingPresentation(folder: TFolder): TFolder | null {
     let outermost: TFolder | null = null;
-    for (let at: TFolder | null = folder; at; at = at.parent) {
-        let companion = false;
-        let markdown = false;
-        for (const entry of at.children) {
-            if (!(entry instanceof TFile)) continue;
-            const name = entry.name.toLowerCase();
-            if (name === 'presentation.mdpoint') companion = true;
-            else if (name === 'slides.md') markdown = true;
-        }
-        if (companion && markdown) outermost = at;
-    }
+    for (let at: TFolder | null = folder; at; at = at.parent) if (holdsPresentationPair(entries(at))) outermost = at;
     return outermost;
 }
 

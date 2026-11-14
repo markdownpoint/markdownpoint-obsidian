@@ -281,3 +281,10 @@ test('slides are not copied out of a presentation of a newer format minor', asyn
     assert.equal((await copier.copy('view', ['one'])).kind, 'newer');
     assert.deepEqual(state.writes, []);
 });
+
+test("a slide on a layout MarkdownPoint doesn't read, which its theme leaves out, is copied nowhere", async () => {
+    const { host, state } = setup();
+    host.theme = () => Promise.resolve({ ...theme, layouts: new Map() });
+    assert.deepEqual(await new SlideCopy(host).copy('context', ['one']), { kind: 'unavailable' });
+    assert.deepEqual(state.writes, []);
+});

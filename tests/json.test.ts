@@ -27,3 +27,14 @@ test('a JSON object reads as MarkdownPoint reads one: past a byte order mark, re
     const values = Array.from({ length: 200_000 }, (_, index) => index);
     assert.equal((readJsonObject(JSON.stringify({ values }))?.values as number[] | undefined)?.length, 200_000);
 });
+
+test('a JSON object reads nested 256 levels deep, the object itself the first, and is refused past them, as MarkdownPoint refuses the file', () => {
+    // The object is the first level, so its key's value nests one less, as MarkdownPoint's own test counts them.
+    const nested = (levels: number, inner = '') => `{"a":${'['.repeat(levels - 1)}${inner}${']'.repeat(levels - 1)}}`;
+    assert.ok(readJsonObject(nested(256)));
+    assert.equal(readJsonObject(nested(257)), null);
+    // Far past what the parse can descend, refused before it
+    assert.equal(readJsonObject(nested(100_000)), null);
+    // Brackets in a string, an escaped quotation mark before them among them, are words, not levels
+    assert.ok(readJsonObject(`{"a":"\\"${'['.repeat(300)}","b":${nested(256).slice(5, -1)}}`));
+});

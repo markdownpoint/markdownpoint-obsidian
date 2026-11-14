@@ -75,7 +75,11 @@ export const fa: Translations = {
         handoffFailed: 'ذخیره و باز کردن ارائه انجام نشد.',
         themeChanged: 'طرح زمینه تغییر کرده یا در دسترس نیست. این پنجره را دوباره باز کنید و آن را از نو انتخاب کنید.',
         newerFormat: ({ version }: { version: string }) =>
-            `این ارائه از قالب جدیدتری از MarkdownPoint (نسخهٔ ${version}) استفاده می‌کند. برای باز کردن آن به‌صورت ارائه، افزونهٔ MarkdownPoint را به‌روز کنید.`
+            `این ارائه از قالب جدیدتری از MarkdownPoint (نسخهٔ ${version}) استفاده می‌کند. برای باز کردن آن به‌صورت ارائه، افزونهٔ MarkdownPoint را به‌روز کنید.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `خواندن «${file}» در «${presentation}» با MarkdownPoint ممکن نیست. ارائه را در برنامهٔ MarkdownPoint باز کنید تا ببینید چه چیزی را باید اصلاح کنید.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `خواندن ارائهٔ داخل «${presentation}» با MarkdownPoint ممکن نیست. آن را در برنامهٔ MarkdownPoint باز کنید تا ببینید چه چیزی را باید اصلاح کنید.`
     },
     slides: {
         new: 'اسلاید جدید',
