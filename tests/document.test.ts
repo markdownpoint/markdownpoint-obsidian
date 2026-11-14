@@ -19,6 +19,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { indexPresentation, slideAtPosition } from '../src/format/document.ts';
+import { readPresentationPair } from '../src/readers/markdownpoint-readers.js';
+import { assertLinear } from './support/linear.ts';
 
 test('slides and their field ranges follow source order and preserve every source byte', () => {
     const text =
@@ -298,11 +300,12 @@ test('fence closure follows the lexer for mixed closing runs and trailing tabs',
     }
 });
 
-test('multiline link titles retain the lexical context before a fence-like line', () => {
+test('a fence ends a link definition, so one inside what would be its title opens a code block', () => {
     const source =
         '<!-- slide: first -->\n<!-- text: body -->\n[ref]: /help "A title\n~~~md\n<!-- slide: literal -->\nend"\n<!-- slide: second -->\n';
+    assert.equal(indexPresentation(source, 0), null);
     assert.deepEqual(
-        indexPresentation(source, 0)!.slides.map(slide => slide.id),
+        indexPresentation(source.replace('end"\n', 'end"\n~~~\n'), 0)!.slides.map(slide => slide.id),
         ['first', 'second']
     );
 });
@@ -477,4 +480,129 @@ test('only the fence that took in a marker makes an unclosed code block refuse t
     );
     const swallowing = `<!-- slide: s0 -->\n<!-- text: t -->\nIntro\n${fence}\n<!-- slide: s1 -->\n`;
     assert.equal(indexPresentation(swallowing, 0), null);
+});
+
+test('lines that would be markers in code blocks read in time in line with their number', () => {
+    const MARKER = '<!-- slide: x -->\n';
+    const deck = (words: string) => `<!-- slide: first -->\n<!-- notes -->\n${words}`;
+    // Core's reader holds each shape of nesting to linear time; these are the plugin's own reading of it, a line at a time.
+    const shapes: Record<string, (count: number) => string> = {
+        'in a fence': count => `\`\`\`\n${MARKER.repeat(count)}\`\`\`\n`,
+        "in a list item's fence": count => `- \`\`\`\n${`  ${MARKER}`.repeat(count)}  \`\`\`\n`
+    };
+    assert.deepEqual(
+        indexPresentation(deck(shapes['in a fence']!(2)), 0)?.slides.map(slide => slide.id),
+        ['first']
+    );
+    for (const [where, words] of Object.entries(shapes))
+        assertLinear(
+            `marker lines ${where}`,
+            count => deck(words(count)),
+            source => indexPresentation(source, 0),
+            2_000
+        );
+}, 30_000);
+
+test('a long line shaped as a marker reads in time in line with its length, in code or out of it', () => {
+    const deck = (words: string) => `<!-- slide: first -->\n<!-- notes -->\n${words}`;
+    const line = (count: number) => `<!-- slide:${' '.repeat(count)}x\n`;
+    const shapes: Record<string, (count: number) => string> = {
+        'in a fence that took in a marker': count => `\`\`\`\n<!-- slide: x -->\n${line(count)}\`\`\`\n`,
+        'outside code': line
+    };
+    for (const [where, words] of Object.entries(shapes))
+        assertLinear(
+            `a marker-shaped line ${where}`,
+            count => deck(words(count)),
+            source => indexPresentation(source, 0),
+            500
+        );
+}, 30_000);
+
+test('a marker in words of code blocks, lists, quotes and HTML is one exactly where MarkdownPoint reads one', () => {
+    // A slide's marker comes with a notes marker as indented, so the words after them stand in a block wherever they read
+    // as markers.
+    const marked = (indent: string) => `${indent}<!-- slide: x -->\n${indent}<!-- notes -->`;
+    const ALPHABET = [
+        '```',
+        '~~~',
+        '````',
+        '```js',
+        '  ```',
+        '    ```',
+        '- a',
+        '  - b',
+        '1. c',
+        '- ```',
+        '2. ```',
+        '   ```',
+        '-',
+        '',
+        'text',
+        marked(''),
+        marked('  '),
+        marked('    '),
+        '> q',
+        '> ```',
+        '> - ```',
+        marked('>     '),
+        '<div>',
+        '</div>',
+        '<!-- c -->',
+        '<!--',
+        '-->',
+        '<pre>',
+        '</pre>',
+        '# h',
+        '| a |',
+        '|---|',
+        '[x]: /u',
+        '"t"'
+    ];
+    const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
+    const front = `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n`;
+    const bytes = (text: string) => new TextEncoder().encode(text);
+    let seed = 11;
+    const random = () => (seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff) / 0x80000000;
+    let opened = 0;
+    let refused = 0;
+    for (let round = 0; round < 600; round++) {
+        const words = Array.from({ length: 1 + Math.floor(random() * 8) }, () => ALPHABET[Math.floor(random() * ALPHABET.length)]!).join(
+            '\n'
+        );
+        for (const markdown of [
+            `${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n\n<!-- slide: two -->\n`,
+            `${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n`
+        ]) {
+            const index = indexPresentation(markdown, front.length);
+            // The companion lists the slides the plugin finds, so the app opens the pair exactly when it finds the same.
+            const ids = index?.slides.map(slide => slide.id) ?? ['one', 'two'];
+            const json = JSON.stringify({
+                markdownpoint: '1.0',
+                type: 'presentation',
+                id,
+                theme: 'basic',
+                slides: Object.fromEntries(ids.map(slide => [slide, { layout: 'title' }]))
+            });
+            const reading = readPresentationPair(
+                'Talk',
+                { name: 'presentation.mdpoint', bytes: bytes(json) },
+                { name: 'slides.md', bytes: bytes(markdown) }
+            );
+            const case_ = JSON.stringify(words);
+            if (index === null) {
+                refused++;
+                assert.equal(reading.opens, false, case_);
+            } else {
+                opened++;
+                assert.ok(reading.opens, `${case_}: ${reading.opens ? '' : reading.problem.code}`);
+                assert.deepEqual(
+                    reading.presentation.slides.map(slide => slide.id),
+                    ids,
+                    case_
+                );
+            }
+        }
+    }
+    assert.ok(opened > 100 && refused > 100, `${opened} opened, ${refused} refused`);
 });

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { blockTokens } from './block-grammar.ts';
+import { markdownOpenFence } from '../readers/markdownpoint-readers.js';
 import { lineEnd } from './document.ts';
 
 /**
@@ -47,13 +47,7 @@ export function terminateSourceBlock(source: string, newline: string): string {
     return /[\r\n]$/.test(closed) ? closed : closed + newline;
 }
 
-const OPEN_CODE_PROBE = 'mp-open-code-probe';
-
-/** Whether Markdown words leave a fenced code block open at their end, as the grammar that draws the slide reads them. */
+/** Whether Markdown words leave a fenced code block open at their end, as MarkdownPoint reads them. */
 function leavesCodeOpen(words: string): boolean {
-    if (!words.includes('```') && !words.includes('~~~')) return false;
-    const last = blockTokens(`${words.replace(/\r\n?/g, '\n')}\n${OPEN_CODE_PROBE}`)
-        .filter(token => token.type !== 'space')
-        .at(-1);
-    return last?.type === 'code' && last.codeBlockStyle !== 'indented' && last.raw.replace(/\n+$/, '').endsWith(OPEN_CODE_PROBE);
+    return markdownOpenFence(words.replace(/\r\n?/g, '\n')) !== null;
 }

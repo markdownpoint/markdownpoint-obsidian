@@ -16,8 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { Token } from 'marked';
-import { blockTokens } from './block-grammar.ts';
+import { markdownFenceReader } from '../readers/markdownpoint-readers.js';
 import { isStableId } from './recognition.ts';
 
 export interface DocumentBlock {
@@ -67,7 +66,8 @@ export function lineEnd(source: string, from: number): { at: number; next: numbe
     return found ? { at: found.index, next: found.index + found[0].length } : null;
 }
 
-const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*((?:(?!-->).)+?))?\s*-->[ \t]*$/;
+// An id holds no whitespace, so the pattern reads a line in time in line with its length.
+const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*(\S+?))?\s*-->[ \t]*$/;
 
 /** A marker's id as its kind reads it: a stable id, or for a text marker an instance's id, a dot and its text control's id. */
 function markerId(kind: string, id: string): boolean {
@@ -80,33 +80,6 @@ function markerId(kind: string, id: string): boolean {
  * as `<!-- /slide -->`, `<!-- slide: a<b -->` or `<!-- notes --> Say hi`. A comment with more words is the author's.
  */
 const markerLike = /^<!--\s*\/?(?:section|slide|composition|text|control|notes)(?=[:\s]|-->|$):?\s*(?:\S+?\s*)?(?:-->.*)?$/i;
-
-/**
- * A candidate directive consumed by a fenced code token is content, not a slide boundary. `start` is where the block
- * holding that code begins in the field's normalized text. An indented line may continue a list item, and the fenced
- * code that ends it. Indented code holds no marker, since MarkdownPoint reads a marker however far it is indented.
- */
-function containingCode(markdown: string, line: string) {
-    const source = markdown.replace(/\r\n?/g, '\n');
-    const top = blockTokens(source).at(-1);
-    let last = top;
-    while (last?.type === 'list' || last?.type === 'list_item' || last?.type === 'blockquote') {
-        // A list holds its items, and an item or a quote its blocks.
-        const { items, tokens } = last as { items?: Token[]; tokens?: Token[] };
-        last = (items ?? tokens)?.filter(token => token.type !== 'space').at(-1);
-    }
-    if (!top || last?.type !== 'code' || last.codeBlockStyle === 'indented' || !last.raw.trimEnd().endsWith(line.trimEnd()))
-        return undefined;
-    const start = source.length - top.raw.length;
-    return { raw: last.raw, start, leading: last === top && source.slice(0, start).trim().length === 0 };
-}
-
-/** Ask the same grammar using a bounded probe, not the growing document prefix. */
-function closesFence(fence: string, line: string): boolean {
-    if (!line.trimStart().startsWith(fence[0]!)) return false;
-    const token = blockTokens(`${fence}\n${line}\n`)[0];
-    return token?.type === 'code' && token.text === '';
-}
 
 /**
  * Indexes source ranges without rewriting or rendering Markdown. bodyStart is the
@@ -123,11 +96,11 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     let section: DocumentSection | null = null;
     let block: DocumentBlock | null = null;
     let container: 'slide' | 'composition' | null = null;
-    let payloadFrom = bodyStart;
-    let hasFence = false;
-    // Where, in the current field's normalized text, the code block that last took in a marker begins
-    let swallowedFrom: number | null = null;
-    let openFence: string | null = null;
+    // Which lines stand in a fenced code block, read as MarkdownPoint reads them, a field at a time: each field is its own
+    // Markdown block, so HTML or a fence-like line in one never changes how the next is read.
+    let code = markdownFenceReader();
+    // Where, in the field's lines as the reader counts them, the top-level code block that took in a marker's line opened
+    let swallowed: number | null = null;
     let offset = bodyStart;
     let lineNumber = markdown.slice(0, bodyStart).split(LINE_END).length - 1;
 
@@ -135,39 +108,22 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
         const ending = lineEnd(markdown, offset);
         const end = ending?.next ?? markdown.length;
         const line = markdown.slice(offset, ending?.at ?? end);
-        // A leading fence cannot later become part of a preceding link definition.
-        // Once Marked identifies it, scan to its closing line once.
-        // Retokenizing its growing payload at every example marker is quadratic.
-        if (openFence) {
-            if (closesFence(openFence, line)) {
-                openFence = null;
-                payloadFrom = end;
-                hasFence = false;
-                swallowedFrom = null;
-            }
-            offset = end;
-            lineNumber++;
-            continue;
-        }
-        hasFence ||= line.includes('```') || line.includes('~~~');
-        // Each field is its own Markdown block. HTML or a fence-like line in one
-        // field must not change how the next field is interpreted.
         // As MarkdownPoint reads a line: a marker names its block by ids, a line shaped as one with a word that is no id
         // refuses the file, and a line of more words, as `text: ask Anna`, is a comment.
         // A marker is read without the spaces or tabs before it, as after it.
         const bare = line.replace(/^[ \t]+/, '');
         const found = marker.exec(bare);
         const match = found && (found[2] === undefined || markerId(found[1]!, found[2])) ? found : null;
-        if (match || markerLike.test(bare)) {
-            const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), bare) : undefined;
-            if (code) {
-                swallowedFrom = code.start;
-                const fence = /^ {0,3}(`{3,}|~{3,})/.exec(code.raw)?.[1];
-                if (fence && code.leading) openFence = fence;
-                offset = end;
-                lineNumber++;
-                continue;
-            }
+        const structural = match !== null || markerLike.test(bare);
+        // A line in a fenced code block is the code's words, a marker's shape among them. A block at the top level takes
+        // in the rest of the file while it stays open; one in a list item or a quote ends with them.
+        if (code.line(line)) {
+            if (structural) swallowed = code.open()?.start ?? swallowed;
+            offset = end;
+            lineNumber++;
+            continue;
+        }
+        if (structural) {
             if (!match || !ending) return null;
             const kind = match[1];
             const id = match[2];
@@ -201,24 +157,14 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
                     part.blocks.push(block);
                 }
             }
-            payloadFrom = end;
-            hasFence = false;
-            swallowedFrom = null;
+            code = markdownFenceReader();
+            swallowed = null;
         }
         offset = end;
         lineNumber++;
     }
-    if (openFence) return null;
     // A code block that takes in a marker and never closes holds the rest of the file, so its slides would go missing.
     // Another fence left open at the end only holds that field's words, as the MarkdownPoint app reads it.
-    if (swallowedFrom !== null) {
-        const source = markdown.slice(payloadFrom).replace(/\r\n?/g, '\n');
-        const last = blockTokens(source).at(-1);
-        if (last?.type === 'code' && source.length - last.raw.length === swallowedFrom) {
-            const fence = /^ {0,3}(`{3,}|~{3,})/.exec(last.raw)?.[1];
-            const closing = last.raw.replace(/\n+$/, '').split('\n').at(-1) ?? '';
-            if (fence && !closesFence(fence, closing)) return null;
-        }
-    }
+    if (swallowed !== null && code.open()?.start === swallowed) return null;
     return { slides, compositions, sections };
 }
