@@ -18,6 +18,7 @@
 
 import { chartNumberRule, respellChartNumber, sameRule } from '../core/chart-numbers.ts';
 import type { ChartNumberRule } from '../core/chart-numbers.ts';
+import { decodeCharacterReferences } from '../core/character-references.ts';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { indexPresentation } from './document.ts';
 import { inlineText, tokenRuns, wordTokens } from './link-tokens.ts';
@@ -120,7 +121,9 @@ interface Leaf {
  */
 function respellCell(source: string, from: ChartNumberRule, to: ChartNumberRule): string {
     // A table reads a cell's escaped pipes as pipes before its Markdown, a code span's included.
-    const leaves = cellLeaves(wordTokens(source.replaceAll('\\|', '|')));
+    const tokens = wordTokens(source.replaceAll('\\|', '|'));
+    if (showsAddressDigit(tokens)) return source;
+    const leaves = cellLeaves(tokens);
     const plain = leaves.map(leaf => leaf.text).join('');
     const words = plain.trim();
     const spelled = respellChartNumber(words, from, to);
@@ -130,6 +133,25 @@ function respellCell(source: string, from: ChartNumberRule, to: ChartNumberRule)
     if (written !== null) return written.replaceAll('|', '\\|');
     const edge = source.length - source.trimStart().length;
     return source.slice(0, edge) + markdownText(spelled).replaceAll('|', '\\|') + source.slice(source.trimEnd().length);
+}
+
+/**
+ * Whether tokens hold, at any depth, a digit of a link that shows its own address, as an autolink shows it,
+ * `<foo:1,234>` or `<name@host>`: the cell holds no number there, as MarkdownPoint core's `showsAddressDigit` reads
+ * it, since a cell's words hold no brackets to find it by. An address GFM finds in the words themselves the number
+ * reader finds (`parseChartNumber`).
+ */
+function showsAddressDigit(tokens: readonly unknown[]): boolean {
+    return tokens.some(token => {
+        if (!isRecord(token)) return false;
+        const children = Array.isArray(token.tokens) ? (token.tokens as unknown[]) : [];
+        if (token.type === 'link' && typeof token.raw === 'string' && /^[[<]/.test(token.raw) && typeof token.href === 'string') {
+            const words = chartWords(children);
+            const href = decodeCharacterReferences(token.href);
+            if (/\d/.test(words) && (href === words || href === `mailto:${words}`)) return true;
+        }
+        return showsAddressDigit(children);
+    });
 }
 
 /**

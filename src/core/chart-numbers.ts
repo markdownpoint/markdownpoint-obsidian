@@ -1,4 +1,5 @@
 /** How a presentation writes a chart's numbers: the rule its language reads cells by, and a cell's number read, spelled and respelled by it. */
+import { Lexer } from "marked";
 import { CHART_NUMBER_LOCALES, CHART_NUMBER_PARENTS, CHART_NUMBER_PROFILES, CHART_NUMBER_SCRIPTS } from "./chart-number-rules.js";
 import { cldrProfile } from "../common/cldr-chain.js";
 
@@ -76,7 +77,8 @@ function numberPattern(rule: ChartNumberRule): RegExp {
  * presentation's decimal mark is the point; whole digits stand ungrouped, or grouped by the presentation's group mark or by a space, in
  * the presentation's widths, never by both. Nothing is guessed: "1,234" is 1234 in English and 1.234 in Swedish, and "1,23" in
  * English holds no number. A loss is written as spreadsheets write one: with a minus before the number or after its
- * prefix, in parentheses, or with a minus ending the cell, as "-$4.50", "($4.50)" and "4.50-" do.
+ * prefix, in parentheses, or with a minus ending the cell, as "-$4.50", "($4.50)" and "4.50-" do. Digits that stand in an
+ * address the words link are no number (`addressDigits`).
  */
 export function parseChartNumber(text: string, rule: ChartNumberRule): ChartNumber | null {
   return readChartNumber(text, rule)?.number ?? null;
@@ -105,8 +107,20 @@ function signedWords(sign1: string, prefix: string, sign2: string, suffix: strin
  * without their group marks, whether it grouped them, and the digits after its point, if it has one.
  */
 function readChartNumber(text: string, rule: ChartNumberRule): ChartNumberRead | null {
-  const match = numberPattern(rule).exec(text.trim());
-  return match?.groups ? readNumberParts(match.groups, rule) : null;
+  const words = text.trim(), match = numberPattern(rule).exec(words);
+  return match?.groups && !addressDigits(words) ? readNumberParts(match.groups, rule) : null;
+}
+
+/**
+ * Whether an address GFM links in the words holds a digit, as marked's GFM lexer finds one in running text: an http,
+ * https or ftp address, one starting `www.`, an email, or a mailto: or xmpp: one. Every digit of a cell that holds a
+ * number is its number's, so such a number runs through the address, and spelling it anew would make another address.
+ * A cell's words are written back with such an address as written, so wherever they are read they link it. Only words
+ * that could hold one are lexed.
+ */
+function addressDigits(words: string): boolean {
+  return /:\/\/|www\.|@/i.test(words) && Lexer.lexInline(words, { gfm: true })
+    .some(token => token.type === "link" && !/^[[<]/.test(token.raw) && /\d/.test(token.raw));
 }
 
 /** A cell's number read from its parts, and what it is spelled from. */
@@ -157,14 +171,16 @@ function digitsValue(whole: string, fraction: string, loss: boolean): number {
 /**
  * A cell's number as another rule spells it, or null when `from` reads no number in it: its signs, words and digits
  * kept, its point, group mark and group widths taken from `to`, so "1 234,50" from a Swedish computer is "1,234.50" in
- * an English presentation, and its loss "(1 234,50)" is "(1,234.50)". The same rule gives the cell back as it is.
+ * an English presentation, and its loss "(1 234,50)" is "(1,234.50)". The same rule gives the cell back as it is, and so
+ * does a spelling `to` would read otherwise, as "www,5" would be the address "www.5".
  */
 export function respellChartNumber(text: string, from: ChartNumberRule, to: ChartNumberRule): string | null {
   const read = readChartNumber(text, from);
   if (!read) return null;
   if (sameRule(from, to)) return text;
   const whole = read.grouped ? grouped(read.whole, to) : read.whole;
-  return `${read.sign1}${read.prefix}${read.sign2}${whole}${read.fraction === null ? "" : `${to.decimal}${read.fraction}`}${read.suffix}`;
+  const spelled = `${read.sign1}${read.prefix}${read.sign2}${whole}${read.fraction === null ? "" : `${to.decimal}${read.fraction}`}${read.suffix}`;
+  return readChartNumber(spelled, to)?.number.value === read.number.value ? spelled : text;
 }
 
 /** Whether two rules spell every number alike. */

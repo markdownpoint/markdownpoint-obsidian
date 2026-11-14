@@ -3,7 +3,7 @@
     "src/common/cldr-chain.ts": "26b4a17fea2367f77424000f4f40e9457be8001ff2104490d230dec0b416ecb0",
     "src/core/character-references.ts": "d6da1f7334695344a5797cdb15d0901ce77a25e9cde0f8b90d611801bc1b67c2",
     "src/core/chart-number-rules.ts": "13979c863b5b14946775d32b8829642a8407724b151d325ccd938c1de8ea5f1f",
-    "src/core/chart-numbers.ts": "5193aa341622c2e27ade336f18e94c8b3bfb647643bd104f2af8ae83a15bbd46",
+    "src/core/chart-numbers.ts": "332e4064cd830ccf1467987c57bdbadd068080cb689c6037c9296469b3689b67",
     "src/core/new-presentation-style.ts": "c8b2d7534086ce2191318fe1c30e83b7a20fa5c64a365c0f9af0042d2ffbf18f",
     "src/themes/basic/blank.json": "121a789a439fb12fb1543e22fbebd9b89d884c69aace6b85ee869529a24a1a4e",
     "src/themes/basic/content-with-header.json": "bd5428c387995e0ae95045ccbd2c92dfd4301e7f55192ab7d7086fafcbd2599f",

@@ -97,9 +97,7 @@ const respelledByCore: readonly (readonly [locale: string, cell: string, core: s
     ['en-US', '1,234 <https://example.com/a>', '1·234 [https://example.com/a](https://example.com/a)', '1·234 <https://example.com/a>'],
     ['sv-SE', '[](https://example.com) 1,5', '&#32;1.5', '[](https://example.com) 1.5'],
     ['sv-SE', '` 1,5 `', '`1.5`', '` 1.5 `'],
-    ['en-US', '`1`,`234`', '`1·234`'],
-    // An address the number runs through is written as its words, so it doesn't link to another address.
-    ['sv-SE', 'https://example.com/1,234', 'https://example.com/1.234', 'https\\://example.com/1.234']
+    ['en-US', '`1`,`234`', '`1·234`']
 ];
 
 test("a respelled cell keeps its marks, links and code around its number's runs, as MarkdownPoint core respells it", () => {
@@ -131,15 +129,38 @@ test("a cell's words read a character reference as MarkdownPoint core reads it, 
     for (const [source, words] of read) assert.equal(markdownWords(source), words, source);
 });
 
-test('a number whose character reference ends a bare address keeps its value when pasted into another language', () => {
-    for (const cell of ['https://x.co/1,234&#37;', 'www.x.co/1,234&#37;']) {
-        assert.equal(parseChartNumber(markdownWords(cell), english)?.value, 1234, cell);
-        const respelled = respellChartCells(table(`| Sales | ${cell} | 2 |`), english, swedish)
-            .split('\n')[2]!
-            .split(' | ')[1]!;
-        assert.notEqual(respelled, cell);
-        assert.equal(parseChartNumber(markdownWords(respelled), swedish)?.value, 1234, respelled);
+test('a cell whose number runs through an address holds none and stays as written, as MarkdownPoint core reads it as written and saved again', () => {
+    // A bare address, one starting www., an email, two with a character reference ending them, and an address and an
+    // email escaped, which core writes as links once saved; then an address in angle brackets, an autolink whose scheme
+    // GFM links only in brackets, a link whose words are its address, whole or parted by marks or a note, and an email
+    // a number runs into.
+    const words = [
+        'https://example.com/1,234',
+        'www.example.com/1,234',
+        'user1@example.com',
+        'https://x.co/1,234&#37;',
+        'www.x.co/1,234&#37;'
+    ];
+    const escaped = [String.raw`https\://example.com/1,234`, String.raw`user1\@example.com`];
+    for (const cell of [...words, ...escaped]) assert.equal(parseChartNumber(markdownWords(cell), english), null, cell);
+    for (const cell of [
+        ...words,
+        ...escaped,
+        '<https://example.com/1,234>',
+        '<foo:1,234>',
+        '[foo:1,234](foo:1,234)',
+        '[foo:**1,234**](foo:1,234)',
+        '[foo:1<!-- note -->,234](foo:1,234)',
+        '1 234@example.com'
+    ]) {
+        assert.equal(respellChartCells(table(`| Sales | ${cell} | 1.5 |`), english, swedish), table(`| Sales | ${cell} | 1,5 |`), cell);
+        assert.equal(respellChartCells(table(`| Sales | ${cell} | 1,5 |`), swedish, english), table(`| Sales | ${cell} | 1.5 |`), cell);
     }
+    assert.equal(
+        respellChartCells(table('| Sales | www,5 | 1,5 |'), swedish, english),
+        table('| Sales | www,5 | 1.5 |'),
+        'a respell that would make an address leaves the cell'
+    );
 });
 
 test('a cell whose marks would read otherwise once respelled is written as its words', () => {
@@ -152,15 +173,6 @@ test('the words a respelled run is written as read back as spelled, every mark t
     const cell = written.split('\n')[2]!.split(' | ')[1]!;
     assert.equal(cell, marks.replace(':', '\\:').replace('@', '\\@') + ' 1.5 \\_\\]\\}');
     assert.equal(inlineText(wordTokens(cell)), '*|<&[=~{`\\ .,%()+:;/?"$#!>@^\' 1.5 _]}');
-    for (const [address, spelled] of [
-        ['https://example.com/1,234', String.raw`https\://example.com/1.234`],
-        ['<https://example.com/1,234>', String.raw`https\://example.com/1.234`],
-        ['www.example.com/1,234', String.raw`www\.example.com/1.234`]
-    ] as const) {
-        const respelled = respellChartCells(table(`| Sales | ${address} | 2 |`), swedish, english);
-        assert.equal(respelled, table(`| Sales | ${spelled} | 2 |`));
-        assert.ok(!wordTokens(spelled).some(token => token.type === 'link'), spelled);
-    }
 });
 
 test("a cell's escaped pipe is a pipe, a code span's too, as a table reads it", () => {
