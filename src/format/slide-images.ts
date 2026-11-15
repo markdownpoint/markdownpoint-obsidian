@@ -108,10 +108,17 @@ export function assignedSlideImages(
     }
     addLevel(slide, root, false);
     const references: SlideImageReference[] = [];
-    // A slide's own background replaces the presentation's whole: without its own picture it shows none.
-    const shownBackground = isRecord(slide.background) ? slide.background : companion.background;
-    const background = isRecord(shownBackground) && isRecord(shownBackground.image) ? shownBackground.image.file : undefined;
-    const backgroundPath = imagePath(background, root, true);
+    // The background a slide shows, each whole: its own, else its layout's, else its master's, whose picture is the
+    // theme's, one file per scheme.
+    const ownBackground = isRecord(slide.background) ? slide.background : undefined;
+    const themeBackground = ownBackground || !theme ? undefined : [layout?.background, theme.master.value.background].find(isRecord);
+    const ownImage = isRecord(ownBackground?.image) ? ownBackground.image : undefined;
+    const themeImage = isRecord(themeBackground?.image) ? themeBackground.image : undefined;
+    const backgroundPath = ownImage
+        ? imagePath(ownImage.file, root, true)
+        : themeImage && theme
+          ? imagePath(picture(themeImage.file), theme.root + '/', false)
+          : undefined;
     if (backgroundPath) references.push({ path: backgroundPath, name: null, category: 'background' });
     const pending = [...objects.values()].map(object => ({ object, parent: null as Ancestor | null }));
     const expanded = new Set<string>();

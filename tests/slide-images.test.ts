@@ -48,13 +48,51 @@ const theme: EmbeddedTheme = {
 };
 const paths = (value: unknown, embedded: EmbeddedTheme | null = theme) =>
     assignedSlideImages(path, value, 'one', embedded).map(image => image.path);
+/** The theme with a background on its master, and on its title layout when one is given. */
+const withBackgrounds = (masterBackground: unknown, layoutBackground?: unknown): EmbeddedTheme => ({
+    ...theme,
+    master: { ...theme.master, value: { ...master, background: masterBackground } },
+    layouts: new Map([
+        [
+            'title',
+            {
+                path: 'title.json',
+                source: '{}',
+                value: layoutBackground === undefined ? layout : { ...layout, background: layoutBackground }
+            }
+        ]
+    ])
+});
+
+test("a slide without a background of its own shows its layout's, else its master's, each whole, a theme's picture for the slide's scheme", () => {
+    const perScheme = { image: { file: { light: 'art/day.svg', dark: 'art/night.svg' } } };
+    const background = (embedded: EmbeddedTheme, slide: Record<string, unknown>) =>
+        assignedSlideImages(path, { slides: { one: { overrides: { logo: null }, ...slide } } }, 'one', embedded)
+            .filter(image => image.category === 'background')
+            .map(image => image.path);
+    // The title layout's scheme is evening, a dark one.
+    assert.deepEqual(background(withBackgrounds(perScheme), { layout: 'title' }), [root + 'themes/field-notes/art/night.svg']);
+    assert.deepEqual(
+        background(withBackgrounds(perScheme), {}),
+        [root + 'themes/field-notes/art/day.svg'],
+        'a slide without a layout shows its master\u2019s'
+    );
+    assert.deepEqual(background(withBackgrounds(perScheme, { image: { file: 'art/title.svg' } }), { layout: 'title' }), [
+        root + 'themes/field-notes/art/title.svg'
+    ]);
+    // A layout's own background replaces the master's whole: its fill alone shows no picture of the master's.
+    assert.deepEqual(background(withBackgrounds(perScheme, { fill: 'accent' }), { layout: 'title' }), []);
+    assert.deepEqual(background(withBackgrounds(perScheme), { layout: 'title', background: { image: { file: 'media/own.png' } } }), [
+        root + 'media/own.png'
+    ]);
+});
 
 test('assigned images prioritize background, named layout placeholders, then other pictures', () => {
     const companion = {
-        background: { image: { file: 'media/back.svg' } },
         slides: {
             one: {
                 layout: 'title',
+                background: { image: { file: 'media/back.svg' } },
                 overrides: { hero: { file: 'media/hero.svg' }, detail: { file: 'generated/detail.png' } },
                 objects: [
                     {
@@ -91,17 +129,15 @@ test("a placeholder's picture a layout left to the slide shows as the slide's ow
 });
 
 test('cleared backgrounds, removed objects and empty placeholders do not show samples or prior generations', () => {
-    const companion = {
-        background: { image: { file: 'media/back.svg' } },
-        slides: { one: { layout: 'title', background: {}, overrides: { logo: null, hero: { file: null } } } }
-    };
-    assert.deepEqual(paths(companion), []);
-    // A slide's own background replaces the presentation's whole: its fill alone shows no picture of the presentation's.
+    const pictured = withBackgrounds({ image: { file: 'art/back.svg' } });
+    const companion = { slides: { one: { layout: 'title', background: {}, overrides: { logo: null, hero: { file: null } } } } };
+    assert.deepEqual(paths(companion, pictured), []);
+    // A slide's own background replaces its master's whole: its fill alone shows no picture of the master's.
     assert.deepEqual(
-        paths({
-            ...companion,
-            slides: { one: { layout: 'title', background: { fill: 'accent' }, overrides: { logo: null, hero: { file: null } } } }
-        }),
+        paths(
+            { slides: { one: { layout: 'title', background: { fill: 'accent' }, overrides: { logo: null, hero: { file: null } } } } },
+            pictured
+        ),
         []
     );
     assert.deepEqual(paths({ slides: { one: { background: { image: { file: 'media/own.png' } }, objects: [] } } }, null), [
@@ -159,10 +195,10 @@ test("a slide shows the scheme MarkdownPoint shows: its own, else its layout's, 
 
 test('repeated files are shown once and video assignments are not treated as images', () => {
     const companion = {
-        background: { image: { file: 'media/same.png' } },
         slides: {
             one: {
                 layout: 'title',
+                background: { image: { file: 'media/same.png' } },
                 overrides: { logo: null, hero: { file: 'media/same.png' }, detail: { file: 'media/clip.mp4' } },
                 objects: [
                     { id: 'again', type: 'image', file: 'media/same.png' },
