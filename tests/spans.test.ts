@@ -46,7 +46,13 @@ test('spans read as the MarkdownPoint app reads them: a group, a color, a weight
         '[ab]{font-weight=100}',
         '[ab]{font-weight=200}',
         '[ab]{font-weight=800}',
-        '[ab]{color=#fff}'
+        '[ab]{color=#fff}',
+        // Pandoc's spacing and quotes.
+        '[ab]{ color=accent }',
+        "[ab]{color='accent' font-weight='300'}",
+        '[ab]{color=accent\nfont-weight=600}',
+        '[ab]{\tfont-weight=600\t}',
+        '[ab]{ }'
     ])
         assert.deepEqual(presentationSpan(span), { length: span.length, content: 'ab' }, span);
     for (const literal of [
@@ -60,7 +66,9 @@ test('spans read as the MarkdownPoint app reads them: a group, a color, a weight
         '[ab]{color=accent-}',
         '[ab]{color=#ffff0}',
         '[ab]{size=2}',
-        '[ab] {}'
+        '[ab] {}',
+        `[ab]{color="accent'}`,
+        '[ab]{color="accent"font-weight=600}'
     ])
         assert.equal(presentationSpan(literal), null, literal);
 });
