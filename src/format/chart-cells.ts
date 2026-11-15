@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { canonicalLocale } from '../core/canonical-locale.ts';
 import { chartNumberRule, respellChartNumber, sameRule } from '../core/chart-numbers.ts';
 import type { ChartNumberRule } from '../core/chart-numbers.ts';
 import { decodeCharacterReferences } from '../core/character-references.ts';
@@ -31,12 +32,7 @@ import { blockField, type PartTextSchemas } from './text-schemas.ts';
  * canonical form, and en-US where it names none. A tag no language reads is one the app refuses the presentation for.
  */
 export function presentationLocale(presentation: Readonly<Record<string, unknown>>): string {
-    if (typeof presentation.locale !== 'string') return 'en-US';
-    try {
-        return Intl.getCanonicalLocales(presentation.locale)[0] ?? 'en-US';
-    } catch {
-        return 'en-US';
-    }
+    return typeof presentation.locale === 'string' ? (canonicalLocale(presentation.locale) ?? 'en-US') : 'en-US';
 }
 
 /**

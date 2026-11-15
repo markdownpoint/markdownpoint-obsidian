@@ -219,9 +219,13 @@ test('the header, the first column, words that hold no number, and words that ar
     assert.equal(respellChartCells(padded, swedish, english), `\n\n${table('| Sales | 1.5 |')}\r\n\n`);
 });
 
-test("a presentation's language is its locale as the MarkdownPoint app reads it: canonical, and en-US where it names none", () => {
+test("a presentation's language is its locale as the MarkdownPoint app reads it: canonical by CLDR's pinned aliases, and en-US where it names none", () => {
     assert.equal(presentationLocale({ locale: 'sv-se' }), 'sv-SE');
     assert.equal(presentationLocale({ locale: 'zh-hant-tw' }), 'zh-Hant-TW');
+    assert.equal(presentationLocale({ locale: 'iw-il' }), 'he-IL');
+    // CLDR's own alias, where the computer's Intl keeps tw.
+    assert.equal(presentationLocale({ locale: 'tw' }), 'ak');
+    assert.equal(presentationLocale({ locale: 'en-u-ca-gregory' }), 'en-US', 'a tag outside the format is none');
     assert.equal(presentationLocale({}), 'en-US');
 });
 
