@@ -18,6 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { setTimeout as delay } from 'node:timers/promises';
 import { beforeEach, test, vi } from 'vitest';
 import type { App, Vault } from 'obsidian';
 import { memoryApp, modals, notices } from './support/obsidian.ts';
@@ -119,7 +120,7 @@ const opens = (reader: PresentationReader, view: MarkdownView) =>
     view.file !== null && reader.matchesIdentity(view.file as never, view.getViewData());
 
 /** Every read the vault's events started, done. */
-const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const settle = () => delay(0);
 
 beforeEach(() => {
     notices.length = 0;

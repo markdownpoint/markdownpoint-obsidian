@@ -160,7 +160,7 @@ export function memoryApp(files: Readonly<Record<string, string | Uint8Array>>, 
     };
     const vaultEvents = new Events();
     const vault = {
-        configDir: '.obsidian',
+        configDir: '.config',
         adapter: { exists: () => Promise.resolve(false) },
         getName: () => name,
         getRoot: () => root,
