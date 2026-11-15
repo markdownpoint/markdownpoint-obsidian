@@ -19,7 +19,7 @@
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import type { PreparedPart } from './insert.ts';
 import { isRecord, isStableId } from './recognition.ts';
-import { standingFrame } from './text-growth.ts';
+import { passedOverText, standingFrame } from './text-growth.ts';
 
 export function layoutName(key: string, value: Record<string, unknown>): string {
     if (typeof value.name === 'string' && value.name.trim()) return value.name;
@@ -89,6 +89,7 @@ export function layoutTextPlaceholders(theme: EmbeddedTheme, layoutKey: string):
             !isRecord(object) ||
             object.type !== 'text' ||
             object.placeholder !== true ||
+            passedOverText(object) ||
             (typeof object.id === 'string' && inherited.has(object.id))
         )
             continue;

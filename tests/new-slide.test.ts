@@ -143,6 +143,17 @@ test('multicolumn writing reads down each column under a spanning title', () => 
     assert.deepEqual(layoutTextPlaceholders(columns, 'title'), ['title', 'left-heading', 'left-body', 'right-heading', 'right-body']);
 });
 
+test('a placeholder whose newer auto-size word may grow a side its frame leaves out is passed over, as MarkdownPoint passes it over', () => {
+    const newer = theme({
+        objects: [
+            { id: 'title', type: 'text', placeholder: true, frame: { x: 80, y: 150, width: 600, height: 100 } },
+            { id: 'body', type: 'text', placeholder: true, 'auto-size': 'fit', frame: { x: 80, y: 300, width: 600 } },
+            { id: 'caption', type: 'text', placeholder: true, 'auto-size': 'fit', frame: { x: 80, y: 600, width: 600, height: 60 } }
+        ]
+    });
+    assert.deepEqual(layoutTextPlaceholders(newer, 'title'), ['title', 'caption'], 'a full frame reads, whatever the word');
+});
+
 test('a title that grows to its words, holding no height, still reads before the body under it', () => {
     const growing = theme({
         objects: [

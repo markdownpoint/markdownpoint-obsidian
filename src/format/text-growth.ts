@@ -50,6 +50,25 @@ function grownSides(record: Readonly<Record<string, unknown>>): { width: boolean
     return { width: (fit === 'width' || fit === 'both') && !columned, height: fit === 'height' || fit === 'both' };
 }
 
+/** The auto-size words MarkdownPoint reads. */
+const AUTO_SIZES: readonly unknown[] = ['both', 'width', 'height', 'none'];
+
+/**
+ * Whether MarkdownPoint passes over a text record and keeps it as written: a newer minor's auto-size word may grow a
+ * side its frame leaves out, which no reader of this version can tell.
+ */
+export function passedOverText(record: Readonly<Record<string, unknown>>): boolean {
+    const fit = record['auto-size'];
+    const frame = record.frame;
+    return (
+        record.type === 'text' &&
+        typeof fit === 'string' &&
+        !AUTO_SIZES.includes(fit) &&
+        isRecord(frame) &&
+        (frame.width === undefined || frame.height === undefined)
+    );
+}
+
 /**
  * The share of a text's width its alignment holds as its words resize it: 0 set left, a half centered, 1 set right, and
  * a justified or unaligned text's the side its lines start on, the right in a right-to-left text.
