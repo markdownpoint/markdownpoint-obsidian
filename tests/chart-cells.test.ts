@@ -158,9 +158,15 @@ test('a cell whose number runs through an address holds none and stays as writte
     }
     assert.equal(
         respellChartCells(table('| Sales | www,5 | 1,5 |'), swedish, english),
-        table('| Sales | www,5 | 1.5 |'),
-        'a respell that would make an address leaves the cell'
+        table('| Sales | www .5 | 1.5 |'),
+        'a respell that would make an address sets the words apart from the number'
     );
+    assert.equal(
+        respellChartCells(table('| Sales | **www**,5 | 1,5 |'), swedish, english),
+        table('| Sales | **www** .5 | 1.5 |'),
+        'the space and the point go with the digit'
+    );
+    assert.equal(parseChartNumber('www .5', english)?.value, 0.5);
 });
 
 test('a cell whose marks would read otherwise once respelled is written as its words', () => {

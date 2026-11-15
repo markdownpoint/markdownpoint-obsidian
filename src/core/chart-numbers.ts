@@ -171,16 +171,22 @@ function digitsValue(whole: string, fraction: string, loss: boolean): number {
 /**
  * A cell's number as another rule spells it, or null when `from` reads no number in it: its signs, words and digits
  * kept, its point, group mark and group widths taken from `to`, so "1 234,50" from a Swedish computer is "1,234.50" in
- * an English presentation, and its loss "(1 234,50)" is "(1,234.50)". The same rule gives the cell back as it is, and so
- * does a spelling `to` would read otherwise, as "www,5" would be the address "www.5".
+ * an English presentation, and its loss "(1 234,50)" is "(1,234.50)". The same rule gives the cell back as it is. Where
+ * the new marks would join the words before the number into an address, as "www,5" and "sales@example,5" would link
+ * "www.5" and "sales@example.5", a space sets the words apart, "www .5", so the cell keeps its value; a spelling `to`
+ * reads otherwise even so gives the cell back as it is.
  */
 export function respellChartNumber(text: string, from: ChartNumberRule, to: ChartNumberRule): string | null {
   const read = readChartNumber(text, from);
   if (!read) return null;
   if (sameRule(from, to)) return text;
   const whole = read.grouped ? grouped(read.whole, to) : read.whole;
-  const spelled = `${read.sign1}${read.prefix}${read.sign2}${whole}${read.fraction === null ? "" : `${to.decimal}${read.fraction}`}${read.suffix}`;
-  return readChartNumber(spelled, to)?.number.value === read.number.value ? spelled : text;
+  const number = `${read.sign2}${whole}${read.fraction === null ? "" : `${to.decimal}${read.fraction}`}${read.suffix}`;
+  for (const gap of ["", " "]) {
+    const spelled = `${read.sign1}${read.prefix}${gap}${number}`;
+    if (readChartNumber(spelled, to)?.number.value === read.number.value) return spelled;
+  }
+  return text;
 }
 
 /** Whether two rules spell every number alike. */
