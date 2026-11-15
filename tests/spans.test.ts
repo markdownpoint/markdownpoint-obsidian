@@ -43,6 +43,9 @@ test('spans read as the MarkdownPoint app reads them: a group, a color, a weight
         '[ab]{font-weight="900"}',
         '[ab]{color=muted font-weight=300}',
         '[ab]{font-weight=700 color="#2F7D4F"}',
+        '[ab]{font-weight=100}',
+        '[ab]{font-weight=200}',
+        '[ab]{font-weight=800}',
         '[ab]{color=#fff}'
     ])
         assert.deepEqual(presentationSpan(span), { length: span.length, content: 'ab' }, span);
@@ -50,6 +53,8 @@ test('spans read as the MarkdownPoint app reads them: a group, a color, a weight
         '[]{}',
         '[ab]{font-weight=450}',
         '[ab]{font-weight=600.0}',
+        '[ab]{font-weight=0}',
+        '[ab]{font-weight=1000}',
         '[ab]{color=accent color=muted}',
         '[ab]{font-weight=600 font-weight=700}',
         '[ab]{color=accent-}',

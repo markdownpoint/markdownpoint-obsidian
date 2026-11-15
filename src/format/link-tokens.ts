@@ -113,7 +113,7 @@ function delimitedSpan(source: string): { length: number; content: string } | nu
 
 const spanAttributes = /^\{((?:[a-z-]+=(?:"[^"]*"|[^\s"{}]+))(?:[ \t]+[a-z-]+=(?:"[^"]*"|[^\s"{}]+))*)?\}/;
 const spanAttribute = /([a-z-]+)=(?:"([^"]*)"|([^\s"{}]+))/g;
-const spanWeights = new Set(['300', '400', '500', '600', '700', '900']);
+const spanWeights = new Set(['100', '200', '300', '400', '500', '600', '700', '800', '900']);
 
 /**
  * The length of the attributes a span's closing bracket carries at the start of `source`: a color, a weight or both,
