@@ -13,7 +13,11 @@
     "colors": {
       "orange": "#F2641F",
       "ember": "#B83A0B"
-    }
+    },
+    "color-order": [
+      "orange",
+      "ember"
+    ]
   },
   "schemes": {
     "light": {
@@ -94,6 +98,15 @@
       }
     }
   },
+  "scheme-order": [
+    "light",
+    "dark",
+    "apricot",
+    "butter",
+    "mint",
+    "sky",
+    "lilac"
+  ],
   "text-styles": {
     "display": {
       "font-family": "display",
@@ -144,6 +157,14 @@
       "color": "muted"
     }
   },
+  "text-style-order": [
+    "display",
+    "title",
+    "heading",
+    "body",
+    "figure",
+    "meta"
+  ],
   "default-text-box": {"text-style":"body"},
   "layout-order": [
     "title",
