@@ -48,7 +48,8 @@ export function isPresentationFilePath(value: unknown): value is string {
     return isAuthoredFilePath(value) && /^(?:media|generated)\//.test(value);
 }
 
-/** A theme's own file, as MarkdownPoint takes one: none of its package's, the manifest, the previews or the example presentation. */
-export function isThemeFilePath(value: unknown): value is string {
-    return isAuthoredFilePath(value) && !/^(?:manifest\.json|previews|example)(?:\/|$)/.test(value);
-}
+/**
+ * A theme's own file, as MarkdownPoint takes one: none of its package's at its root, the manifest, the previews or the
+ * example presentation, in any spelling MarkdownPoint counts as one of them, as its readers judge it.
+ */
+export { isThemeFilePath } from '../readers/markdownpoint-readers.js';
