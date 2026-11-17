@@ -66,8 +66,9 @@ export function lineEnd(source: string, from: number): { at: number; next: numbe
     return found ? { at: found.index, next: found.index + found[0].length } : null;
 }
 
-// An id holds no whitespace, so the pattern reads a line in time in line with its length.
-const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*(\S+?))?\s*-->[ \t]*$/;
+// An id holds no whitespace, so the pattern reads a line in time in line with its length. Only spaces and tabs stand
+// inside a marker, as around it; a line with other white space there is `markerLike`'s.
+const marker = /^<!--[ \t]*(slide|composition|section|text|control|notes)(?::[ \t]*(\S+?))?[ \t]*-->[ \t]*$/;
 
 /** A marker's id as its kind reads it: a stable id, or for a text marker an instance's id, a dot and its text control's id. */
 function markerId(kind: string, id: string): boolean {

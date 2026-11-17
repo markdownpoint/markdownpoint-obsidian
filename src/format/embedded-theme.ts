@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { isThemeFilePath } from './file-paths.ts';
+import { isThemeFilePath, MAX_NAME_BYTES } from './file-paths.ts';
 import { readJsonObject } from './json.ts';
 import { opensFormatVersion } from './format-version.ts';
 import { isRecord, isStableId, isUuid, presentationCompanionPath } from './recognition.ts';
@@ -42,9 +42,9 @@ export interface EmbeddedThemePaths {
     readonly layouts: ReadonlyMap<string, string>;
 }
 
-/** Theme folder keys are readable stable names that every supported filesystem accepts. */
+/** Theme folder keys are readable stable names that every supported filesystem accepts: a folder's name of 255 bytes at most. */
 export function isThemeKey(value: unknown): value is string {
-    return isStableId(value) && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(value);
+    return isStableId(value) && value.length <= MAX_NAME_BYTES && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(value);
 }
 
 /** Current format1 embedded snapshot paths; global Theme discovery is separate. */
@@ -59,7 +59,8 @@ export function embeddedThemePaths(markdownPath: string, companion: unknown, lay
         return null;
     const keys = new Set(layoutKeys);
     for (const key of keys) {
-        if (!isThemeKey(key) || key === 'master' || key === 'manifest') return null;
+        // A layout's file takes `.json` after its key.
+        if (!isThemeKey(key) || key.length > MAX_NAME_BYTES - '.json'.length || key === 'master' || key === 'manifest') return null;
     }
     const root = markdownPath.slice(0, markdownPath.lastIndexOf('/') + 1) + `themes/${companion.theme}`;
     return {

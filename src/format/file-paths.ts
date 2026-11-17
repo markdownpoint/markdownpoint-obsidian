@@ -30,15 +30,28 @@ export function isPortableName(name: string): boolean {
     return /^[^<>:"|?*\\/\p{Cc}]*[^<>:"|?*\\/\p{Cc} .]$/u.test(name) && !DEVICE_NAME.test(name);
 }
 
+/** The most bytes a name holds in UTF-8, as APFS, NTFS and ext4 bound one: a longer name is a file no volume can hold. */
+export const MAX_NAME_BYTES = 255;
+
 /**
  * A file a presentation or a theme names, as MarkdownPoint reads one: portable names joined by `/`, none with `#`, so it
  * is never a URL, a fragment or a platform path, and none hidden, since Finder's records and files being written are no
- * one's. A generation record in `generated/` is the presentation's bookkeeping, not a file it shows.
+ * one's. It is in NFC, the form it and its folder's names are compared in, and each name is at most 255 bytes. A
+ * generation record in `generated/` is the presentation's bookkeeping, not a file it shows.
  */
 export function isAuthoredFilePath(value: unknown): value is string {
     return (
         typeof value === 'string' &&
-        value.split('/').every(name => isPortableName(name) && !name.startsWith('.') && !name.includes('#')) &&
+        value.normalize('NFC') === value &&
+        value
+            .split('/')
+            .every(
+                name =>
+                    isPortableName(name) &&
+                    !name.startsWith('.') &&
+                    !name.includes('#') &&
+                    new TextEncoder().encode(name).length <= MAX_NAME_BYTES
+            ) &&
         !(value.startsWith('generated/') && value.endsWith('.json'))
     );
 }

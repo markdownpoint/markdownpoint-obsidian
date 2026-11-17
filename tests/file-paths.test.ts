@@ -52,7 +52,13 @@ test('a portable name is one every supported system holds as written', () => {
 });
 
 test("a file's path is MarkdownPoint's: portable names joined by a slash, none hidden and none with a number sign", () => {
-    for (const path of ['media/picture.png', 'art/Wait... what.PNG', 'media/Årets möte/Photo 1.PNG', 'generated/picture.png'])
+    for (const path of [
+        'media/picture.png',
+        'art/Wait... what.PNG',
+        'media/Årets möte/Photo 1.PNG',
+        'generated/picture.png',
+        `media/${'é'.repeat(125)}a.png`
+    ])
         assert.equal(isAuthoredFilePath(path), true, path);
     for (const path of [
         '',
@@ -68,7 +74,10 @@ test("a file's path is MarkdownPoint's: portable names joined by a slash, none h
         'media/con.png',
         'media\\picture.png',
         'https://example.com/picture.png',
-        'generated/0f5b3c1e-7d1a-4c55-9d3a-7d3f8a2b9c01.json'
+        'generated/0f5b3c1e-7d1a-4c55-9d3a-7d3f8a2b9c01.json',
+        // A path in NFC, each name at most 255 bytes, as a folder lists it.
+        'media/Cafe\u0301.png',
+        `media/${'é'.repeat(126)}.png`
     ])
         assert.equal(isAuthoredFilePath(path), false, String(path));
 });

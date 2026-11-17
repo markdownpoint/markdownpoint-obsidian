@@ -129,6 +129,23 @@ test('code in a list or quote ends with its container; HTML stays within its fie
     }
 });
 
+test('spaces or tabs inside a marker do not change it', () => {
+    const text = '<!--\t slide:\t opening \t-->\n\n<!--  text:\theading  -->\nStart here.\n\n<!--\tnotes\t-->\nA reminder.\n';
+    const document = indexPresentation(text, 0)!;
+    assert.deepEqual(
+        document.slides.map(slide => [slide.id, slide.blocks.map(block => [block.kind, block.id])]),
+        [
+            [
+                'opening',
+                [
+                    ['text', 'heading'],
+                    ['notes', null]
+                ]
+            ]
+        ]
+    );
+});
+
 test("a marker with spaces or tabs before it is that marker; in fenced code, a list item's included, it is the code's words", () => {
     for (const indent of [' ', '   ', '\t', '    ']) {
         const text = `${indent}<!-- slide: opening -->\n\n${indent}<!-- text: heading -->\nStart here.\n\n${indent}<!-- notes -->\nA reminder.\n\n${indent}<!-- slide: closing -->\n`;
@@ -204,7 +221,11 @@ test('a line that reads as a marker, misspelled, closing or with words after it,
         '<!-- slide: x --> trailing words',
         '<!-- notes --> Say hi',
         '<!-- /notes -->',
-        '  <!-- /text -->  '
+        '  <!-- /text -->  ',
+        // Only spaces and tabs stand inside a marker, as around it: other white space makes it a marker gone wrong.
+        '<!--\u00a0slide: x -->',
+        '<!-- slide:\u2028x -->',
+        '<!-- notes\u3000-->'
     ])
         assert.equal(indexPresentation(`<!-- slide: first -->\n<!-- text: body -->\nWords.\n${line}\nMore.\n`, 0), null, line);
     for (const line of ['<!-- Notes: ask Anna -->', '<!-- slide : x -->', '<!-- text: ask Anna now -->']) {
