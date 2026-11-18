@@ -259,19 +259,16 @@ test('MarkdownPoint formatting boundaries keep adjacent real links separate from
         '~~[ftp://x~~b](invalid[Go](slide:two)',
         '==[a==b](https://example.com/a(b)) [Go](slide:two)==',
         '==[a==b](<https://example.com/)> "title )") [Go](slide:two)==',
-        '==[reference][a\\]==b] [Go](slide:two)==\n\n[a\\]==b]: https://example.com'
-    ])
-        assert.equal(rewrite(source), source.replace('[Go](slide:two)', '[Go](slide:copy-two)'));
-    for (const literal of [
-        '~ftp://x~[Go](slide:two)',
+        '==[reference][a\\]==b] [Go](slide:two)==\n\n[a\\]==b]: https://example.com',
+        // A span holding an attribute the app doesn't take is a span all the same, so the address ends with it.
         '[ftp://x]{color=not_valid}[Go](slide:two)',
-        '**==ftp://x**[Go](slide:two)==**',
         '[ftp://x]{font-weight=450}[Go](slide:two)',
         '[ftp://x]{font-weight=600.0}[Go](slide:two)',
         '[ftp://x]{color=accent-}[Go](slide:two)',
-        '[ftp://x]{size=2}[Go](slide:two)',
-        '[]{}ftp://x[Go](slide:two)'
-    ]) {
+        '[ftp://x]{size=2}[Go](slide:two)'
+    ])
+        assert.equal(rewrite(source), source.replace('[Go](slide:two)', '[Go](slide:copy-two)'));
+    for (const literal of ['~ftp://x~[Go](slide:two)', '**==ftp://x**[Go](slide:two)==**', '[]{}ftp://x[Go](slide:two)']) {
         assert.equal(rewrite(literal), literal);
     }
 });

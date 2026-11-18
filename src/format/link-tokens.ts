@@ -20,7 +20,7 @@ import { Lexer, Marked, Tokenizer } from 'marked';
 import type { Token } from 'marked';
 import { blockRules } from './block-grammar.ts';
 import { decodeCharacterReferences, plainWords } from '../core/character-references.ts';
-import { isRecord, isStableId } from './recognition.ts';
+import { isRecord } from './recognition.ts';
 
 interface EmphasisMask {
     from: number;
@@ -111,37 +111,26 @@ function delimitedSpan(source: string): { length: number; content: string } | nu
     return null;
 }
 
-/** A span's attribute, `key=value`, its value bare or in double or single quotes. */
-const spanPair = String.raw`[a-z-]+=(?:"[^"]*"|'[^']*'|[^\s"'{}]+)`;
+/** A span's attribute, `key=value`, its value bare or in double or single quotes, on one line, as the app reads it. */
+const spanPair = String.raw`[a-z][a-z0-9-]*=(?:"[^"\n]*"|'[^'\n]*'|[^\s"'{}]+)`;
 /** Spaces and tabs with at most one line break among them, as Pandoc's reader skips them inside an attribute block. */
 const spanSpace = String.raw`[ \t]*(?:\n[ \t]*)?`;
 // The space after the pairs is matched only after a pair, so no run of space can be split two ways.
 const spanAttributes = new RegExp(String.raw`^\{${spanSpace}(?:(${spanPair}(?:(?=[ \t\n])${spanSpace}${spanPair})*)${spanSpace})?\}`);
-const spanAttribute = /([a-z-]+)=(?:"([^"]*)"|'([^']*)'|([^\s"'{}]+))/g;
-const spanWeights = new Set(['100', '200', '300', '400', '500', '600', '700', '800', '900']);
-
 /**
- * The length of the attributes a span's closing bracket carries at the start of `source`: a color, a weight or both,
- * `{color=muted font-weight=600}`, or neither, `{}`. A value may be bare or in single or double quotes, and spaces, tabs
- * and one line break may stand inside the braces and between the attributes, as Pandoc reads them. Any other key, a key
- * twice or a value that names no color or weight is no span's, 0.
+ * The length of the attributes a span's closing bracket carries at the start of `source`: `key=value` pairs, such as a
+ * color, a weight or both, `{color=muted font-weight=600}`, or none, `{}`. A value may be bare or in single or double
+ * quotes, and spaces, tabs and one line break may stand inside the braces and between the attributes, as Pandoc reads
+ * them. A key or a value the app doesn't take leaves the span a span: the app skips it and applies the rest. 0 where no
+ * attribute block reads.
  */
 export function spanAttributesLength(source: string): number {
-    const block = spanAttributes.exec(source);
-    if (!block) return 0;
-    const keys = new Set<string>();
-    for (const [, key, double, single, bare] of (block[1] ?? '').matchAll(spanAttribute)) {
-        const value = double ?? single ?? bare!;
-        const color = /^#[a-f\d]+$/i.test(value) ? [4, 5, 7, 9].includes(value.length) : isStableId(value);
-        if (keys.has(key!) || !(key === 'color' ? color : key === 'font-weight' && spanWeights.has(value))) return 0;
-        keys.add(key!);
-    }
-    return block[0].length;
+    return spanAttributes.exec(source)?.[0].length ?? 0;
 }
 
 /**
  * A bracketed span as the MarkdownPoint app reads one: words with a color, a weight or both, `[words]{color=muted
- * font-weight=600}`, or a group with neither, `[words]{}`. Other attributes leave the brackets as written.
+ * font-weight=600}`, or a group with neither, `[words]{}`. An attribute the app doesn't take leaves it a span.
  */
 export function presentationSpan(source: string): { length: number; content: string } | null {
     if (!source.startsWith('[')) return null;

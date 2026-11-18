@@ -36,7 +36,7 @@ function read(source: string): [string, string][] {
     return fieldSpans(source).map(span => [source.slice(span.from, span.to), source.slice(span.wordsFrom, span.wordsTo)]);
 }
 
-test('spans read as the MarkdownPoint app reads them: a group, a color, a weight or both, each key once', () => {
+test('spans read as the MarkdownPoint app reads them: a group, a color, a weight or both, and any other attribute block', () => {
     assert.deepEqual(presentationSpan('[ab]{} c'), { length: 6, content: 'ab' });
     for (const span of [
         '[ab]{font-weight=600}',
@@ -52,11 +52,8 @@ test('spans read as the MarkdownPoint app reads them: a group, a color, a weight
         "[ab]{color='accent' font-weight='300'}",
         '[ab]{color=accent\nfont-weight=600}',
         '[ab]{\tfont-weight=600\t}',
-        '[ab]{ }'
-    ])
-        assert.deepEqual(presentationSpan(span), { length: span.length, content: 'ab' }, span);
-    for (const literal of [
-        '[]{}',
+        '[ab]{ }',
+        // A key or a value the app doesn't take, or a key twice: the app skips it and draws the words with the rest.
         '[ab]{font-weight=450}',
         '[ab]{font-weight=600.0}',
         '[ab]{font-weight=0}',
@@ -66,10 +63,11 @@ test('spans read as the MarkdownPoint app reads them: a group, a color, a weight
         '[ab]{color=accent-}',
         '[ab]{color=#ffff0}',
         '[ab]{size=2}',
-        '[ab] {}',
-        `[ab]{color="accent'}`,
-        '[ab]{color="accent"font-weight=600}'
+        '[ab]{color=accent glow=3}',
+        '[ab]{color=accent data-3d=yes}'
     ])
+        assert.deepEqual(presentationSpan(span), { length: span.length, content: 'ab' }, span);
+    for (const literal of ['[]{}', '[ab] {}', `[ab]{color="accent'}`, '[ab]{color="accent"font-weight=600}'])
         assert.equal(presentationSpan(literal), null, literal);
 });
 
@@ -118,13 +116,13 @@ test('spans stand outside code, HTML and destinations, and inside links and othe
         '`[a]{color=accent}`',
         '[go](x[a]{font-weight=600})',
         '\\[a]{color=accent}',
-        '[a]{size=2}',
         '[]{}',
         '- [a]{}\n\n  ```\n  b\n  ```\n',
         '[ref]: https://example.com/[slug]{}\n'
     ])
         assert.deepEqual(read(literal), [], literal);
     assert.deepEqual(read('[*x*]{}y [ref]\n\n[ref]: https://example.com/[slug]{}\n'), [['[*x*]{}', 'x']]);
+    assert.deepEqual(read('[a]{size=2}'), [['[a]{size=2}', 'a']], 'an attribute the app skips leaves a span');
     assert.deepEqual(read('# [*a*]{}b\n\n- [*c*]{}d\n- e\n\n| [*f*]{}g |\n| --- |\n'), [
         ['[*a*]{}', 'a'],
         ['[*c*]{}', 'c'],
@@ -443,7 +441,7 @@ test('reading view drops the group marks it renders as characters, only where th
     assert.equal(hidden('[**A&amp;B**]{}', entity), 'A&B');
 });
 
-test('reading view drops the marks of color and weight spans as it does a group, and keeps other brackets', () => {
+test('reading view drops the marks of a span, whatever attributes it holds, as it does a group', () => {
     const source = 'A [**ink**]{color=accent} and [bold]{font-weight=600}[*er*]{} [x]{color="#2F7D4F"} [y]{size=2}';
     const paragraph = element(
         'P',
@@ -453,7 +451,7 @@ test('reading view drops the marks of color and weight spans as it does a group,
         element('EM', text('er')),
         text(']{} [x]{color="#2F7D4F"} [y]{size=2}')
     );
-    assert.equal(hidden(source, paragraph), 'A ink and bolder x [y]{size=2}');
+    assert.equal(hidden(source, paragraph), 'A ink and bolder x y');
     const nested = element('P', text('[['), element('EM', text('c')), text(']{}d]{color=accent}'));
     assert.equal(hidden('[[*c*]{}d]{color=accent}', nested), 'cd');
     // Reading view renders a link in a span's words as a link: only the span's marks remain as characters.
