@@ -17,7 +17,7 @@
  */
 
 import { indexPresentation } from '../format/document.ts';
-import type { DocumentSlide, PresentationDocument } from '../format/document.ts';
+import type { DocumentBlock, DocumentSlide, PresentationDocument } from '../format/document.ts';
 import { payloadContentEnd } from '../format/payload.ts';
 import { textBindingLabel, textBindingName } from '../format/text-binding.ts';
 import type { TextFieldLabels } from '../format/text-binding.ts';
@@ -78,10 +78,13 @@ export interface MissingPlaceholder {
 function placeholderPosition(slide: DocumentSlide, order: readonly string[], index: number): number {
     const rank = (id: string | null) => (id === null ? -1 : order.indexOf(id));
     const words = slide.blocks.filter(block => block.kind !== 'notes');
+    // What stands after a block up to the next one stays after it: a later minor's block stays after the block it follows
+    const following = (block: DocumentBlock) => slide.blocks[slide.blocks.indexOf(block) + 1]?.from ?? slide.to;
     const before = words.filter(block => rank(block.id) >= 0 && rank(block.id) < index).at(-1);
-    if (before) return before.to;
+    if (before) return following(before);
     const after = words.find(block => rank(block.id) > index);
-    return after?.from ?? words.at(-1)?.to ?? slide.blocks[0]?.from ?? slide.to;
+    const last = words.at(-1);
+    return after?.from ?? (last ? following(last) : (slide.blocks[0]?.from ?? slide.to));
 }
 
 /** The placeholders each slide's layout gives it, `placeholders` by slide, that its source has no text block for. */

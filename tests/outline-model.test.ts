@@ -43,6 +43,22 @@ test('HTML tags and leading single-line or multiline comments are omitted from o
     }
 });
 
+test("in a newer minor's file a later minor's block names no slide or section in the outline", () => {
+    const front = '---\nmarkdownpoint: "1.1"\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n';
+    const markdown =
+        `${front}<!-- section: intro -->\n# Intro\n\n<!-- aside -->\n[intro]: /elsewhere\n\n` +
+        '<!-- slide: first -->\n<!-- text: title -->\n\n<!-- sticker: t -->\nTilted words.\n\n<!-- text: body -->\nThe body.\n';
+    const document = indexPresentation(markdown, front.length)!;
+    assert.deepEqual(
+        outlineSlides(markdown, document, 'Title', new Set()).map(slide => slide.title),
+        ['The body.']
+    );
+    assert.deepEqual(
+        outlineSections(markdown, document).map(section => section.title),
+        ['Intro']
+    );
+});
+
 test('populated Title takes precedence over earlier Eyebrow and Body fields, with authored fallbacks', () => {
     const markdown =
         '<!-- slide: first -->\n<!-- text: eyebrow -->\nOpening thought\n<!-- text: body -->\nEarlier body.\n<!-- text: title -->\n**A place to begin**\n<!-- notes -->\nA reminder.\n<!-- slide: empty-title -->\n<!-- text: eyebrow -->\nA useful lead\n<!-- text: title -->\n\n<!-- text: body -->\nDetails.\n<!-- slide: comment-title -->\n<!-- text: title -->\n<!-- An annotation. -->\n<!-- text: body -->\nA real fallback.\n';

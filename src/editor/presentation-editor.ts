@@ -81,6 +81,8 @@ interface DraftMarker {
     readonly structure?: SlideStructure | null;
     readonly images?: readonly SlideImagePreview[];
     readonly slideTo?: number;
+    /** A later minor's marker, which edits never cross or enter, shown as written with its block. */
+    readonly kept?: true;
 }
 
 class SlideBoundary extends WidgetType {
@@ -587,6 +589,13 @@ export class PresentationEditor extends Component {
                     markerTo: section.markerTo,
                     text: state.doc.sliceString(section.from, section.markerTo),
                     label: null
+                })),
+                ...snapshot.document.laterMarkers.map(marker => ({
+                    from: marker.from,
+                    markerTo: marker.markerTo,
+                    text: state.doc.sliceString(marker.from, marker.markerTo),
+                    label: null,
+                    kept: true as const
                 }))
             ];
         } else if (file && preview && previous?.markers.length && this.reader.matchesIdentity(file, markdown)) {
@@ -660,12 +669,14 @@ export class PresentationEditor extends Component {
         );
         // Missing notes are block widgets before the next marker, not editable entry
         // points. Excluding that marker's start would create an empty cursor line.
-        const ranges = markers.map(marker =>
-            Decoration.replace({
-                block: true,
-                inclusiveStart: !entryPoints.has(marker.from),
-                ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label, marker.slideId) })
-            }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to)
+        const ranges = markers.flatMap(marker =>
+            marker.kept
+                ? []
+                : Decoration.replace({
+                      block: true,
+                      inclusiveStart: !entryPoints.has(marker.from),
+                      ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label, marker.slideId) })
+                  }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to)
         );
         ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
         ranges.push(...missingFieldDecorations(state, missing, this.writePlaceholder));
@@ -682,7 +693,7 @@ export class PresentationEditor extends Component {
                 );
             }
         for (const section of snapshot?.document.sections ?? []) {
-            const first = state.doc.sliceString(section.markerTo, section.to).search(/\S/);
+            const first = state.doc.sliceString(section.markerTo, section.headingTo).search(/\S/);
             if (first >= 0)
                 ranges.push(
                     Decoration.line({

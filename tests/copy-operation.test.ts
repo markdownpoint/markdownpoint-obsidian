@@ -282,6 +282,13 @@ test('slides are not copied out of a presentation of a newer format minor', asyn
     assert.deepEqual(state.writes, []);
 });
 
+test('slides are not copied out of a presentation whose .md file states a newer format minor beside a companion of this one', async () => {
+    const { state, copier } = setup();
+    state.markdown = `---\nmarkdownpoint: "1.1"\nid: ${uuid}\n---\n${markdown}`;
+    assert.equal((await copier.copy('view', ['one'])).kind, 'newer');
+    assert.deepEqual(state.writes, []);
+});
+
 test("a slide on a layout MarkdownPoint doesn't read, which its theme leaves out, is copied nowhere", async () => {
     const { host, state } = setup();
     host.theme = () => Promise.resolve({ ...theme, layouts: new Map() });

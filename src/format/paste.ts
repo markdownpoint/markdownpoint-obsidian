@@ -62,6 +62,9 @@ export function prepareClipboardPaste(
     for (const part of document.compositions) {
         const record = definitions.records.get(part.id);
         if (record === undefined) return null;
+        // A definition holding a later minor's block is none a reader of this minor wrote, so a copy never reuses it; its
+        // identity stays taken
+        if (document.laterMarkers.some(marker => marker.from >= part.from && marker.from < part.to)) continue;
         held.push({ id: part.id, markdown: markdown.slice(part.from, part.to), record });
     }
     const occupied = new Set([

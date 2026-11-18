@@ -63,6 +63,37 @@ test('same-presentation paste keeps raw fields, notes and metadata while creatin
     );
 });
 
+test("a paste never reuses a definition holding a later minor's block, which its own copy's note only looks like", () => {
+    const front = `---\nmarkdownpoint: "1.1"\nid: ${uuid}\n---\n`;
+    const words = 'First.\n\n<!-- note -->\nSecond.\n';
+    const card = `<!-- composition: card -->\n<!-- control: caption -->\n${words}`;
+    const placed = '{"layout":"title","objects":[{"id":"placed","type":"instance","composition":"card"}]}';
+    const definition = '{"controls":[{"id":"caption","type":"text"}],"objects":[]}';
+    const copied = decodeSlideClipboard(
+        encodeSlideClipboard(
+            uuid,
+            origin,
+            'en-US',
+            {
+                slides: [{ id: 'first', markdown: '<!-- slide: first -->\n<!-- text: body -->\nWords.\n', record: placed }],
+                compositions: [{ id: 'card', markdown: card, record: definition }]
+            },
+            theme
+        )!
+    )!;
+    const companion = `{"slides":{"first":${placed}},"compositions":{"card":${definition}}}`;
+    for (const [version, reused] of [
+        ['1.0', true],
+        ['1.1', false]
+    ] as const) {
+        const destination = `${front.replace('1.1', version)}<!-- slide: first -->\n<!-- text: body -->\nWords.\n${card}`;
+        const document = indexPresentation(destination, front.length)!;
+        let minted = 0;
+        const prepared = prepareClipboardPaste(copied, destination, document, companion, new Map(), () => `fresh-${++minted}`)!;
+        assert.equal(prepared.compositions.length === 0, reused, version);
+    }
+});
+
 test('an empty presentation accepts the first pasted slide', () => {
     const document = indexPresentation('', 0)!;
     const prepared = prepareClipboardPaste(packet, '', document, '{"slides":{}}', new Map(), () => 'fresh')!;

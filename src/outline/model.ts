@@ -81,7 +81,7 @@ export function outlineSlides(
 export function outlineSections(markdown: string, document: PresentationDocument): OutlineSection[] {
     const sections: OutlineSection[] = [];
     for (const section of document.sections) {
-        const tokens = linkTokens(markdown.slice(section.markerTo, section.to).replace(/\r\n?/g, '\n').trim()).filter(
+        const tokens = linkTokens(markdown.slice(section.markerTo, section.headingTo).replace(/\r\n?/g, '\n').trim()).filter(
             token => token.type !== 'space'
         );
         const heading = tokens[0];

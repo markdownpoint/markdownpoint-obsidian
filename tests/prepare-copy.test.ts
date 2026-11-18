@@ -55,6 +55,17 @@ test('complete slide preparation changes only identity and actual Markdown/JSON 
     );
 });
 
+test("a copied slide's note shaped as a later minor's marker is escaped, as MarkdownPoint writes it, so every minor reads it as a note", () => {
+    const words = (note: string) =>
+        `Before.\r\n${note}\r\n<!-- id: p-kept -->\r\n<!--\\ done -->\r\n<!-- three words here -->\r\n\`\`\`\r\n<!-- code -->\r\n\`\`\`\r\nAfter.\r\n`;
+    const markdown = `<!-- slide: one -->\r\n<!-- text: body -->\r\n${words('  <!-- todo -->\t')}<!-- notes -->\r\n<!-- aside: x -->\r\nSay it.\r\n`;
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, 'slide', slides, compositions, schemas)!;
+    assert.equal(
+        result.markdown,
+        `<!-- slide: copy-one -->\r\n<!-- text: body -->\r\n${words('  <!--\\ todo -->\t')}<!-- notes -->\r\n<!--\\ aside: x -->\r\nSay it.\r\n`
+    );
+});
+
 test('a copied slide whose marker ends in a bare CR keeps it and takes its new id', () => {
     const markdown = '<!-- slide: one -->\r<!-- text: body -->\rWords.\r';
     const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, 'slide', slides, compositions, schemas);

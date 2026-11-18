@@ -18,6 +18,12 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
+import { EditorState } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
+import { editorInfoField, editorLivePreviewField } from './support/obsidian.ts';
+import { PresentationEditor } from '../src/editor/presentation-editor.ts';
+import { NotesUi } from '../src/settings/notes-ui.ts';
+import type { PresentationReader } from '../src/presentation/reader.ts';
 import { CompanionDocument, reconcileSlideRecords } from '../src/format/companion.ts';
 import { planSlideDeletion } from '../src/format/delete.ts';
 import { indexPresentation } from '../src/format/document.ts';
@@ -70,4 +76,49 @@ test("a presentation of a newer format minor opens, and what the plugin doesn't 
         ],
         "the deleted slide returns with the object the plugin doesn't know"
     );
+});
+
+test("in Live Preview a later minor's marker stays in view as written, and no edit crosses or enters it", () => {
+    const later = `${header}<!-- slide: a -->\n<!-- text: title -->\nA title\n\n<!-- sticker: t -->\nTilted.\n\n<!-- notes -->\nSay it.\n`;
+    const reader = {
+        snapshot(_file: unknown, source: string) {
+            const document = indexPresentation(source, header.length);
+            return (
+                document && {
+                    id: ID,
+                    bodyStart: header.length,
+                    document,
+                    images: new Map(),
+                    placeholders: new Map(),
+                    outline: { slides: document.slides.map(slide => ({ id: slide.id, skipped: false })), sections: [] }
+                }
+            );
+        },
+        matchesIdentity: () => true
+    } as unknown as PresentationReader;
+    const notes = new NotesUi({ loadLocalStorage: () => null, saveLocalStorage: () => undefined });
+    const owner = new PresentationEditor(reader, notes, () => undefined);
+    const state = EditorState.create({ doc: later, extensions: [editorInfoField, editorLivePreviewField, owner.extension] });
+    const marker = later.indexOf('<!-- sticker');
+    // A Delete at the end of the title's words would join the marker to them, and its block to the title
+    for (const [userEvent, change] of [
+        ['delete', { from: marker - 1, to: marker }],
+        ['delete', { from: marker, to: marker + 4 }],
+        ['input', { from: marker + 5, insert: 'x' }],
+        ['input', { from: marker - 1, to: marker + 1, insert: 'Pasted' }]
+    ] as const)
+        assert.equal(state.update({ userEvent, changes: change }).docChanged, false, JSON.stringify(change));
+    const words = later.indexOf('Tilted.');
+    assert.equal(
+        state.update({ userEvent: 'input', changes: { from: words, insert: 'Still ' } }).newDoc.toString(),
+        later.replace('Tilted.', 'Still Tilted.')
+    );
+    for (const decorations of state.facet(EditorView.decorations)) {
+        if (typeof decorations === 'function') continue;
+        for (const cursor = decorations.iter(); cursor.value; cursor.next())
+            assert.ok(
+                cursor.to <= marker || cursor.from > marker,
+                `a decoration over ${JSON.stringify(later.slice(cursor.from, cursor.to))}`
+            );
+    }
 });

@@ -212,6 +212,18 @@ test("the index finds a presentation's spans in text, notes, controls and sectio
     ]);
 });
 
+test("in a newer minor's file a later minor's block holds no span of the words or the heading before it", () => {
+    const front = '---\nmarkdownpoint: "1.1"\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n';
+    const later =
+        `${front}<!-- section: intro -->\n# [In]{color=accent}tro\n\n<!-- aside -->\n[Kept]{color=accent} as written.\n\n` +
+        '<!-- slide: a -->\n<!-- text: title -->\n[He]{color=accent}llo\n\n<!-- sticker: t -->\n[Tilted]{color=accent}\n';
+    const spans = new SpanIndex().read(EditorState.create({ doc: later }), indexPresentation(later, front.length)!);
+    assert.deepEqual(
+        spans.map(span => later.slice(span.wordsFrom, span.wordsTo)),
+        ['In', 'He']
+    );
+});
+
 function ranges(set: DecorationSet, doc: string): string[] {
     const found: string[] = [];
     for (const cursor = set.iter(); cursor.value; cursor.next()) found.push(doc.slice(cursor.from, cursor.to));

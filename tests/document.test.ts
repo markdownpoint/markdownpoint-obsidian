@@ -388,7 +388,7 @@ test('caret lookup follows slide ranges without claiming section headings or com
     assert.equal(slideAtPosition(document, document.sections[1]!.markerTo), null);
     assert.equal(slideAtPosition(document, last.to), null);
     assert.equal(slideAtPosition(document, markdown.length - 1), null);
-    assert.equal(slideAtPosition({ slides: [], compositions: [], sections: [] }, 0), null);
+    assert.equal(slideAtPosition({ slides: [], compositions: [], sections: [], laterMarkers: [] }, 0), null);
 });
 
 test('composition definitions retain complete control and text ranges wherever they occur', () => {
@@ -548,6 +548,69 @@ test('a long line shaped as a marker reads in time in line with its length, in c
         );
 }, 30_000);
 
+test("in a newer minor's file a later minor's block ends the words and the heading before it, and stands in its page or section", () => {
+    const front = (version: string) => `---\nmarkdownpoint: ${version}\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n`;
+    const body =
+        '<!-- section: intro -->\n# Intro\n\n<!-- aside: s -->\nShiny [words]{color=accent}.\n\n' +
+        '<!-- slide: a -->\n<!-- glow -->\nFirst.\n\n<!-- text: title -->\nHello.\n\n<!-- sticker: t -->\nTilted words.\n\n' +
+        '<!-- notes -->\nSay hi.\n\n  <!-- glow-twice -->\t\nAfter notes.\n\n' +
+        '<!-- slide: b -->\n<!-- text: title -->\nB.\n\n<!-- tail -->';
+    const read = (version: string) => {
+        const markdown = front(version) + body;
+        const document = indexPresentation(markdown, front(version).length)!;
+        const words = (from: number, to: number) => markdown.slice(from, to);
+        return {
+            blocks: document.slides.map(slide => slide.blocks.map(block => words(block.contentFrom, block.to))),
+            heading: words(document.sections[0]!.markerTo, document.sections[0]!.headingTo),
+            section: words(document.sections[0]!.from, document.sections[0]!.to),
+            slides: document.slides.map(slide => words(slide.from, slide.to)),
+            length: markdown.length,
+            last: document.slides[1]!.to
+        };
+    };
+    for (const version of ['"1.1"', "'1.1'", String.raw`"1.\x31"`, '"1.1" # a newer app']) {
+        const later = read(version);
+        assert.deepEqual(later.blocks, [['Hello.\n\n', 'Say hi.\n\n'], ['B.\n\n']], version);
+        assert.equal(later.heading, '# Intro\n\n', version);
+        // The section and the pages hold their blocks, so a move or a deletion takes them along
+        assert.equal(later.section, '<!-- section: intro -->\n# Intro\n\n<!-- aside: s -->\nShiny [words]{color=accent}.\n\n', version);
+        assert.ok(later.slides[0]!.includes('After notes.') && later.slides[1]!.endsWith('<!-- tail -->'), version);
+        assert.equal(later.last, later.length, 'a marker that ends the file needs no line break');
+    }
+    // In this minor's file, or one that states no version, the same lines are notes in the words
+    for (const version of ['"1.0"', '1.1']) {
+        const notes = read(version);
+        assert.deepEqual(
+            notes.blocks[0],
+            ['Hello.\n\n<!-- sticker: t -->\nTilted words.\n\n', 'Say hi.\n\n  <!-- glow-twice -->\t\nAfter notes.\n\n'],
+            version
+        );
+        assert.equal(notes.heading, notes.section.slice('<!-- section: intro -->\n'.length), version);
+    }
+});
+
+test("in a newer minor's file a paragraph id, an escaped note, a comment of words and code stay in the words", () => {
+    const front = '---\nmarkdownpoint: "1.1"\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n';
+    const words =
+        'One.\n<!-- id: p-one -->\n<!--\\ sticker: t -->\n<!-- Sticker -->\n<!-- sticker: two words -->\n```\n<!-- sticker: t -->\n```\nEnd.\n';
+    const markdown = `${front}<!-- slide: a -->\n<!-- text: title -->\n${words}`;
+    const block = indexPresentation(markdown, front.length)!.slides[0]!.blocks[0]!;
+    assert.equal(markdown.slice(block.contentFrom, block.to), words);
+    // A later minor's block whose code never closes takes in the pages after it, which refuses the file
+    const swallowing = `${front}<!-- slide: a -->\n<!-- sticker: t -->\n\`\`\`\n<!-- slide: b -->\n`;
+    assert.equal(indexPresentation(swallowing, front.length), null);
+});
+
+test("a long comment line shaped as a later minor's marker reads in time in line with its length", () => {
+    const front = '---\nmarkdownpoint: "1.1"\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n';
+    assertLinear(
+        "a later minor's padded marker",
+        spaces => `${front}<!-- slide: a -->\n<!-- text: title -->\n<!-- sticker${' '.repeat(spaces)}x -->\n`,
+        markdown => indexPresentation(markdown, front.length),
+        16_000
+    );
+});
+
 test('a marker in words of code blocks, lists, quotes and HTML is one exactly where MarkdownPoint reads one', () => {
     // A slide's marker comes with a notes marker as indented, so the words after them stand in a block wherever they read
     // as markers.
@@ -586,52 +649,57 @@ test('a marker in words of code blocks, lists, quotes and HTML is one exactly wh
         '| a |',
         '|---|',
         '[x]: /u',
-        '"t"'
+        '"t"',
+        '<!-- aside -->',
+        '  <!-- aside: x -->'
     ];
     const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
-    const front = `---\nmarkdownpoint: "1.0"\nid: ${id}\n---\n\n`;
     const bytes = (text: string) => new TextEncoder().encode(text);
     let seed = 11;
     const random = () => (seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff) / 0x80000000;
     let opened = 0;
     let refused = 0;
-    for (let round = 0; round < 600; round++) {
-        const words = Array.from({ length: 1 + Math.floor(random() * 8) }, () => ALPHABET[Math.floor(random() * ALPHABET.length)]!).join(
-            '\n'
-        );
-        for (const markdown of [
-            `${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n\n<!-- slide: two -->\n`,
-            `${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n`
-        ]) {
-            const index = indexPresentation(markdown, front.length);
-            // The companion lists the slides the plugin finds, so the app opens the pair exactly when it finds the same.
-            const ids = index?.slides.map(slide => slide.id) ?? ['one', 'two'];
-            const json = JSON.stringify({
-                markdownpoint: '1.0',
-                type: 'presentation',
-                id,
-                theme: 'basic',
-                slides: Object.fromEntries(ids.map(slide => [slide, { layout: 'title' }]))
-            });
-            const reading = readPresentationPair(
-                'Talk',
-                { name: 'presentation.mdpoint', bytes: bytes(json) },
-                { name: 'slides.md', bytes: bytes(markdown) }
-            );
-            const case_ = JSON.stringify(words);
-            if (index === null) {
-                refused++;
-                assert.equal(reading.opens, false, case_);
-            } else {
-                opened++;
-                assert.ok(reading.opens, `${case_}: ${reading.opens ? '' : reading.problem.code}`);
-                assert.deepEqual(
-                    reading.presentation.slides.map(slide => slide.id),
-                    ids,
-                    case_
+    // In a newer minor's file, the aside is a later minor's marker, which opens a block of its own and reads its code afresh
+    for (const version of ['1.0', '1.1'])
+        for (let round = 0; round < 600; round++) {
+            const front = `---\nmarkdownpoint: "${version}"\nid: ${id}\n---\n\n`;
+            const words = Array.from(
+                { length: 1 + Math.floor(random() * 8) },
+                () => ALPHABET[Math.floor(random() * ALPHABET.length)]!
+            ).join('\n');
+            for (const markdown of [
+                `${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n\n<!-- slide: two -->\n`,
+                `${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n`
+            ]) {
+                const index = indexPresentation(markdown, front.length);
+                // The companion lists the slides the plugin finds, so the app opens the pair exactly when it finds the same.
+                const ids = index?.slides.map(slide => slide.id) ?? ['one', 'two'];
+                const json = JSON.stringify({
+                    markdownpoint: version,
+                    type: 'presentation',
+                    id,
+                    theme: 'basic',
+                    slides: Object.fromEntries(ids.map(slide => [slide, { layout: 'title' }]))
+                });
+                const reading = readPresentationPair(
+                    'Talk',
+                    { name: 'presentation.mdpoint', bytes: bytes(json) },
+                    { name: 'slides.md', bytes: bytes(markdown) }
                 );
+                const case_ = `${version} ${JSON.stringify(words)}`;
+                if (index === null) {
+                    refused++;
+                    assert.equal(reading.opens, false, case_);
+                } else {
+                    opened++;
+                    assert.ok(reading.opens, `${case_}: ${reading.opens ? '' : reading.problem.code}`);
+                    assert.deepEqual(
+                        reading.presentation.slides.map(slide => slide.id),
+                        ids,
+                        case_
+                    );
+                }
             }
         }
-    }
-    assert.ok(opened > 100 && refused > 100, `${opened} opened, ${refused} refused`);
+    assert.ok(opened > 200 && refused > 200, `${opened} opened, ${refused} refused`);
 });

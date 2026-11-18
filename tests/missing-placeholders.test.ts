@@ -67,6 +67,22 @@ test("a layout's placeholders without blocks go in its reading order among the p
     );
 });
 
+test("in a newer minor's file a missing placeholder goes after the later minor's blocks that follow the block before it", () => {
+    const front = '---\nmarkdownpoint: "1.1"\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n';
+    const later =
+        `${front}<!-- slide: noted -->\n<!-- text: title -->\nA title\n<!-- sticker: t -->\nTilted.\n<!-- notes -->\nSay it.\n\n` +
+        '<!-- slide: own -->\n<!-- text: chart -->\nNorth\n\n<!-- glow -->\nAfter the words.\n';
+    const missing = missingPlaceholders(indexPresentation(later, front.length)!, placeholders, labels);
+    assert.deepEqual(
+        missing.map(placeholder => [placeholder.slideId, placeholder.id, placeholder.at]),
+        [
+            ['noted', 'body', later.indexOf('<!-- notes -->')],
+            ['own', 'title', later.length],
+            ['own', 'body', later.length]
+        ]
+    );
+});
+
 test('writing in a missing placeholder adds only its marker, with the caret on its writable line', () => {
     const document = indexPresentation(deck, 0)!;
     const write = (slideId: string, id: string) => {

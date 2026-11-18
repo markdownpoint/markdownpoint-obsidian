@@ -41,7 +41,7 @@ test('draft margins select their nearest slide but reusable composition text is 
     assert.equal(slideForMenu(document, source.indexOf('Shared'), source), null);
     assert.equal(slideForMenu(document, source.length, source), null);
     assert.equal(slideForMenu(document, -1, source), null);
-    assert.equal(slideForMenu({ slides: [], compositions: [], sections: [] }, 0, ''), null);
+    assert.equal(slideForMenu({ slides: [], compositions: [], sections: [], laterMarkers: [] }, 0, ''), null);
 });
 
 test("a leading composition and frontmatter do not borrow the first slide's actions", () => {

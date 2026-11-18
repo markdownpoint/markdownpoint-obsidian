@@ -100,6 +100,16 @@ test('unchanged definitions are reused under their existing identities', () => {
     assert.equal(preferred.slides[1]!.record, placement('outer'));
 });
 
+test('a definition whose note a paste escapes is still the unchanged one, as either spelling is one note', () => {
+    const noted = (id: string, note: string) => part('composition', id, '{}', `Shared words.\n${note}`);
+    const value = { slides: [part('slide', 'b', placement('card'))], compositions: [noted('card', '<!-- todo -->')] };
+    for (const held of [noted('card', '<!-- todo -->'), noted('card', '<!--\\ todo -->'), noted('kept', '<!-- todo -->')]) {
+        const result = prepare([held], value)!;
+        assert.deepEqual(result.compositions, [], held.markdown);
+        assert.equal(result.slides[0]!.record, placement(held.id));
+    }
+});
+
 test('repeated paste reuses unchanged imported definitions instead of appending more copies', () => {
     const first = prepare()!;
     const second = prepare(

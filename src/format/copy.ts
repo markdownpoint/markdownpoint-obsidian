@@ -19,7 +19,7 @@
 import { compositionSources } from './capture.ts';
 import type { CapturedPart, CapturedSlides } from './capture.ts';
 import { isSlideRecordSource } from './companion.ts';
-import { indexPresentation } from './document.ts';
+import { escapeMarkerShapedNotes, indexPresentation, spellBlocks } from './document.ts';
 import { payloadContentEnd, terminateSourceBlock } from './payload.ts';
 import { prepareCopiedPart } from './prepare-copy.ts';
 import { isStableId } from './recognition.ts';
@@ -40,7 +40,9 @@ function definitionKey(part: CapturedPart): string | null {
         !isSlideRecordSource(part.record)
     )
         return null;
-    const words = terminateSourceBlock(part.markdown.slice(definition.markerTo).replace(/\r\n?/g, '\n'), '\n');
+    // A note's two spellings, escaped and as written in this minor's file, are one note, as a paste writes it escaped
+    const spelled = spellBlocks(part.markdown, definition, words => escapeMarkerShapedNotes(words))!;
+    const words = terminateSourceBlock(spelled.replace(/\r\n?/g, '\n'), '\n');
     const content = words.slice(0, payloadContentEnd(words, 0, words.length));
     return JSON.stringify([part.record.replace(/\r\n?/g, '\n'), content]);
 }

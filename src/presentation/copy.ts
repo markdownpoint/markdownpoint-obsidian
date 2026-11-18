@@ -22,7 +22,7 @@ import { encodeSlideClipboard } from '../format/clipboard.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 import { readJsonObject } from '../format/json.ts';
-import { readsFormatFully } from '../format/format-version.ts';
+import { formatStanding, readsFormatFully, statedMarkdownVersion } from '../format/format-version.ts';
 
 export interface CopySource {
     readonly path: string;
@@ -70,8 +70,10 @@ export class SlideCopy<Context> {
             if (!current()) return { kind: 'canceled' };
             const metadata = source && readJsonObject(source.companion);
             if (!source || !metadata) return { kind: 'unavailable' };
-            // A newer minor may hold keys the destination's version doesn't have, which the MarkdownPoint app would refuse there
-            if (!readsFormatFully(metadata.markdownpoint)) return { kind: 'newer' };
+            // A newer minor may hold keys or blocks the destination's version doesn't have, which the MarkdownPoint app would
+            // refuse there or show as words, and the .md file may state one beside a companion of this minor
+            if (!readsFormatFully(metadata.markdownpoint) || formatStanding(statedMarkdownVersion(source.markdown)) === 'newer-minor')
+                return { kind: 'newer' };
             const captured = captureSlides(source.markdown, source.index, source.companion, selected);
             if (!captured) return { kind: 'unavailable' };
             const layouts = new Set<string>();

@@ -37,7 +37,7 @@ const styleMarks = new Map<string, Decoration>();
 
 /** Every stretch of a presentation's source that holds words: text, notes, controls and section headings. */
 function wordFields(document: PresentationDocument): { from: number; to: number }[] {
-    return [...blockFields(document), ...document.sections.map(section => ({ from: section.markerTo, to: section.to }))];
+    return [...blockFields(document), ...document.sections.map(section => ({ from: section.markerTo, to: section.headingTo }))];
 }
 
 /** The words of the slides' and compositions' blocks: text, notes and controls, whose paragraphs may end with an id. */
