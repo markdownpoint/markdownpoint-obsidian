@@ -157,9 +157,6 @@ export const TEXT_POINT_KEYS: ReadonlySet<string> = new Set([
     'anchor-point'
 ]);
 
-/** Two lengths a side that grows to its words is judged at: a point is linear in each length, so two decide it for all. */
-const JUDGED_LENGTHS = [1000, 2000];
-
 /** Where a text record's frame x and y stand from the center of a box it draws `width` by `height`, its growth, turn and scale read as MarkdownPoint reads them. */
 function pointFromCenter(record: Readonly<Record<string, unknown>>, width: number, height: number): { x: number; y: number } {
     const grows = grownSides(record);
@@ -168,25 +165,25 @@ function pointFromCenter(record: Readonly<Record<string, unknown>>, width: numbe
 }
 
 /**
- * Which of an inherited text record's frame x and y name another point under `merged`'s keys, as MarkdownPoint judges a
- * level's change of its growth, alignment, direction, columns, path, turn, scale or anchor point: at every length its words could
- * give a side that grows. A level states each that moves; one it leaves out keeps what the record inherits.
+ * The frame x and y a level's text record `merged` stores where it changes what decides the point they name and states
+ * neither, as MarkdownPoint converts them: the point that puts its box in `inherited`'s place. The inherited box stands
+ * at a length along each side: its own along a side it doesn't grow along, the level's where only it grows, and none
+ * where both grow, so the level's box grows from the point the inherited box grows from. That box's x and y are read with
+ * the level's keys. Undefined where a length the conversion needs isn't a number.
  */
-export function pointMoved(
+export function inheritedPoint(
     inherited: Readonly<Record<string, unknown>>,
     merged: Readonly<Record<string, unknown>>
-): { x: boolean; y: boolean } {
+): { x: number; y: number } | undefined {
     const grows = grownSides(inherited);
+    const levelGrows = grownSides(merged);
     const frame = isRecord(inherited.frame) ? inherited.frame : {};
-    let x = false;
-    let y = false;
-    for (const width of grows.width ? JUDGED_LENGTHS : [finite(frame.width) ? frame.width : 0])
-        for (const height of grows.height ? JUDGED_LENGTHS : [finite(frame.height) ? frame.height : 0]) {
-            const was = pointFromCenter(inherited, width, height);
-            const is = pointFromCenter(merged, width, height);
-            // MarkdownPoint holds a point to the millionth, so the same point can round a millionth apart along two paths.
-            x ||= Math.abs(was.x - is.x) > 1.5e-6;
-            y ||= Math.abs(was.y - is.y) > 1.5e-6;
-        }
-    return { x, y };
+    const own = isRecord(merged.frame) ? merged.frame : {};
+    const length = (side: 'width' | 'height'): unknown => (!grows[side] ? frame[side] : levelGrows[side] ? 0 : own[side]);
+    const width = length('width');
+    const height = length('height');
+    if (!finite(frame.x) || !finite(frame.y) || !finite(width) || !finite(height)) return undefined;
+    const was = pointFromCenter(inherited, width, height);
+    const is = pointFromCenter(merged, width, height);
+    return { x: frame.x - was.x + is.x, y: frame.y - was.y + is.y };
 }

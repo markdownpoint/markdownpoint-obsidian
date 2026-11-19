@@ -19,7 +19,7 @@
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import { formatStanding } from './format-version.ts';
 import { isRecord } from './recognition.ts';
-import { columnCountAsRead, heldAnchor, ownAnchor, pointMoved, standingFrame, TEXT_POINT_KEYS } from './text-growth.ts';
+import { columnCountAsRead, heldAnchor, inheritedPoint, ownAnchor, standingFrame, TEXT_POINT_KEYS } from './text-growth.ts';
 
 export interface StructureRegion {
     readonly x: number;
@@ -71,26 +71,26 @@ function masterSlideSize(master: Record<string, unknown>): { width: number; heig
 }
 
 /**
- * A text's override as MarkdownPoint applies it: one that changes what decides the point its frame's x and y name, and
- * moves a part it leaves out, waits, so the text keeps the keys it inherits. MarkdownPoint may still apply such a key
- * alone where it moves nothing; the schematic shows the box its level gives it.
+ * A text's override as MarkdownPoint applies it: one that changes what decides the point its frame's x and y name puts
+ * the box in the inherited box's place with each of them it leaves out, and a part it states is its own.
  */
-function heldPoint(
+function withInheritedPoint(
     base: Record<string, unknown>,
     override: Record<string, unknown>,
     merged: Record<string, unknown>
 ): Record<string, unknown> {
-    const changed = Object.keys(override).filter(key => TEXT_POINT_KEYS.has(key));
-    if (base.type !== 'text' || changed.length === 0) return merged;
-    const moved = pointMoved(base, merged);
-    const frame = isRecord(override.frame) ? override.frame : {};
-    if (!(moved.x && !Object.hasOwn(frame, 'x')) && !(moved.y && !Object.hasOwn(frame, 'y'))) return merged;
-    const held = { ...merged };
-    for (const key of changed) {
-        if (Object.hasOwn(base, key)) held[key] = base[key];
-        else delete held[key];
-    }
-    return held;
+    if (base.type !== 'text' || !isRecord(merged.frame) || !Object.keys(override).some(key => TEXT_POINT_KEYS.has(key))) return merged;
+    const point = inheritedPoint(base, merged);
+    if (!point) return merged;
+    const stated = isRecord(override.frame) ? override.frame : {};
+    return {
+        ...merged,
+        frame: {
+            ...merged.frame,
+            ...(Object.hasOwn(stated, 'x') ? {} : { x: point.x }),
+            ...(Object.hasOwn(stated, 'y') ? {} : { y: point.y })
+        }
+    };
 }
 
 /** Whether a scale draws an object at another size: a single object's along its axes, or an instance's one number. */
@@ -120,7 +120,7 @@ export function slideStructure(record: unknown, theme: EmbeddedTheme | null): Sl
                 } else if (isRecord(override))
                     objects.set(
                         id,
-                        heldPoint(base, override, {
+                        withInheritedPoint(base, override, {
                             ...base,
                             ...override,
                             type: base.type,

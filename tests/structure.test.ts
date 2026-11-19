@@ -79,13 +79,14 @@ test('a turned area turns about its anchor point, a part a level leaves out over
     assert.deepEqual(regions({ ...grows, 'anchor-point': { x: 0.5, y: 0.5 } }), [
         { x: 100, y: 100, width: 400, height: 48, pivot: { x: 300, y: 124 } }
     ]);
-    // An anchor point a level gives moves the point its x and y name, so it waits until the level gives them too.
+    // An anchor point a level gives moves the point its x and y name: with neither given, the box grows from the point
+    // the inherited box grows from, and turns about the anchor.
     assert.deepEqual(regions(grows, { title: { 'anchor-point': { x: 0.1 } } }), [
-        { x: 76, y: 76, width: 400, height: 48, pivot: { x: 276, y: 100 } }
+        { x: 100, y: 100, width: 400, height: 48, pivot: { x: 140, y: 100 } }
     ]);
     assert.deepEqual(
-        regions(grows, { title: { 'anchor-point': { x: 0.1 }, frame: { x: 100, y: 100 } } }),
-        [{ x: 100, y: 100, width: 400, height: 48, pivot: { x: 140, y: 100 } }],
+        regions(grows, { title: { 'anchor-point': { x: 0.1 }, frame: { x: 120, y: 100 } } }),
+        [{ x: 120, y: 100, width: 400, height: 48, pivot: { x: 160, y: 100 } }],
         "a level's x stands over the top it grows from"
     );
     // A level that makes a box sized by hand grow gives the part it leaves out from its own growth: the top.
@@ -299,7 +300,7 @@ test('a text whose width follows its words, holding no width, stands a width no 
     ]);
 });
 
-test("a slide's change of what decides a text's point, moving a part of its frame it leaves out, waits as MarkdownPoint holds it, and applies once it gives that part", () => {
+test("a slide's change of what decides a text's point puts its box in the inherited box's place with each part of its frame it leaves out, as MarkdownPoint converts it", () => {
     const regions = (title: Record<string, unknown>, change: Record<string, unknown>) => {
         const own = { ...layout, objects: [title] };
         const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
@@ -309,11 +310,20 @@ test("a slide's change of what decides a text's point, moving a part of its fram
     };
     // Set left, its left edge holds as its words set its width: nothing moves, so it follows its layout.
     assert.deepEqual(regions(field, { 'auto-size': 'width' }), [{ x: 100, y: 100, width: 48, height: 180 }]);
-    // Centered, its x would name its middle: the change waits, and the box stands as its layout sizes it.
+    // Centered, it grows about the middle of its layout's box, as a slide that gives that middle's x does.
     const centered = { ...field, align: 'center' };
-    assert.deepEqual(regions(centered, { 'auto-size': 'width' }), [{ x: 100, y: 100, width: 800, height: 180 }]);
-    assert.deepEqual(regions(centered, { 'auto-size': 'width', frame: { x: 500 } }), [{ x: 476, y: 100, width: 48, height: 180 }]);
+    assert.deepEqual(regions(centered, { 'auto-size': 'width' }), [{ x: 476, y: 100, width: 48, height: 180 }]);
+    assert.deepEqual(regions(centered, { 'auto-size': 'width', frame: { x: 500 } }), regions(centered, { 'auto-size': 'width' }));
+    assert.deepEqual(
+        regions(centered, { 'auto-size': 'width', frame: { x: 600 } }),
+        [{ x: 576, y: 100, width: 48, height: 180 }],
+        'a part it gives is its own'
+    );
     // A height that grows holds the top of its middle, which no alignment moves.
     const tall = { ...field, 'auto-size': 'height', frame: { x: 100, y: 100, width: 800 } };
     assert.deepEqual(regions(tall, { align: 'center' }), [{ x: 100, y: 100, width: 800, height: 48 }]);
+    // A slide that fixes the height of a turned box that grows down from its top stands where that box draws at that
+    // height: the top of its middle at (300, 100), turned a quarter.
+    const turned = { ...field, 'auto-size': 'height', rotation: 90, frame: { x: 100, y: 100, width: 400 } };
+    assert.deepEqual(regions(turned, { 'auto-size': 'none', frame: { height: 120 } }), [{ x: 40, y: 40, width: 400, height: 120 }]);
 });
