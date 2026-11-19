@@ -19,7 +19,7 @@
 import { Lexer, Marked, Tokenizer } from 'marked';
 import type { Token } from 'marked';
 import { blockRules } from './block-grammar.ts';
-import { decodeCharacterReferences, plainWords } from '../core/character-references.ts';
+import { decodeCharacterReferences, tokenPlainWords } from '../core/character-references.ts';
 import { isRecord } from './recognition.ts';
 
 interface EmphasisMask {
@@ -235,13 +235,13 @@ export function holdsHtml(tokens: readonly unknown[]): boolean {
 }
 
 /** Whether a token is one marked gives, which may be plain words. */
-const wordsToken = (token: unknown): token is Parameters<typeof plainWords>[0] =>
+const wordsToken = (token: unknown): token is Parameters<typeof tokenPlainWords>[0] =>
     isRecord(token) && typeof token.type === 'string' && typeof token.raw === 'string';
 
-/** A token's words as written and the Markdown that writes them, where it is plain words (`plainWords`). */
+/** A token's words as written and the Markdown that writes them, where it is plain words (`tokenPlainWords`). */
 function plainToken(token: unknown): { words: string; raw: string } | undefined {
     if (!wordsToken(token)) return undefined;
-    const words = plainWords(token);
+    const words = tokenPlainWords(token);
     return words === undefined ? undefined : { words, raw: token.raw };
 }
 

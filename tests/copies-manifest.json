@@ -3,7 +3,7 @@
     "src/common/cldr-chain.ts": "337b7a013357497bea7e22c203bec55523027198d89b1c99d74ebe2ddc957b2d",
     "src/common/pattern-end.ts": "8af454cf16895a7c1fde35eb25d7f754cd9b3f002df3db60b0616fb39599ae36",
     "src/core/canonical-locale.ts": "2950d7a355ca78a7804013176fd802d9a2025d1fe85e4cdf4b5694fad24f145e",
-    "src/core/character-references.ts": "d6da1f7334695344a5797cdb15d0901ce77a25e9cde0f8b90d611801bc1b67c2",
+    "src/core/character-references.ts": "d96313c6aaaa8afe59679f4cca6772e6f3fd9be7a0f3b1ab5c3d1057ab2f121a",
     "src/core/chart-number-rules.ts": "13979c863b5b14946775d32b8829642a8407724b151d325ccd938c1de8ea5f1f",
     "src/core/chart-numbers.ts": "fe0af3be80078c670b59e8e5d971a217b4982082b8a0e2991b72575eca44cda7",
     "src/core/locale-alias-rules.ts": "da20839fa27e380fb25cd85c75b4ed1034fb16393a8ccbdfea8f6916c348c48c",

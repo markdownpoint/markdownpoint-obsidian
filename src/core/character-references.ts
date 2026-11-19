@@ -14,7 +14,7 @@ interface WordsToken {
  * read as a whole: a bare URL's token ends before the `;` that closes a reference at its end. An escaped character, code
  * and Markdown kept as written end the run.
  */
-export function plainWords(token: WordsToken): string | undefined {
+export function tokenPlainWords(token: WordsToken): string | undefined {
   if (token.type === "text" && !token.tokens?.length) return token.text ?? token.raw;
   // A link's label opens with a bracket and an autolink with an angle bracket.
   return token.type === "link" && !/^[[<]/.test(token.raw) ? token.raw : undefined;
