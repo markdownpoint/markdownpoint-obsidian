@@ -75,6 +75,8 @@ test("a file's path is MarkdownPoint's: portable names joined by a slash, none h
         'media\\picture.png',
         'https://example.com/picture.png',
         'generated/0f5b3c1e-7d1a-4c55-9d3a-7d3f8a2b9c01.json',
+        'generated/0f5b3c1e-7d1a-4c55-9d3a-7d3f8a2b9c01.JSON',
+        'generated/history/record.Json',
         // A path in NFC, each name at most 255 bytes, as a folder lists it.
         'media/Cafe\u0301.png',
         `media/${'é'.repeat(126)}.png`

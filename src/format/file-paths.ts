@@ -37,7 +37,7 @@ export const MAX_NAME_BYTES = 255;
  * A file a presentation or a theme names, as MarkdownPoint reads one: portable names joined by `/`, none with `#`, so it
  * is never a URL, a fragment or a platform path, and none hidden, since Finder's records and files being written are no
  * one's. It is in NFC, the form it and its folder's names are compared in, and each name is at most 255 bytes. A
- * generation record in `generated/` is the presentation's bookkeeping, not a file it shows.
+ * generation record in `generated/`, its `.json` in any case, is the presentation's bookkeeping, not a file it shows.
  */
 export function isAuthoredFilePath(value: unknown): value is string {
     return (
@@ -52,7 +52,7 @@ export function isAuthoredFilePath(value: unknown): value is string {
                     !name.includes('#') &&
                     new TextEncoder().encode(name).length <= MAX_NAME_BYTES
             ) &&
-        !(value.startsWith('generated/') && value.endsWith('.json'))
+        !(value.startsWith('generated/') && /\.json$/i.test(value))
     );
 }
 
