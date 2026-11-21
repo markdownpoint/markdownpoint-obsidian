@@ -239,6 +239,26 @@ test('a line that reads as a marker, misspelled, closing or with words after it,
     }
 });
 
+test('a comment that starts like a marker is a note when its first --> ends a later line before the next <!--, as MarkdownPoint reads it', () => {
+    for (const note of ['<!-- notes\nAsk Anna.\n-->', '<!-- slide draft\nA second take. -->', '<!-- notes\r\nAsk Anna.\r\n-->\r']) {
+        const text = `<!-- slide: first -->\n<!-- text: body -->\nWords.\n${note}\nMore.\n`;
+        const document = indexPresentation(text, 0);
+        assert.ok(document, note);
+        assert.deepEqual(
+            document.slides[0]!.blocks.map(block => text.slice(block.contentFrom, block.to)),
+            [`Words.\n${note}\nMore.\n`]
+        );
+    }
+    // A marker that lost its `-->` meets the next marker, another comment or an arrow in its words first.
+    for (const forgotten of ['<!-- notes\nSay hi.', '<!-- notes\nSay hi.\n<!-- remember the demo -->', '<!-- notes\nRevenue --> profit.'])
+        assert.equal(
+            indexPresentation(`<!-- slide: first -->\n<!-- text: body -->\nWords.\n${forgotten}\n<!-- slide: second -->\n`, 0),
+            null,
+            forgotten
+        );
+    assert.equal(indexPresentation('<!-- slide: first -->\n<!-- text: body -->\nWords.\n<!-- notes\nSay hi.\n', 0), null);
+});
+
 test("a control's default words under a slide stay that slide's words, which MarkdownPoint keeps and warns about", () => {
     const text =
         '<!-- slide: first -->\n<!-- text: body -->\nWords.\n\n<!-- control: caption -->\nUnbound words.\n<!-- slide: second -->\n';
@@ -643,6 +663,10 @@ test('a marker in words of code blocks, lists, quotes and HTML is one exactly wh
         '<!-- c -->',
         '<!--',
         '-->',
+        '<!-- notes',
+        '<!-- slide x',
+        'a --> b',
+        'x -->',
         '<pre>',
         '</pre>',
         '# h',

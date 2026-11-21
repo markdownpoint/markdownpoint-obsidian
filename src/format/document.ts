@@ -84,9 +84,37 @@ function markerId(kind: string, id: string): boolean {
 /**
  * A line that reads as one of the markers, misspelled or closing, which MarkdownPoint refuses rather than keeps as words: a
  * marker's word, after a slash or not, with at most one word after it, colon or not, and words after its `-->` included,
- * as `<!-- /slide -->`, `<!-- slide: a<b -->` or `<!-- notes --> Say hi`. A comment with more words is the author's.
+ * as `<!-- /slide -->`, `<!-- slide: a<b -->` or `<!-- notes --> Say hi`. A comment with more words is the author's, and
+ * so is one such a line opens that ends on a later line (`noteOpener`).
  */
 const markerLike = /^<!--\s*\/?(?:section|slide|composition|text|control|notes)(?=[:\s]|-->|$):?\s*(?:\S+?\s*)?(?:-->.*)?$/i;
+
+/** Where `run` next stands in `text` from `from` on; past every position where it doesn't. */
+function runFrom(text: string, run: string, from: number): number {
+    const at = text.indexOf(run, from);
+    return at < 0 ? Infinity : at;
+}
+
+/**
+ * Whether a comment line of `text` that ends at `end`, its line end included, opens a note however it starts, as
+ * MarkdownPoint's `noteOpener` reads it: it holds no `-->`, and the first `-->` after it ends a later line with no `<!--`
+ * before it. A marker whose `-->` was forgotten meets the next comment or marker first, or an arrow in words, and stays
+ * one. Asked of each line in order. The app reads the text with its line ends made line feeds, so a CR ends a line here.
+ */
+function noteOpener(text: string): (line: string, end: number) => boolean {
+    // Where the next `-->` and the next `<!--` stand from the last line asked about on
+    let closing = -1;
+    let opening = -1;
+    return (line, end) => {
+        if (line.includes('-->')) return false;
+        if (closing < end) closing = runFrom(text, '-->', end);
+        if (opening < end) opening = runFrom(text, '<!--', end);
+        if (closing === Infinity || opening < closing) return false;
+        let after = closing + 3;
+        while (text[after] === ' ' || text[after] === '\t') after++;
+        return after === text.length || text[after] === '\n' || text[after] === '\r';
+    };
+}
 
 /** A comment line shaped as a marker, spaces or tabs after it: one lowercase word, or one, a colon and an id. */
 const markerShaped = /^<!--\s*([a-z]+(?:-[a-z]+)*)(?::\s*[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)?)?\s*-->[ \t]*$/;
@@ -173,20 +201,21 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     let offset = bodyStart;
     let lineNumber = markdown.slice(0, bodyStart).split(LINE_END).length - 1;
     const newerMinor = formatStanding(statedMarkdownVersion(markdown)) === 'newer-minor';
+    const opensNote = noteOpener(markdown);
 
     while (offset < markdown.length) {
         const ending = lineEnd(markdown, offset);
         const end = ending?.next ?? markdown.length;
         const line = markdown.slice(offset, ending?.at ?? end);
         // As MarkdownPoint reads a line: a marker names its block by ids, a line shaped as one with a word that is no id
-        // refuses the file, and a line of more words, as `text: ask Anna`, is a comment.
+        // refuses the file, and a line of more words, as `text: ask Anna`, is a comment, as is one that opens a note.
         // A marker is read without the spaces or tabs before it, as after it.
         const bare = line.replace(/^[ \t]+/, '');
         const found = marker.exec(bare);
         const match = found && (found[2] === undefined || markerId(found[1]!, found[2])) ? found : null;
         // In a newer minor's file, a later minor's marker opens a block of that minor's, which MarkdownPoint keeps as written
         const later = newerMinor && laterMarkerShaped(bare);
-        const structural = later || match !== null || markerLike.test(bare);
+        const structural = later || match !== null || (markerLike.test(bare) && !opensNote(bare, end));
         // A line in a fenced code block is the code's words, a marker's shape among them. A block at the top level takes
         // in the rest of the file while it stays open; one in a list item or a quote ends with them.
         if (code.line(line)) {
