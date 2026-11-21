@@ -5,7 +5,7 @@
     "src/core/canonical-locale.ts": "2950d7a355ca78a7804013176fd802d9a2025d1fe85e4cdf4b5694fad24f145e",
     "src/core/character-references.ts": "d96313c6aaaa8afe59679f4cca6772e6f3fd9be7a0f3b1ab5c3d1057ab2f121a",
     "src/core/chart-number-rules.ts": "13979c863b5b14946775d32b8829642a8407724b151d325ccd938c1de8ea5f1f",
-    "src/core/chart-numbers.ts": "d0600d16be5a827a50df9f8adae5fcc68a940c8cca1acb7fdf7feeeb68fc28e0",
+    "src/core/chart-numbers.ts": "a808246e9fbe18f74e0c6858aad3bc5ae12c2b182d58b77e178a4b2ddf9c4f72",
     "src/core/locale-alias-rules.ts": "da20839fa27e380fb25cd85c75b4ed1034fb16393a8ccbdfea8f6916c348c48c",
     "src/core/new-presentation-style.ts": "c8b2d7534086ce2191318fe1c30e83b7a20fa5c64a365c0f9af0042d2ffbf18f",
     "src/themes/basic/blank.json": "121a789a439fb12fb1543e22fbebd9b89d884c69aace6b85ee869529a24a1a4e",

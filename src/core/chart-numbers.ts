@@ -20,7 +20,7 @@ export function chartNumberRule(locale: string): ChartNumberRule {
 
 /**
  * How a cell spells its number, so a counting value keeps the cell's own spelling: "$1,284,392", "99.99%", "3.1×",
- * "1 250 kr" and "($1,234.50)" count with their words, signs, separators and decimals.
+ * "1 250 kr", "($1,234.50)" and "007" count with their words, signs, separators, decimals and whole digits.
  */
 export interface ChartNumberFormat {
   /** The words before and after the digits of a value that is no loss. */
@@ -34,6 +34,11 @@ export interface ChartNumberFormat {
   negativePrefix: string;
   negativeSuffix: string;
   decimals: number;
+  /**
+   * The fewest whole digits a value is spelled with: as many as the cell writes where it starts with a zero or writes
+   * none, as "007" writes three and ".312" none, else one.
+   */
+  wholeDigits: number;
   /** The mark the cell groups its whole digits with, as it writes it, or none. */
   group: string;
   /** How many digits a group holds, nearest the point and beyond it: the presentation's. */
@@ -47,7 +52,7 @@ export interface ChartNumber { value: number; format: ChartNumberFormat }
 
 /** How a count spells its number when its cell holds none: plain digits, the presentation's point. */
 export const plainFormat = (rule: ChartNumberRule): ChartNumberFormat =>
-  ({ prefix: "", suffix: "", negativePrefix: "-", negativeSuffix: "", decimals: 0, group: "", primary: rule.primary, secondary: rule.secondary, point: rule.decimal });
+  ({ prefix: "", suffix: "", negativePrefix: "-", negativeSuffix: "", decimals: 0, wholeDigits: 1, group: "", primary: rule.primary, secondary: rule.secondary, point: rule.decimal });
 
 /** The most digits toFixed spells after the point; one more throws a RangeError, which refuses the whole render. */
 const MAX_FIXED_DIGITS = 100;
@@ -149,10 +154,11 @@ function readNumberParts(groups: Readonly<Record<string, string | undefined>>, r
   const { loss, ...words } = signedWords(sign1, prefix, sign2, suffix);
   const value = digitsValue(whole, fraction, loss);
   if (!Number.isFinite(value)) return null;
+  const wholeDigits = whole.replace(/\D/g, "");
   return {
-    number: { value, format: { ...words, decimals: Math.min(fraction.length, MAX_FIXED_DIGITS), group: marks[0] ?? "", primary: rule.primary,
-      secondary: rule.secondary, point: rule.decimal } },
-    sign1, prefix, sign2, whole: whole.replace(/\D/g, ""), grouped: marks.length > 0, fraction: at < 0 ? null : fraction, suffix
+    number: { value, format: { ...words, decimals: Math.min(fraction.length, MAX_FIXED_DIGITS), wholeDigits: /^0|^$/.test(wholeDigits) ? wholeDigits.length : 1,
+      group: marks[0] ?? "", primary: rule.primary, secondary: rule.secondary, point: rule.decimal } },
+    sign1, prefix, sign2, whole: wholeDigits, grouped: marks.length > 0, fraction: at < 0 ? null : fraction, suffix
   };
 }
 
@@ -221,11 +227,13 @@ function grouped(whole: string, format: Pick<ChartNumberFormat, "group" | "prima
   return parts.join(format.group);
 }
 
-/** A value spelled as its cell spells its number: the same words, separators and decimals. */
+/** A value spelled as its cell spells its number: the same words, separators, decimals and whole digits. */
 export function formatChartNumber(value: number, format: ChartNumberFormat): string {
   const fixed = Math.abs(value).toFixed(format.decimals);
   // From 1e21 toFixed spells an exponent; a value that large is whole, so its digits are its integer's.
-  const [whole = "0", fraction] = fixed.includes("e") ? [BigInt(Math.abs(value)).toString(), "0".repeat(format.decimals) || undefined] : fixed.split(".");
+  const [integer = "0", fraction] = fixed.includes("e") ? [BigInt(Math.abs(value)).toString(), "0".repeat(format.decimals) || undefined] : fixed.split(".");
+  // A cell that writes no whole digit, as ".312" does, writes none for a value below one; toFixed always writes one.
+  const whole = integer === "0" && fraction ? "0".repeat(format.wholeDigits) : integer.padStart(format.wholeDigits, "0");
   const digits = fraction ? `${grouped(whole, format)}${format.point}${fraction}` : grouped(whole, format);
   // Rounding decides the sign, so a count passing through zero never shows a negative zero.
   const loss = Number(fixed) !== 0 && value < 0;
