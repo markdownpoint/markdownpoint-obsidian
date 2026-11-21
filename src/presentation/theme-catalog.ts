@@ -19,7 +19,8 @@
 import { TFile } from 'obsidian';
 import type { TFolder, Vault } from 'obsidian';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
-import { isThemeKey, themeFilePaths } from '../format/embedded-theme.ts';
+import { themeFilePaths } from '../format/embedded-theme.ts';
+import { isThemeKey } from '../format/file-paths.ts';
 import { layoutName } from '../format/new-slide.ts';
 import { mintId } from '../format/id-allocation.ts';
 import { prepareNewPresentation } from '../format/new-presentation.ts';

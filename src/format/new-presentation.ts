@@ -17,8 +17,7 @@
  */
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
-import { isThemeKey } from './embedded-theme.ts';
-import { isPortableName } from './file-paths.ts';
+import { isPortableName, isThemeKey } from './file-paths.ts';
 import { FORMAT_VERSION } from './format-version.ts';
 import { isUuid } from './recognition.ts';
 import { orderedLayouts, prepareNewSlide } from './new-slide.ts';

@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { isThemeFilePath, MAX_NAME_BYTES } from './file-paths.ts';
+import { isThemeFilePath, isThemeKey, MAX_NAME_BYTES } from './file-paths.ts';
 import { readJsonObject } from './json.ts';
 import { opensFormatVersion } from './format-version.ts';
-import { isRecord, isStableId, isUuid, presentationCompanionPath } from './recognition.ts';
+import { isRecord, isUuid, presentationCompanionPath } from './recognition.ts';
 
 export interface EmbeddedThemeDocument {
     readonly path: string;
@@ -40,11 +40,6 @@ export interface EmbeddedThemePaths {
     readonly root: string;
     readonly master: string;
     readonly layouts: ReadonlyMap<string, string>;
-}
-
-/** Theme folder keys are readable stable names that every supported filesystem accepts: a folder's name of 255 bytes at most. */
-export function isThemeKey(value: unknown): value is string {
-    return isStableId(value) && value.length <= MAX_NAME_BYTES && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(value);
 }
 
 /** Current format1 embedded snapshot paths; global Theme discovery is separate. */
