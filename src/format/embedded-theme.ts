@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { isThemeFilePath, isThemeKey, MAX_NAME_BYTES } from './file-paths.ts';
+import { isLayoutKey, isThemeFilePath, isThemeKey } from './file-paths.ts';
 import { readJsonObject } from './json.ts';
 import { opensFormatVersion } from './format-version.ts';
 import { isRecord, isUuid, presentationCompanionPath } from './recognition.ts';
@@ -53,10 +53,7 @@ export function embeddedThemePaths(markdownPath: string, companion: unknown, lay
     )
         return null;
     const keys = new Set(layoutKeys);
-    for (const key of keys) {
-        // A layout's file takes `.json` after its key.
-        if (!isThemeKey(key) || key.length > MAX_NAME_BYTES - '.json'.length || key === 'master' || key === 'manifest') return null;
-    }
+    for (const key of keys) if (!isLayoutKey(key)) return null;
     const root = markdownPath.slice(0, markdownPath.lastIndexOf('/') + 1) + `themes/${companion.theme}`;
     return {
         key: companion.theme,

@@ -18,16 +18,16 @@
 
 /**
  * The names and paths a presentation or a theme holds, as MarkdownPoint's readers judge them, so the plugin and the app
- * apply one rule: a portable name, the most bytes a name holds, a file a presentation or a theme names, a presentation's
- * own file in `media/` or `generated/`, a theme's own file as its manifest lists it, and a theme's key, the name of its
- * folder. A theme JSON file's field that names a file takes more than its manifest's rule: the path in NFC and each
- * name at most 255 bytes.
+ * apply one rule: a portable name, a file a presentation or a theme names, a presentation's own file in `media/` or
+ * `generated/`, a theme's own file as its manifest lists it, a theme's key, the name of its folder, and a layout's key,
+ * the name of its file without `.json`. A theme JSON file's field that names a file takes more than its manifest's rule:
+ * the path in NFC and each name at most 255 bytes.
  */
 export {
     isAuthoredFilePath,
+    isLayoutKey,
     isPortableName,
     isPresentationFilePath,
     isThemeFilePath,
-    isThemeKey,
-    MAX_NAME_BYTES
+    isThemeKey
 } from '../readers/markdownpoint-readers.js';
