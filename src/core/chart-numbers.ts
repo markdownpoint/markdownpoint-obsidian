@@ -29,7 +29,7 @@ export interface ChartNumberFormat {
   /**
    * The words before and after a loss's digits, its marks among them, as the cell writes them: "-$" and "" for "-$4.50",
    * "$(" and ")" for "$(1,234.50)", "" and " kr-" for "1 234,50 kr-". A cell that writes no loss spells one with a minus
-   * after its prefix.
+   * in place of its prefix's plus, or else after its prefix.
    */
   negativePrefix: string;
   negativeSuffix: string;
@@ -59,7 +59,11 @@ const markKind = (mark: string): string => GROUP_SPACE.test(mark) ? " " : mark =
 
 const escapeClass = (text: string): string => text.replace(/[\\\]^-]/g, "\\$&");
 
-/** A cell's sign, prefix, digits and suffix, by a rule's marks: digits run from a digit, or the decimal mark, to a digit. */
+/**
+ * A cell's sign, prefix, digits and suffix, by a rule's marks: digits run from a digit, or the decimal mark, to a digit. A
+ * period right after a letter, its marks included, ends an abbreviation, as "Rs." and "रु." do, so it is the prefix's and
+ * never the point.
+ */
 const numberPatterns = new Map<string, RegExp>();
 
 function numberPattern(rule: ChartNumberRule): RegExp {
@@ -67,7 +71,7 @@ function numberPattern(rule: ChartNumberRule): RegExp {
   let pattern = numberPatterns.get(key);
   if (!pattern) {
     const marks = escapeClass(`${rule.decimal}${rule.group}\u0020\u00A0\u202F\u2009'\u2019`), point = escapeClass(rule.decimal);
-    numberPatterns.set(key, pattern = new RegExp(`^(?<sign1>[-\\u2212]?)(?<prefix>[^\\d\\-\\u2212]*?)(?<sign2>[-\\u2212]?)(?<digits>[${point}]?\\d(?:[\\d${marks}]*\\d)?)(?<suffix>\\D*)$`, "u"));
+    numberPatterns.set(key, pattern = new RegExp(`^(?<sign1>[-\\u2212]?)(?<prefix>[^\\d\\-\\u2212]*?)(?<sign2>[-\\u2212]?)(?<digits>(?!(?<=\\p{L}\\p{M}*)\\.)[${point}]?\\d(?:[\\d${marks}]*\\d)?)(?<suffix>\\D*)$`, "u"));
   }
   return pattern;
 }
@@ -90,16 +94,20 @@ export function parseChartNumber(text: string, rule: ChartNumberRule): ChartNumb
  * inside or outside them, as "(1,234.50)", "($1,234.50)" and "$(1,234.50)" write one; or by a minus ending the cell, as
  * "1,234.50-" and "1 234,50 kr-" do. A parenthesis with no partner across the digits, as in "(EUR) 5 (est.)", a minus
  * within the suffix's words, as in "5-year", and a dash after a colon, a comma or a period, as a whole price "100:-" or
- * "10,-" is written, are words. The minus before the digits decides a cell that also writes another mark, as "(-5)" does.
+ * "10,-" is written, are words. A cell that writes several of these marks, as "(-5)" and "-5-" do, writes one loss, and
+ * a value that is no loss is spelled without any of them. A loss in a cell that writes none takes a minus in place of
+ * the plus its prefix starts or ends with, as "+5" counting to "-3" does, or else after its prefix.
  */
 function signedWords(sign1: string, prefix: string, sign2: string, suffix: string): Pick<ChartNumberFormat, "prefix" | "suffix" | "negativePrefix" | "negativeSuffix"> & { loss: boolean } {
-  if (sign1 || sign2) return { prefix, suffix, negativePrefix: `${sign1}${prefix}${sign2}`, negativeSuffix: suffix, loss: true };
   const open = prefix.lastIndexOf("("), close = suffix.indexOf(")");
-  if (open >= 0 && !prefix.includes(")", open) && close >= 0 && !suffix.slice(0, close).includes("(")) {
-    return { prefix: prefix.slice(0, open) + prefix.slice(open + 1), suffix: suffix.slice(0, close) + suffix.slice(close + 1), negativePrefix: prefix, negativeSuffix: suffix, loss: true };
+  const paired = open >= 0 && !prefix.includes(")", open) && close >= 0 && !suffix.slice(0, close).includes("(");
+  const bare = paired ? { prefix: prefix.slice(0, open) + prefix.slice(open + 1), suffix: suffix.slice(0, close) + suffix.slice(close + 1) } : { prefix, suffix };
+  const ending = /(?<![:.,])[-−]$/u.test(bare.suffix);
+  if (sign1 || sign2 || paired || ending) {
+    return { prefix: bare.prefix, suffix: ending ? bare.suffix.slice(0, -1) : bare.suffix, negativePrefix: `${sign1}${prefix}${sign2}`, negativeSuffix: suffix, loss: true };
   }
-  if (/(?<![:.,])[-−]$/u.test(suffix)) return { prefix, suffix: suffix.slice(0, -1), negativePrefix: prefix, negativeSuffix: suffix, loss: true };
-  return { prefix, suffix, negativePrefix: `${prefix}-`, negativeSuffix: suffix, loss: false };
+  const negativePrefix = /\+$/.test(prefix) ? prefix.replace(/\+$/, "-") : /^\+/.test(prefix) ? prefix.replace(/^\+/, "-") : `${prefix}-`;
+  return { prefix, suffix, negativePrefix, negativeSuffix: suffix, loss: false };
 }
 
 /**
@@ -129,8 +137,9 @@ interface ChartNumberRead { number: ChartNumber; sign1: string; prefix: string; 
 /** A cell's number from the parts a rule's pattern found in it, or null when they spell none by the rule. */
 function readNumberParts(groups: Readonly<Record<string, string | undefined>>, rule: ChartNumberRule): ChartNumberRead | null {
   const { sign1 = "", prefix = "", sign2 = "", digits = "", suffix = "" } = groups;
-  // A prefix that ends in a period or a comma would spell a point the presentation doesn't write, as ".5" in Swedish.
-  if ((sign1 && sign2) || /[.,]$/.test(prefix)) return null;
+  // A prefix that ends in a comma, or in a period that ends no abbreviation, would spell a point the presentation doesn't
+  // write, as ".5" in Swedish.
+  if ((sign1 && sign2) || /(?:,|(?<!\p{L}\p{M}*)\.)$/u.test(prefix)) return null;
   const at = digits.indexOf(rule.decimal);
   if (at >= 0 && digits.indexOf(rule.decimal, at + 1) >= 0) return null;
   const whole = at < 0 ? digits : digits.slice(0, at), fraction = at < 0 ? "" : digits.slice(at + rule.decimal.length);
@@ -173,8 +182,9 @@ function digitsValue(whole: string, fraction: string, loss: boolean): number {
  * kept, its point, group mark and group widths taken from `to`, so "1 234,50" from a Swedish computer is "1,234.50" in
  * an English presentation, and its loss "(1 234,50)" is "(1,234.50)". The same rule gives the cell back as it is. Where
  * the new marks would join the words before the number into an address, as "www,5" and "sales@example,5" would link
- * "www.5" and "sales@example.5", a space sets the words apart, "www .5", so the cell keeps its value; a spelling `to`
- * reads otherwise even so gives the cell back as it is.
+ * "www.5" and "sales@example.5", or end an abbreviation with the point, as "Rs,5" would in "Rs.5", a space sets the words
+ * apart, "www .5" and "Rs .5", so the cell keeps its value; a spelling `to` reads otherwise even so gives the cell back as
+ * it is.
  */
 export function respellChartNumber(text: string, from: ChartNumberRule, to: ChartNumberRule): string | null {
   const read = readChartNumber(text, from);
