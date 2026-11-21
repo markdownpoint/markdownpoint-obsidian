@@ -675,7 +675,11 @@ test('a marker in words of code blocks, lists, quotes and HTML is one exactly wh
         '[x]: /u',
         '"t"',
         '<!-- aside -->',
-        '  <!-- aside: x -->'
+        '  <!-- aside: x -->',
+        '<!--\taside:\tcard.title\t-->',
+        // Not marker-shaped: anything after the colon but ids, or white space other than spaces and tabs
+        '<!-- aside: fix- -->',
+        '<!--\u00a0aside -->'
     ];
     const id = '0c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d';
     const bytes = (text: string) => new TextEncoder().encode(text);

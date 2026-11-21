@@ -18,7 +18,7 @@
 
 import { markdownFenceReader } from '../readers/markdownpoint-readers.js';
 import { formatStanding, statedMarkdownVersion } from './format-version.ts';
-import { isStableId } from './recognition.ts';
+import { isStableId, STABLE_ID_BODY } from './recognition.ts';
 
 export interface DocumentBlock {
     readonly kind: 'text' | 'notes' | 'control';
@@ -116,8 +116,15 @@ function noteOpener(text: string): (line: string, end: number) => boolean {
     };
 }
 
-/** A comment line shaped as a marker, spaces or tabs after it: one lowercase word, or one, a colon and an id. */
-const markerShaped = /^<!--\s*([a-z]+(?:-[a-z]+)*)(?::\s*[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)?)?\s*-->[ \t]*$/;
+/**
+ * A comment line shaped as a marker, spaces or tabs after it: one lowercase word, or one, a colon and an id or two ids
+ * joined by a dot, with spaces or tabs where a marker takes them. Any other white space, or anything after the colon
+ * but ids, makes it a note. `markerLike`'s wider shape serves this minor's own words alone: a word a minor adds is a
+ * marker, or a misspelled one, only in files of that minor or later.
+ */
+const markerShaped = new RegExp(
+    `^<!--[ \\t]*([a-z]+(?:-[a-z]+)*)(?::[ \\t]*${STABLE_ID_BODY}(?:\\.${STABLE_ID_BODY})?)?[ \\t]*-->[ \\t]*$`
+);
 /** The words a marker-shaped line of this minor may start with and stay what it is: its markers' and a paragraph id's. */
 const knownMarkerWords: ReadonlySet<string> = new Set(['section', 'slide', 'composition', 'text', 'control', 'notes', 'id']);
 

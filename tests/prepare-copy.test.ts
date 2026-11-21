@@ -66,6 +66,15 @@ test("a copied slide's note shaped as a later minor's marker is escaped, as Mark
     );
 });
 
+test("a copied slide's note of another shape, or with other white space than spaces and tabs, stays as written, while one with tabs is escaped", () => {
+    const notes = ['<!-- todo: fix- -->', '<!-- todo: a--b -->', '<!-- todo: a.b.c -->', '<!--\u00a0todo -->', '<!-- todo\u2003-->'].join(
+        '\r\n'
+    );
+    const markdown = `<!-- slide: one -->\r\n<!-- text: body -->\r\n${notes}\r\n<!--\ttodo:\tcard.title\t-->\r\n`;
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, 'slide', slides, compositions, schemas)!;
+    assert.equal(result.markdown, `<!-- slide: copy-one -->\r\n<!-- text: body -->\r\n${notes}\r\n<!--\\\ttodo:\tcard.title\t-->\r\n`);
+});
+
 test('a copied slide whose marker ends in a bare CR keeps it and takes its new id', () => {
     const markdown = '<!-- slide: one -->\r<!-- text: body -->\rWords.\r';
     const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, 'slide', slides, compositions, schemas);
