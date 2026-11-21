@@ -36,7 +36,7 @@ const schemas = new Map<string, readonly TextSchema[]>([
 
 test('complete slide preparation changes only identity and actual Markdown/JSON references', () => {
     const markdown =
-        '<!--  slide: one  --> \r\n<!-- author comment -->\r\n<!-- text: body -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n\r\n<!-- text: card.caption -->\r\n[Back](slide:one).\r\n<!-- notes -->\r\n[Next](slide:two).\r\n\r\n \t';
+        '<!--  slide: one  --> \r\n<!-- text: body -->\r\n<!-- author comment -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n\r\n<!-- text: card.caption -->\r\n[Back](slide:one).\r\n<!-- notes -->\r\n[Next](slide:two).\r\n\r\n \t';
     const record = String.raw`{ "layout":"title", "future":9007199254740993, "escaped":"\u0061", "objects":["title",{"id":"card","type":"instance","composition":"card","link":"slide:two"}] }`;
     const result = prepareCopiedPart({ id: 'one', markdown, record }, 'slide', slides, compositions, schemas)!;
     assert.ok(result);

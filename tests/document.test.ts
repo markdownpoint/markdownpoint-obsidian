@@ -395,7 +395,9 @@ test('section heading ranges preserve source positions, including empty and trai
 test('caret lookup follows slide ranges without claiming section headings or compositions', () => {
     const markdown =
         'Frontmatter gap.\n<!-- section: opening -->\n# Opening\n<!-- slide: first -->\n<!-- text: title -->\nFirst.\n\n<!-- notes -->\nRemember.\n\n<!-- section: ending -->\n# Ending\n<!-- slide: last -->\n<!-- text: body -->\nLast.\n\n<!-- composition: shared -->\n<!-- control: caption -->\nReusable.\n';
-    const document = indexPresentation(markdown, 0)!;
+    // Read from its start, the gap's words stand in no block before the first section
+    assert.equal(indexPresentation(markdown, 0), null);
+    const document = indexPresentation(markdown, 'Frontmatter gap.\n'.length)!;
     const [first, last] = document.slides;
     assert.ok(first && last);
     for (const slide of document.slides) {
@@ -575,8 +577,8 @@ test("in a newer minor's file a later minor's block ends the words and the headi
         '<!-- slide: a -->\n<!-- glow -->\nFirst.\n\n<!-- text: title -->\nHello.\n\n<!-- sticker: t -->\nTilted words.\n\n' +
         '<!-- notes -->\nSay hi.\n\n  <!-- glow-twice -->\t\nAfter notes.\n\n' +
         '<!-- slide: b -->\n<!-- text: title -->\nB.\n\n<!-- tail -->';
-    const read = (version: string) => {
-        const markdown = front(version) + body;
+    const read = (version: string, source = body) => {
+        const markdown = front(version) + source;
         const document = indexPresentation(markdown, front(version).length)!;
         const words = (from: number, to: number) => markdown.slice(from, to);
         return {
@@ -597,9 +599,11 @@ test("in a newer minor's file a later minor's block ends the words and the headi
         assert.ok(later.slides[0]!.includes('After notes.') && later.slides[1]!.endsWith('<!-- tail -->'), version);
         assert.equal(later.last, later.length, 'a marker that ends the file needs no line break');
     }
-    // In this minor's file, or one that states no version, the same lines are notes in the words
+    // In this minor's file, or one that states no version, the same lines are notes in the words, and words in no block
+    // after a page's marker refuse the file
     for (const version of ['"1.0"', '1.1']) {
-        const notes = read(version);
+        assert.equal(indexPresentation(front(version) + body, front(version).length), null, version);
+        const notes = read(version, body.replace('<!-- glow -->\nFirst.\n\n', ''));
         assert.deepEqual(
             notes.blocks[0],
             ['Hello.\n\n<!-- sticker: t -->\nTilted words.\n\n', 'Say hi.\n\n  <!-- glow-twice -->\t\nAfter notes.\n\n'],
@@ -695,13 +699,18 @@ test('a marker in words of code blocks, lists, quotes and HTML is one exactly wh
                 { length: 1 + Math.floor(random() * 8) },
                 () => ALPHABET[Math.floor(random() * ALPHABET.length)]!
             ).join('\n');
-            for (const markdown of [
-                `${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n\n<!-- slide: two -->\n`,
-                `${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n`
-            ]) {
+            // The words stand in a page's notes, or in no block, after a page's marker before its first block or before
+            // the first page
+            for (const [markdown, pages] of [
+                [`${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n\n<!-- slide: two -->\n`, ['one', 'two']],
+                [`${front}<!-- slide: one -->\n<!-- notes -->\n${words}\n`, ['one']],
+                [`${front}<!-- slide: one -->\n${words}\n\n<!-- slide: two -->\n`, ['one', 'two']],
+                [`${front}${words}\n\n<!-- slide: one -->\n<!-- notes -->\n`, ['one']]
+            ] as const) {
                 const index = indexPresentation(markdown, front.length);
-                // The companion lists the slides the plugin finds, so the app opens the pair exactly when it finds the same.
-                const ids = index?.slides.map(slide => slide.id) ?? ['one', 'two'];
+                // The companion lists the slides the plugin finds, else the pages the words stand among, so the app opens the
+                // pair exactly when it finds the same.
+                const ids = index?.slides.map(slide => slide.id) ?? pages;
                 const json = JSON.stringify({
                     markdownpoint: version,
                     type: 'presentation',

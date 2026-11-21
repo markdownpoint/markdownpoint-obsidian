@@ -185,7 +185,8 @@ export function spellBlocks(
 /**
  * Indexes source ranges without rewriting or rendering Markdown. bodyStart is the
  * first offset after the already recognized frontmatter. Invalid structural
- * directives return null so consumers cannot navigate or decorate stale ranges.
+ * directives, and words that stand in no block, return null so consumers cannot
+ * navigate or decorate a file MarkdownPoint refuses.
  */
 export function indexPresentation(markdown: string, bodyStart: number): PresentationDocument | null {
     const slides: DocumentSlide[] = [];
@@ -209,6 +210,10 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     let lineNumber = markdown.slice(0, bodyStart).split(LINE_END).length - 1;
     const newerMinor = formatStanding(statedMarkdownVersion(markdown)) === 'newer-minor';
     const opensNote = noteOpener(markdown);
+    // Where words would stand in no block, before the first marker and after a slide's or a composition's until its first
+    // block, or null where the words read stand in one. MarkdownPoint refuses words there, which no save could keep.
+    let unclaimed: number | null = bodyStart;
+    const strayWords = (to: number) => unclaimed !== null && markdown.slice(unclaimed, to).trim().length > 0;
 
     while (offset < markdown.length) {
         const ending = lineEnd(markdown, offset);
@@ -232,6 +237,8 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
             continue;
         }
         if (structural) {
+            if (strayWords(offset)) return null;
+            unclaimed = null;
             // Each marker ends the words and the heading before it. A later minor's block stands where it is, in a page or
             // after a section's heading, so the page or the section goes on past it.
             if (block) block.to = offset;
@@ -265,6 +272,7 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
                     if (seen.has(id)) return null;
                     seen.add(id);
                     part = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length, blocks: [] };
+                    unclaimed = end;
                     (kind === 'slide' ? slides : compositions).push(part);
                 }
             } else {
@@ -282,5 +290,6 @@ export function indexPresentation(markdown: string, bodyStart: number): Presenta
     // A code block that takes in a marker and never closes holds the rest of the file, so its slides would go missing.
     // Another fence left open at the end only holds that field's words, as the MarkdownPoint app reads it.
     if (swallowed !== null && code.open()?.start === swallowed) return null;
+    if (strayWords(markdown.length)) return null;
     return { slides, compositions, sections, laterMarkers };
 }
