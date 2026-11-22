@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { StateEffect, StateField, EditorState, Transaction } from '@codemirror/state';
+import { Annotation, ChangeSet, StateEffect, StateField, EditorState, Transaction } from '@codemirror/state';
 import type { Extension, TransactionSpec } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view';
 import type { DecorationSet } from '@codemirror/view';
@@ -41,7 +41,7 @@ import { notesDecorations } from './notes-widgets.ts';
 import type { NotesActions } from './notes-widgets.ts';
 import type { NotesUi } from '../settings/notes-ui.ts';
 import { payloadContentEnd } from '../format/payload.ts';
-import { slideAtPosition } from '../format/document.ts';
+import { indexPresentation, slideAtPosition } from '../format/document.ts';
 import { historyReorderSelection, slideReorderTransaction } from './reorder.ts';
 import type { SlideReorder } from '../format/reorder.ts';
 import { undo, redo } from '@codemirror/commands';
@@ -52,8 +52,11 @@ import { historyBoundarySelection, slideEditTransactions } from './structural-hi
 import { planSlideInsertion } from '../format/insert.ts';
 import type { PreparedPart } from '../format/insert.ts';
 import { slideInsertionTransaction } from './insert.ts';
+import { inOpening, keepsStructure, openingWrite } from './openings.ts';
 
 const refreshPresentation = StateEffect.define<boolean>();
+// Words typed on a slide's line went into its presenter notes, which the draft then shows open
+const wroteNotes = Annotation.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
 const noImageSpaces: ReadonlyMap<string, number> = new Map();
 
@@ -212,6 +215,16 @@ export class PresentationEditor extends Component {
                     update: update => {
                         sync();
                         for (const transaction of update.transactions) this.restoreHistoryCaret(view, transaction);
+                        // Notes take words, or undo and redo put the caret in closed ones: they show open
+                        if (
+                            update.transactions.some(
+                                transaction =>
+                                    transaction.annotation(wroteNotes) || transaction.isUserEvent('undo') || transaction.isUserEvent('redo')
+                            )
+                        )
+                            view.dom.ownerDocument.defaultView?.queueMicrotask(() => {
+                                if (this.running && this.views.has(view)) this.revealSelectedNotes(view);
+                            });
                         if (
                             update.selectionSet ||
                             update.docChanged ||
@@ -274,17 +287,53 @@ export class PresentationEditor extends Component {
                             }
                         ];
                 }
-                return boundaryChangesAllowed(
-                    transaction,
-                    [...markers, ...draft.fields, ...noteFields].map(range => ({
-                        from: range.from,
-                        markerTo: 'contentFrom' in range ? range.contentFrom : range.markerTo
-                    }))
+                if (
+                    !boundaryChangesAllowed(
+                        transaction,
+                        [...markers, ...draft.fields, ...noteFields].map(range => ({
+                            from: range.from,
+                            markerTo: 'contentFrom' in range ? range.contentFrom : range.markerTo
+                        }))
+                    )
                 )
-                    ? transaction
-                    : [];
+                    return [];
+                return this.openingInput(transaction, draft) ?? transaction;
             })
         ];
+    }
+
+    /**
+     * Words the author types, pastes or drops where no block holds them: on the line of a slide with no blocks they go
+     * into the writing its draft shows below, and anywhere else nowhere, since MarkdownPoint refuses a file with them.
+     */
+    private openingInput(transaction: Transaction, draft: DraftState): readonly (Transaction | TransactionSpec)[] | null {
+        const snapshot = draft.snapshot;
+        if (!snapshot || !transaction.docChanged || transaction.annotation(slideStructureChange) === true) return null;
+        if (!transaction.isUserEvent('input') && !transaction.isUserEvent('move')) return null;
+        const start = transaction.startState.doc;
+        const typed: { from: number; to: number; fromB: number }[] = [];
+        transaction.changes.iterChanges((fromA, toA, fromB, _toB, inserted) => {
+            if (inserted.toString().trim() && inOpening(snapshot.document, snapshot.bodyStart, start.length, fromA))
+                typed.push({ from: fromA, to: toA, fromB });
+        });
+        const change = typed[0];
+        if (!change) return null;
+        // An edit that leaves every word in a block, as a pasted block with its own marker, stands as made
+        if (indexPresentation(transaction.newDoc.toString(), snapshot.bodyStart)) return null;
+        // One slide's line at a time takes words; a composition would be typed twice if its words moved while it lasts
+        if (typed.length > 1 || transaction.isUserEvent('input.type.compose')) return [];
+        const markdown = start.toString();
+        const write = openingWrite(markdown, snapshot.document, snapshot.bodyStart, draft.missing, change.from, change.to);
+        if (!write) return [];
+        // The words stay as typed, with what came with them, an auto-paired bracket's caret and state included: only
+        // their block's marker is written, at the start of their line
+        const at = transaction.changes.mapPos(write.at, -1);
+        const marker = ChangeSet.of({ from: at, insert: write.before }, transaction.newDoc.length);
+        const edit = transaction.changes.compose(marker);
+        const proposed = marker.apply(transaction.newDoc).toString();
+        const map = (position: number) => edit.mapPos(position, 1);
+        if (!keepsStructure(markdown, snapshot.document, snapshot.bodyStart, proposed, write, map, at)) return [];
+        return [transaction, { changes: marker, sequential: true, annotations: write.notesOf ? wroteNotes.of(true) : [] }];
     }
 
     onload(): void {
