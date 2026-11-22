@@ -580,21 +580,14 @@ test("reading view drops group marks only in a presentation's slides.md, as Mark
     assert.deepEqual(await Promise.all([1, 2, 3].map(() => readsAsPresentation(deck, 'Talk/slides.md'))), [true, true, true]);
     assert.equal(await readsAsPresentation(deck, 'Talk/slides.md'), true);
     assert.deepEqual(reads, ['presentation.mdpoint', 'slides.md']);
-    // A change to either file reads the pair again
+    // A change to either file reads the pair again, and the presentation file's bytes only when it changed
     for (const name of ['presentation.mdpoint', 'slides.md']) {
         const file = deck.getFolderByPath('Talk')!.children.find(file => file.name === name);
         assert.ok(file instanceof TFile);
         file.stat = { mtime: 1, size: file.stat.size };
         assert.equal(await readsAsPresentation(deck, 'Talk/slides.md'), true);
     }
-    assert.deepEqual(reads, [
-        'presentation.mdpoint',
-        'slides.md',
-        'presentation.mdpoint',
-        'slides.md',
-        'presentation.mdpoint',
-        'slides.md'
-    ]);
+    assert.deepEqual(reads, ['presentation.mdpoint', 'slides.md', 'presentation.mdpoint', 'slides.md', 'slides.md']);
     for (const [files, path] of [
         [{ 'slides.md': markdown, 'presentation.mdpoint': companion({}) }, 'Talk/notes.md'],
         [{ 'slides.md': markdown, 'presentation.mdpoint': companion({ id: '1c3b6a2e-1d4f-4a5b-9c6d-7e8f9a0b1c2d' }) }, 'Talk/slides.md'],

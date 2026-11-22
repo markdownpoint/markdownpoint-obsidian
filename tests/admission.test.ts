@@ -326,8 +326,11 @@ test("a deck opened for records the plugin writes back gets them written, though
 
 test("files unchanged since their last read aren't read as a pair again, by the reader or the reading view", async () => {
     const { app, reader } = vault({ [path]: markdown(['a']), [companionPath]: companion(['a']) });
+    const unopened = filesRead.count;
+    // Opening the note starts two reads, which read the presentation file once
     const view = app.open(path);
     await settle();
+    assert.equal(filesRead.count, unopened + 1);
     const opened = pairsRead.count;
     // A command reads the presentation before it changes it, as New slide does three times
     for (let index = 0; index < 3; index++) await reader.refreshView(view as never);
@@ -350,21 +353,25 @@ test("files unchanged since their last read aren't read as a pair again, by the 
 });
 
 test('a save of the words alone reads the presentation file no more, and a change Obsidian reports to it reads it anew', async () => {
-    const { app, reader } = vault({ [path]: markdown(['a', 'b']), [companionPath]: companion(['a', 'b']) });
+    const { app, reader, reads } = vault(themed(false));
     const view = app.open(path);
     await settle();
     assert.equal(opens(reader, view), true);
     const files = filesRead.count;
     const pairs = pairsRead.count;
+    const opened = reads.length;
     // Saves as Obsidian makes them while the author types
     for (let index = 0; index < 3; index++) {
         app.type(view, `${markdown(['a', 'b'])}\n<!-- notes -->\nNotes ${index}.\n`);
+        const typed = reader.snapshot(view.file as never, view.getViewData());
         app.save(view);
         await settle();
         assert.equal(opens(reader, view), true);
+        assert.equal(reader.snapshot(view.file as never, view.getViewData()), typed, 'the words typed are parsed once, not again as saved');
     }
     assert.ok(pairsRead.count >= pairs + 3, 'each save reads the pair');
     assert.equal(filesRead.count, files, 'and none reads the presentation file');
+    assert.deepEqual(reads.slice(opened), [path, path, path], 'nor its bytes');
     assert.equal(await readsAsPresentation(app.vault as unknown as Vault, path), true);
     assert.equal(filesRead.count, files, 'nor does the reading view');
     // A change to the presentation file, then one that keeps its time and size: each reads it anew
@@ -375,6 +382,33 @@ test('a save of the words alone reads the presentation file no more, and a chang
     await settle();
     assert.equal(filesRead.count, files + 2);
     assert.equal(await readsAsPresentation(app.vault as unknown as Vault, path), false, 'a record no marker names refuses the pair');
+});
+
+test("a picture added to the presentation's media shows on its slide, though both files stay as they were", async () => {
+    const { app, reader } = vault({
+        [path]: markdown(['a']),
+        [companionPath]: JSON.stringify({
+            markdownpoint: '1.0',
+            type: 'presentation',
+            id,
+            theme: 'basic',
+            slides: { a: { layout: 'title', background: { image: { file: 'media/back.png' } } } }
+        }),
+        // A theme that reads, which a save of the words alone keeps
+        'Talk/themes/basic/master.json': basic('master.json'),
+        'Talk/themes/basic/title.json': basic('title.json')
+    });
+    const view = app.open(path);
+    await settle();
+    const pictures = () =>
+        reader
+            .snapshot(view.file as never, view.getViewData())
+            ?.images.get('a')
+            ?.map(image => image.path);
+    assert.deepEqual(pictures(), []);
+    app.vault.write('Talk/media/back.png', new Uint8Array([137, 80, 78, 71]));
+    await settle();
+    assert.deepEqual(pictures(), ['Talk/media/back.png']);
 });
 
 test("a change Obsidian reports reads the pair anew, though the write kept both files' time and size", async () => {
@@ -436,6 +470,20 @@ test('a layout MarkdownPoint refuses leaves the others their slides, read once u
         ['a', false],
         ['b', false]
     ]);
+});
+
+test('a presentation turned back to keeps its slides as its theme made them while its files are read again', async () => {
+    const { app, reader } = vault({ ...themed(false), 'Other/slides.md': markdown(['a']), 'Other/presentation.mdpoint': companion(['a']) });
+    const structured = (view: MarkdownView) =>
+        reader.snapshot(view.file as never, view.getViewData())?.outline.slides.map(slide => slide.structure != null);
+    app.open(path);
+    await settle();
+    app.open('Other/slides.md');
+    await settle();
+    const view = app.open(path);
+    assert.deepEqual(structured(view), [true, true], 'before the read');
+    await settle();
+    assert.deepEqual(structured(view), [true, true]);
 });
 
 test('New slide in a presentation whose every layout MarkdownPoint refuses says none is available, and opens no picker', async () => {
