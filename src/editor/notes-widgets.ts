@@ -77,7 +77,8 @@ export function notesDecorations(
     opened: ReadonlySet<string>,
     focused: boolean,
     entryPoints: ReadonlySet<number>,
-    actions: NotesActions
+    actions: NotesActions,
+    openBlanks: ReadonlySet<number>
 ): Range<Decoration>[] {
     const ranges: Range<Decoration>[] = [];
     for (const slot of slots) {
@@ -95,7 +96,9 @@ export function notesDecorations(
                 if (slot.field.contentFrom < slot.field.to || slot.field.to === state.doc.length) {
                     ranges.push(Decoration.line({ attributes: { dir: 'auto' } }).range(slot.field.contentFrom));
                 }
-                ranges.push(...writingAreaDecorations(state, slot.field, focused, uiText.notes.label, 'markdownpoint-notes-field'));
+                ranges.push(
+                    ...writingAreaDecorations(state, slot.field, focused, openBlanks, uiText.notes.label, 'markdownpoint-notes-field')
+                );
             }
         } else ranges.push(Decoration.widget({ block: true, side: slot.at < state.doc.length ? -1 : 1, widget }).range(slot.at));
     }

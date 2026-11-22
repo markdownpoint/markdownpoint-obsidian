@@ -34,7 +34,14 @@ import { uiNumber, uiText } from '../ui-text.ts';
 import { boundaryChangesAllowed, slideStructureChange } from './boundary-protection.ts';
 import { compactFieldAt, missingPlaceholders, validatedPlaceholderInsertion, writingFields } from './writing-fields.ts';
 import type { MissingPlaceholder, WritingField } from './writing-fields.ts';
-import { fieldDecorations, focusWritingField, insertWritingBlock, missingFieldDecorations } from './field-widgets.ts';
+import {
+    blankFold,
+    selectionOnBlank,
+    fieldDecorations,
+    focusWritingField,
+    insertWritingBlock,
+    missingFieldDecorations
+} from './field-widgets.ts';
 import { validatedNotesInsertion, slideNotes } from './notes.ts';
 import type { SlideNotes } from './notes.ts';
 import { notesDecorations } from './notes-widgets.ts';
@@ -73,6 +80,8 @@ interface DraftState {
     readonly focused: boolean;
     readonly showImages: boolean;
     readonly imageSpaces: ReadonlyMap<string, number>;
+    /** The organizational blank lines an edit left a caret on, by where each starts: shown until the caret leaves. */
+    readonly openBlanks: ReadonlySet<number>;
 }
 
 interface DraftMarker {
@@ -615,7 +624,8 @@ export class PresentationEditor extends Component {
                 showImages,
                 imageSpaces,
                 markers: [{ from: 0, markerTo: state.doc.length, text: markdown, label: null }],
-                decorations: Decoration.set([Decoration.replace({ block: true, widget: new EmptyDraft() }).range(0, state.doc.length)])
+                decorations: Decoration.set([Decoration.replace({ block: true, widget: new EmptyDraft() }).range(0, state.doc.length)]),
+                openBlanks: new Set<number>()
             };
         }
         let markers: readonly DraftMarker[] = [];
@@ -716,6 +726,19 @@ export class PresentationEditor extends Component {
                 .filter(field => field.contentFrom === field.to && field.to < state.doc.length)
                 .map(field => field.contentFrom)
         );
+        // An organizational blank line an edit leaves a caret on stays shown while a selection's end stands on it, so the
+        // caret shown is where the author writes; one the keys reach stays folded, as before. Closed notes keep theirs too,
+        // for when they open, as undo and redo open them.
+        const edited = transaction?.docChanged === true;
+        const kept = new Set(
+            [...(previous?.openBlanks ?? [])].map(from => (transaction && edited ? transaction.changes.mapPos(from) : from))
+        );
+        const openBlanks = new Set(
+            [...fields, ...notes.flatMap(slot => (slot.field ? [slot.field] : []))].flatMap(field => {
+                const from = blankFold(state, field);
+                return from !== null && (edited || kept.has(from)) && selectionOnBlank(state, field, from) ? [from] : [];
+            })
+        );
         // Missing notes are block widgets before the next marker, not editable entry
         // points. Excluding that marker's start would create an empty cursor line.
         const ranges = markers.flatMap(marker =>
@@ -727,9 +750,9 @@ export class PresentationEditor extends Component {
                       ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label, marker.slideId) })
                   }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to)
         );
-        ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
+        ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints, openBlanks));
         ranges.push(...missingFieldDecorations(state, missing, this.writePlaceholder));
-        ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions));
+        ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions, openBlanks));
         if (showImages)
             for (const marker of markers) {
                 if (!marker.slideId || marker.slideTo === undefined || !marker.images?.length) continue;
@@ -762,7 +785,8 @@ export class PresentationEditor extends Component {
             focused,
             showImages,
             imageSpaces,
-            decorations: Decoration.set(ranges, true)
+            decorations: Decoration.set(ranges, true),
+            openBlanks
         };
     }
 }

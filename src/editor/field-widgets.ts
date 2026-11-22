@@ -155,7 +155,8 @@ export function fieldDecorations(
     fields: readonly WritingField[],
     previous: readonly WritingField[],
     focused: boolean,
-    entryPoints: ReadonlySet<number>
+    entryPoints: ReadonlySet<number>,
+    openBlanks: ReadonlySet<number>
 ): Range<Decoration>[] {
     const ranges: Range<Decoration>[] = [];
     const prior = new Map(previous.map(field => [field.key, field]));
@@ -168,15 +169,45 @@ export function fieldDecorations(
                 widget: new FieldHeader(field.label, field.populated, old?.populated === false && field.populated, field.opening)
             }).range(field.from, state.doc.lineAt(field.from).to)
         );
-        ranges.push(...writingAreaDecorations(state, field, focused));
+        ranges.push(...writingAreaDecorations(state, field, focused, openBlanks));
     }
     return ranges;
 }
 
+/**
+ * Where a block's organizational blank line starts, the one blank line that ends it and adds no height, folded with its
+ * own line break; each blank line before it is the author's spacing, and spaces after the file's last line break are a
+ * row of their own, as the file's last row is. Where only such spaces follow the words, they fold, as before. Null
+ * where it has none.
+ */
+export function blankFold(state: EditorState, field: WritingField): number | null {
+    if (field.contentTo <= field.contentFrom || field.contentTo >= field.to || state.doc.lineAt(field.contentTo).from !== field.contentTo)
+        return null;
+    const lastBreak = state.doc.sliceString(field.contentTo, field.to).lastIndexOf('\n');
+    return lastBreak < 0 ? field.contentTo : state.doc.lineAt(field.contentTo + lastBreak).from;
+}
+
+/** Where the fold from `from` ends: after the blank line's own line break, at the block's end at the latest. */
+function blankFoldEnd(state: EditorState, field: WritingField, from: number): number {
+    return Math.min(field.to, state.doc.lineAt(from).to + 1);
+}
+
+/**
+ * Whether a selection's end stands on a block's organizational blank line, from `from`, as a caret does. A selection that
+ * only passes over the line leaves it as it is.
+ */
+export function selectionOnBlank(state: EditorState, field: WritingField, from: number): boolean {
+    const end = blankFoldEnd(state, field, from);
+    const on = (position: number) => position >= from && position < end;
+    return state.selection.ranges.some(range => on(range.anchor) || on(range.head));
+}
+
+/** A block's writing area. `openBlanks` names the organizational blank lines an edit left a caret on, shown until it leaves. */
 export function writingAreaDecorations(
     state: EditorState,
     field: WritingField,
     focused: boolean,
+    openBlanks: ReadonlySet<number>,
     accessibleName = field.label,
     extraClass = ''
 ): Range<Decoration>[] {
@@ -184,12 +215,11 @@ export function writingAreaDecorations(
     const cursor = state.selection.main.head;
     const compact = field.contentFrom === field.to && field.to < state.doc.length;
     const active = focused && cursor >= field.contentFrom && (cursor < field.to || (field.to === state.doc.length && cursor === field.to));
-    const collapsedFrom =
-        field.contentTo > field.contentFrom && field.contentTo < field.to && state.doc.lineAt(field.contentTo).from === field.contentTo
-            ? field.contentTo
-            : field.to;
+    const fold = blankFold(state, field);
+    const collapsedFrom = fold === null || openBlanks.has(fold) ? field.to : fold;
+    const collapsedTo = collapsedFrom < field.to ? blankFoldEnd(state, field, collapsedFrom) : field.to;
     if (collapsedFrom < field.to) {
-        ranges.push(Decoration.replace({ block: true, inclusiveEnd: false }).range(collapsedFrom, field.to));
+        ranges.push(Decoration.replace({ block: true, inclusiveEnd: false }).range(collapsedFrom, collapsedTo));
     }
     if (!field.populated && !active)
         ranges.push(
@@ -203,7 +233,7 @@ export function writingAreaDecorations(
         for (let number = state.doc.lineAt(field.contentFrom).number; number <= state.doc.lines; number++) {
             const line = state.doc.line(number);
             if (line.from > field.to || (line.from === field.to && field.to !== state.doc.length)) break;
-            if (line.from >= collapsedFrom && line.from < field.to) continue;
+            if (line.from >= collapsedFrom && line.from < collapsedTo) continue;
             const terminal =
                 line.from === field.to &&
                 line.from > field.contentFrom &&

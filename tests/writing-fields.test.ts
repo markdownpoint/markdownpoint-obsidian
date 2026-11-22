@@ -20,6 +20,8 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
 import { compactFieldAt, writingFields } from '../src/editor/writing-fields.ts';
+import { blankFold, selectionOnBlank, writingAreaDecorations } from '../src/editor/field-widgets.ts';
+import { EditorState } from '@codemirror/state';
 import { en } from '../src/i18n/locales/en.ts';
 import { slideNotes } from '../src/editor/notes.ts';
 
@@ -110,4 +112,66 @@ test("a control's field is named after its control's id, and only the id title i
             ['first:text:badge.label-id-b7d9e1', 'Label', 'body']
         ]
     );
+});
+
+test('one organizational blank line ends a block with no height of its own; each blank line before it stays a row', () => {
+    const folded = (markdown: string) => {
+        const state = EditorState.create({ doc: markdown });
+        const [field] = writingFields(markdown, indexPresentation(markdown, 0)!, labels);
+        const ranges: [number, number][] = [];
+        for (const range of writingAreaDecorations(state, field!, false, new Set())) {
+            const spec = range.value.spec as { block?: boolean; widget?: unknown };
+            if (spec.block && !spec.widget) ranges.push([range.from, range.to]);
+        }
+        return { ranges, words: markdown.indexOf('Words.') + 'Words.\n'.length };
+    };
+    const next = '<!-- slide: next -->\n';
+    // The blank line MarkdownPoint writes before the next marker folds away
+    const one = folded(`<!-- slide: one -->\n<!-- text: body -->\nWords.\n\n${next}`);
+    assert.deepEqual(one.ranges, [[one.words, one.words + 1]]);
+    // Two blank lines show one row: only the last folds, so a line Enter adds after the words stays where the caret writes
+    const two = folded(`<!-- slide: one -->\n<!-- text: body -->\nWords.\n\n\n${next}`);
+    assert.deepEqual(two.ranges, [[two.words + 1, two.words + 2]]);
+    const three = folded(`<!-- slide: one -->\n<!-- text: body -->\nWords.\n\n\n\n${next}`);
+    assert.deepEqual(three.ranges, [[three.words + 2, three.words + 3]]);
+    // At the end of the file, too, only the last blank line folds
+    const end = folded('<!-- slide: one -->\n<!-- text: body -->\nWords.\n\n\n');
+    assert.deepEqual(end.ranges, [[end.words + 1, end.words + 2]]);
+    // Spaces after the file's last line break are a row of their own, as the file's last row is: the blank line folds alone
+    const tail = folded('<!-- slide: one -->\n<!-- text: body -->\nWords.\n\n  ');
+    assert.deepEqual(tail.ranges, [[tail.words, tail.words + 1]]);
+    // A blank line an edit leaves a caret on stays shown; a caret on it is one on that line, never on the file's last row
+    const markdown = `<!-- slide: one -->\n<!-- text: body -->\nWords.\n\n${next}`;
+    const [field] = writingFields(markdown, indexPresentation(markdown, 0)!, labels);
+    const on = (doc: string, head: number) => {
+        const state = EditorState.create({ doc, selection: { anchor: head } });
+        const [first] = writingFields(doc, indexPresentation(doc, 0)!, labels);
+        return selectionOnBlank(state, first!, blankFold(state, first!)!);
+    };
+    assert.deepEqual(
+        [one.words - 1, one.words, one.words + 1].map(head => on(markdown, head)),
+        [false, true, false]
+    );
+    assert.equal(blankFold(EditorState.create({ doc: markdown }), field!), one.words);
+    const shown = EditorState.create({ doc: markdown, selection: { anchor: one.words } });
+    assert.deepEqual(
+        writingAreaDecorations(shown, field!, false, new Set([one.words])).filter(
+            range => range.from === one.words && range.to > range.from
+        ),
+        []
+    );
+    const ended = '<!-- slide: one -->\n<!-- text: body -->\nWords.\n\n';
+    assert.equal(on(ended, ended.length), false);
+    const spaces = '<!-- slide: one -->\n<!-- text: body -->\nWords.\n\n  ';
+    assert.equal(on(spaces, spaces.length), false);
+    // A selection begun on the line keeps it, one that only passes over it does not
+    const selected = (doc: string, anchor: number, head: number) => {
+        const [first] = writingFields(doc, indexPresentation(doc, 0)!, labels);
+        const state = EditorState.create({ doc, selection: { anchor, head } });
+        return selectionOnBlank(state, first!, blankFold(state, first!)!);
+    };
+    assert.equal(selected(markdown, one.words, one.words - 3), true);
+    assert.equal(selected(markdown, markdown.indexOf('Words.'), markdown.indexOf(next)), false);
+    // A block whose words end the file, or with no words, folds nothing
+    assert.deepEqual(folded('<!-- slide: one -->\n<!-- text: body -->\nWords.').ranges, []);
 });
