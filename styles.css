@@ -131,6 +131,11 @@
     line-height: var(--line-height-tight);
 }
 
+/* The blank line between the marker and the first block, held in the boundary at a line's height */
+.markdownpoint-presentation .markdown-source-view.mod-cm6 .cm-content > .markdownpoint-slide-boundary.holds-opening {
+    padding-block-end: calc(var(--size-4-3) + var(--font-text-size) * var(--line-height-normal));
+}
+
 .markdownpoint-slide-boundary::after {
     content: '';
     flex: 1;

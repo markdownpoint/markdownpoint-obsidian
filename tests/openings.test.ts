@@ -20,10 +20,11 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { history, redo, undo } from '@codemirror/commands';
 import { EditorSelection, EditorState, StateEffect } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
 import { editorInfoField, editorLivePreviewField } from './support/obsidian.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import type { TextFieldLabels } from '../src/format/text-binding.ts';
-import { inOpening, keepsStructure, openingWrite } from '../src/editor/openings.ts';
+import { heldOpenings, inOpening, keepsStructure, openingWrite } from '../src/editor/openings.ts';
 import { missingPlaceholders } from '../src/editor/writing-fields.ts';
 import { PresentationEditor } from '../src/editor/presentation-editor.ts';
 import { NotesUi } from '../src/settings/notes-ui.ts';
@@ -236,4 +237,78 @@ test('Live Preview refuses words no block takes and lets every other edit throug
     // Source mode stays ordinary Markdown, and so does an edit that is not the author's typing
     assert.equal(type(editor(deck, false), at, 'Hi').doc.toString(), deck.slice(0, at) + 'Hi' + deck.slice(at));
     assert.equal(state.update({ changes: { from: at, insert: 'Hi' } }).state.doc.toString(), deck.slice(0, at) + 'Hi' + deck.slice(at));
+});
+
+test("a slide's boundary holds its opening of one blank line before its first block, and no other", () => {
+    const held = (markdown: string, bodyStart = 0) => Object.fromEntries(heldOpenings(markdown, indexPresentation(markdown, bodyStart)!));
+    const line = (markdown: string, id: string, bodyStart = 0) => slideOf(markdown, id, bodyStart).blocks[0]!.from - 1;
+    // Slides with no blocks keep their line, where words write their first writing
+    assert.deepEqual(held(deck), { words: line(deck, 'words'), noted: line(deck, 'noted') });
+    // Spaces on the line are still no words
+    const spaced = deck.replace('<!-- slide: words -->\n\n', '<!-- slide: words -->\n  \n');
+    assert.equal(held(spaced).words, line(spaced, 'words'));
+    // An opening of more lines keeps them, for the author to delete; a compact slide has no line to hold
+    assert.equal(held(deck.replace('<!-- slide: words -->\n\n', '<!-- slide: words -->\n\n\n')).words, undefined);
+    assert.deepEqual(held('<!-- slide: one -->\n<!-- text: body -->\nB\n'), {});
+    // Right under the frontmatter, as anywhere
+    const front = '---\nmarkdownpoint: "1.1"\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n';
+    const top = `${front}<!-- slide: top -->\n\n<!-- text: body -->\nB\n`;
+    assert.deepEqual(held(top, front.length), { top: line(top, 'top', front.length) });
+    // A later minor's block that ends the opening is shown as written, so the line before it stays
+    const later = `${front}<!-- slide: glows -->\n\n<!-- glow -->\nShine.\n<!-- text: body -->\nWords.\n\n<!-- slide: lit -->\n\n<!-- text: body -->\nLit.\n`;
+    assert.deepEqual(held(later, front.length), { lit: line(later, 'lit', front.length) });
+});
+
+test("an opening a selection's end stands on stays shown; a selection that only passes over it leaves it held", () => {
+    const document = indexPresentation(deck, 0)!;
+    const words = slideOf(deck, 'words');
+    const first = words.blocks[0]!.from;
+    const holds = (...ranges: [number, number][]) =>
+        heldOpenings(
+            deck,
+            document,
+            ranges.map(([anchor, head]) => ({ anchor, head }))
+        ).has('words');
+    // A caret on the line, at its start or on its spaces, shows it
+    assert.equal(holds([words.markerTo, words.markerTo]), false);
+    const spaced = deck.replace('<!-- slide: words -->\n\n', '<!-- slide: words -->\n  \n');
+    const spacedWords = slideOf(spaced, 'words');
+    const spacedHolds = (head: number) => heldOpenings(spaced, indexPresentation(spaced, 0)!, [{ anchor: head, head }]).has('words');
+    assert.equal(spacedHolds(spacedWords.markerTo + 2), false);
+    // Either end of a selection on it shows it
+    assert.equal(holds([words.markerTo, first + 3]), false);
+    assert.equal(holds([words.from - 4, words.markerTo]), false);
+    // One range of several on it is enough
+    assert.equal(holds([first + 2, first + 2], [words.markerTo, words.markerTo]), false);
+    // Carets on the marker and at the first block, and a selection across the whole opening, leave it held
+    assert.equal(holds([words.from, words.from], [first, first]), true);
+    assert.equal(holds([words.from - 4, first + 3]), true);
+    assert.equal(holds([first + 3, words.from - 4]), true);
+});
+
+test('Live Preview passes the caret over each opening a boundary holds, and still does while an open fence stops the deck being read', () => {
+    // A position the caret passes over stands inside an atomic range, not at its edge
+    const passed = (state: EditorState, position: number) =>
+        state.facet(EditorView.atomicRanges).some(ranges => {
+            let inside = false;
+            ranges({ state } as EditorView).between(position, position, (from, to) => {
+                inside ||= from < position && to > position;
+            });
+            return inside;
+        });
+    const lineEnd = (markdown: string, id: string) => slideOf(markdown, id).blocks[0]!.from - 1;
+    const state = editor(deck);
+    assert.deepEqual(
+        ['words', 'noted'].map(id => passed(state, lineEnd(deck, id))),
+        [true, true]
+    );
+    // A caret on the line shows it
+    assert.equal(passed(state.update({ selection: { anchor: opening(deck, 'words') } }).state, lineEnd(deck, 'words')), false);
+    const words = deck.indexOf('Words.');
+    const fenced = type(state, words, '```\n');
+    assert.equal(indexPresentation(fenced.doc.toString(), 0), null);
+    assert.deepEqual(
+        ['words', 'noted'].map(id => passed(fenced, lineEnd(deck, id) + (id === 'noted' ? 4 : 0))),
+        [true, true]
+    );
 });

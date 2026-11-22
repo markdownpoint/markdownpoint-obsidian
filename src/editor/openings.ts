@@ -57,6 +57,34 @@ export function inOpening(document: PresentationDocument, bodyStart: number, len
     return openingAt(document, bodyStart, length, position) !== null;
 }
 
+type Selection = readonly { readonly anchor: number; readonly head: number }[];
+
+/**
+ * The slides whose boundary holds their opening, by id, with where its line ends. The one blank line MarkdownPoint
+ * writes between a slide's marker and its first block holds no words, so the draft draws it inside the boundary, and
+ * the caret passes over it as over a field's marker. A slide with no blocks keeps its line, where words write its
+ * first writing; an opening of more lines keeps them, for the author to delete, and so does one a later minor's block
+ * ends, since that block's words are shown as written.
+ */
+export function heldOpenings(markdown: string, document: PresentationDocument, selection: Selection = []): Map<string, number> {
+    const held = new Map<string, number>();
+    for (const slide of document.slides) {
+        const first = slide.blocks[0];
+        if (first && holdsOpening(markdown, slide.markerTo, first.from, selection)) held.set(slide.id, first.from - 1);
+    }
+    return held;
+}
+
+/**
+ * Whether `from`–`to` is one blank line with its line break, which a boundary holds: no words, a later minor's marker
+ * included. A line a selection's end stands on, as an edit can leave one, stays until it leaves, so the caret shown is
+ * where the author writes; a selection that only passes over it leaves it held.
+ */
+export function holdsOpening(markdown: string, from: number, to: number, selection: Selection): boolean {
+    const on = (position: number) => position >= from && position < to;
+    return /^[ \t]*\n$/.test(markdown.slice(from, to)) && !selection.some(range => on(range.anchor) || on(range.head));
+}
+
 /** The block written for words typed in an opening: `before`, its marker, goes at `at`. */
 export interface OpeningWrite {
     readonly at: number;

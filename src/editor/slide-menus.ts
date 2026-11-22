@@ -26,6 +26,10 @@ import { slideForMenu } from './menu-target.ts';
 import { uiText } from '../ui-text.ts';
 import { presentationCompanionPath } from '../format/recognition.ts';
 
+// The draft's parts that name their slide, which a menu opened on them is for
+const slideParts =
+    '.markdownpoint-slide-boundary[data-slide], .markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide], .markdownpoint-slide-column[data-slide]';
+
 export interface SlideMenuTarget {
     readonly owner: MarkdownView;
     readonly file: TFile;
@@ -279,9 +283,7 @@ export class SlideMenus extends Component {
         const content = node !== null && view.contentDOM.contains(node);
         if (content !== capture) return;
         const element = node?.instanceOf(Element) ? node : node?.parentElement;
-        const explicitId = element?.closest<HTMLElement>(
-            '.markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide], .markdownpoint-slide-column[data-slide]'
-        )?.dataset.slide;
+        const explicitId = element?.closest<HTMLElement>(slideParts)?.dataset.slide;
         const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false);
         const target = position === null && !explicitId ? null : this.target(owner, position ?? 0, explicitId);
         // Native Obsidian creates the content menu asynchronously. Capture its pointer
@@ -304,9 +306,7 @@ export class SlideMenus extends Component {
         const focused = view.dom.ownerDocument.activeElement;
         const control =
             focused?.instanceOf(HTMLElement) && view.contentDOM.contains(focused) && focused !== view.contentDOM ? focused : null;
-        const explicitId = control?.closest<HTMLElement>(
-            '.markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide], .markdownpoint-slide-column[data-slide]'
-        )?.dataset.slide;
+        const explicitId = control?.closest<HTMLElement>(slideParts)?.dataset.slide;
         if (!this.target(owner, view.state.selection.main.head, explicitId)) return;
         const bounds = control?.getBoundingClientRect() ?? view.coordsAtPos(view.state.selection.main.head);
         if (!bounds) return;

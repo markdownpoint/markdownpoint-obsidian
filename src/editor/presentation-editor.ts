@@ -59,7 +59,7 @@ import { historyBoundarySelection, slideEditTransactions } from './structural-hi
 import { planSlideInsertion } from '../format/insert.ts';
 import type { PreparedPart } from '../format/insert.ts';
 import { slideInsertionTransaction } from './insert.ts';
-import { inOpening, keepsStructure, openingWrite } from './openings.ts';
+import { heldOpenings, holdsOpening, inOpening, keepsStructure, openingWrite } from './openings.ts';
 
 const refreshPresentation = StateEffect.define<boolean>();
 // Words typed on a slide's line went into its presenter notes, which the draft then shows open
@@ -82,6 +82,10 @@ interface DraftState {
     readonly imageSpaces: ReadonlyMap<string, number>;
     /** The organizational blank lines an edit left a caret on, by where each starts: shown until the caret leaves. */
     readonly openBlanks: ReadonlySet<number>;
+    /** The openings the boundaries hold, by slide, with where each line ends. */
+    readonly openings: ReadonlyMap<string, number>;
+    /** Each opening a boundary holds, with its line break: source the draft hides, which the caret passes over. */
+    readonly hidden: DecorationSet;
 }
 
 interface DraftMarker {
@@ -100,15 +104,19 @@ interface DraftMarker {
 class SlideBoundary extends WidgetType {
     constructor(
         private readonly label: string,
-        private readonly slideId?: string
+        private readonly slideId?: string,
+        // The boundary holds the blank line between the marker and the first block, its height included
+        private readonly opening = false
     ) {
         super();
     }
     eq(other: SlideBoundary): boolean {
-        return this.label === other.label && this.slideId === other.slideId;
+        return this.label === other.label && this.slideId === other.slideId && this.opening === other.opening;
     }
     toDOM(view: EditorView): HTMLElement {
-        const element = view.dom.ownerDocument.defaultView!.createDiv({ cls: 'markdownpoint-slide-boundary' });
+        const element = view.dom.ownerDocument.defaultView!.createDiv({
+            cls: ['markdownpoint-slide-boundary', ...(this.opening ? ['holds-opening'] : [])]
+        });
         if (this.slideId) element.dataset.slide = this.slideId;
         element.createSpan({ text: this.label, cls: 'markdownpoint-slide-number' });
         return element;
@@ -263,6 +271,7 @@ export class PresentationEditor extends Component {
                 }
             }),
             EditorView.atomicRanges.of(view => view.state.field(field).decorations),
+            EditorView.atomicRanges.of(view => view.state.field(field).hidden),
             EditorState.transactionFilter.of(transaction => {
                 const draft = transaction.startState.field(field);
                 const markers = draft.markers;
@@ -625,7 +634,9 @@ export class PresentationEditor extends Component {
                 imageSpaces,
                 markers: [{ from: 0, markerTo: state.doc.length, text: markdown, label: null }],
                 decorations: Decoration.set([Decoration.replace({ block: true, widget: new EmptyDraft() }).range(0, state.doc.length)]),
-                openBlanks: new Set<number>()
+                openBlanks: new Set<number>(),
+                openings: new Map<string, number>(),
+                hidden: Decoration.none
             };
         }
         let markers: readonly DraftMarker[] = [];
@@ -739,17 +750,32 @@ export class PresentationEditor extends Component {
                 return from !== null && (edited || kept.has(from)) && selectionOnBlank(state, field, from) ? [from] : [];
             })
         );
+        // While the deck can't be read, as while a code fence is still open, an opening held before stays held while its
+        // line is as it was, so the caret passes over it as before
+        const openings = snapshot
+            ? heldOpenings(markdown, snapshot.document, state.selection.ranges)
+            : new Map(
+                  markers.flatMap(marker => {
+                      const end = marker.slideId === undefined ? undefined : previous?.openings.get(marker.slideId);
+                      if (marker.slideId === undefined || end === undefined) return [];
+                      const to = transaction?.docChanged ? transaction.changes.mapPos(end + 1) : end + 1;
+                      return holdsOpening(markdown, marker.markerTo, to, state.selection.ranges) ? [[marker.slideId, to - 1] as const] : [];
+                  })
+              );
+        const held = (marker: DraftMarker) => (marker.slideId === undefined ? undefined : openings.get(marker.slideId));
         // Missing notes are block widgets before the next marker, not editable entry
         // points. Excluding that marker's start would create an empty cursor line.
-        const ranges = markers.flatMap(marker =>
-            marker.kept
-                ? []
-                : Decoration.replace({
-                      block: true,
-                      inclusiveStart: !entryPoints.has(marker.from),
-                      ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label, marker.slideId) })
-                  }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to)
-        );
+        const ranges = markers.flatMap(marker => {
+            if (marker.kept) return [];
+            const opening = held(marker);
+            return Decoration.replace({
+                block: true,
+                inclusiveStart: !entryPoints.has(marker.from),
+                ...(marker.label === null
+                    ? { inclusiveEnd: false }
+                    : { widget: new SlideBoundary(marker.label, marker.slideId, opening !== undefined) })
+            }).range(marker.from, marker.label === null ? marker.markerTo : (opening ?? state.doc.lineAt(marker.from).to));
+        });
         ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints, openBlanks));
         ranges.push(...missingFieldDecorations(state, missing, this.writePlaceholder));
         ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions, openBlanks));
@@ -786,7 +812,15 @@ export class PresentationEditor extends Component {
             showImages,
             imageSpaces,
             decorations: Decoration.set(ranges, true),
-            openBlanks
+            openBlanks,
+            openings,
+            hidden: Decoration.set(
+                markers.flatMap(marker => {
+                    const end = held(marker);
+                    return end === undefined ? [] : [Decoration.mark({}).range(marker.from, end + 1)];
+                }),
+                true
+            )
         };
     }
 }
