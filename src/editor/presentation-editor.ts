@@ -16,30 +16,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { StateEffect, StateField, EditorState, Transaction } from '@codemirror/state';
+import { Annotation, ChangeSet, EditorSelection, StateEffect, StateField, EditorState, Transaction } from '@codemirror/state';
 import type { Extension, TransactionSpec } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view';
-import type { DecorationSet } from '@codemirror/view';
+import type { DecorationSet, MouseSelectionStyle } from '@codemirror/view';
 import { Component, MarkdownView, editorInfoField, editorLivePreviewField } from 'obsidian';
 import type { Editor, TFile } from 'obsidian';
 import type { PresentationReader, PresentationSnapshot } from '../presentation/reader.ts';
 import type { SlideImagePreview } from '../presentation/image-reader.ts';
 import { imageSpacing, ImageSpace } from './image-spacing.ts';
 import { slideThumbnails } from './thumbnail-widgets.ts';
+import { keptParagraphIds, paragraphIdMarks } from './paragraph-ids.ts';
+import { spanMarks } from './span-marks.ts';
 import type { SlideStructure } from '../format/structure.ts';
 import { outlineSlideNumbers } from '../outline/model.ts';
 import { uiNumber, uiText } from '../ui-text.ts';
 import { boundaryChangesAllowed, slideStructureChange } from './boundary-protection.ts';
-import { compactFieldAt, writingFields } from './writing-fields.ts';
-import type { WritingField } from './writing-fields.ts';
-import { fieldDecorations, focusWritingField, insertWritingBlock } from './field-widgets.ts';
+import { compactFieldAt, missingPlaceholders, validatedPlaceholderInsertion, writingFields } from './writing-fields.ts';
+import type { MissingPlaceholder, WritingField } from './writing-fields.ts';
+import {
+    blankFold,
+    selectionOnBlank,
+    fieldDecorations,
+    focusWritingField,
+    insertWritingBlock,
+    missingFieldDecorations
+} from './field-widgets.ts';
 import { validatedNotesInsertion, slideNotes } from './notes.ts';
 import type { SlideNotes } from './notes.ts';
 import { notesDecorations } from './notes-widgets.ts';
 import type { NotesActions } from './notes-widgets.ts';
 import type { NotesUi } from '../settings/notes-ui.ts';
 import { payloadContentEnd } from '../format/payload.ts';
-import { slideAtPosition } from '../format/document.ts';
+import { indexPresentation, slideAtPosition } from '../format/document.ts';
+import type { DocumentSlide } from '../format/document.ts';
 import { historyReorderSelection, slideReorderTransaction } from './reorder.ts';
 import type { SlideReorder } from '../format/reorder.ts';
 import { undo, redo } from '@codemirror/commands';
@@ -50,8 +60,22 @@ import { historyBoundarySelection, slideEditTransactions } from './structural-hi
 import { planSlideInsertion } from '../format/insert.ts';
 import type { PreparedPart } from '../format/insert.ts';
 import { slideInsertionTransaction } from './insert.ts';
+import {
+    compositionTakeBack,
+    compositionWrite,
+    heldOpenings,
+    holdsOpening,
+    inOpening,
+    keepsStructure,
+    openingEntry,
+    openingWrite
+} from './openings.ts';
+import type { OpeningWrite } from './openings.ts';
+import { aboveRule, slideForGap } from './menu-target.ts';
 
 const refreshPresentation = StateEffect.define<boolean>();
+// Words typed on a slide's line went into its presenter notes, which the draft then shows open
+const wroteNotes = Annotation.define<boolean>();
 const editorFocus = StateEffect.define<boolean>();
 const noImageSpaces: ReadonlyMap<string, number> = new Map();
 
@@ -62,11 +86,18 @@ interface DraftState {
     readonly markers: readonly DraftMarker[];
     readonly decorations: DecorationSet;
     readonly fields: readonly WritingField[];
+    readonly missing: readonly MissingPlaceholder[];
     readonly notes: readonly SlideNotes[];
     readonly openedNotes: ReadonlySet<string>;
     readonly focused: boolean;
     readonly showImages: boolean;
     readonly imageSpaces: ReadonlyMap<string, number>;
+    /** The organizational blank lines an edit left a caret on, by where each starts: shown until the caret leaves. */
+    readonly openBlanks: ReadonlySet<number>;
+    /** The openings the boundaries hold, by slide, with where each line ends. */
+    readonly openings: ReadonlyMap<string, number>;
+    /** Each opening a boundary holds, with its line break: source the draft hides, which the caret passes over. */
+    readonly hidden: DecorationSet;
 }
 
 interface DraftMarker {
@@ -78,23 +109,49 @@ interface DraftMarker {
     readonly structure?: SlideStructure | null;
     readonly images?: readonly SlideImagePreview[];
     readonly slideTo?: number;
+    /** A later minor's marker, which edits never cross or enter, shown as written with its block. */
+    readonly kept?: true;
+}
+
+/** A composition an input method began in the block its key wrote on a slide's line, until it is settled. */
+interface OpeningComposition {
+    readonly write: OpeningWrite;
+    /** Where the block's marker starts, and where what the author's input wrote after it ends. */
+    from: number;
+    to: number;
+    bodyStart: number;
+    /** Closed notes the key opened, which close again if the composition leaves them nothing. */
+    readonly opened: { readonly id: string; readonly slideId: string } | null;
+}
+
+/** A press with the primary button alone, once, which a slide's boundary takes. */
+function plainPress(event: MouseEvent): boolean {
+    return event.button === 0 && event.detail <= 1 && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
 }
 
 class SlideBoundary extends WidgetType {
     constructor(
         private readonly label: string,
-        private readonly slideId?: string
+        private readonly slideId?: string,
+        // The boundary holds the blank line between the marker and the first block, its height included
+        private readonly opening = false
     ) {
         super();
     }
     eq(other: SlideBoundary): boolean {
-        return this.label === other.label && this.slideId === other.slideId;
+        return this.label === other.label && this.slideId === other.slideId && this.opening === other.opening;
     }
     toDOM(view: EditorView): HTMLElement {
-        const element = view.dom.ownerDocument.defaultView!.createDiv({ cls: 'markdownpoint-slide-boundary' });
+        const element = view.dom.ownerDocument.defaultView!.createDiv({
+            cls: ['markdownpoint-slide-boundary', ...(this.opening ? ['holds-opening'] : [])]
+        });
         if (this.slideId) element.dataset.slide = this.slideId;
         element.createSpan({ text: this.label, cls: 'markdownpoint-slide-number' });
         return element;
+    }
+    // A plain press reaches CodeMirror, whose style for it enters the slide or selects; menus listen on the DOM
+    ignoreEvent(event: Event): boolean {
+        return !(this.slideId && event.type === 'mousedown' && plainPress(event as MouseEvent));
     }
 }
 
@@ -116,6 +173,7 @@ export class PresentationEditor extends Component {
     private readonly views = new Set<EditorView>();
     private readonly pending = new WeakSet<EditorView>();
     private readonly pendingCaret = new WeakSet<EditorView>();
+    private readonly compositions = new WeakMap<EditorView, OpeningComposition>();
     private running = false;
     private readonly notesActions: NotesActions = {
         toggle: (view, slideId) => {
@@ -135,6 +193,14 @@ export class PresentationEditor extends Component {
                 if (insertion) insertWritingBlock(view, insertion);
             }
         }
+    };
+
+    private readonly writePlaceholder = (view: EditorView, key: string): void => {
+        const draft = view.state.field(this.field);
+        const placeholder = draft.missing.find(placeholder => placeholder.key === key);
+        if (!this.running || !placeholder || !draft.snapshot) return;
+        const insertion = validatedPlaceholderInsertion(view.state.doc.toString(), draft.snapshot.document, placeholder);
+        if (insertion) insertWritingBlock(view, insertion);
     };
 
     constructor(
@@ -158,6 +224,9 @@ export class PresentationEditor extends Component {
         this.extension = [
             imageSpacing,
             field,
+            spanMarks(state => state.field(field).snapshot?.document ?? null),
+            paragraphIdMarks(state => state.field(field).snapshot?.document ?? null),
+            keptParagraphIds(state => state.field(field).snapshot?.document ?? null),
             slideThumbnails(view => {
                 const draft = view.state.field(field);
                 return {
@@ -195,7 +264,26 @@ export class PresentationEditor extends Component {
                 return {
                     update: update => {
                         sync();
-                        for (const transaction of update.transactions) this.restoreHistoryCaret(view, transaction);
+                        const composition = this.compositions.get(view);
+                        for (const transaction of update.transactions) {
+                            this.restoreHistoryCaret(view, transaction);
+                            if (!composition || !transaction.docChanged) continue;
+                            // The author's input writes at the composition's end; any other edit stays outside it
+                            const changes = transaction.changes;
+                            composition.from = changes.mapPos(composition.from, 1);
+                            composition.to = changes.mapPos(composition.to, transaction.isUserEvent('input') ? 1 : -1);
+                            composition.bodyStart = changes.mapPos(composition.bodyStart, -1);
+                        }
+                        // Notes take words, or undo and redo put the caret in closed ones: they show open
+                        if (
+                            update.transactions.some(
+                                transaction =>
+                                    transaction.annotation(wroteNotes) || transaction.isUserEvent('undo') || transaction.isUserEvent('redo')
+                            )
+                        )
+                            view.dom.ownerDocument.defaultView?.queueMicrotask(() => {
+                                if (this.running && this.views.has(view)) this.revealSelectedNotes(view);
+                            });
                         if (
                             update.selectionSet ||
                             update.docChanged ||
@@ -216,6 +304,19 @@ export class PresentationEditor extends Component {
             }),
             EditorView.focusChangeEffect.of((_state, focused) => editorFocus.of(focused)),
             EditorView.domEventHandlers({
+                keydown: (event, view) => {
+                    this.compositionKey(view, event);
+                    return false;
+                },
+                // A key an input method took without composing, or a composition's end once CodeMirror has read it
+                keyup: (_event, view) => {
+                    this.settleComposition(view);
+                    return false;
+                },
+                compositionend: (_event, view) => {
+                    view.dom.ownerDocument.defaultView?.setTimeout(() => this.settleComposition(view));
+                    return false;
+                },
                 focus: (_event, view) => {
                     // Let a pointer's native selection settle before revealing a folded
                     // area. Keyboard focus may retain a caret in notes at document end.
@@ -224,7 +325,9 @@ export class PresentationEditor extends Component {
                     });
                 }
             }),
+            EditorView.mouseSelectionStyle.of((view, event) => this.boundaryPress(view, event)),
             EditorView.atomicRanges.of(view => view.state.field(field).decorations),
+            EditorView.atomicRanges.of(view => view.state.field(field).hidden),
             EditorState.transactionFilter.of(transaction => {
                 const draft = transaction.startState.field(field);
                 const markers = draft.markers;
@@ -258,17 +361,203 @@ export class PresentationEditor extends Component {
                             }
                         ];
                 }
-                return boundaryChangesAllowed(
-                    transaction,
-                    [...markers, ...draft.fields, ...noteFields].map(range => ({
-                        from: range.from,
-                        markerTo: 'contentFrom' in range ? range.contentFrom : range.markerTo
-                    }))
+                if (
+                    !boundaryChangesAllowed(
+                        transaction,
+                        [...markers, ...draft.fields, ...noteFields].map(range => ({
+                            from: range.from,
+                            markerTo: 'contentFrom' in range ? range.contentFrom : range.markerTo
+                        }))
+                    )
                 )
-                    ? transaction
-                    : [];
+                    return [];
+                return this.openingInput(transaction, draft) ?? transaction;
             })
         ];
+    }
+
+    /**
+     * Words the author types, pastes or drops where no block holds them: on the line of a slide with no blocks they go
+     * into the writing its draft shows below, and anywhere else nowhere, since MarkdownPoint refuses a file with them.
+     */
+    private openingInput(transaction: Transaction, draft: DraftState): readonly (Transaction | TransactionSpec)[] | null {
+        const snapshot = draft.snapshot;
+        if (!snapshot || !transaction.docChanged || transaction.annotation(slideStructureChange) === true) return null;
+        if (!transaction.isUserEvent('input') && !transaction.isUserEvent('move')) return null;
+        const start = transaction.startState.doc;
+        const typed: { from: number; to: number; fromB: number }[] = [];
+        transaction.changes.iterChanges((fromA, toA, fromB, _toB, inserted) => {
+            if (inserted.toString().trim() && inOpening(snapshot.document, snapshot.bodyStart, start.length, fromA))
+                typed.push({ from: fromA, to: toA, fromB });
+        });
+        const change = typed[0];
+        if (!change) return null;
+        // An edit that leaves every word in a block, as a pasted block with its own marker, stands as made
+        if (indexPresentation(transaction.newDoc.toString(), snapshot.bodyStart)) return null;
+        // One slide's line at a time takes words; a composition would be typed twice if its words moved while it lasts
+        if (typed.length > 1 || transaction.isUserEvent('input.type.compose')) return [];
+        const markdown = start.toString();
+        const write = openingWrite(markdown, snapshot.document, snapshot.bodyStart, draft.missing, change.from, change.to);
+        if (!write) return [];
+        // The words stay as typed, with what came with them, an auto-paired bracket's caret and state included: only
+        // their block's marker is written, at the start of their line
+        const at = transaction.changes.mapPos(write.at, -1);
+        const marker = ChangeSet.of({ from: at, insert: write.before }, transaction.newDoc.length);
+        const edit = transaction.changes.compose(marker);
+        const proposed = marker.apply(transaction.newDoc).toString();
+        const map = (position: number) => edit.mapPos(position, 1);
+        if (!keepsStructure(markdown, snapshot.document, snapshot.bodyStart, proposed, write, map, at)) return [];
+        return [transaction, { changes: marker, sequential: true, annotations: write.notesOf ? wroteNotes.of(true) : [] }];
+    }
+
+    /**
+     * An input method's key on the line of a slide with no blocks writes the block typed words take there before its
+     * composition starts, as typing, and native history joins the composition to it: one undo takes both. A composition
+     * that comes with no such key stays refused, as on any line no block holds.
+     */
+    private compositionKey(view: EditorView, event: { readonly keyCode: number; readonly isComposing: boolean }): void {
+        // Chromium gives each key an input method takes key code 229, as MarkdownPoint's own boundary for them reads it
+        if (!this.running || event.keyCode !== 229 || event.isComposing || view.compositionStarted) return;
+        this.settleComposition(view);
+        const state = view.state;
+        const draft = state.field(this.field);
+        const snapshot = draft.snapshot;
+        const caret = state.selection.main;
+        if (!snapshot || state.selection.ranges.length > 1 || !caret.empty) return;
+        const write = compositionWrite(state.doc.toString(), snapshot.document, snapshot.bodyStart, draft.missing, caret.head);
+        if (!write) return;
+        // Notes show open as the composition starts in them
+        const opened = write.notesOf && draft.id && !draft.openedNotes.has(write.notesOf) ? { id: draft.id, slideId: write.notesOf } : null;
+        if (opened) this.notesUi.setOpen(opened.id, opened.slideId, true);
+        const start = state.doc;
+        view.dispatch({
+            changes: { from: write.at, insert: write.before },
+            selection: { anchor: write.at + write.before.length },
+            userEvent: 'input.type'
+        });
+        if (view.state.doc !== start)
+            this.compositions.set(view, {
+                write,
+                from: write.at,
+                to: write.at + write.before.length,
+                bodyStart: snapshot.bodyStart,
+                opened
+            });
+        else if (opened) this.notesUi.setOpen(opened.id, opened.slideId, false);
+    }
+
+    /**
+     * Once no composition is under way, a block written for one keeps its words; without words its marker goes back,
+     * and with words that would move or set free a marker everything does. Both go outside history, so the edit that
+     * wrote the block maps away with them and leaves no step to undo.
+     */
+    private settleComposition(view: EditorView): void {
+        const composition = this.compositions.get(view);
+        if (!composition || view.compositionStarted) return;
+        this.compositions.delete(view);
+        const { write, from, to, bodyStart, opened } = composition;
+        const back = compositionTakeBack(view.state.doc.toString(), bodyStart, write, from, to);
+        if (!back) return;
+        if (opened) this.notesUi.setOpen(opened.id, opened.slideId, false);
+        view.dispatch({ changes: back, annotations: Transaction.addToHistory.of(false) });
+    }
+
+    /**
+     * A plain press on a slide's boundary, decided by where it lands in the DOM rather than by the hit test of the
+     * CodeMirror the author's Obsidian ships. The boundary holds hidden source at both its edges, so a press on it
+     * selects nothing, as on any widget without words, and released within CodeMirror's drag threshold it enters the
+     * slide's first writing.
+     */
+    private boundaryPress(view: EditorView, press: MouseEvent): MouseSelectionStyle | null {
+        if (!this.running || !plainPress(press)) return null;
+        const node = press.targetNode;
+        const element = node?.instanceOf(Element) ? node : node?.parentElement;
+        const boundary = element?.closest<HTMLElement>('.markdownpoint-slide-boundary[data-slide]');
+        const slideId = boundary?.dataset.slide;
+        if (!boundary || !slideId || !view.contentDOM.contains(boundary)) return null;
+        const gap = aboveRule(boundary, press.clientY);
+        const pressed = view.state.doc;
+        let moved = false;
+        // Registered before CodeMirror's own listeners, these end with them
+        const ownerDocument = view.dom.ownerDocument;
+        const end = () => {
+            ownerDocument.removeEventListener('mousemove', move);
+            ownerDocument.removeEventListener('mouseup', release);
+        };
+        const move = (event: MouseEvent) => {
+            if (event.buttons === 0) end();
+        };
+        // A press the document changed under is no click, as CodeMirror drops one the author types during. The click
+        // enters once CodeMirror's own release is done, which would map its caret through the atoms of the press.
+        const click = () => this.running && this.views.has(view) && view.state.doc === pressed;
+        const release = (event: MouseEvent) => {
+            end();
+            if (moved || event.button !== 0 || !click()) return;
+            ownerDocument.defaultView?.setTimeout(() => {
+                if (click()) this.enterBoundary(view, slideId, gap ? press.clientX : null);
+            });
+        };
+        ownerDocument.addEventListener('mousemove', move);
+        ownerDocument.addEventListener('mouseup', release);
+        return {
+            get: current => {
+                // CodeMirror's drag threshold, measured as it measures it
+                moved ||= Math.max(Math.abs(current.clientX - press.clientX), Math.abs(current.clientY - press.clientY)) >= 10;
+                return view.state.selection;
+            },
+            update: () => false
+        };
+    }
+
+    /**
+     * A press released where it started on a slide's boundary enters the slide's first writing, as that writing's
+     * ghost does. In the gap above the rule, which belongs to the preceding slide, it lands where Up from this slide's
+     * first writing lands, at the press's column, `gapX`.
+     */
+    private enterBoundary(view: EditorView, slideId: string, gapX: number | null): void {
+        const snapshot = view.state.field(this.field).snapshot;
+        const slide = snapshot?.document.slides.find(slide => slide.id === slideId);
+        if (!snapshot || !slide) return;
+        const preceding = slideForGap(snapshot.document, slide, view.state.doc.toString(), snapshot.bodyStart);
+        if (gapX === null || preceding === slide) {
+            this.enter(view, slide, true);
+            return;
+        }
+        // Up from the boundary, which Up from the first writing passes over
+        const goal = gapX - view.contentDOM.getBoundingClientRect().left;
+        const landing = view.moveVertically(EditorSelection.cursor(slide.from, 1, undefined, goal), false);
+        if (landing.head >= preceding.markerTo && landing.head < preceding.to) {
+            view.dispatch({ selection: landing, userEvent: 'select.pointer', scrollIntoView: true });
+            view.focus();
+        }
+        // Up passes over a slide that shows no line, as one of closed notes alone, which the press then enters as a click
+        // on its boundary does, where that writes nothing
+        else this.enter(view, preceding, false);
+    }
+
+    /**
+     * Puts the caret in a slide's first writing, as its ghost does, and in view; an unwritten placeholder is written,
+     * and a compact field given its line, only where `write` allows, the editor otherwise only focused.
+     */
+    private enter(view: EditorView, slide: DocumentSlide, write: boolean): void {
+        const draft = view.state.field(this.field);
+        const length = view.state.doc.length;
+        const fields = [...draft.fields, ...draft.notes.flatMap(slot => (slot.field ? [slot.field] : []))];
+        const entry = draft.snapshot && openingEntry(draft.snapshot.document, slide, draft.missing, fields, length);
+        const writes =
+            entry?.kind === 'placeholder' ||
+            (entry?.kind === 'field' && compactFieldAt([entry.field], entry.field.contentFrom, length) !== undefined);
+        if (!entry || (writes && !write)) {
+            view.focus();
+            return;
+        }
+        if (entry.kind === 'placeholder') this.writePlaceholder(view, entry.key);
+        else if (entry.kind === 'field') {
+            focusWritingField(view, entry.field);
+            this.revealSelectedNotes(view);
+        } else view.dispatch({ selection: { anchor: entry.at }, userEvent: 'select.pointer' });
+        view.dispatch({ scrollIntoView: true });
+        view.focus();
     }
 
     onload(): void {
@@ -318,30 +607,14 @@ export class PresentationEditor extends Component {
         });
     }
 
-    insertSlides(
-        editor: Editor,
-        slides: readonly PreparedPart[],
-        afterSlideId: string | null,
-        canApply: () => boolean,
-        compositions: readonly PreparedPart[] = []
-    ): Promise<boolean> {
+    insertSlides(editor: Editor, slides: readonly PreparedPart[], afterSlideId: string | null, canApply: () => boolean): Promise<boolean> {
         const prepared = slides.map(slide => ({ ...slide }));
-        const definitions = compositions.map(part => ({ ...part }));
         return this.editSlideRecords(editor, canApply, (state, snapshot, companion) => {
-            const plan = planSlideInsertion(
-                state.doc.toString(),
-                snapshot.document,
-                companion,
-                prepared,
-                afterSlideId,
-                snapshot.bodyStart,
-                definitions
-            );
+            const plan = planSlideInsertion(state.doc.toString(), snapshot.document, companion, prepared, afterSlideId, snapshot.bodyStart);
             if (!plan) return null;
             return {
                 companion: plan.companion,
                 ids: prepared.map(slide => slide.id),
-                compositionIds: definitions.map(part => part.id),
                 transaction: (current, livePreview) =>
                     slideInsertionTransaction(current, plan, prepared[0]!.id, livePreview, snapshot.bodyStart)
             };
@@ -358,7 +631,6 @@ export class PresentationEditor extends Component {
         ) => {
             readonly companion: string;
             readonly ids: Iterable<string>;
-            readonly compositionIds?: Iterable<string>;
             transaction(state: EditorState, livePreview: boolean): TransactionSpec | null;
         } | null
     ): Promise<boolean> {
@@ -373,7 +645,7 @@ export class PresentationEditor extends Component {
         const companion = snapshot && this.reader.companionFor(file, snapshot);
         if (!snapshot || companion === null) return false;
         const plan = prepare(view.state, snapshot, companion);
-        if (!plan || !(await this.data.remember(file.path, snapshot.id, plan.companion, plan.ids, plan.compositionIds))) return false;
+        if (!plan || !(await this.data.remember(file.path, snapshot.id, plan.companion, plan.ids))) return false;
         if (
             !this.running ||
             !this.views.has(view) ||
@@ -520,7 +792,7 @@ export class PresentationEditor extends Component {
         const openedNotes = this.notesUi.opened(id ?? '');
         const showImages = preview && this.showSlideImages();
         const spacing = state.field(imageSpacing, false);
-        const imageSpaces = showImages && spacing && spacing.id === id ? spacing.heights : noImageSpaces;
+        const imageSpaces = showImages && spacing && spacing.presentationId === id ? spacing.heights : noImageSpaces;
         const selectionChanged = transaction?.selection && !transaction.startState.selection.eq(transaction.newSelection);
         if (
             snapshot &&
@@ -543,13 +815,17 @@ export class PresentationEditor extends Component {
                 snapshot,
                 empty: true,
                 fields: [],
+                missing: [],
                 notes: [],
                 openedNotes,
                 focused,
                 showImages,
                 imageSpaces,
                 markers: [{ from: 0, markerTo: state.doc.length, text: markdown, label: null }],
-                decorations: Decoration.set([Decoration.replace({ block: true, widget: new EmptyDraft() }).range(0, state.doc.length)])
+                decorations: Decoration.set([Decoration.replace({ block: true, widget: new EmptyDraft() }).range(0, state.doc.length)]),
+                openBlanks: new Set<number>(),
+                openings: new Map<string, number>(),
+                hidden: Decoration.none
             };
         }
         let markers: readonly DraftMarker[] = [];
@@ -572,6 +848,13 @@ export class PresentationEditor extends Component {
                     markerTo: section.markerTo,
                     text: state.doc.sliceString(section.from, section.markerTo),
                     label: null
+                })),
+                ...snapshot.document.laterMarkers.map(marker => ({
+                    from: marker.from,
+                    markerTo: marker.markerTo,
+                    text: state.doc.sliceString(marker.from, marker.markerTo),
+                    label: null,
+                    kept: true as const
                 }))
             ];
         } else if (file && preview && previous?.markers.length && this.reader.matchesIdentity(file, markdown)) {
@@ -617,6 +900,15 @@ export class PresentationEditor extends Component {
                 return mapped ? [mapped] : [];
             });
         }
+        let missing = snapshot ? missingPlaceholders(snapshot.document, snapshot.placeholders, uiText.fields) : [];
+        if (!snapshot && markers.length && previous)
+            missing = previous.missing.flatMap(placeholder => {
+                const at = transaction?.docChanged ? transaction.changes.mapPos(placeholder.at, 1) : placeholder.at;
+                return at === state.doc.length || state.doc.lineAt(at).from === at ? [{ ...placeholder, at }] : [];
+            });
+        // A placeholder shown above a slide's first field opens the slide in its place.
+        const opening = new Set(missing.flatMap(placeholder => (placeholder.opening ? [placeholder.at] : [])));
+        if (opening.size) fields = fields.map(field => (field.opening && opening.has(field.from) ? { ...field, opening: false } : field));
         let notes = snapshot ? slideNotes(markdown, snapshot.document, uiText.notes.placeholder) : [];
         if (!snapshot && markers.length && previous)
             notes = previous.notes.flatMap(slot => {
@@ -634,17 +926,48 @@ export class PresentationEditor extends Component {
                 .filter(field => field.contentFrom === field.to && field.to < state.doc.length)
                 .map(field => field.contentFrom)
         );
+        // An organizational blank line an edit leaves a caret on stays shown while a selection's end stands on it, so the
+        // caret shown is where the author writes; one the keys reach stays folded, as before. Closed notes keep theirs too,
+        // for when they open, as undo and redo open them.
+        const edited = transaction?.docChanged === true;
+        const kept = new Set(
+            [...(previous?.openBlanks ?? [])].map(from => (transaction && edited ? transaction.changes.mapPos(from) : from))
+        );
+        const openBlanks = new Set(
+            [...fields, ...notes.flatMap(slot => (slot.field ? [slot.field] : []))].flatMap(field => {
+                const from = blankFold(state, field);
+                return from !== null && (edited || kept.has(from)) && selectionOnBlank(state, field, from) ? [from] : [];
+            })
+        );
+        // While the deck can't be read, as while a code fence is still open, an opening held before stays held while its
+        // line is as it was, so the caret passes over it as before
+        const openings = snapshot
+            ? heldOpenings(markdown, snapshot.document, state.selection.ranges)
+            : new Map(
+                  markers.flatMap(marker => {
+                      const end = marker.slideId === undefined ? undefined : previous?.openings.get(marker.slideId);
+                      if (marker.slideId === undefined || end === undefined) return [];
+                      const to = transaction?.docChanged ? transaction.changes.mapPos(end + 1) : end + 1;
+                      return holdsOpening(markdown, marker.markerTo, to, state.selection.ranges) ? [[marker.slideId, to - 1] as const] : [];
+                  })
+              );
+        const held = (marker: DraftMarker) => (marker.slideId === undefined ? undefined : openings.get(marker.slideId));
         // Missing notes are block widgets before the next marker, not editable entry
         // points. Excluding that marker's start would create an empty cursor line.
-        const ranges = markers.map(marker =>
-            Decoration.replace({
+        const ranges = markers.flatMap(marker => {
+            if (marker.kept) return [];
+            const opening = held(marker);
+            return Decoration.replace({
                 block: true,
                 inclusiveStart: !entryPoints.has(marker.from),
-                ...(marker.label === null ? { inclusiveEnd: false } : { widget: new SlideBoundary(marker.label, marker.slideId) })
-            }).range(marker.from, marker.label === null ? marker.markerTo : state.doc.lineAt(marker.from).to)
-        );
-        ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints));
-        ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions));
+                ...(marker.label === null
+                    ? { inclusiveEnd: false }
+                    : { widget: new SlideBoundary(marker.label, marker.slideId, opening !== undefined) })
+            }).range(marker.from, marker.label === null ? marker.markerTo : (opening ?? state.doc.lineAt(marker.from).to));
+        });
+        ranges.push(...fieldDecorations(state, fields, previous?.fields ?? [], focused, entryPoints, openBlanks));
+        ranges.push(...missingFieldDecorations(state, missing, this.writePlaceholder));
+        ranges.push(...notesDecorations(state, notes, openedNotes, focused, entryPoints, this.notesActions, openBlanks));
         if (showImages)
             for (const marker of markers) {
                 if (!marker.slideId || marker.slideTo === undefined || !marker.images?.length) continue;
@@ -657,7 +980,7 @@ export class PresentationEditor extends Component {
                 );
             }
         for (const section of snapshot?.document.sections ?? []) {
-            const first = state.doc.sliceString(section.markerTo, section.to).search(/\S/);
+            const first = state.doc.sliceString(section.markerTo, section.headingTo).search(/\S/);
             if (first >= 0)
                 ranges.push(
                     Decoration.line({
@@ -671,12 +994,22 @@ export class PresentationEditor extends Component {
             empty: false,
             markers,
             fields,
+            missing,
             notes,
             openedNotes,
             focused,
             showImages,
             imageSpaces,
-            decorations: Decoration.set(ranges, true)
+            decorations: Decoration.set(ranges, true),
+            openBlanks,
+            openings,
+            hidden: Decoration.set(
+                markers.flatMap(marker => {
+                    const end = held(marker);
+                    return end === undefined ? [] : [Decoration.mark({}).range(marker.from, end + 1)];
+                }),
+                true
+            )
         };
     }
 }

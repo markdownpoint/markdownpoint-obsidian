@@ -64,13 +64,21 @@ export const pl: Translations = {
         cancel: 'Anuluj',
         invalidName: 'Wprowadź nazwę bez ukośników i znaków zastrzeżonych.',
         exists: 'Istnieje już plik lub folder o tej nazwie.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint nie może stworzyć prezentacji wewnątrz folderu „${presentation}”. Wybierz folder poza nim.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint nie może otworzyć prezentacji „${presentation}”, dopóki znajduje się ona w folderze „${outer}”. Przenieś folder „${presentation}” poza folder „${outer}”, a następnie otwórz prezentację.`,
         failed: 'Nie udało się stworzyć prezentacji. Sprawdź folder i spróbuj ponownie.',
         openFailed: 'Prezentacja została stworzona, ale nie udało się jej otworzyć. Otwórz plik slides.md w jej folderze.',
         openChanged: 'Prezentacja zmieniła się lub nie udało się jej odczytać. Spróbuj ponownie.',
         handoffFailed: 'Nie udało się zapisać i otworzyć prezentacji.',
         themeChanged: 'Motyw zmienił się lub jest niedostępny. Otwórz ponownie to okno i wybierz motyw jeszcze raz.',
         newerFormat: ({ version }: { version: string }) =>
-            `Ta prezentacja używa nowszego formatu MarkdownPoint (${version}). Zaktualizuj wtyczkę MarkdownPoint, aby otworzyć ją jako prezentację.`
+            `Ta prezentacja używa nowszego formatu MarkdownPoint (${version}). Zaktualizuj wtyczkę MarkdownPoint, aby otworzyć ją jako prezentację.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint nie może odczytać pliku „${file}” w „${presentation}”. Otwórz prezentację w aplikacji MarkdownPoint, aby zobaczyć, co trzeba poprawić.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint nie może odczytać prezentacji w „${presentation}”. Otwórz ją w aplikacji MarkdownPoint, aby zobaczyć, co trzeba poprawić.`
     },
     slides: {
         new: 'Nowy slajd',

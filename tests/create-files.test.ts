@@ -23,7 +23,7 @@ import { presentationFolderName } from '../src/format/new-presentation.ts';
 
 interface File {
     path: string;
-    source: string;
+    source: string | Uint8Array;
     stat: { mtime: number; size: number };
 }
 interface Folder {
@@ -48,7 +48,7 @@ function vault() {
         parent(node.path).children.push(node);
         return node;
     };
-    const create = (path: string, source: string): Promise<File> => {
+    const create = (path: string, source: string | Uint8Array): Promise<File> => {
         state.beforeWrite(path);
         writes.push(path);
         return Promise.resolve(add({ path, source, stat: { mtime: ++clock, size: source.length } }));
@@ -61,6 +61,7 @@ function vault() {
             getAbstractFileByPath: (path: string) => nodes.get(path) ?? null,
             createFolder: (path: string): Promise<Folder> => Promise.resolve(add({ path, children: [] })),
             create,
+            createBinary: create,
             copy: (file: File, path: string) => create(path, file.source),
             trash: (node: File | Folder) => {
                 assert.ok(!('children' in node) || !node.children.length, 'rollback never removes foreign descendants');
@@ -75,11 +76,21 @@ function vault() {
 test('creation writes a complete theme before its fixed pair and returns the draft', async () => {
     const { host, writes, nodes } = vault();
     const picture: File = { path: 'source/logo.jpg', source: 'binary-image', stat: { mtime: 1, size: 12 } };
-    const files = new Map<string, string | File>([...contents, ['themes/basic/media/logo.jpg', picture]]);
+    const bytes = Uint8Array.of(0xff, 0xd8, 0xff, 0xe0);
+    const files = new Map<string, string | Uint8Array | File>([
+        ...contents,
+        ['themes/basic/media/logo.jpg', picture],
+        ['themes/basic/media/preview.jpg', bytes]
+    ]);
     const made = await createPresentationFiles(host, 'Årets möte', files, () => true);
     assert.equal(made.path, 'Årets möte/slides.md');
     assert.deepEqual(writes.slice(-2), ['Årets möte/presentation.mdpoint', 'Årets möte/slides.md']);
     assert.equal((nodes.get('Årets möte/themes/basic/media/logo.jpg') as File).source, picture.source);
+    assert.deepEqual(
+        (nodes.get('Årets möte/themes/basic/media/preview.jpg') as File).source,
+        bytes,
+        'a picture the plugin ships is written as its bytes'
+    );
     assert.equal(picture.path, 'source/logo.jpg');
 });
 

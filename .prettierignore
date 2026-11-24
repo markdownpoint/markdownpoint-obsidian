@@ -4,5 +4,10 @@ coverage
 LICENSE
 # The Basic theme files mirror the published MarkdownPoint format byte for byte
 src/themes/basic/*.json
+# MarkdownPoint core's own files, byte for byte
+src/core/
+src/common/
+# MarkdownPoint core's readers, bundled by its scripts/bundle-readers.ts
+src/readers/
 # Verbatim third-party license texts, embedded in main.js
 THIRD_PARTY_NOTICES.md

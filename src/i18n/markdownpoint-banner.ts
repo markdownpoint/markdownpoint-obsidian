@@ -75,8 +75,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**الغامق** و*المائل* يعملان تمامًا كما في Obsidian.'
             },
             {
-                headline: 'استخدم التخطيط التلقائي كما في Figma.',
-                subtext: 'رتّب مجموعة في صف أو عمود.'
+                headline: 'ارسم مخططات من جدول أرقام.',
+                subtext: 'أعمدة أو أشرطة أو خطوط أو مخطط دائري أو عدّاد.'
             },
             {
                 headline: 'شارك عرضك برابط.',
@@ -84,15 +84,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'إضاءة ثلاثية الأبعاد كما في Blender.',
-                subtext: 'أضواء نقطية وشمسية وبقعية ومساحية مع ظلال.'
+                subtext: 'أضواء نقطية واتجاهية وبقعية ومساحية مع ظلال.'
             },
             {
                 headline: 'تتبّع عروضك في Git.',
                 subtext: 'العروض ملفات نصية بصيغة Markdown وJSON.'
-            },
-            {
-                headline: 'أنشئ مكونات كما في Figma.',
-                subtext: 'عدّلها مرة واحدة فتتغير كل النسخ.'
             },
             {
                 headline: 'تصفّح السمات كما في Obsidian.',
@@ -173,8 +169,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Fett** und *kursiv* gehen genau wie in Obsidian.'
             },
             {
-                headline: 'Nutze Auto-Layout wie in Figma.',
-                subtext: 'Richte eine Gruppe in Zeile oder Spalte aus.'
+                headline: 'Zeichne Diagramme aus Zahlentabellen.',
+                subtext: 'Säulen, Balken, Linien, Kreis oder Zähler.'
             },
             {
                 headline: 'Teile Präsentationen per Link.',
@@ -182,15 +178,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D-Beleuchtung wie in Blender.',
-                subtext: 'Punkt, Sonne, Spot und Fläche mit Schatten.'
+                subtext: 'Punkt-, Spot-, Flächen- und gerichtetes Licht mit Schatten.'
             },
             {
                 headline: 'Verwalte deine Präsentationen in Git.',
                 subtext: 'Es sind Markdown- und JSON-Textdateien.'
-            },
-            {
-                headline: 'Baue Komponenten wie in Figma.',
-                subtext: 'Bearbeite sie einmal und jede Instanz ändert sich.'
             },
             {
                 headline: 'Stöbere in Themes wie bei Obsidian.',
@@ -271,8 +263,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Bold** and *italic* work just like Obsidian.'
             },
             {
-                headline: 'Use auto layout like Figma.',
-                subtext: 'Line up a group in a row or a column.'
+                headline: 'Draw charts from a table of numbers.',
+                subtext: 'Columns, bars, lines, a pie or a counter.'
             },
             {
                 headline: 'Share a deck with a link.',
@@ -280,15 +272,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D lighting like Blender.',
-                subtext: 'Point, sun, spot and area lights with shadows.'
+                subtext: 'Point, directional, spot and area lights with shadows.'
             },
             {
                 headline: 'Track your decks in Git.',
                 subtext: 'Decks are Markdown and JSON text files.'
-            },
-            {
-                headline: 'Build components like Figma.',
-                subtext: 'Edit a composition and its instances change.'
             },
             {
                 headline: 'Browse themes like in Obsidian.',
@@ -369,8 +357,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Negrita** y *cursiva* van como en Obsidian.'
             },
             {
-                headline: 'Usa auto layout como en Figma.',
-                subtext: 'Alinea un grupo en una fila o columna.'
+                headline: 'Dibuja gráficas de tablas de números.',
+                subtext: 'Columnas, barras, líneas, sectores o un contador.'
             },
             {
                 headline: 'Comparte tus diapos con un enlace.',
@@ -378,15 +366,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Iluminación 3D como en Blender.',
-                subtext: 'Luces de punto, sol, foco y área con sombras.'
+                subtext: 'Luces de punto, direccionales, de foco y de área con sombras.'
             },
             {
                 headline: 'Versiona tus presentaciones con Git.',
                 subtext: 'Son archivos de texto Markdown y JSON.'
-            },
-            {
-                headline: 'Crea componentes como en Figma.',
-                subtext: 'Edítalo una vez y cambian todas las instancias.'
             },
             {
                 headline: 'Explora temas como en Obsidian.',
@@ -467,8 +451,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**پررنگ** و *ایتالیک* درست مثل Obsidian کار می‌کنند.'
             },
             {
-                headline: 'مثل Figma از چیدمان خودکار استفاده کنید.',
-                subtext: 'یک گروه را در یک ردیف یا ستون بچینید.'
+                headline: 'از یک جدول اعداد نمودار رسم کنید.',
+                subtext: 'ستونی، میله‌ای، خطی، دایره‌ای یا شمارنده.'
             },
             {
                 headline: 'ارائه را با یک پیوند به اشتراک بگذارید.',
@@ -476,15 +460,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'نورپردازی سه‌بعدی مثل Blender.',
-                subtext: 'نورهای نقطه‌ای، خورشیدی، نورافکن و سطحی با سایه.'
+                subtext: 'نورهای نقطه‌ای، جهت‌دار، نورافکن و سطحی با سایه.'
             },
             {
                 headline: 'ارائه‌هایتان را با Git مدیریت کنید.',
                 subtext: 'ارائه‌ها فایل‌های متنی Markdown و JSON هستند.'
-            },
-            {
-                headline: 'مثل Figma کامپوننت بسازید.',
-                subtext: 'یک بار ویرایش کنید تا همهٔ نمونه‌ها تغییر کنند.'
             },
             {
                 headline: 'تم‌ها را مثل Obsidian مرور کنید.',
@@ -565,8 +545,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Gras** et *italique* sont comme dans Obsidian.'
             },
             {
-                headline: 'Utilisez l’auto layout comme dans Figma.',
-                subtext: 'Alignez un groupe en ligne ou en colonne.'
+                headline: 'Tracez un graphique d’après un tableau.',
+                subtext: 'Colonnes, barres, courbes, secteurs ou compteur.'
             },
             {
                 headline: 'Partagez une présentation par lien.',
@@ -574,15 +554,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Éclairage 3D comme dans Blender.',
-                subtext: 'Lampes point, soleil, spot et surface avec ombres.'
+                subtext: 'Lumières point, directionnelles, spot et surface avec ombres.'
             },
             {
                 headline: 'Versionnez vos présentations avec Git.',
                 subtext: 'Ce sont des fichiers texte Markdown et JSON.'
-            },
-            {
-                headline: 'Des composants comme dans Figma.',
-                subtext: 'Modifiez-le une fois et chaque instance suit.'
             },
             {
                 headline: 'Parcourez des thèmes à la Obsidian.',
@@ -663,8 +639,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Tebal** dan *miring* sama seperti di Obsidian.'
             },
             {
-                headline: 'Gunakan auto layout ala Figma.',
-                subtext: 'Susun grup dalam satu baris atau kolom.'
+                headline: 'Gambar grafik dari tabel angka.',
+                subtext: 'Kolom, batang, garis, pai, atau penghitung.'
             },
             {
                 headline: 'Bagikan presentasi dengan tautan.',
@@ -672,15 +648,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Pencahayaan 3D ala Blender.',
-                subtext: 'Cahaya titik, matahari, sorot, dan area berbayang.'
+                subtext: 'Cahaya titik, terarah, sorot, dan area berbayang.'
             },
             {
                 headline: 'Lacak presentasi Anda di Git.',
                 subtext: 'Presentasi berupa file teks Markdown dan JSON.'
-            },
-            {
-                headline: 'Buat komponen ala Figma.',
-                subtext: 'Edit sekali dan semua instance ikut berubah.'
             },
             {
                 headline: 'Jelajahi tema seperti di Obsidian.',
@@ -761,8 +733,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Grassetto** e *corsivo* vanno come in Obsidian.'
             },
             {
-                headline: 'Usa l’auto layout come in Figma.',
-                subtext: 'Allinea un gruppo in una riga o colonna.'
+                headline: 'Crea grafici da una tabella di numeri.',
+                subtext: 'Colonne, barre, linee, una torta o un contatore.'
             },
             {
                 headline: 'Condividi le slide con un link.',
@@ -770,15 +742,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Illuminazione 3D come in Blender.',
-                subtext: 'Luci puntiformi, solari, spot e ad area con ombre.'
+                subtext: 'Luci puntiformi, direzionali, spot e ad area con ombre.'
             },
             {
                 headline: 'Versiona le presentazioni con Git.',
                 subtext: 'Sono file di testo Markdown e JSON.'
-            },
-            {
-                headline: 'Crea componenti come in Figma.',
-                subtext: 'Modificalo una volta e ogni istanza cambia.'
             },
             {
                 headline: 'Sfoglia i temi come in Obsidian.',
@@ -859,8 +827,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**太字** と *斜体* も Obsidian と同じです。'
             },
             {
-                headline: 'Figma のようなオートレイアウト。',
-                subtext: 'グループを横一列か縦一列に並べます。'
+                headline: '数値の表からグラフを描けます。',
+                subtext: '縦棒、横棒、折れ線、円、カウンターが使えます。'
             },
             {
                 headline: 'プレゼンをリンクで共有できます。',
@@ -868,15 +836,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Blender のような 3D ライティング。',
-                subtext: 'ポイント、サン、スポット、エリアのライトと影。'
+                subtext: 'ポイント、指向性、スポット、エリアのライトと影。'
             },
             {
                 headline: 'プレゼンを Git で管理できます。',
                 subtext: 'Markdown と JSON のテキストファイルです。'
-            },
-            {
-                headline: 'Figma のようにコンポーネントを作れます。',
-                subtext: '一度編集すると、すべてのインスタンスが変わります。'
             },
             {
                 headline: 'Obsidian のようにテーマを選べます。',
@@ -957,8 +921,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**굵게**와 *기울임*은 Obsidian과 똑같이 작동합니다.'
             },
             {
-                headline: 'Figma처럼 자동 레이아웃을 쓰세요.',
-                subtext: '그룹을 한 행이나 한 열로 정렬합니다.'
+                headline: '숫자 표로 차트를 그리세요.',
+                subtext: '세로형 막대, 가로형 막대, 선, 원형 또는 카운터.'
             },
             {
                 headline: '링크로 발표 자료를 공유하세요.',
@@ -966,15 +930,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Blender 같은 3D 조명.',
-                subtext: '포인트, 태양, 스폿, 영역 조명과 그림자.'
+                subtext: '포인트, 디렉셔널, 스폿, 영역 조명과 그림자.'
             },
             {
                 headline: '발표 자료를 Git으로 관리하세요.',
                 subtext: '발표 자료는 Markdown과 JSON 텍스트 파일입니다.'
-            },
-            {
-                headline: 'Figma처럼 컴포넌트를 만드세요.',
-                subtext: '한 번 편집하면 모든 인스턴스가 바뀝니다.'
             },
             {
                 headline: 'Obsidian처럼 테마를 둘러보세요.',
@@ -1055,8 +1015,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Vet** en *cursief* werken zoals in Obsidian.'
             },
             {
-                headline: 'Gebruik auto layout zoals in Figma.',
-                subtext: 'Zet een groep in een rij of een kolom.'
+                headline: 'Teken grafieken uit een getallentabel.',
+                subtext: 'Kolommen, staven, lijnen, een cirkel of een teller.'
             },
             {
                 headline: 'Deel een presentatie met een link.',
@@ -1064,15 +1024,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D-belichting zoals in Blender.',
-                subtext: 'Punt-, zon-, spot- en vlaklampen met schaduwen.'
+                subtext: 'Punt-, richtings-, spot- en vlaklichten met schaduwen.'
             },
             {
                 headline: 'Beheer je presentaties in Git.',
                 subtext: 'Het zijn Markdown- en JSON-tekstbestanden.'
-            },
-            {
-                headline: 'Bouw componenten zoals in Figma.',
-                subtext: 'Bewerk ze één keer en elke instantie verandert.'
             },
             {
                 headline: 'Blader door thema’s zoals in Obsidian.',
@@ -1153,8 +1109,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Pogrubienie** i *kursywa* są jak w Obsidian.'
             },
             {
-                headline: 'Używaj auto layoutu jak w Figma.',
-                subtext: 'Ułóż grupę w rzędzie lub kolumnie.'
+                headline: 'Rysuj wykresy z tabeli liczb.',
+                subtext: 'Kolumny, słupki, linie, wykres kołowy lub licznik.'
             },
             {
                 headline: 'Udostępnij prezentację linkiem.',
@@ -1162,15 +1118,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Oświetlenie 3D jak w Blender.',
-                subtext: 'Punkt, słońce, reflektor i obszar z cieniami.'
+                subtext: 'Światła punktowe, kierunkowe, reflektorowe i powierzchniowe z cieniami.'
             },
             {
                 headline: 'Śledź zmiany prezentacji w Git.',
                 subtext: 'Prezentacje to pliki tekstowe Markdown i JSON.'
-            },
-            {
-                headline: 'Twórz komponenty jak w Figma.',
-                subtext: 'Edytuj raz, a zmieni się każda instancja.'
             },
             {
                 headline: 'Przeglądaj motywy jak w Obsidian.',
@@ -1251,8 +1203,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Negrito** e *itálico* são como no Obsidian.'
             },
             {
-                headline: 'Use auto layout como no Figma.',
-                subtext: 'Alinhe um grupo numa linha ou coluna.'
+                headline: 'Desenhe gráficos a partir de tabelas.',
+                subtext: 'Colunas, barras, linhas, uma tarte ou um contador.'
             },
             {
                 headline: 'Partilhe com uma ligação.',
@@ -1260,15 +1212,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Iluminação 3D como no Blender.',
-                subtext: 'Luzes ponto, sol, foco e área com sombras.'
+                subtext: 'Luzes ponto, direcionais, foco e área com sombras.'
             },
             {
                 headline: 'Controle versões no Git.',
                 subtext: 'São ficheiros de texto Markdown e JSON.'
-            },
-            {
-                headline: 'Crie componentes como no Figma.',
-                subtext: 'Edite uma vez e todas as instâncias mudam.'
             },
             {
                 headline: 'Explore temas como no Obsidian.',
@@ -1349,8 +1297,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Negrito** e *itálico* são iguais ao Obsidian.'
             },
             {
-                headline: 'Use auto layout como no Figma.',
-                subtext: 'Alinhe um grupo em uma linha ou coluna.'
+                headline: 'Desenhe gráficos a partir de tabelas.',
+                subtext: 'Colunas, barras, linhas, uma pizza ou um contador.'
             },
             {
                 headline: 'Compartilhe com um link.',
@@ -1358,15 +1306,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Iluminação 3D como no Blender.',
-                subtext: 'Luzes ponto, sol, spot e área com sombras.'
+                subtext: 'Luzes ponto, direcionais, spot e área com sombras.'
             },
             {
                 headline: 'Versione suas apresentações no Git.',
                 subtext: 'São arquivos de texto Markdown e JSON.'
-            },
-            {
-                headline: 'Crie componentes como no Figma.',
-                subtext: 'Edite uma vez e todas as instâncias mudam.'
             },
             {
                 headline: 'Explore temas como no Obsidian.',
@@ -1447,8 +1391,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Жирный** и *курсив* работают как в Obsidian.'
             },
             {
-                headline: 'Используйте автолейаут как в Figma.',
-                subtext: 'Выстраивайте группу в строку или столбец.'
+                headline: 'Стройте диаграммы по таблице чисел.',
+                subtext: 'Столбцы, полосы, линии, круговая диаграмма или счётчик.'
             },
             {
                 headline: 'Делитесь презентацией по ссылке.',
@@ -1456,15 +1400,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D-освещение как в Blender.',
-                subtext: 'Точка, солнце, прожектор и область с тенями.'
+                subtext: 'Точечный, направленный, прожекторный и площадной свет с тенями.'
             },
             {
                 headline: 'Храните версии слайдов в Git.',
                 subtext: 'Это текстовые файлы Markdown и JSON.'
-            },
-            {
-                headline: 'Создавайте компоненты как в Figma.',
-                subtext: 'Измените раз, и изменятся все экземпляры.'
             },
             {
                 headline: 'Выбирайте темы как в Obsidian.',
@@ -1545,8 +1485,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**ตัวหนา** และ *ตัวเอียง* ใช้ได้เหมือนใน Obsidian'
             },
             {
-                headline: 'ใช้ Auto layout แบบ Figma',
-                subtext: 'เรียงกลุ่มเป็นแถวหรือคอลัมน์'
+                headline: 'วาดแผนภูมิจากตารางตัวเลข',
+                subtext: 'คอลัมน์ แท่ง เส้น วงกลม หรือตัวนับ'
             },
             {
                 headline: 'แชร์งานนำเสนอด้วยลิงก์',
@@ -1554,15 +1494,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'แสงไฟ 3D แบบ Blender',
-                subtext: 'ไฟแบบจุด ดวงอาทิตย์ สปอต และพื้นที่ พร้อมเงา'
+                subtext: 'ไฟแบบจุด แบบทิศทาง สปอต และพื้นที่ พร้อมเงา'
             },
             {
                 headline: 'ติดตามงานนำเสนอของคุณใน Git',
                 subtext: 'งานนำเสนอเป็นไฟล์ข้อความ Markdown และ JSON'
-            },
-            {
-                headline: 'สร้างคอมโพเนนต์แบบ Figma',
-                subtext: 'แก้ครั้งเดียว ทุกอินสแตนซ์เปลี่ยนตาม'
             },
             {
                 headline: 'เลือกธีมได้เหมือนใน Obsidian',
@@ -1643,8 +1579,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: "**Kalın** ve *italik* Obsidian'daki gibi çalışır."
             },
             {
-                headline: 'Figma gibi otomatik yerleşim kullanın.',
-                subtext: 'Bir grubu satır veya sütun hâlinde dizin.'
+                headline: 'Bir sayı tablosundan grafik çizin.',
+                subtext: 'Sütun, çubuk, çizgi, pasta grafik veya sayaç.'
             },
             {
                 headline: 'Sunumunuzu bir bağlantıyla paylaşın.',
@@ -1652,15 +1588,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Blender gibi 3D ışıklandırma.',
-                subtext: 'Gölgeli nokta, güneş, spot ve alan ışıkları.'
+                subtext: 'Gölgeli nokta, yönlü, spot ve alan ışıkları.'
             },
             {
                 headline: "Sunumlarınızı Git'te takip edin.",
                 subtext: 'Sunumlar Markdown ve JSON metin dosyalarıdır.'
-            },
-            {
-                headline: 'Figma gibi bileşenler oluşturun.',
-                subtext: 'Bir kez düzenleyin, tüm örnekler değişsin.'
             },
             {
                 headline: 'Temalara Obsidian’daki gibi göz atın.',
@@ -1741,8 +1673,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Жирний** і *курсив* працюють як в Obsidian.'
             },
             {
-                headline: 'Автолейаут як у Figma.',
-                subtext: 'Вишиковуйте групу в рядок або стовпець.'
+                headline: 'Будуйте діаграми з таблиці чисел.',
+                subtext: 'Стовпці, смуги, лінії, кругова діаграма або лічильник.'
             },
             {
                 headline: 'Діліться презентацією за посиланням.',
@@ -1750,15 +1682,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '3D-освітлення як у Blender.',
-                subtext: 'Точка, сонце, прожектор і область з тінями.'
+                subtext: 'Точкове, спрямоване, прожекторне й площинне світло з тінями.'
             },
             {
                 headline: 'Відстежуйте зміни презентацій у Git.',
                 subtext: 'Це текстові файли Markdown і JSON.'
-            },
-            {
-                headline: 'Створюйте компоненти як у Figma.',
-                subtext: 'Змініть раз, і зміняться всі екземпляри.'
             },
             {
                 headline: 'Обирайте теми як в Obsidian.',
@@ -1839,8 +1767,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**Đậm** và *nghiêng* dùng y như trong Obsidian.'
             },
             {
-                headline: 'Dùng auto layout như Figma.',
-                subtext: 'Xếp một nhóm thành hàng hoặc cột.'
+                headline: 'Vẽ biểu đồ từ một bảng số.',
+                subtext: 'Cột, thanh, đường, biểu đồ tròn hoặc bộ đếm.'
             },
             {
                 headline: 'Chia sẻ bộ slide bằng một liên kết.',
@@ -1848,15 +1776,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Ánh sáng 3D như Blender.',
-                subtext: 'Đèn điểm, mặt trời, spot và vùng có đổ bóng.'
+                subtext: 'Đèn điểm, định hướng, spot và vùng có đổ bóng.'
             },
             {
                 headline: 'Theo dõi bộ slide trong Git.',
                 subtext: 'Bộ slide là các tệp văn bản Markdown và JSON.'
-            },
-            {
-                headline: 'Tạo component như Figma.',
-                subtext: 'Sửa một lần, mọi instance đều đổi theo.'
             },
             {
                 headline: 'Duyệt chủ đề như trong Obsidian.',
@@ -1937,8 +1861,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**粗体** 和 *斜体* 的用法和 Obsidian 一样。'
             },
             {
-                headline: '像 Figma 一样使用自动布局。',
-                subtext: '把一组对象排成一行或一列。'
+                headline: '用数字表格绘制图表。',
+                subtext: '柱形、条形、折线、饼图或计数器。'
             },
             {
                 headline: '用链接分享演示文稿。',
@@ -1946,15 +1870,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '像 Blender 一样的 3D 灯光。',
-                subtext: '点光、日光、聚光和面光，都带阴影。'
+                subtext: '点光、平行光、聚光和面光，都带阴影。'
             },
             {
                 headline: '用 Git 管理你的演示文稿。',
                 subtext: '演示文稿就是 Markdown 和 JSON 文本文件。'
-            },
-            {
-                headline: '像 Figma 一样创建组件。',
-                subtext: '编辑一次，所有实例都会改变。'
             },
             {
                 headline: '像 Obsidian 一样挑选主题。',
@@ -2035,8 +1955,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '**粗體** 和 *斜體* 的用法和 Obsidian 一樣。'
             },
             {
-                headline: '像 Figma 一樣使用自動佈局。',
-                subtext: '把一組物件排成一列或一欄。'
+                headline: '用數字表格繪製圖表。',
+                subtext: '直條圖、橫條圖、折線圖、圓形圖或計數器。'
             },
             {
                 headline: '用連結分享簡報。',
@@ -2044,15 +1964,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '像 Blender 一樣的 3D 燈光。',
-                subtext: '點光、日光、聚光和面光，都有陰影。'
+                subtext: '點光、平行光、聚光和面光，都有陰影。'
             },
             {
                 headline: '用 Git 管理你的簡報。',
                 subtext: '簡報就是 Markdown 和 JSON 純文字檔。'
-            },
-            {
-                headline: '像 Figma 一樣建立元件。',
-                subtext: '編輯一次，所有實例都會跟著改變。'
             },
             {
                 headline: '像 Obsidian 一樣挑選主題。',

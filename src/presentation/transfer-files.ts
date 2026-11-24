@@ -19,10 +19,10 @@
 import { TFile, TFolder, getFrontMatterInfo, parseYaml } from 'obsidian';
 import type { App } from 'obsidian';
 import type { SlideClipboard } from '../format/clipboard.ts';
-import type { CapturedSlides } from '../format/capture.ts';
+import type { CapturedPart } from '../format/capture.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
-import { themeAssetPaths } from '../format/embedded-theme.ts';
-import { planClipboardAssets } from '../format/clipboard-assets.ts';
+import { themeFilePaths } from '../format/embedded-theme.ts';
+import { planClipboardFiles } from '../format/clipboard-files.ts';
 import { readJsonObject } from '../format/json.ts';
 import { presentationIdentity } from '../format/recognition.ts';
 import { clipboardDigest } from '../settings/clipboard.ts';
@@ -32,14 +32,14 @@ import { readEmbeddedTheme } from './theme-reader.ts';
 import { equalByteStreams } from './byte-streams.ts';
 
 export interface TransferredSlides {
-    readonly captured: CapturedSlides;
+    readonly captured: readonly CapturedPart[];
     current(): boolean;
     cleanup(): Promise<void>;
 }
 export class ThemeArtworkMismatch extends Error {}
 
 /** Copy files before a slide edit. Successful imports remain available for native undo/redo. */
-export async function transferSlideAssets(
+export async function transferSlideFiles(
     app: App,
     packet: SlideClipboard,
     destination: TFile,
@@ -48,8 +48,8 @@ export async function transferSlideAssets(
     current: () => boolean,
     signal: AbortSignal
 ): Promise<TransferredSlides> {
-    const plan = planClipboardAssets(packet.captured);
-    const themeFiles = themeAssetPaths(packet.theme);
+    const plan = planClipboardFiles(packet.captured);
+    const themeFiles = themeFilePaths(packet.theme);
     if (!plan || !themeFiles) throw new Error('Clipboard media references are unreadable');
     if (!current() || signal.aborted) throw new Error('Media transfer canceled');
     if (!plan.files.length && !themeFiles.length)
@@ -64,7 +64,7 @@ export async function transferSlideAssets(
     ]);
     const header = getFrontMatterInfo(sources[0]);
     const frontmatter: unknown = header.exists ? parseYaml(header.frontmatter) : null;
-    if (presentationIdentity(frontmatter, readJsonObject(sources[1])) !== packet.origin.document)
+    if (presentationIdentity(frontmatter, readJsonObject(sources[1])) !== packet.origin.presentationId)
         throw new Error('Clipboard source identity changed');
     const originRoot = packet.origin.path.slice(0, packet.origin.path.lastIndexOf('/') + 1);
     const destinationRoot = destination.path.slice(0, destination.path.lastIndexOf('/') + 1);

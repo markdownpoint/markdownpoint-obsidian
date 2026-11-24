@@ -65,13 +65,21 @@ export const ru: Translations = {
         cancel: 'Отмена',
         invalidName: 'Введите имя без косых черт и зарезервированных символов.',
         exists: 'Файл или папка с таким именем уже существует.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint не может создать презентацию внутри «${presentation}». Выберите папку вне «${presentation}».`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint не может открыть презентацию «${presentation}», пока она находится внутри «${outer}». Переместите папку «${presentation}» из «${outer}», а затем откройте её.`,
         failed: 'Не удалось создать презентацию. Проверьте папку и повторите попытку.',
         openFailed: 'Презентация создана, но открыть её не удалось. Откройте slides.md в папке презентации.',
         openChanged: 'Презентация изменилась или недоступна для чтения. Повторите попытку.',
         handoffFailed: 'Не удалось сохранить и открыть презентацию.',
         themeChanged: 'Тема изменилась или недоступна. Откройте это окно снова и выберите тему ещё раз.',
         newerFormat: ({ version }: { version: string }) =>
-            `В этой презентации используется более новый формат MarkdownPoint (${version}). Обновите плагин MarkdownPoint, чтобы открыть её как презентацию.`
+            `В этой презентации используется более новый формат MarkdownPoint (${version}). Обновите плагин MarkdownPoint, чтобы открыть её как презентацию.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint не может прочитать «${file}» в «${presentation}». Откройте презентацию в приложении MarkdownPoint, чтобы увидеть, что исправить.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint не может прочитать презентацию в «${presentation}». Откройте её в приложении MarkdownPoint, чтобы увидеть, что исправить.`
     },
     slides: {
         new: 'Новый слайд',

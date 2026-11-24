@@ -19,7 +19,8 @@
 import { indexPresentation } from '../format/document.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import { payloadContentEnd } from '../format/payload.ts';
-import type { WritingField } from './writing-fields.ts';
+import { blockInsertion } from './writing-fields.ts';
+import type { BlockInsertion, WritingField } from './writing-fields.ts';
 
 export interface SlideNotes {
     readonly slideId: string;
@@ -58,23 +59,12 @@ export function slideNotes(markdown: string, document: PresentationDocument, pla
 }
 
 /** A minimal source insertion; all existing bytes and the companion stay intact. */
-export function notesInsertion(markdown: string, at: number): { from: number; insert: string; cursor: number } {
-    const newline = markdown.includes('\r\n') ? '\r\n' : '\n';
-    // Keep a following source newline as the empty payload's writable line.
-    // Redo then maps the insertion caret into notes, before the next marker.
-    const from = at < markdown.length && markdown.slice(at - newline.length, at) === newline ? at - newline.length : at;
-    const before = markdown.slice(0, from);
-    const gap = before.endsWith(newline + newline) ? '' : before.endsWith(newline) ? newline : newline + newline;
-    const prefix = gap + '<!-- notes -->' + newline;
-    return { from, insert: prefix, cursor: from + prefix.length };
+export function notesInsertion(markdown: string, at: number): BlockInsertion {
+    return blockInsertion(markdown, at, '<!-- notes -->');
 }
 
 /** Validate once on activation, including unfinished Markdown at the final field. */
-export function validatedNotesInsertion(
-    markdown: string,
-    document: PresentationDocument,
-    slideId: string
-): ReturnType<typeof notesInsertion> | null {
+export function validatedNotesInsertion(markdown: string, document: PresentationDocument, slideId: string): BlockInsertion | null {
     const slide = document.slides.find(slide => slide.id === slideId);
     if (!slide || slide.blocks.some(block => block.kind === 'notes')) return null;
     const insertion = notesInsertion(markdown, slide.to);

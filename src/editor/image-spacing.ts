@@ -21,12 +21,12 @@ import { WidgetType } from '@codemirror/view';
 import type { EditorView } from '@codemirror/view';
 
 export interface ImageSpacing {
-    readonly id: string | null;
+    readonly presentationId: string | null;
     readonly heights: ReadonlyMap<string, number>;
 }
 export const setImageSpacing = StateEffect.define<ImageSpacing>();
 export const imageSpacing = StateField.define<ImageSpacing>({
-    create: () => ({ id: null, heights: new Map() }),
+    create: () => ({ presentationId: null, heights: new Map() }),
     update: (value, transaction) => {
         for (const effect of transaction.effects) if (effect.is(setImageSpacing)) return effect.value;
         return value;

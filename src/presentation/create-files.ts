@@ -28,6 +28,7 @@ interface CreationVault<File extends StoredFile, Folder extends StoredFolder> {
     getAbstractFileByPath(path: string): File | Folder | null;
     createFolder(path: string): Promise<Folder>;
     create(path: string, source: string): Promise<File>;
+    createBinary(path: string, bytes: Uint8Array): Promise<File>;
     copy(file: File, path: string): Promise<File>;
     trash(file: File | Folder): Promise<void>;
 }
@@ -36,7 +37,7 @@ interface CreationVault<File extends StoredFile, Folder extends StoredFolder> {
 export async function createPresentationFiles<File extends StoredFile, Folder extends StoredFolder>(
     vault: CreationVault<File, Folder>,
     root: string,
-    files: ReadonlyMap<string, string | File>,
+    files: ReadonlyMap<string, string | Uint8Array | File>,
     canContinue: () => boolean
 ): Promise<File> {
     const folders: { folder: Folder; path: string }[] = [];
@@ -84,7 +85,12 @@ export async function createPresentationFiles<File extends StoredFile, Folder ex
             const source = files.get(relative)!;
             const path = `${root}/${relative}`;
             if (vault.getAbstractFileByPath(path)) throw new Error('A presentation file appeared during creation');
-            const file = typeof source === 'string' ? await vault.create(path, source) : await vault.copy(source, path);
+            const file =
+                typeof source === 'string'
+                    ? await vault.create(path, source)
+                    : source instanceof Uint8Array
+                      ? await vault.createBinary(path, source)
+                      : await vault.copy(source, path);
             created.push({ file, path, mtime: file.stat.mtime, size: file.stat.size });
             check();
             if (relative === 'slides.md') markdown = file;

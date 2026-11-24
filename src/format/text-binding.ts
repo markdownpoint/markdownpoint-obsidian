@@ -16,17 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { ALLOCATED_TAIL } from './id-allocation.ts';
+
 export interface TextBindingName {
     readonly name: string;
     readonly number: string | null;
 }
 
-/** A text object's readable name, or a composition instance's control name. */
+/** The readable name of a text object's id. */
 export function textBindingName(binding: string): TextBindingName {
-    const parts = binding.slice(binding.lastIndexOf('.') + 1).split('-');
+    const parts = binding.split('-');
     // Only the MarkdownPoint app's explicit allocation spelling is technical: id- plus a letter
     // and five letters/digits. A similarly sized authored word stays intact.
-    if (parts.at(-2) === 'id' && /^[a-z][a-z0-9]{5}$/.test(parts.at(-1) ?? '')) parts.splice(-2);
+    if (parts.at(-2) === 'id' && ALLOCATED_TAIL.test(parts.at(-1) ?? '')) parts.splice(-2);
     const number = parts.length > 1 && /^\d+$/.test(parts.at(-1)!) ? parts.pop()! : null;
     return { name: parts.join('-') || 'text', number };
 }
@@ -37,7 +39,7 @@ export interface TextFieldLabels {
     readonly numbered: (values: { name: string; number: string }) => string;
 }
 
-/** Known field types are translated; custom authored names keep their own words. */
+/** Known field types are translated; other names are their words, capitalized. */
 export function textBindingLabel(binding: TextBindingName, labels: TextFieldLabels): string {
     const authored = binding.name.replaceAll('-', ' ');
     const name =

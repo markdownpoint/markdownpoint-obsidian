@@ -21,11 +21,11 @@ import { encodeSlideClipboard } from '../format/clipboard.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 import { readJsonObject } from '../format/json.ts';
-import { readsFormatFully } from '../format/format-version.ts';
+import { formatStanding, readsFormatFully, statedMarkdownVersion } from '../format/format-version.ts';
 
 export interface CopySource {
     readonly path: string;
-    readonly documentId: string;
+    readonly id: string;
     readonly markdown: string;
     readonly companion: string;
     readonly index: PresentationDocument;
@@ -69,12 +69,14 @@ export class SlideCopy<Context> {
             if (!current()) return { kind: 'canceled' };
             const metadata = source && readJsonObject(source.companion);
             if (!source || !metadata) return { kind: 'unavailable' };
-            // A newer minor may hold keys the destination's version doesn't have, which the MarkdownPoint app would refuse there
-            if (!readsFormatFully(metadata.markdownpoint)) return { kind: 'newer' };
+            // A newer minor may hold keys or blocks the destination's version doesn't have, which the MarkdownPoint app would
+            // refuse there or show as words, and the .md file may state one beside a companion of this minor
+            if (!readsFormatFully(metadata.markdownpoint) || formatStanding(statedMarkdownVersion(source.markdown)) === 'newer-minor')
+                return { kind: 'newer' };
             const captured = captureSlides(source.markdown, source.index, source.companion, selected);
             if (!captured) return { kind: 'unavailable' };
             const layouts = new Set<string>();
-            for (const part of captured.slides) {
+            for (const part of captured) {
                 const record = readJsonObject(part.record);
                 if (typeof record?.layout !== 'string') return { kind: 'unavailable' };
                 layouts.add(record.layout);
@@ -85,7 +87,7 @@ export class SlideCopy<Context> {
             const token = crypto.randomUUID();
             const encoded = encodeSlideClipboard(
                 token,
-                { vault: this.host.vaultId(), path: source.path, document: source.documentId },
+                { vault: this.host.vaultId(), path: source.path, presentationId: source.id },
                 captured,
                 theme
             );
@@ -98,7 +100,7 @@ export class SlideCopy<Context> {
                 if (
                     !latest ||
                     latest.path !== source.path ||
-                    latest.documentId !== source.documentId ||
+                    latest.id !== source.id ||
                     latest.markdown !== source.markdown ||
                     latest.companion !== source.companion
                 )

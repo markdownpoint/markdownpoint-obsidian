@@ -64,13 +64,21 @@ export const tr: Translations = {
         cancel: 'İptal',
         invalidName: 'Eğik çizgi veya ayrılmış karakter içermeyen bir ad girin.',
         exists: 'Bu adda bir dosya veya klasör zaten var.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint, “${presentation}” içinde sunu oluşturamaz. “${presentation}” dışında bir klasör seçin.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint, “${presentation}” sunusunu “${outer}” içindeyken açamaz. “${presentation}” klasörünü “${outer}” dışına taşıyın, ardından sunuyu açın.`,
         failed: 'Sunu oluşturulamadı. Klasörü kontrol edip tekrar deneyin.',
         openFailed: 'Sunu oluşturuldu ama açılamadı. Klasöründeki slides.md dosyasını açın.',
         openChanged: 'Sunu değişti veya okunamadı. Tekrar deneyin.',
         handoffFailed: 'Sunu kaydedilip açılamadı.',
         themeChanged: 'Tema değişti veya kullanılamıyor. Bu iletişim kutusunu yeniden açıp temayı tekrar seçin.',
         newerFormat: ({ version }: { version: string }) =>
-            `Bu sunu daha yeni bir MarkdownPoint biçimi (${version}) kullanıyor. Sunu olarak açmak için MarkdownPoint eklentisini güncelleyin.`
+            `Bu sunu daha yeni bir MarkdownPoint biçimi (${version}) kullanıyor. Sunu olarak açmak için MarkdownPoint eklentisini güncelleyin.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint, “${presentation}” içindeki “${file}” dosyasını okuyamaz. Neyi düzeltmeniz gerektiğini görmek için sunuyu MarkdownPoint uygulamasında açın.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint, “${presentation}” içindeki sunuyu okuyamaz. Neyi düzeltmeniz gerektiğini görmek için sunuyu MarkdownPoint uygulamasında açın.`
     },
     slides: {
         new: 'Yeni slayt',

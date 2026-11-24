@@ -29,15 +29,15 @@ const uuid = '11111111-1111-4111-8111-111111111111';
 const path = 'deck/slides.md';
 const companion = JSON.stringify({
     markdownpoint: '1.0',
-    kind: 'presentation',
+    type: 'presentation',
     id: uuid,
     theme: 'basic',
     slides: { one: { layout: 'title' }, two: { layout: 'title' } }
 });
 const markdown = '<!-- slide: one -->\n<!-- text: body -->\nFirst words.\n<!-- slide: two -->\n<!-- text: body -->\nSecond words.\n';
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
-const master = '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
-const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+const master = '{"markdownpoint":"1.0","type":"master","id":"11111111-1111-4111-8111-111111111111"}';
+const layout = '{"markdownpoint":"1.0","type":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,
@@ -56,7 +56,7 @@ function setup() {
     const state = { markdown, companion, active: true, writes: [] as string[], reads: 0 };
     const source = (): CopySource => ({
         path,
-        documentId: uuid,
+        id: uuid,
         markdown: state.markdown,
         companion: state.companion,
         index: indexPresentation(state.markdown, 0)!
@@ -86,7 +86,7 @@ test('Copy captures a complete group in source order and leaves its source untou
     assert.equal(result.kind, 'copied');
     assert.equal(state.writes.length, 1);
     assert.deepEqual(
-        decodeSlideClipboard(state.writes[0]!)!.captured.slides.map(part => part.id),
+        decodeSlideClipboard(state.writes[0]!)!.captured.map(part => part.id),
         ['one', 'two']
     );
     assert.equal(state.markdown, markdown);
@@ -131,7 +131,7 @@ test('a later copy intent supersedes slow earlier preparation', async () => {
     resume.resolve();
     assert.equal((await first).kind, 'canceled');
     assert.equal(state.writes.length, 1);
-    assert.equal(decodeSlideClipboard(state.writes[0]!)!.captured.slides[0]!.id, 'two');
+    assert.equal(decodeSlideClipboard(state.writes[0]!)!.captured[0]!.id, 'two');
 });
 
 test('an in-flight clipboard write finishes before the newer copy writes its result', async () => {
@@ -160,7 +160,7 @@ test('an in-flight clipboard write finishes before the newer copy writes its res
     assert.equal((await first).kind, 'canceled');
     assert.equal((await second).kind, 'copied');
     assert.deepEqual(
-        state.writes.map(source => decodeSlideClipboard(source)!.captured.slides[0]!.id),
+        state.writes.map(source => decodeSlideClipboard(source)!.captured[0]!.id),
         ['one', 'two']
     );
 });
@@ -279,5 +279,19 @@ test('slides are not copied out of a presentation of a newer format minor', asyn
     const { state, copier } = setup();
     state.companion = state.companion.replace('"markdownpoint":"1.0"', '"markdownpoint":"1.1"');
     assert.equal((await copier.copy('view', ['one'])).kind, 'newer');
+    assert.deepEqual(state.writes, []);
+});
+
+test('slides are not copied out of a presentation whose .md file states a newer format minor beside a companion of this one', async () => {
+    const { state, copier } = setup();
+    state.markdown = `---\nmarkdownpoint: "1.1"\nid: ${uuid}\n---\n${markdown}`;
+    assert.equal((await copier.copy('view', ['one'])).kind, 'newer');
+    assert.deepEqual(state.writes, []);
+});
+
+test("a slide on a layout MarkdownPoint doesn't read, which its theme leaves out, is copied nowhere", async () => {
+    const { host, state } = setup();
+    host.theme = () => Promise.resolve({ ...theme, layouts: new Map() });
+    assert.deepEqual(await new SlideCopy(host).copy('context', ['one']), { kind: 'unavailable' });
     assert.deepEqual(state.writes, []);
 });

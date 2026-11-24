@@ -16,21 +16,60 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { decodeCharacterReferences } from '../core/character-references.ts';
 import { linkTokens } from './link-tokens.ts';
 import type { Token, Tokens } from 'marked';
-import { decodeHTMLStrict } from 'entities';
 
 const punctuation = /\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])/g;
-const decode = (value: string): string => decodeHTMLStrict(value.replace(punctuation, '$1'));
+const decode = (value: string): string => decodeCharacterReferences(value.replace(punctuation, '$1'));
 
-function columns(source: string): number {
-    const line = source.trim();
-    const separators: number[] = [];
-    for (let index = 0; index < line.length; index++) {
+/** Each cell of a table row's line, by where it starts and ends in the line, the pipes at the row's ends set aside. */
+function rowCells(line: string): { from: number; to: number }[] {
+    const from = line.length - line.trimStart().length;
+    const to = line.trimEnd().length;
+    const pipes: number[] = [];
+    for (let index = from; index < to; index++) {
         if (line[index] === '\\') index++;
-        else if (line[index] === '|') separators.push(index);
+        else if (line[index] === '|') pipes.push(index);
     }
-    return separators.length + 1 - Number(separators[0] === 0) - Number(separators.at(-1) === line.length - 1);
+    const cuts = [from - 1, ...pipes, to];
+    const cells = cuts.slice(1).map((cut, index) => ({ from: cuts[index]! + 1, to: cut }));
+    return cells.slice(pipes[0] === from ? 1 : 0, pipes.at(-1) === to - 1 ? -1 : undefined);
+}
+
+/**
+ * The one table a table block's words hold, no row wider than its header and no cell's words holding a line feed or a
+ * carriage return by a character reference, or null when they hold anything else, as MarkdownPoint reads a table.
+ */
+function blockTable(source: string): Tokens.Table | null {
+    const trimmed = source.replace(/\r\n?/g, '\n').trim();
+    const blocks = linkTokens(trimmed).filter(token => token.type !== 'space');
+    const table = blocks[0] as Tokens.Table | undefined;
+    if (blocks.length !== 1 || table?.type !== 'table' || table.raw.trim() !== trimmed) return null;
+    const width = table.header.length;
+    if (!width || trimmed.split('\n').some(line => rowCells(line).length > width)) return null;
+    return [...table.header, ...table.rows.flat()].some(cell => breaksLine(cell.tokens)) ? null : table;
+}
+
+/**
+ * Whether words hold a line feed or a carriage return by a character reference. MarkdownPoint reads references over each
+ * run of plain words, a bare address among them, and never in code, an escaped character, a picture, an autolink or
+ * HTML, which it keeps as written.
+ */
+function breaksLine(tokens: readonly Token[]): boolean {
+    let words = '';
+    const broken = (): boolean => /[\r\n]/.test(decodeCharacterReferences(words));
+    for (const token of tokens) {
+        const nested = 'tokens' in token && token.tokens?.length ? token.tokens : undefined;
+        if ((token.type === 'text' && !nested) || (token.type === 'link' && !/^[[<]/.test(token.raw))) {
+            words += token.type === 'text' ? ((token as Tokens.Text).text ?? token.raw) : token.raw;
+            continue;
+        }
+        if (broken()) return true;
+        words = '';
+        if (nested && token.type !== 'image' && !token.raw.startsWith('<') && breaksLine(nested)) return true;
+    }
+    return broken();
 }
 
 /** Trace actual link destinations through a parse-only copy; saved source never receives probe text. */
@@ -45,16 +84,20 @@ export function remapMarkdownSlideLinks(
     while (used.has(`mdp-copy-${serial}-`)) serial++;
     // A flat bracket label is words or a reference identifier, not a stable-ID
     // destination. Keep labels intact so probes cannot break reference resolution.
+    // With no reference definition in the words no label is one, and an autolink's
+    // address in a label, which is a link there too, is probed as anywhere else.
+    const definitions = source.includes(']:');
     const labels = [...source.matchAll(/\[(?:\\[\s\S]|[^[\]\\])*\]/g)].map(match => ({
         from: match.index,
         to: match.index + match[0].length
     }));
     let labelIndex = 0;
-    const candidates: { from: number; to: number; probe: string; replacement: string }[] = [];
+    const candidates: { from: number; to: number; probe: string; replacement: string; literal: boolean }[] = [];
     for (const match of source.matchAll(/(?:\\[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]|[a-z0-9:;&#-])+/gi)) {
         while (labelIndex < labels.length && labels[labelIndex]!.to <= match.index) labelIndex++;
         const label = labels[labelIndex];
-        if (label && label.from <= match.index && match.index < label.to) continue;
+        const autolink = source[match.index - 1] === '<' && source[match.index + match[0].length] === '>';
+        if ((definitions || !autolink) && label && label.from <= match.index && match.index < label.to) continue;
         const href = decode(match[0]);
         const next = href.startsWith('slide:') ? ids.get(href.slice(6)) : undefined;
         if (next === undefined || href === `slide:${next}`) continue;
@@ -62,7 +105,8 @@ export function remapMarkdownSlideLinks(
             from: match.index,
             to: match.index + match[0].length,
             probe: `slide:mdp-copy-${serial}-${candidates.length}`,
-            replacement: `slide:${next}`
+            replacement: `slide:${next}`,
+            literal: href === match[0]
         });
     }
     if (!candidates.length) return source;
@@ -74,32 +118,25 @@ export function remapMarkdownSlideLinks(
     }
     pieces.push(source.slice(position));
     const annotated = pieces.join('').replace(/\r\n?/g, '\n');
-    const tokens = linkTokens(schema === 'table' ? annotated.trim() : annotated);
-    if (schema === 'table') {
-        const blocks = tokens.filter(token => token.type !== 'space');
-        const table = blocks[0];
-        if (blocks.length !== 1 || table?.type !== 'table' || table.raw.trim() !== annotated.trim()) return source;
-        const width = (table as Tokens.Table).header.length;
-        if (
-            !width ||
-            annotated
-                .trim()
-                .split(/\r\n?|\n/)
-                .some(line => columns(line) > width)
-        )
-            return source;
-    }
+    const table = schema === 'table' ? blockTable(annotated) : null;
+    if (schema === 'table' && !table) return source;
+    const tokens = table ? [table] : linkTokens(annotated);
     const found = new Set<string>();
-    const probes = new Set(candidates.map(candidate => candidate.probe));
+    const probes = new Map(candidates.map(candidate => [candidate.probe, candidate]));
     const pending: Token[] = [...tokens];
     while (pending.length) {
         const token = pending.pop()!;
         if (token.type === 'link') {
-            if (token.raw.startsWith('[') && token.raw.endsWith(')') && typeof token.href === 'string') {
+            // An inline link, or an autolink, `<slide:…>`, which MarkdownPoint reads as a link too.
+            const inline = token.raw.startsWith('[') && token.raw.endsWith(')');
+            if ((inline || (token.raw.startsWith('<') && token.raw.endsWith('>'))) && typeof token.href === 'string') {
                 // Marked already removed punctuation escapes while reading the href.
-                const target = decodeHTMLStrict(token.href);
-                if (probes.has(target)) found.add(target);
+                const probe = probes.get(decodeCharacterReferences(token.href));
+                // An autolink's address is read as written: an escaped or referenced one is words, which only its probe made a link.
+                if (probe && (inline || probe.literal)) found.add(probe.probe);
             }
+            // A link's words may hold another, which MarkdownPoint reads as the link of those words.
+            if (inline) pending.push(...(token as Tokens.Link).tokens);
         } else if (token.type === 'table') {
             if (schema === 'table') {
                 const table = token as Tokens.Table;

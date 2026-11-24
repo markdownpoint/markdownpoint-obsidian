@@ -16,10 +16,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+    plugins: [
+        {
+            // A picture the plugin ships is its bytes, as the bundle's binary loader gives them (esbuild.config.mjs)
+            name: 'picture-bytes',
+            enforce: 'pre',
+            load(id) {
+                if (!id.endsWith('.jpg')) return null;
+                const base64 = readFileSync(id).toString('base64');
+                return `export default Uint8Array.from(atob(${JSON.stringify(base64)}), character => character.charCodeAt(0));`;
+            }
+        }
+    ],
     resolve: {
         alias: {
             // The plugin's runtime imports of Obsidian resolve to headless stand-ins

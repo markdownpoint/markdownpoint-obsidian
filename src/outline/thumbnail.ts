@@ -35,7 +35,7 @@ export function renderThumbnail(container: HTMLElement, structure: SlideStructur
     svg.setAttribute('focusable', 'false');
     for (const region of structure.regions) {
         const group = document.createElementNS(NS, 'g');
-        group.setAttribute('transform', `rotate(${region.rotation} ${region.x + region.width / 2} ${region.y + region.height / 2})`);
+        group.setAttribute('transform', `rotate(${region.rotation} ${region.pivot.x} ${region.pivot.y})`);
         const width = (region.width - region.gutter * (region.columns - 1)) / region.columns;
         for (let column = 0; column < region.columns; column++) {
             const rect = document.createElementNS(NS, 'rect');

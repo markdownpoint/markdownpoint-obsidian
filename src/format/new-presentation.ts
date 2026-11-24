@@ -17,11 +17,12 @@
  */
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
-import { isThemeKey } from './embedded-theme.ts';
+import { isPortableName, isThemeKey } from './file-paths.ts';
 import { FORMAT_VERSION } from './format-version.ts';
-import { isDocumentId } from './recognition.ts';
+import { isUuid } from './recognition.ts';
 import { orderedLayouts, prepareNewSlide } from './new-slide.ts';
 import { readJsonObject } from './json.ts';
+import { NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE } from '../core/new-presentation-style.ts';
 
 export interface NewPresentation {
     readonly markdown: string;
@@ -31,24 +32,25 @@ export interface NewPresentation {
 /** A presentation folder keeps its human name on both desktop platforms. */
 export function presentationFolderName(value: string): string | null {
     const name = value.trim().normalize('NFC');
-    return !name ||
-        name.startsWith('.') ||
-        name.endsWith('.') ||
-        /[\\/<>:"|?*]/.test(name) ||
-        /\p{Cc}/u.test(name) ||
-        /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(name)
-        ? null
-        : name;
+    return isPortableName(name) && !name.startsWith('.') ? name : null;
 }
 
-/** One empty slide and one matching pair, without copying the theme's sample words. */
+/** The layout a new presentation starts on, as MarkdownPoint picks it: the first of these the theme has, else its first. */
+export function firstSlideLayout(theme: EmbeddedTheme): string | undefined {
+    return ['title', 'content-with-header', 'content', 'blank'].find(key => theme.layouts.has(key)) ?? orderedLayouts(theme)[0];
+}
+
+/**
+ * One empty slide and one matching pair, without copying the theme's sample words. As MarkdownPoint's New does, a new
+ * text box starts in the theme's body style where it has one, and backgrounds are generated in MarkdownPoint's own style.
+ */
 export function prepareNewPresentation(
     theme: EmbeddedTheme,
     id: string,
     slideId: string,
-    layoutKey: string | undefined = orderedLayouts(theme)[0]
+    layoutKey: string | undefined = firstSlideLayout(theme)
 ): NewPresentation | null {
-    if (!isDocumentId(id) || !isThemeKey(theme.key) || !layoutKey) return null;
+    if (!isUuid(id) || !isThemeKey(theme.key) || !layoutKey) return null;
     const slide = prepareNewSlide(theme, layoutKey, slideId);
     const record = slide && readJsonObject(slide.record);
     if (!slide || !record) return null;
@@ -56,7 +58,14 @@ export function prepareNewPresentation(
         markdown: `---\nmarkdownpoint: "${FORMAT_VERSION}"\nid: ${id}\n---\n\n${slide.markdown}`,
         companion:
             JSON.stringify(
-                { markdownpoint: FORMAT_VERSION, kind: 'presentation', id, theme: theme.key, slides: { [slideId]: record } },
+                {
+                    markdownpoint: FORMAT_VERSION,
+                    type: 'presentation',
+                    id,
+                    theme: theme.key,
+                    'background-image-style': NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE,
+                    slides: { [slideId]: record }
+                },
                 null,
                 2
             ) + '\n'

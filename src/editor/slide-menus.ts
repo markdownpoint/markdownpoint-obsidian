@@ -22,15 +22,28 @@ import { Text } from '@codemirror/state';
 import { ViewPlugin } from '@codemirror/view';
 import type { EditorView } from '@codemirror/view';
 import type { PresentationReader } from '../presentation/reader.ts';
-import { slideForMenu } from './menu-target.ts';
+import { aboveRule, slideForGap, slideForMenu } from './menu-target.ts';
 import { uiText } from '../ui-text.ts';
 import { presentationCompanionPath } from '../format/recognition.ts';
+
+// The draft's parts that name their slide, which a menu opened on them is for
+const boundaries = '.markdownpoint-slide-boundary[data-slide]';
+const slideParts = `${boundaries}, .markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide], .markdownpoint-slide-column[data-slide]`;
+
+/** The slide boundary level with a point in the margin beside the draft. */
+function boundaryBeside(view: EditorView, y: number): HTMLElement | null {
+    for (const boundary of view.contentDOM.querySelectorAll<HTMLElement>(boundaries)) {
+        const bounds = boundary.getBoundingClientRect();
+        if (y >= bounds.top && y < bounds.bottom) return boundary;
+    }
+    return null;
+}
 
 export interface SlideMenuTarget {
     readonly owner: MarkdownView;
     readonly file: TFile;
     readonly path: string;
-    readonly document: string;
+    readonly presentationId: string;
     readonly slide: string | null;
 }
 
@@ -136,7 +149,7 @@ export class SlideMenus extends Component {
         }
         if (!section) {
             // Empty space belongs to the preceding rendered section; top padding uses
-            // the first one. Section/composition text is excluded by the source target.
+            // the first one. Section text is excluded by the source target.
             let top = -Infinity;
             let first: HTMLElement | null = null;
             let firstTop = Infinity;
@@ -251,24 +264,26 @@ export class SlideMenus extends Component {
             target.owner.file === target.file &&
             target.file.path === target.path &&
             this.app.workspace.getLeavesOfType('markdown').some(leaf => leaf.view === target.owner) &&
-            this.reader.snapshot(target.file, target.owner.getViewData())?.id === target.document
+            this.reader.snapshot(target.file, target.owner.getViewData())?.id === target.presentationId
         );
     }
 
-    private target(owner: MarkdownView, position: number, explicitId?: string): SlideMenuTarget | null {
+    /** `gap` says the menu opened in the gap above the named slide's rule, which belongs to the preceding slide. */
+    private target(owner: MarkdownView, position: number, explicitId?: string, gap = false): SlideMenuTarget | null {
         const file = owner.file;
         if (!this.running || !file) return null;
         const markdown = owner.getViewData();
         const snapshot = this.reader.snapshot(file, markdown);
         if (!snapshot) return null;
+        const named = explicitId ? snapshot.document.slides.find(slide => slide.id === explicitId) : undefined;
         const slide = explicitId
-            ? snapshot.document.slides.find(slide => slide.id === explicitId)
+            ? named && (gap ? slideForGap(snapshot.document, named, markdown, snapshot.bodyStart) : named)
             : slideForMenu(snapshot.document, position, markdown, snapshot.bodyStart);
         return slide ||
             (!snapshot.document.slides.length &&
                 (position >= snapshot.bodyStart ||
                     (owner.getMode() === 'source' && owner.containerEl.querySelector('.markdownpoint-empty-draft') !== null)))
-            ? { owner, file, path: file.path, document: snapshot.id, slide: slide?.id ?? null }
+            ? { owner, file, path: file.path, presentationId: snapshot.id, slide: slide?.id ?? null }
             : null;
     }
 
@@ -279,11 +294,13 @@ export class SlideMenus extends Component {
         const content = node !== null && view.contentDOM.contains(node);
         if (content !== capture) return;
         const element = node?.instanceOf(Element) ? node : node?.parentElement;
-        const explicitId = element?.closest<HTMLElement>(
-            '.markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide], .markdownpoint-slide-column[data-slide]'
-        )?.dataset.slide;
+        const explicit = element?.closest<HTMLElement>(slideParts);
+        // The gap above a boundary's rule belongs to the preceding slide, and so does the margin beside it
+        const boundary = explicit ? (explicit.matches(boundaries) ? explicit : null) : content ? null : boundaryBeside(view, event.clientY);
+        const gap = boundary !== null && aboveRule(boundary, event.clientY);
+        const explicitId = gap ? boundary.dataset.slide : explicit?.dataset.slide;
         const position = view.posAtCoords({ x: event.clientX, y: event.clientY }, false);
-        const target = position === null && !explicitId ? null : this.target(owner, position ?? 0, explicitId);
+        const target = position === null && !explicitId ? null : this.target(owner, position ?? 0, explicitId, gap);
         // Native Obsidian creates the content menu asynchronously. Capture its pointer
         // target, then contribute through editor-menu rather than replacing text items.
         if (element?.closest('.markdownpoint-slide-tools') && target) {
@@ -304,9 +321,7 @@ export class SlideMenus extends Component {
         const focused = view.dom.ownerDocument.activeElement;
         const control =
             focused?.instanceOf(HTMLElement) && view.contentDOM.contains(focused) && focused !== view.contentDOM ? focused : null;
-        const explicitId = control?.closest<HTMLElement>(
-            '.markdownpoint-notes[data-slide], .markdownpoint-slide-tools[data-slide], .markdownpoint-slide-column[data-slide]'
-        )?.dataset.slide;
+        const explicitId = control?.closest<HTMLElement>(slideParts)?.dataset.slide;
         if (!this.target(owner, view.state.selection.main.head, explicitId)) return;
         const bounds = control?.getBoundingClientRect() ?? view.coordsAtPos(view.state.selection.main.head);
         if (!bounds) return;

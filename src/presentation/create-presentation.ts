@@ -18,15 +18,15 @@
 
 import { Component, Modal, Notice, TFile, TFolder, getFrontMatterInfo } from 'obsidian';
 import type { App } from 'obsidian';
-import { prepareNewPresentation, presentationFolderName } from '../format/new-presentation.ts';
-import { orderedLayouts } from '../format/new-slide.ts';
+import { mintId } from '../format/id-allocation.ts';
+import { firstSlideLayout, prepareNewPresentation, presentationFolderName } from '../format/new-presentation.ts';
 import { slideStructure } from '../format/structure.ts';
-import { presentationCompanionPath } from '../format/recognition.ts';
 import { indexPresentation } from '../format/document.ts';
 import { basicThemeFiles } from '../themes/basic.ts';
 import { renderThumbnail } from '../outline/thumbnail.ts';
 import { createPresentationFiles } from './create-files.ts';
-import { creationThemes, inFolder, readCreationTheme } from './theme-catalog.ts';
+import { creationParent, enclosingPresentation } from './presentation-files.ts';
+import { creationThemes, inFolder, opensAsMade, readCreationTheme } from './theme-catalog.ts';
 import type { CreationTheme } from './theme-catalog.ts';
 import { uiText } from '../ui-text.ts';
 
@@ -52,8 +52,8 @@ export class PresentationCreation extends Component {
         void creationThemes(this.app.vault)
             .then(themes => {
                 if (!this.running || revision !== this.revision) return;
-                const active = this.app.workspace.getActiveFile();
-                const parent = active && presentationCompanionPath(active.path) ? active.parent?.parent : active?.parent;
+                const folder = this.app.workspace.getActiveFile()?.parent;
+                const parent = folder && creationParent(folder);
                 this.modal = new CreationModal(
                     this.app,
                     themes,
@@ -90,9 +90,9 @@ export class PresentationCreation extends Component {
             (parent.isRoot() ? this.app.vault.getRoot() : this.app.vault.getFolderByPath(parentPath)) === parent;
         const theme = choice.folder ? await readCreationTheme(this.app.vault, choice.folder) : choice.theme;
         if (!theme || theme.id !== choice.theme.id) throw new Error(uiText.presentations.themeChanged);
-        const made = prepareNewPresentation(theme, crypto.randomUUID(), `id-${crypto.randomUUID()}`);
-        if (!made) throw new Error(uiText.presentations.themeChanged);
-        const files = new Map<string, string | TFile>();
+        const made = prepareNewPresentation(theme, crypto.randomUUID(), mintId());
+        if (!made || !opensAsMade(inFolder(parentPath, name), made)) throw new Error(uiText.presentations.themeChanged);
+        const files = new Map<string, string | Uint8Array | TFile>();
         if (choice.folder) {
             const prefix = choice.folder.path + '/';
             for (const file of this.app.vault.getFiles())
@@ -115,6 +115,8 @@ export class PresentationCreation extends Component {
                 },
                 createFolder: path => this.app.vault.createFolder(path),
                 create: (path, source) => this.app.vault.create(path, source),
+                // Obsidian takes an ArrayBuffer: the bytes' own, never more of a buffer they view.
+                createBinary: (path, bytes) => this.app.vault.createBinary(path, bytes.slice().buffer),
                 copy: (file: TFile, path) => this.app.vault.copy(file, path),
                 trash: file => this.app.fileManager.trashFile(file)
             },
@@ -175,7 +177,7 @@ class CreationModal extends Modal {
             });
             button.tabIndex = choice === selected ? 0 : -1;
             const preview = button.createSpan({ cls: 'markdownpoint-creation-preview markdownpoint-thumbnail' });
-            const schematic = () => renderThumbnail(preview, slideStructure({ layout: orderedLayouts(choice.theme)[0] }, choice.theme));
+            const schematic = () => renderThumbnail(preview, slideStructure({ layout: firstSlideLayout(choice.theme) }, choice.theme));
             if (choice.preview) {
                 const image = preview.createEl('img', { attr: { src: choice.preview, alt: '', loading: 'lazy', draggable: 'false' } });
                 image.addEventListener(
@@ -240,6 +242,14 @@ class CreationModal extends Modal {
             }
             if (!destination) {
                 error.setText(uiText.presentations.failed);
+                return;
+            }
+            const around = enclosingPresentation(destination);
+            if (around) {
+                error.setText(
+                    uiText.presentations.insidePresentation({ presentation: around.isRoot() ? this.app.vault.getName() : around.name })
+                );
+                folder.focus();
                 return;
             }
             if (this.app.vault.getAbstractFileByPath(inFolder(destination.path, cleaned))) {

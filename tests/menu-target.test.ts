@@ -19,7 +19,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { indexPresentation } from '../src/format/document.ts';
-import { slideForMenu } from '../src/editor/menu-target.ts';
+import { slideForGap, slideForMenu } from '../src/editor/menu-target.ts';
 
 const source =
     '\n<!-- section: opening -->\nOpening\n<!-- slide: one -->\n<!-- text: body -->\nFirst\n\n\n<!-- slide: two -->\n<!-- text: body -->\nSecond\n';
@@ -33,25 +33,39 @@ test('slide menu targets fields, inter-slide whitespace and EOF without targetin
     assert.equal(slideForMenu(document, source.indexOf('Opening'), source), null);
 });
 
-test('draft margins select their nearest slide but reusable composition text is excluded', () => {
-    const source =
-        '\n\n<!-- slide: one -->\n<!-- text: title -->\nFirst\n<!-- composition: reusable -->\n<!-- control: title -->\nShared words\n';
+test('draft margins select their nearest slide', () => {
+    const source = '\n\n<!-- slide: one -->\n<!-- text: title -->\nFirst\n';
     const document = indexPresentation(source, 0)!;
     assert.equal(slideForMenu(document, 0, source)?.id, 'one');
-    assert.equal(slideForMenu(document, source.indexOf('Shared'), source), null);
-    assert.equal(slideForMenu(document, source.length, source), null);
+    assert.equal(slideForMenu(document, source.length + 1, source), null);
     assert.equal(slideForMenu(document, -1, source), null);
-    assert.equal(slideForMenu({ slides: [], compositions: [], sections: [] }, 0, ''), null);
+    assert.equal(slideForMenu({ slides: [], sections: [], laterMarkers: [] }, 0, ''), null);
 });
 
-test("a leading composition and frontmatter do not borrow the first slide's actions", () => {
-    const source =
-        '<!-- composition: shared -->\n<!-- control: title -->\nReusable words\n<!-- slide: actual -->\n<!-- text: body -->\nSlide words\n';
-    const document = indexPresentation(source, 0)!;
-    assert.equal(slideForMenu(document, source.indexOf('Reusable'), source), null);
+test("frontmatter does not borrow the first slide's actions", () => {
     const header = '---\nmarkdownpoint: "1.0"\n---\n';
     const plain = header + '\n<!-- slide: actual -->\n<!-- text: body -->\nWords\n';
     const indexed = indexPresentation(plain, header.length)!;
     assert.equal(slideForMenu(indexed, 0, plain, header.length), null);
     assert.equal(slideForMenu(indexed, header.length, plain, header.length)?.id, 'actual');
+});
+
+test("the gap above a slide's rule belongs to the preceding slide; at the top and after a section's heading it stays the slide's own", () => {
+    const source =
+        '<!-- slide: one -->\n\n<!-- text: body -->\nFirst\n\n<!-- slide: two -->\n\n<!-- text: body -->\nSecond\n\n' +
+        '<!-- section: more -->\n# More\n\n<!-- slide: three -->\n\n<!-- text: body -->\nThird\n';
+    const document = indexPresentation(source, 0)!;
+    const gap = (id: string) =>
+        slideForGap(
+            document,
+            document.slides.find(slide => slide.id === id)!,
+            source
+        ).id;
+    assert.equal(gap('two'), 'one');
+    assert.equal(gap('one'), 'one');
+    assert.equal(gap('three'), 'three');
+    const header = '---\nmarkdownpoint: "1.0"\n---\n';
+    const top = `${header}<!-- slide: top -->\n\n<!-- text: body -->\nWords\n`;
+    const indexed = indexPresentation(top, header.length)!;
+    assert.equal(slideForGap(indexed, indexed.slides[0]!, top, header.length).id, 'top');
 });

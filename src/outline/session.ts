@@ -28,13 +28,15 @@ export class OutlineSession {
         return this.current;
     }
 
-    follow(presentation: OutlinePresentation | null): void {
+    /** Whether the state changed: the reader hands a save of unchanged words the outline it already follows. */
+    follow(presentation: OutlinePresentation | null): boolean {
+        if (presentation === this.current.presentation) return false;
         const order = presentation?.slides.map(slide => slide.id) ?? [];
         const present = new Set(order);
         const same =
             presentation !== null &&
             presentation.path === this.current.presentation?.path &&
-            presentation.documentId === this.current.presentation.documentId;
+            presentation.id === this.current.presentation.id;
         const previous = same ? reconcileSelection(order, this.current.selection) : selectionOf<string>([], null);
         const removed = new Set([...this.current.selection.selected].filter(id => !present.has(id)));
         const before =
@@ -49,6 +51,7 @@ export class OutlineSession {
               : selectionOf(order[0] ? [order[0]] : [], order[0] ?? null);
         const activeSlideId = same && present.has(this.current.activeSlideId ?? '') ? this.current.activeSlideId : selection.cursor;
         this.current = { presentation, activeSlideId, selection };
+        return true;
     }
 
     selectForMenu(id: string): boolean {

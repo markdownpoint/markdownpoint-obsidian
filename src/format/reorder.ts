@@ -52,6 +52,7 @@ export function reorderSlideSource(
         ...document.slides.map(slide => ({ kind: 'slide' as const, id: slide.id, from: slide.from, to: slide.to })),
         ...document.sections.map(section => ({ kind: 'section' as const, id: section.id, from: section.from, to: section.to }))
     ].sort((a, b) => a.from - b.from);
+    type Block = (typeof blocks)[number];
     if (
         !blocks.length ||
         (document.sections.length > 0 && blocks[0]!.kind !== 'section') ||
@@ -87,14 +88,15 @@ export function reorderSlideSource(
     // In particular, a final unfinished code fence cannot swallow a slide when
     // moved earlier. Validate once per explicit move, never during idle rendering.
     const indexed = indexPresentation(proposed, blocks[0]!.from);
+    const planned = (kind: Block['kind']): string =>
+        next
+            .filter(block => block.kind === kind)
+            .map(block => block.id)
+            .join('\n');
     if (
         !indexed ||
-        indexed.slides.map(slide => slide.id).join('\n') !==
-            next
-                .filter(block => block.kind === 'slide')
-                .map(block => block.id)
-                .join('\n') ||
-        indexed.sections.map(section => section.id).join('\n') !== document.sections.map(section => section.id).join('\n')
+        indexed.slides.map(slide => slide.id).join('\n') !== planned('slide') ||
+        indexed.sections.map(section => section.id).join('\n') !== planned('section')
     )
         return null;
     return { from, to, insert, document: indexed };

@@ -156,20 +156,13 @@ test('explicit slide insertion passes Live Preview boundary protection without w
     assert.equal(state.update({ changes: { from: 0, to: 10 }, userEvent: 'delete' }).docChanged, false);
 });
 
-test('middle insertion with a tail definition is one native undo and keeps CRLF caret positions', () => {
+test('middle insertion of a CRLF fragment is one native undo and keeps its caret position', () => {
     const source = '<!-- slide: copy -->\r\n<!-- text: title -->\r\n<!-- text: body -->\r\nWords\r\n';
-    const definition = { id: 'card', markdown: '<!-- composition: card -->\r\n<!-- control: caption -->\r\nDefault.\r\n', record: '{}' };
     for (const livePreview of [false, true]) {
         let state = EditorState.create({ doc: markdown, extensions: [history()] });
-        const plan = planSlideInsertion(markdown, indexPresentation(markdown, 0)!, companion, [prepared('copy', source)], 'one', 0, [
-            definition
-        ])!;
-        state = slideEditTransactions(state, slideInsertionTransaction(state, plan, 'copy', livePreview)!).at(-1)!.state;
+        state = insert(state, [prepared('copy', source)], 'one', livePreview);
         const inserted = state.doc.toString();
-        assert.deepEqual(
-            indexPresentation(inserted, 0)!.compositions.map(part => part.id),
-            ['card']
-        );
+        assert.deepEqual(idsOf(state), ['one', 'copy', 'two']);
         assert.equal(state.doc.lineAt(state.selection.main.head).text, livePreview ? '' : '<!-- text: title -->');
         assert.equal(undoDepth(state), 1);
         const target = {

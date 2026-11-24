@@ -17,44 +17,101 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
 import { basicTheme, basicThemeFiles } from '../src/themes/basic.ts';
-import { prepareNewPresentation } from '../src/format/new-presentation.ts';
+import { firstSlideLayout, prepareNewPresentation } from '../src/format/new-presentation.ts';
+import { NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE } from '../src/core/new-presentation-style.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { readJsonObject } from '../src/format/json.ts';
 import { presentationIdentity } from '../src/format/recognition.ts';
-import { themeDocument, themeAssetPaths } from '../src/format/embedded-theme.ts';
+import { themeDocument, themeFilePaths } from '../src/format/embedded-theme.ts';
 
-const document = '12345678-1234-4234-8234-123456789abc';
+const presentationId = '12345678-1234-4234-8234-123456789abc';
 
-test('the bundled licensed theme has a valid master and every ordered layout', () => {
-    assert.equal(basicThemeFiles.size, 14);
-    assert.equal(themeDocument(basicThemeFiles.get('master.json')!, 'master')?.id, basicTheme.id);
+test('the bundled licensed theme has a valid master, every ordered layout and the picture its image layouts hold', () => {
+    assert.equal(basicThemeFiles.size, 15);
+    assert.equal(themeDocument(basicThemeFiles.get('master.json') as string, 'master')?.id, basicTheme.id);
     assert.equal(basicTheme.layouts.size, 13);
     for (const [key, layout] of basicTheme.layouts) {
         assert.ok(themeDocument(layout.source, 'layout'), key);
         assert.equal(basicThemeFiles.get(`${key}.json`), layout.source);
-        assert.doesNotMatch(layout.source, /layout-preview\.jpg/);
     }
 });
 
-test('a new presentation has matching identity, the chosen theme, and empty title fields', () => {
-    const made = prepareNewPresentation(basicTheme, document, 'opening')!;
+test("Basic's theme files are MarkdownPoint's, byte for byte, so a slide pastes between a presentation the app made and one the plugin made", () => {
+    for (const [file, contents] of basicThemeFiles)
+        if (typeof contents === 'string')
+            assert.equal(contents, readFileSync(new URL(`../src/themes/basic/${file}`, import.meta.url), 'utf8'), file);
+});
+
+test('a new presentation holds every file its Basic theme references, the layouts’ preview as the picture’s bytes', () => {
+    const referenced = themeFilePaths(basicTheme);
+    assert.ok(referenced?.includes('media/layout-preview.jpg'), 'the image layouts hold the preview');
+    for (const file of referenced!) assert.ok(basicThemeFiles.has(file), file);
+    const preview = readFileSync(new URL('../src/themes/basic/media/layout-preview.jpg', import.meta.url));
+    assert.deepEqual(basicThemeFiles.get('media/layout-preview.jpg'), new Uint8Array(preview));
+});
+
+test('a new presentation has matching identity, the chosen theme, and a first slide open on its first placeholder', () => {
+    const made = prepareNewPresentation(basicTheme, presentationId, 'opening')!;
     const companion = readJsonObject(made.companion)!;
-    assert.equal(presentationIdentity({ markdownpoint: '1.0', id: document }, companion), document);
+    assert.equal(presentationIdentity({ markdownpoint: '1.0', id: presentationId }, companion), presentationId);
     assert.equal(companion.theme, 'basic');
     assert.deepEqual(companion.slides, { opening: { layout: 'title' } });
     const body = made.markdown.indexOf('<!-- slide:');
     const indexed = indexPresentation(made.markdown, body)!;
     assert.equal(indexed.slides.length, 1);
-    assert.match(made.markdown, /<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n\n<!-- text: title -->\n\n<!-- text: body -->\n$/);
+    assert.equal(
+        made.markdown,
+        `---\nmarkdownpoint: "1.0"\nid: ${presentationId}\n---\n\n<!-- slide: opening -->\n\n<!-- text: eyebrow -->\n`
+    );
     assert.doesNotMatch(made.markdown, /Presentation title|Presentation subtitle|Author and date/);
+});
+
+test("a new presentation's text boxes start as its theme's master says, and its backgrounds in MarkdownPoint's style, as New does", () => {
+    const companion = readJsonObject(prepareNewPresentation(basicTheme, presentationId, 'opening')!.companion)!;
+    assert.deepEqual(
+        basicTheme.master.value['default-text-box'],
+        { 'text-style': 'body' },
+        "Basic's master starts new text boxes in its body style"
+    );
+    assert.equal(Object.hasOwn(companion, 'default-text-box'), false, 'the presentation holds no default of its own');
+    assert.equal(companion['background-image-style'], NEW_PRESENTATION_BACKGROUND_IMAGE_STYLE);
+    // The keys stand where MarkdownPoint writes them, between the theme and the slides.
+    assert.deepEqual(Object.keys(companion), ['markdownpoint', 'type', 'id', 'theme', 'background-image-style', 'slides']);
+});
+
+test('a new presentation starts on the first of title, content-with-header, content and blank its theme has, else its first, as MarkdownPoint picks it', () => {
+    const order = ['section', 'blank', 'content', 'content-with-header', 'title'];
+    const ordered = { ...basicTheme, master: { ...basicTheme.master, value: { ...basicTheme.master.value, 'layout-order': order } } };
+    const starts = (without: readonly string[]) => {
+        const theme = { ...ordered, layouts: new Map([...ordered.layouts].filter(([key]) => !without.includes(key))) };
+        const layout = firstSlideLayout(theme);
+        // The theme chooser previews the layout the new presentation starts on.
+        assert.deepEqual(readJsonObject(prepareNewPresentation(theme, presentationId, 'opening')!.companion)?.slides, {
+            opening: { layout }
+        });
+        return layout;
+    };
+    assert.equal(starts([]), 'title');
+    assert.equal(starts(['title']), 'content-with-header');
+    assert.equal(starts(['title', 'content-with-header']), 'content');
+    assert.equal(starts(['title', 'content-with-header', 'content']), 'blank');
+    assert.equal(starts(['title', 'content-with-header', 'content', 'blank']), 'section');
+    // With no layout-order, its first by key, whatever order the vault lists the files in.
+    const { 'layout-order': _order, ...unordered } = basicTheme.master.value;
+    const preferred = ['title', 'content-with-header', 'content', 'blank'];
+    const rest = [...basicTheme.layouts].filter(([key]) => !preferred.includes(key));
+    assert.ok(rest.length > 1);
+    const reversed = { ...basicTheme, master: { ...basicTheme.master, value: unordered }, layouts: new Map(rest.reverse()) };
+    assert.equal(firstSlideLayout(reversed), rest.map(([key]) => key).sort()[0]);
 });
 
 test('each bundled layout can start a presentation without altering the template', () => {
     const before = JSON.stringify([...basicThemeFiles]);
     for (const key of basicTheme.layouts.keys()) {
-        const made = prepareNewPresentation(basicTheme, document, 'opening', key)!;
+        const made = prepareNewPresentation(basicTheme, presentationId, 'opening', key)!;
         assert.ok(made, key);
         assert.deepEqual(readJsonObject(made.companion)?.slides, { opening: { layout: key } });
         assert.equal(indexPresentation(made.markdown, made.markdown.indexOf('<!-- slide:'))?.slides.length, 1);
@@ -64,45 +121,46 @@ test('each bundled layout can start a presentation without altering the template
 
 test('creation refuses invalid identities, keys and missing layouts before returning file contents', () => {
     assert.equal(prepareNewPresentation(basicTheme, 'invalid', 'opening'), null);
-    assert.equal(prepareNewPresentation(basicTheme, document, '../outside'), null);
-    assert.equal(prepareNewPresentation(basicTheme, document, 'opening', 'missing'), null);
-    assert.equal(prepareNewPresentation({ ...basicTheme, key: '../outside' }, document, 'opening'), null);
-    assert.equal(prepareNewPresentation({ ...basicTheme, layouts: new Map() }, document, 'opening'), null);
+    assert.equal(prepareNewPresentation(basicTheme, presentationId, '../outside'), null);
+    assert.equal(prepareNewPresentation(basicTheme, presentationId, 'opening', 'missing'), null);
+    assert.equal(prepareNewPresentation({ ...basicTheme, key: '../outside' }, presentationId, 'opening'), null);
+    assert.equal(prepareNewPresentation({ ...basicTheme, layouts: new Map() }, presentationId, 'opening'), null);
 });
 
 test('theme creation inventories media variants, overrides and embedded fonts without sample packages', () => {
-    assert.deepEqual(themeAssetPaths(basicTheme), []);
-    const make = (asset: unknown) => ({
+    assert.deepEqual(themeFilePaths(basicTheme), ['media/layout-preview.jpg']);
+    const make = (file: unknown) => ({
         ...basicTheme,
         master: {
             ...basicTheme.master,
             value: {
                 ...basicTheme.master.value,
-                objects: [{ file: asset }],
+                objects: [{ file }],
                 'font-files': { Custom: ['fonts/custom.eot'] }
             }
         }
     });
-    assert.deepEqual(themeAssetPaths(make({ light: 'media/light.svg', dark: 'media/dark.svg' })), [
+    assert.deepEqual(themeFilePaths(make({ light: 'media/light.svg', dark: 'media/dark.svg' })), [
         'media/light.svg',
         'media/dark.svg',
+        'media/layout-preview.jpg',
         'fonts/custom.eot'
     ]);
     assert.deepEqual(
-        themeAssetPaths({
+        themeFilePaths({
             ...basicTheme,
             master: {
                 ...basicTheme.master,
                 value: {
                     ...basicTheme.master.value,
                     objects: [
-                        { type: 'video', 'poster-frame': 2.5 },
-                        { type: 'web-video', 'poster-frame': 'media/poster.png' }
+                        { type: 'video', 'poster-time': 2.5 },
+                        { type: 'web-video', poster: 'media/poster.png' }
                     ]
                 }
             }
         }),
-        ['media/poster.png']
+        ['media/poster.png', 'media/layout-preview.jpg']
     );
     for (const path of [
         '../outside.svg',
@@ -110,23 +168,12 @@ test('theme creation inventories media variants, overrides and embedded fonts wi
         'media/../outside.svg',
         'https://example.com/file.svg',
         'previews/cover.jpg',
-        'example/media/file.jpg'
+        'example/media/file.jpg',
+        // A theme's file follows MarkdownPoint's one path rule.
+        'media/a#b.svg',
+        'media/con.svg',
+        'media/dir./file.svg'
     ]) {
-        assert.equal(themeAssetPaths(make(path)), null, path);
+        assert.equal(themeFilePaths(make(path)), null, path);
     }
-});
-
-test('a theme master or layout that still holds the words before 1.0 is not read, so no path copies it', () => {
-    const master = '"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"';
-    const layout = '"markdownpoint":"1.0","kind":"layout"';
-    for (const old of [
-        '"objects":[{"id":"logo","type":"image","asset":"media/logo.svg"}]',
-        '"objects":[{"id":"card","type":"composition","source":"card"}]',
-        '"overrides":{"words":{"model":{"asset":"models/a.glb"}}}',
-        '"background":{"image":"media/back.png","image-result":{"source":"generated/first.png"}}'
-    ]) {
-        assert.equal(themeDocument(`{${master},${old}}`, 'master'), null, old);
-        assert.equal(themeDocument(`{${layout},${old}}`, 'layout'), null, old);
-    }
-    assert.notEqual(themeDocument(`{${master},"objects":[{"id":"logo","type":"image","file":"media/logo.svg"}]}`, 'master'), null);
 });

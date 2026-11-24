@@ -17,12 +17,10 @@
  */
 
 import type { SlideStructure } from '../format/structure.ts';
-import { Lexer } from 'marked';
-import { decodeHTMLStrict } from 'entities';
-import { isRecord } from '../format/recognition.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import type { ListSelection } from '../selection/list-selection.ts';
 import { textBindingName } from '../format/text-binding.ts';
+import { holdsHtml, inlineText, linkTokens, wordTokens } from '../format/link-tokens.ts';
 
 export interface OutlineSlide {
     readonly id: string;
@@ -40,7 +38,7 @@ export interface OutlineSection {
 
 /** A verified format adapter supplies this view model; the outline never discovers files itself. */
 export interface OutlinePresentation {
-    readonly documentId: string;
+    readonly id: string;
     readonly path: string;
     readonly slides: readonly OutlineSlide[];
     readonly sections: readonly OutlineSection[];
@@ -50,20 +48,6 @@ export interface OutlineState {
     readonly presentation: OutlinePresentation | null;
     readonly activeSlideId: string | null;
     readonly selection: ListSelection<string>;
-}
-
-function inlineText(tokens: readonly unknown[]): string {
-    return tokens
-        .map(token => {
-            if (!isRecord(token)) return '';
-            if (token.type === 'html') return '';
-            if (token.type === 'br') return '\n';
-            const children: unknown = token.tokens;
-            if (Array.isArray(children)) return inlineText(children);
-            if (typeof token.text !== 'string') return '';
-            return token.type === 'text' ? decodeHTMLStrict(token.text) : token.text;
-        })
-        .join('');
 }
 
 /** Prefer authored Title text, then the first other text; notes never supply labels. */
@@ -83,7 +67,7 @@ export function outlineSlides(
             // one token rather than exposing its middle lines as an outline label.
             const source = markdown.slice(block.contentFrom, block.to).replace(/^#{1,6}[ \t]+/gm, '');
             title =
-                inlineText(Lexer.lexInline(source))
+                inlineText(wordTokens(source))
                     .split(/\r?\n/)
                     .find(line => line.trim())
                     ?.trim() ?? '';
@@ -97,11 +81,13 @@ export function outlineSlides(
 export function outlineSections(markdown: string, document: PresentationDocument): OutlineSection[] {
     const sections: OutlineSection[] = [];
     for (const section of document.sections) {
-        const tokens = Lexer.lex(markdown.slice(section.markerTo, section.to).replace(/\r\n?/g, '\n').trim()).filter(
+        const tokens = linkTokens(markdown.slice(section.markerTo, section.headingTo).replace(/\r\n?/g, '\n').trim()).filter(
             token => token.type !== 'space'
         );
         const heading = tokens[0];
-        let title = heading?.type === 'heading' && heading.depth === 1 ? inlineText(heading.tokens ?? []).trim() : '';
+        const words = heading?.type === 'heading' && heading.depth === 1 ? (heading.tokens ?? []) : [];
+        // MarkdownPoint refuses a heading line with a comment, a paragraph id's included, or a tag: it names no section.
+        let title = holdsHtml(words) ? '' : inlineText(words).trim();
         if ([...title].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) title = '';
         sections.push({ id: section.id, title, line: section.line });
     }

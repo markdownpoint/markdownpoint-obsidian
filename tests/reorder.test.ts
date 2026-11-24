@@ -53,7 +53,7 @@ test('a source step keeps split selections split and leaves slides at the edge i
 test('only the changed span is replaced; notes, unknown bindings, comments and frontmatter stay byte-identical', () => {
     const prefix = '---\nmarkdownpoint: "1.0"\nx-extra: keep this\n---\n\n';
     const rich =
-        '<!-- slide: bravo -->\n<!-- text: chart.caption -->\nÅ 東京 👩🏽‍💻\n\n\n<!-- Custom comment: keep -->\n<!-- notes -->\nRehearsal.\n\n\n';
+        '<!-- slide: bravo -->\n<!-- text: chart-caption -->\nÅ 東京 👩🏽‍💻\n\n\n<!-- Custom comment: keep -->\n<!-- notes -->\nRehearsal.\n\n\n';
     const markdown = prefix + slide('alpha') + rich + slide('charlie') + slide('delta');
     const document = indexPresentation(markdown, prefix.length)!;
     const change = stepSlideSource(markdown, document, ['bravo'], 'down')!;
@@ -85,11 +85,10 @@ test('several selected slides can cross different section starts in one replacem
     );
 });
 
-test('CRLF and literal code markers survive a move, and reusable compositions stay outside it', () => {
+test('CRLF and literal code markers survive a move', () => {
     const first = '<!-- slide: alpha -->\n<!-- text: body -->\n```md\n<!-- slide: example -->\n```\n\n';
-    const tail = '<!-- composition: shared -->\n<!-- control: caption -->\nReusable words.\n';
-    const markdown = (first + slide('bravo') + tail).replace(/\n/g, '\r\n');
-    assert.equal(moved(markdown, ['bravo'], 'up'), (slide('bravo') + first + tail).replace(/\n/g, '\r\n'));
+    const markdown = (first + slide('bravo')).replace(/\n/g, '\r\n');
+    assert.equal(moved(markdown, ['bravo'], 'up'), (slide('bravo') + first).replace(/\n/g, '\r\n'));
     assert.equal(stepSlideSource(markdown, indexPresentation(markdown, 0)!, ['bravo'], 'down'), null);
 });
 
@@ -123,15 +122,13 @@ test('a final unfinished fence cannot swallow another slide when moved earlier',
     assert.ok(stepSlideSource(markdown + '```\n', indexPresentation(markdown + '```\n', 0)!, ['bravo'], 'up'));
 });
 
-test('section and slide IDs can match, while missing targets and interleaved compositions cannot move', () => {
+test('section and slide IDs can match, while missing targets cannot move', () => {
     const markdown = section('same') + slide('same') + slide('bravo');
     assert.equal(moved(markdown, ['same'], 'down'), section('same') + slide('bravo') + slide('same'));
     const document = indexPresentation(markdown, 0)!;
     assert.equal(stepSlideSource(markdown, document, [], 'down'), null);
     assert.equal(stepSlideSource(markdown, document, ['missing'], 'down'), null);
     assert.equal(stepSlideSource(markdown, document, ['same', 'missing'], 'down'), null);
-    const interleaved = slide('alpha') + '<!-- composition: shared -->\n<!-- control: body -->\nWords.\n' + slide('bravo');
-    assert.equal(stepSlideSource(interleaved, indexPresentation(interleaved, 0)!, ['bravo'], 'up'), null);
 });
 
 test('a drop gathers split selections in source order before or after the target slide', () => {
@@ -150,16 +147,15 @@ test('a drop gathers split selections in source order before or after the target
     );
 });
 
-test('dropping on a section places the whole group at its start, retaining empty sections and compositions', () => {
-    const tail = '<!-- composition: shared -->\n<!-- control: caption -->\nReusable.\n';
-    const markdown = section('opening') + slide('alpha') + section('empty') + section('ending') + slide('bravo') + slide('charlie') + tail;
+test('dropping on a section places the whole group at its start, retaining empty sections', () => {
+    const markdown = section('opening') + slide('alpha') + section('empty') + section('ending') + slide('bravo') + slide('charlie');
     assert.equal(
         dropped(markdown, ['charlie', 'alpha'], { kind: 'section', id: 'empty' }),
-        section('opening') + section('empty') + slide('alpha') + slide('charlie') + section('ending') + slide('bravo') + tail
+        section('opening') + section('empty') + slide('alpha') + slide('charlie') + section('ending') + slide('bravo')
     );
     assert.equal(
         dropped(markdown, ['bravo'], { kind: 'section', id: 'opening' }),
-        section('opening') + slide('bravo') + slide('alpha') + section('empty') + section('ending') + slide('charlie') + tail
+        section('opening') + slide('bravo') + slide('alpha') + section('empty') + section('ending') + slide('charlie')
     );
 });
 
@@ -176,7 +172,7 @@ test('no-op and missing drop targets leave the source untouched', () => {
 });
 
 test('a drop preserves notes and unknown text bytes, and validates an unfinished final fence', () => {
-    const rich = '<!-- slide: bravo -->\n<!-- text: custom.caption -->\nAuthored words.\n\n\n<!-- notes -->\nA reminder.\n\n';
+    const rich = '<!-- slide: bravo -->\n<!-- text: custom-caption -->\nAuthored words.\n\n\n<!-- notes -->\nA reminder.\n\n';
     const markdown = slide('alpha') + rich + slide('charlie');
     assert.equal(dropped(markdown, ['bravo'], { kind: 'slide', id: 'charlie', edge: 'after' }), slide('alpha') + slide('charlie') + rich);
     const unfinished = slide('alpha') + '<!-- slide: bravo -->\n<!-- text: body -->\n```md\nExample';

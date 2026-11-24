@@ -60,13 +60,21 @@ export const th: Translations = {
         cancel: 'ยกเลิก',
         invalidName: 'กรอกชื่อที่ไม่มีเครื่องหมายทับหรืออักขระที่สงวนไว้',
         exists: 'มีไฟล์หรือโฟลเดอร์ชื่อนี้อยู่แล้ว',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint ไม่สามารถสร้างงานนำเสนอภายใน “${presentation}” ได้ เลือกโฟลเดอร์ที่อยู่นอก “${presentation}”`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint ไม่สามารถเปิด “${presentation}” ได้ขณะที่อยู่ภายใน “${outer}” ย้ายโฟลเดอร์ “${presentation}” ออกจาก “${outer}” แล้วจึงเปิด`,
         failed: 'ไม่สามารถสร้างงานนำเสนอได้ ตรวจสอบโฟลเดอร์แล้วลองอีกครั้ง',
         openFailed: 'สร้างงานนำเสนอแล้วแต่เปิดไม่ได้ เปิด slides.md ในโฟลเดอร์ของงานนำเสนอ',
         openChanged: 'งานนำเสนอมีการเปลี่ยนแปลงหรืออ่านไม่ได้ ลองอีกครั้ง',
         handoffFailed: 'ไม่สามารถบันทึกและเปิดงานนำเสนอได้',
         themeChanged: 'ธีมมีการเปลี่ยนแปลงหรือใช้งานไม่ได้ เปิดหน้าต่างนี้ใหม่แล้วเลือกธีมอีกครั้ง',
         newerFormat: ({ version }: { version: string }) =>
-            `งานนำเสนอนี้ใช้รูปแบบไฟล์ MarkdownPoint ที่ใหม่กว่า (${version}) อัปเดตปลั๊กอิน MarkdownPoint เพื่อเปิดเป็นงานนำเสนอ`
+            `งานนำเสนอนี้ใช้รูปแบบไฟล์ MarkdownPoint ที่ใหม่กว่า (${version}) อัปเดตปลั๊กอิน MarkdownPoint เพื่อเปิดเป็นงานนำเสนอ`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint ไม่สามารถอ่าน “${file}” ใน “${presentation}” ได้ เปิดงานนำเสนอในแอป MarkdownPoint เพื่อดูว่าต้องแก้ไขอะไร`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint ไม่สามารถอ่านงานนำเสนอใน “${presentation}” ได้ เปิดงานนำเสนอในแอป MarkdownPoint เพื่อดูว่าต้องแก้ไขอะไร`
     },
     slides: {
         new: 'สไลด์ใหม่',

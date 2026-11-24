@@ -218,8 +218,7 @@ export class MarkdownPointOutlineView extends ItemView {
         this.focusSelection();
         const { presentation, selection } = this.delegate.state();
         const current = () =>
-            this.delegate.state().presentation?.path === presentation?.path &&
-            this.delegate.state().presentation?.documentId === presentation?.documentId;
+            this.delegate.state().presentation?.path === presentation?.path && this.delegate.state().presentation?.id === presentation?.id;
         const menu = event ? Menu.forEvent(event) : new Menu();
         if (id !== null)
             menu.addItem(entry =>

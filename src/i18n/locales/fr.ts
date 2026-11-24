@@ -65,13 +65,21 @@ export const fr: Translations = {
         cancel: 'Annuler',
         invalidName: 'Saisissez un nom sans barres obliques ni caractères réservés.',
         exists: 'Un fichier ou un dossier portant ce nom existe déjà.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint ne peut pas créer de présentation dans «\u00a0${presentation}\u00a0». Choisissez un dossier hors de «\u00a0${presentation}\u00a0».`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint ne peut pas ouvrir la présentation «\u00a0${presentation}\u00a0» tant qu’elle se trouve dans «\u00a0${outer}\u00a0». Déplacez le dossier «\u00a0${presentation}\u00a0» hors de «\u00a0${outer}\u00a0», puis ouvrez-le.`,
         failed: 'Impossible de créer la présentation. Vérifiez le dossier et réessayez.',
         openFailed: 'La présentation a été créée, mais n’a pas pu être ouverte. Ouvrez slides.md dans son dossier.',
         openChanged: 'La présentation a changé ou n’a pas pu être lue. Réessayez.',
         handoffFailed: 'Impossible d’enregistrer et d’ouvrir la présentation.',
         themeChanged: 'Le thème a changé ou n’est pas disponible. Rouvrez cette fenêtre et choisissez-le de nouveau.',
         newerFormat: ({ version }: { version: string }) =>
-            `Cette présentation utilise un format MarkdownPoint plus récent (${version}). Mettez le module MarkdownPoint à jour pour l’ouvrir en tant que présentation.`
+            `Cette présentation utilise un format MarkdownPoint plus récent (${version}). Mettez le module MarkdownPoint à jour pour l’ouvrir en tant que présentation.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint ne peut pas lire «\u00a0${file}\u00a0» dans «\u00a0${presentation}\u00a0». Ouvrez la présentation dans l’app MarkdownPoint pour voir ce qu’il faut corriger.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint ne peut pas lire la présentation dans «\u00a0${presentation}\u00a0». Ouvrez-la dans l’app MarkdownPoint pour voir ce qu’il faut corriger.`
     },
     slides: {
         new: 'Nouvelle diapositive',

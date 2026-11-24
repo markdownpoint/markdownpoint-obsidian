@@ -18,64 +18,46 @@
 
 import { applyEdits, findNodeAtLocation, parseTree } from 'jsonc-parser';
 import type { Edit } from 'jsonc-parser';
-import type { CapturedPart, CapturedSlides } from './capture.ts';
+import type { CapturedPart } from './capture.ts';
+import { isPresentationFilePath } from './file-paths.ts';
 import { readJsonObject } from './json.ts';
 import { isRecord } from './recognition.ts';
 
-const mediaExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|mp4|m4v|mov|webm|ogv|mp3|m4a|wav|ogg|flac|glb|eot)$/i;
+const mediaExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|mp4|m4v|mov|webm|ogv|mp3|m4a|wav|ogg|flac|glb)$/i;
 
 /** Only presentation-owned media paths may authorize a cross-presentation file read. */
 export function isPresentationMediaPath(value: string): boolean {
-    const parts = value.split('/');
-    return (
-        parts.length > 1 &&
-        ['media', 'generated'].includes(parts[0]!) &&
-        mediaExtension.test(value) &&
-        !/[\\<>:"|?*#]/.test(value) &&
-        !/\p{Cc}/u.test(value) &&
-        parts.every(
-            part =>
-                part && !part.startsWith('.') && !/[ .]$/.test(part) && !/^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(part)
-        )
-    );
+    return mediaExtension.test(value) && isPresentationFilePath(value);
 }
 
 interface Location {
     readonly path: readonly (string | number)[];
     readonly value: string;
 }
-export interface ClipboardAssets {
+export interface ClipboardFiles {
     readonly files: readonly string[];
-    remap(names: ReadonlyMap<string, string>): CapturedSlides | null;
+    remap(names: ReadonlyMap<string, string>): readonly CapturedPart[] | null;
 }
 
 /** Record paths keep ordinary words, links, unknown metadata and numeric source precision untouched. */
-export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets | null {
-    const definitions = new Map<string, Record<string, unknown>>();
-    for (const part of captured.compositions) {
-        const record = readJsonObject(part.record);
-        if (!record) return null;
-        definitions.set(part.id, record);
-    }
+export function planClipboardFiles(captured: readonly CapturedPart[]): ClipboardFiles | null {
     const files = new Set<string>();
     const edits = new Map<CapturedPart, { offset: number; length: number; value: string }[]>();
-    for (const part of [...captured.slides, ...captured.compositions]) {
-        const record = definitions.get(part.id) ?? readJsonObject(part.record);
+    for (const part of captured) {
+        const record = readJsonObject(part.record);
         const tree = parseTree(part.record);
         if (!record || !tree) return null;
         const locations: Location[] = [];
         const add = (value: unknown, path: readonly (string | number)[]) => {
-            if (typeof value === 'string' && value !== '' && value !== 'none') locations.push({ path, value });
+            if (typeof value === 'string' && value !== '') locations.push({ path, value });
         };
         const nested = (value: unknown, name: string): unknown => (isRecord(value) ? value[name] : undefined);
-        if (isRecord(record.background)) {
-            add(record.background.image, ['background', 'image']);
-            add(nested(record.background['image-result'], 'original'), ['background', 'image-result', 'original']);
+        // A restyle's original comes with its picture, as MarkdownPoint brings it, so Remove Restyle shows it again.
+        const backgroundImage = nested(record.background, 'image');
+        if (isRecord(backgroundImage)) {
+            add(backgroundImage.file, ['background', 'image', 'file']);
+            add(backgroundImage['restyled-from'], ['background', 'image', 'restyled-from']);
         }
-        if (definitions.has(part.id) && isRecord(record.controls))
-            for (const [key, control] of Object.entries(record.controls)) {
-                if (isRecord(control) && control.type === 'media') add(control.default, ['controls', key, 'default']);
-            }
         const objects: [Record<string, unknown>, (string | number)[]][] = [];
         if (Array.isArray(record.objects))
             record.objects.forEach((object: unknown, index) => {
@@ -85,22 +67,9 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
             for (const [id, object] of Object.entries(record.overrides)) if (isRecord(object)) objects.push([object, ['overrides', id]]);
         for (const [object, base] of objects) {
             add(object.file, [...base, 'file']);
-            add(object['poster-frame'], [...base, 'poster-frame']);
-            add(nested(object['image-result'], 'original'), [...base, 'image-result', 'original']);
+            add(object.poster, [...base, 'poster']);
+            add(object['restyled-from'], [...base, 'restyled-from']);
             add(nested(object.model, 'file'), [...base, 'model', 'file']);
-            if (
-                base[0] === 'objects' &&
-                object.type === 'composition' &&
-                typeof object.composition === 'string' &&
-                isRecord(object.controls)
-            ) {
-                const controls = definitions.get(object.composition)?.controls;
-                if (!isRecord(controls)) continue;
-                for (const [name, value] of Object.entries(object.controls)) {
-                    const declaration = controls[name];
-                    if (isRecord(declaration) && declaration.type === 'media') add(value, [...base, 'controls', name]);
-                }
-            }
         }
         const replacements: { offset: number; length: number; value: string }[] = [];
         for (const location of locations) {
@@ -123,7 +92,7 @@ export function planClipboardAssets(captured: CapturedSlides): ClipboardAssets |
                     .map(edit => ({ offset: edit.offset, length: edit.length, content: JSON.stringify(names.get(edit.value)!) }));
                 return { ...part, record: changes.length ? applyEdits(part.record, changes) : part.record };
             };
-            return { slides: captured.slides.map(changed), compositions: captured.compositions.map(changed) };
+            return captured.map(changed);
         }
     };
 }

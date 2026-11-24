@@ -55,3 +55,42 @@ export function opensFormatVersion(value: unknown): boolean {
 export function readsFormatFully(value: unknown): boolean {
     return formatStanding(value) === 'readable';
 }
+
+/**
+ * The version a .md file's frontmatter states, read from the file's own text as MarkdownPoint reads it ahead of the file,
+ * since a newer minor's file reads otherwise: the `markdownpoint` line of the frontmatter that opens the file, its value
+ * quoted. Unquoted, it is a number to YAML, which states no version.
+ */
+export function statedMarkdownVersion(markdown: string): string | undefined {
+    const opening = /^\uFEFF?---(?:\r\n|\r|\n)/.exec(markdown);
+    if (!opening) return undefined;
+    const line = /[^\r\n]*/y;
+    for (let at = opening[0].length; at < markdown.length;) {
+        line.lastIndex = at;
+        const text = line.exec(markdown)![0];
+        if (/^---[ \t]*$/.test(text)) return undefined;
+        if (text.startsWith('markdownpoint:')) {
+            const value = text.slice('markdownpoint:'.length);
+            return /^\s*["']/.test(value) ? quotedScalar(value) : undefined;
+        }
+        at += text.length + (markdown.startsWith('\r\n', at + text.length) ? 2 : 1);
+    }
+    return undefined;
+}
+
+/**
+ * A quoted one-line YAML value as MarkdownPoint reads one, a comment after it or not: in double quotes, with YAML's
+ * escapes, of which only those that name a character by number can spell a version, or in single quotes, where two make
+ * one. Undefined for a quote the line doesn't close.
+ */
+function quotedScalar(raw: string): string | undefined {
+    const text = raw.trim();
+    const double = /^"((?:[^"\\]|\\.)*)"(?:\s+#.*)?$/.exec(text);
+    if (double)
+        return double[1]!.replace(/\\(?:(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})|.)/g, (_, numbered?: string) => {
+            const point = numbered === undefined ? Infinity : Number.parseInt(numbered.slice(1), 16);
+            // Any other escape names a character no version holds
+            return point <= 0x10ffff ? String.fromCodePoint(point) : '\\';
+        });
+    return /^'((?:[^']|'')*)'(?:\s+#.*)?$/.exec(text)?.[1]!.replace(/''/g, "'");
+}

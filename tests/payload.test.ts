@@ -18,27 +18,36 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { payloadContentEnd } from '../src/format/payload.ts';
+import { payloadContentEnd, terminateSourceBlock } from '../src/format/payload.ts';
 
-test('exactly one terminal blank line is organizational; further lines stay authored', () => {
-    for (const newline of ['\n', '\r\n']) {
+test('every terminal blank line is organizational: blank lines only separate, and an empty paragraph is <br>', () => {
+    for (const newline of ['\n', '\r\n', '\r']) {
         for (let blanks = 0; blanks < 5; blanks++) {
             const raw = 'Words.' + newline.repeat(blanks + 1);
-            const expected = 'Words.' + newline.repeat(Math.max(1, blanks));
+            const expected = 'Words.' + newline;
             assert.equal(raw.slice(0, payloadContentEnd(raw, 0, raw.length)), expected, JSON.stringify(raw));
         }
     }
 });
 
-test('leading and interior empty paragraphs, lists, quotes, and code stay intact', () => {
-    for (const text of ['\n\nWords.', 'Before.\n\n\nAfter.', '- One\n\n\n- Two', '> One\n>\n> Two', '```\nOne\n\nTwo\n```', '> One\n>']) {
+test('leading and interior lines, empty paragraphs, lists, quotes, and code stay as written', () => {
+    for (const text of [
+        '\n\nWords.',
+        'Before.\n\n<br>\n\nAfter.',
+        'Before.\n\n\nAfter.',
+        '- One\n\n\n- Two',
+        '> One\n>\n> Two',
+        '```\nOne\n\nTwo\n```',
+        '> One\n>',
+        'Words.\n\n<br>'
+    ]) {
         const source = text + '\n\n';
         assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), text + '\n');
     }
 });
 
 test('horizontal whitespace counts as a blank line only when terminated', () => {
-    for (const newline of ['\n', '\r\n']) {
+    for (const newline of ['\n', '\r\n', '\r']) {
         const text = 'Words.' + newline;
         for (const tail of [' \t', ' \t' + newline, ' \t' + newline + '  ']) {
             const source = text + tail;
@@ -49,16 +58,45 @@ test('horizontal whitespace counts as a blank line only when terminated', () => 
     assert.equal(payloadContentEnd(nonbreaking, 0, nonbreaking.length), nonbreaking.length);
 });
 
-test('empty text retains additional authored empty paragraphs and original source offsets', () => {
+test('an empty text is blank lines alone, all organizational, and keeps its source offsets', () => {
     const prefix = '<!-- text: body -->\r\n';
     for (let count = 0; count < 5; count++) {
         const raw = '\r\n'.repeat(count);
         const source = prefix + raw + '<!-- notes -->\r\n';
         const end = payloadContentEnd(source, prefix.length, prefix.length + raw.length);
-        assert.equal(end, prefix.length + Math.max(0, count - 1) * 2);
+        assert.equal(end, prefix.length);
         assert.equal(source.slice(prefix.length, prefix.length + raw.length), raw);
     }
     const words = 'Words.';
     assert.equal(payloadContentEnd(words, 0, words.length), words.length);
     assert.equal(payloadContentEnd('\n\n', 2, 2), 2);
+});
+
+test("a code block left open at the file's end keeps its blank lines as code, all but the last, as MarkdownPoint reads it", () => {
+    for (const newline of ['\n', '\r\n', '\r']) {
+        const code = ['```txt', 'x', '', '', ''].join(newline);
+        const source = code + newline;
+        assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), code, JSON.stringify(source));
+        // Spaces no line feed ends are no line of their own.
+        const spaced = source + '  ';
+        assert.equal(spaced.slice(0, payloadContentEnd(spaced, 0, spaced.length)), code);
+    }
+    const prefix = '<!-- notes -->\n';
+    const notes = prefix + '~~~\nx\n\n\n';
+    assert.equal(notes.slice(prefix.length, payloadContentEnd(notes, prefix.length, notes.length)), '~~~\nx\n\n');
+    // A closed one, and one a list item holds, end at their last line with words.
+    for (const text of ['```\nx\n```', '- One\n\n  ```\n  x']) {
+        const source = text + '\n\n\n';
+        assert.equal(source.slice(0, payloadContentEnd(source, 0, source.length)), text + '\n', JSON.stringify(source));
+    }
+});
+
+test('a block ends at its own line end, CR, LF or CRLF, and a tail of spaces moves before it, onto the blank line', () => {
+    for (const newline of ['\n', '\r\n', '\r']) {
+        const words = 'Words.' + newline;
+        assert.equal(terminateSourceBlock(words, '\n'), words, JSON.stringify(words));
+        assert.equal(terminateSourceBlock('Words.', newline), words);
+        const tail = words + newline + ' \t';
+        assert.equal(terminateSourceBlock(tail, '\n'), words + ' \t' + newline, JSON.stringify(tail));
+    }
 });

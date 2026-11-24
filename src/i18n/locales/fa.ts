@@ -65,13 +65,21 @@ export const fa: Translations = {
         cancel: 'لغو',
         invalidName: 'نامی بدون خط مورب یا نویسه‌های غیرمجاز وارد کنید.',
         exists: 'پرونده یا پوشه‌ای به همین نام از قبل وجود دارد.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `ساختن ارائه داخل «${presentation}» با MarkdownPoint ممکن نیست. پوشه‌ای بیرون از «${presentation}» انتخاب کنید.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `باز کردن «${presentation}» با MarkdownPoint تا وقتی داخل «${outer}» است ممکن نیست. پوشهٔ «${presentation}» را به بیرون از «${outer}» منتقل کنید، سپس آن را باز کنید.`,
         failed: 'ارائه ساخته نشد. پوشه را بررسی کنید و دوباره تلاش کنید.',
         openFailed: 'ارائه ساخته شد اما باز نشد. پروندهٔ slides.md را در پوشهٔ آن باز کنید.',
         openChanged: 'ارائه تغییر کرده یا خوانده نشد. دوباره تلاش کنید.',
         handoffFailed: 'ذخیره و باز کردن ارائه انجام نشد.',
         themeChanged: 'طرح زمینه تغییر کرده یا در دسترس نیست. این پنجره را دوباره باز کنید و آن را از نو انتخاب کنید.',
         newerFormat: ({ version }: { version: string }) =>
-            `این ارائه از قالب جدیدتری از MarkdownPoint (نسخهٔ ${version}) استفاده می‌کند. برای باز کردن آن به‌صورت ارائه، افزونهٔ MarkdownPoint را به‌روز کنید.`
+            `این ارائه از قالب جدیدتری از MarkdownPoint (نسخهٔ ${version}) استفاده می‌کند. برای باز کردن آن به‌صورت ارائه، افزونهٔ MarkdownPoint را به‌روز کنید.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `خواندن «${file}» در «${presentation}» با MarkdownPoint ممکن نیست. ارائه را در برنامهٔ MarkdownPoint باز کنید تا ببینید چه چیزی را باید اصلاح کنید.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `خواندن ارائهٔ داخل «${presentation}» با MarkdownPoint ممکن نیست. آن را در برنامهٔ MarkdownPoint باز کنید تا ببینید چه چیزی را باید اصلاح کنید.`
     },
     slides: {
         new: 'اسلاید جدید',

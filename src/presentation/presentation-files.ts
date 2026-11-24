@@ -17,16 +17,89 @@
  */
 
 import { TFile } from 'obsidian';
-import type { Vault } from 'obsidian';
-import { presentationPairNames } from '../format/recognition.ts';
+import type { TFolder, Vault } from 'obsidian';
+import { inSavedVersions, presentationMember } from '../format/recognition.ts';
+import { findPresentationPair, holdsPresentationPair } from '../readers/markdownpoint-readers.js';
 
-/** Resolve both files from the live folder inventory for readers and the last write guard. */
+/**
+ * Resolve both files from the live folder inventory for readers and the last write guard. A pair under a presentation's
+ * `versions/` has none, as the app opens it only from its presentation, and neither has one inside another
+ * presentation's folder: its `slides.md` opens as a note.
+ */
 export function presentationFiles(vault: Vault, memberPath: string): { markdown: TFile; companion: TFile } | null {
+    const found = pairAt(vault, memberPath);
+    return found && 'pair' in found ? found.pair : null;
+}
+
+/** The outermost presentation around the pair `memberPath` names, which keeps it from opening as a presentation; null when none does. */
+export function presentationAround(vault: Vault, memberPath: string): TFolder | null {
+    const found = pairAt(vault, memberPath);
+    return found && 'around' in found ? found.around : null;
+}
+
+function pairAt(vault: Vault, memberPath: string): { pair: { markdown: TFile; companion: TFile } } | { around: TFolder } | null {
+    if (inSavedVersions(memberPath, path => holdsPresentationFile(vault, path), caselessVaults.has(vault))) return null;
     const slash = memberPath.lastIndexOf('/');
     const folder = slash < 0 ? vault.getRoot() : vault.getFolderByPath(memberPath.slice(0, slash));
     if (!folder) return null;
+    // The pair as MarkdownPoint finds it, by name in any case: a copy beside either file, or either under another name, is none
+    const found = findPresentationPair(folder.path, entries(folder));
+    if (found.kind !== 'pair') return null;
+    const around = folder.parent && enclosingPresentation(folder.parent);
+    if (around) return { around };
     const files = folder.children.filter((entry): entry is TFile => entry instanceof TFile);
-    const names = presentationPairNames(files.map(file => file.name));
-    if (!names) return null;
-    return { markdown: files.find(file => file.name === names.markdown)!, companion: files.find(file => file.name === names.companion)! };
+    const [markdown, companion] = [found.markdown, found.json].map(name => files.find(file => file.name === name));
+    // MarkdownPoint finds a file iCloud hasn't downloaded yet by the name it will have, which no file of the vault has yet
+    return markdown && companion ? { pair: { markdown, companion } } : null;
+}
+
+/** A folder's entries as MarkdownPoint's readers take them. */
+function entries(folder: TFolder): { name: string; directory: boolean }[] {
+    return folder.children.map(entry => ({ name: entry.name, directory: !(entry instanceof TFile) }));
+}
+
+/**
+ * The outermost folder at or above `folder` that holds a whole presentation, its `presentation.mdpoint` and `slides.md`
+ * by name in any case, as MarkdownPoint finds one; null when none does. A presentation's folder holds one presentation,
+ * so none opens or is made inside another, and a lone presentation file makes no folder one.
+ */
+export function enclosingPresentation(folder: TFolder): TFolder | null {
+    let outermost: TFolder | null = null;
+    for (let at: TFolder | null = folder; at; at = at.parent) if (holdsPresentationPair(entries(at))) outermost = at;
+    return outermost;
+}
+
+/** The folder New suggests for a note in `folder`: beside the outermost presentation around it, as none is made inside one. */
+export function creationParent(folder: TFolder): TFolder | null {
+    const around = enclosingPresentation(folder);
+    return around ? around.parent : folder;
+}
+
+/** The vaults whose volume finds a name in another case, and each vault's one look at it. */
+const caselessVaults = new WeakSet<Vault>();
+const vaultCases = new WeakMap<Vault, Promise<void>>();
+
+/**
+ * Learns, once a vault, whether its volume finds a name in another case: the plugins folder of its config folder, where
+ * this plugin stands, spelled so is found, though no folder is spelled so. A reader awaits it before it takes a pair, so
+ * `presentationFiles` answers with it.
+ */
+export function learnVaultCase(vault: Vault): Promise<void> {
+    let learned = vaultCases.get(vault);
+    if (!learned) {
+        const known = `${vault.configDir}/plugins`;
+        const other = [...known].map(letter => (letter === letter.toLowerCase() ? letter.toUpperCase() : letter.toLowerCase())).join('');
+        learned = (async () => {
+            if (other !== known && (await vault.adapter.exists(other)) && !(await vault.adapter.exists(other, true)))
+                caselessVaults.add(vault);
+        })().catch((error: unknown) => console.error(error));
+        vaultCases.set(vault, learned);
+    }
+    return learned;
+}
+
+/** Whether the vault's folder at `path`, the root at '', holds a presentation file, under any name a sync or a copy gives it. */
+function holdsPresentationFile(vault: Vault, path: string): boolean {
+    const folder = path ? vault.getFolderByPath(path) : vault.getRoot();
+    return !!folder?.children.some(entry => entry instanceof TFile && presentationMember(entry.name) === 'companion');
 }

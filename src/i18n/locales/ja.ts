@@ -64,13 +64,21 @@ export const ja: Translations = {
         cancel: 'キャンセル',
         invalidName: 'スラッシュや使用できない文字を含まない名前を入力してください。',
         exists: '同じ名前のファイルまたはフォルダがすでにあります。',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPointは“${presentation}”の中にプレゼンテーションを作成できません。“${presentation}”の外にあるフォルダを選んでください。`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `“${presentation}”が“${outer}”の中にある間は、MarkdownPointは開けません。フォルダ“${presentation}”を“${outer}”の外に移動してから、開いてください。`,
         failed: 'プレゼンテーションを作成できませんでした。フォルダを確認して、もう一度お試しください。',
         openFailed: 'プレゼンテーションは作成されましたが、開けませんでした。そのフォルダのslides.mdを開いてください。',
         openChanged: 'プレゼンテーションが変更されたか、読み込めませんでした。もう一度お試しください。',
         handoffFailed: 'プレゼンテーションを保存して開くことができませんでした。',
         themeChanged: 'テーマが変更されたか、利用できません。このダイアログを開き直して、もう一度テーマを選んでください。',
         newerFormat: ({ version }: { version: string }) =>
-            `このプレゼンテーションは新しいバージョンのMarkdownPointフォーマット（${version}）を使っています。プレゼンテーションとして開くには、MarkdownPointプラグインをアップデートしてください。`
+            `このプレゼンテーションは新しいバージョンのMarkdownPointフォーマット（${version}）を使っています。プレゼンテーションとして開くには、MarkdownPointプラグインをアップデートしてください。`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPointは“${presentation}”の“${file}”を読み込めません。修正が必要な箇所を確認するには、MarkdownPointアプリでプレゼンテーションを開いてください。`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPointは“${presentation}”のプレゼンテーションを読み込めません。修正が必要な箇所を確認するには、MarkdownPointアプリで開いてください。`
     },
     slides: {
         new: '新規スライド',

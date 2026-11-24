@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { blockTokens } from './block-grammar.ts';
-import { isStableId } from './recognition.ts';
+import { markdownFenceReader } from '../readers/markdownpoint-readers.js';
+import { formatStanding, statedMarkdownVersion } from './format-version.ts';
+import { isStableId, STABLE_ID_BODY } from './recognition.ts';
 
 export interface DocumentBlock {
-    readonly kind: 'text' | 'notes' | 'control';
+    readonly kind: 'text' | 'notes';
     readonly id: string | null;
     readonly from: number;
     readonly contentFrom: number;
@@ -38,9 +39,9 @@ export interface DocumentSlide {
 
 export interface PresentationDocument {
     readonly slides: readonly DocumentSlide[];
-    /** Reusable definitions share the source shape, but never enter slide navigation. */
-    readonly compositions: readonly DocumentSlide[];
     readonly sections: readonly DocumentSection[];
+    /** A newer minor's file's markers of a later minor, each a block MarkdownPoint keeps as written: their lines. */
+    readonly laterMarkers: readonly { readonly from: number; readonly markerTo: number }[];
 }
 
 export interface DocumentSection {
@@ -48,144 +49,233 @@ export interface DocumentSection {
     readonly from: number;
     readonly markerTo: number;
     readonly line: number;
+    /** Where its heading's words end: at the next marker, a later minor's included. */
+    headingTo: number;
+    /** Where it ends, at its first page: a later minor's block after its heading stands in it. */
     to: number;
 }
 
-/** Section headings and reusable compositions are outside slide ranges. */
+/** Section headings are outside slide ranges. */
 export function slideAtPosition(document: PresentationDocument, position: number): DocumentSlide | null {
     return document.slides.find(slide => position >= slide.from && position < slide.to) ?? null;
 }
 
-const marker = /^<!--\s*(slide|composition|section|text|control|notes)(?::\s*([^\s]+))?\s*-->[ \t]*$/;
-const markerLike = /^<!--\s*(?:slide|composition|section|text|control|notes)(?=[:\s]|-->|$)(?:\s*:?\s*[^\s<>]*)?\s*(?:-->|$)/i;
+/** A line end as MarkdownPoint reads one: CRLF, a bare LF or a bare CR. */
+const LINE_END = /\r\n|\r|\n/g;
 
-/**
- * A candidate directive consumed by a code token is content, not a slide boundary. `start` is where that code block
- * begins in the field's normalized text.
- */
-function containingCode(markdown: string, line: string) {
-    const source = markdown.replace(/\r\n?/g, '\n');
-    const last = blockTokens(source).at(-1);
-    if (last?.type !== 'code' || !last.raw.trimEnd().endsWith(line.trimEnd())) return undefined;
-    const start = source.length - last.raw.length;
-    return { raw: last.raw, start, leading: source.slice(0, start).trim().length === 0 };
+/** The first line end at or after `from` in the source as written: where it starts and where the next line starts. */
+export function lineEnd(source: string, from: number): { at: number; next: number } | null {
+    LINE_END.lastIndex = from;
+    const found = LINE_END.exec(source);
+    return found ? { at: found.index, next: found.index + found[0].length } : null;
 }
 
-/** Ask the same grammar using a bounded probe, not the growing document prefix. */
-function closesFence(fence: string, line: string): boolean {
-    if (!line.trimStart().startsWith(fence[0]!)) return false;
-    const token = blockTokens(`${fence}\n${line}\n`)[0];
-    return token?.type === 'code' && token.text === '';
+// An id holds no whitespace, so the pattern reads a line in time in line with its length. Only spaces and tabs stand
+// inside a marker, as around it; a line with other white space there is `markerLike`'s.
+const marker = /^<!--[ \t]*(slide|section|text|notes)(?::[ \t]*(\S+?))?[ \t]*-->[ \t]*$/;
+/**
+ * A line that reads as one of the markers, misspelled or closing, which MarkdownPoint refuses rather than keeps as words: a
+ * marker's word, after a slash or not, with at most one word after it, colon or not, and words after its `-->` included,
+ * as `<!-- /slide -->`, `<!-- slide: a<b -->` or `<!-- notes --> Say hi`. A comment with more words is the author's, and
+ * so is one such a line opens that ends on a later line (`noteOpener`).
+ */
+const markerLike = /^<!--\s*\/?(?:section|slide|text|notes)(?=[:\s]|-->|$):?\s*(?:\S+?\s*)?(?:-->.*)?$/i;
+
+/** Where `run` next stands in `text` from `from` on; past every position where it doesn't. */
+function runFrom(text: string, run: string, from: number): number {
+    const at = text.indexOf(run, from);
+    return at < 0 ? Infinity : at;
+}
+
+/**
+ * Whether a comment line of `text` that ends at `end`, its line end included, opens a note however it starts, as
+ * MarkdownPoint's `noteOpener` reads it: it holds no `-->`, and the first `-->` after it ends a later line with no `<!--`
+ * before it. A marker whose `-->` was forgotten meets the next comment or marker first, or an arrow in words, and stays
+ * one. Asked of each line in order. The app reads the text with its line ends made line feeds, so a CR ends a line here.
+ */
+function noteOpener(text: string): (line: string, end: number) => boolean {
+    // Where the next `-->` and the next `<!--` stand from the last line asked about on
+    let closing = -1;
+    let opening = -1;
+    return (line, end) => {
+        if (line.includes('-->')) return false;
+        if (closing < end) closing = runFrom(text, '-->', end);
+        if (opening < end) opening = runFrom(text, '<!--', end);
+        if (closing === Infinity || opening < closing) return false;
+        let after = closing + 3;
+        while (text[after] === ' ' || text[after] === '\t') after++;
+        return after === text.length || text[after] === '\n' || text[after] === '\r';
+    };
+}
+
+/**
+ * A comment line shaped as a marker, spaces or tabs after it: one lowercase word, or one, a colon and an id or two ids
+ * joined by a dot, with spaces or tabs where a marker takes them. Any other white space, or anything after the colon
+ * but ids, makes it a note. `markerLike`'s wider shape serves this minor's own words alone: a word a minor adds is a
+ * marker, or a misspelled one, only in files of that minor or later.
+ */
+const markerShaped = new RegExp(
+    `^<!--[ \\t]*([a-z]+(?:-[a-z]+)*)(?::[ \\t]*${STABLE_ID_BODY}(?:\\.${STABLE_ID_BODY})?)?[ \\t]*-->[ \\t]*$`
+);
+/** The words a marker-shaped line of this minor may start with and stay what it is: its markers' and a paragraph id's. */
+const knownMarkerWords: ReadonlySet<string> = new Set(['section', 'slide', 'text', 'notes', 'id']);
+
+/**
+ * Whether a line, read without the spaces or tabs before it, has a later minor's marker's shape: marker-shaped, with a
+ * word none of this minor's markers has. In a newer minor's file it is that minor's marker; in this minor's, a note.
+ */
+function laterMarkerShaped(bare: string): boolean {
+    if (!bare.startsWith('<!--')) return false;
+    const word = markerShaped.exec(bare)?.[1];
+    return word !== undefined && !knownMarkerWords.has(word);
+}
+
+/**
+ * A block's words as MarkdownPoint writes them in every file it saves: a backslash after the `<!--` of each line outside
+ * code that a later minor reads as its marker, so every minor reads it as the note it is. An escaped line has no marker's
+ * shape, and stays as written.
+ */
+export function escapeMarkerShapedNotes(words: string): string {
+    if (!words.includes('<!--')) return words;
+    const code = markdownFenceReader();
+    let escaped = '';
+    for (let offset = 0; offset < words.length;) {
+        const ending = lineEnd(words, offset);
+        const end = ending?.next ?? words.length;
+        const line = words.slice(offset, ending?.at ?? end);
+        const bare = line.replace(/^[ \t]+/, '');
+        const opening = offset + line.length - bare.length + '<!--'.length;
+        // Every line is read for the code blocks, so a fence opened on one closes on the right one
+        const note = !code.line(line) && laterMarkerShaped(bare);
+        escaped += note ? `${words.slice(offset, opening)}\\${words.slice(opening, end)}` : words.slice(offset, end);
+        offset = end;
+    }
+    return escaped;
+}
+
+/**
+ * A slide's source after its marker, each block's words as `spell` gives them, and null where it gives none: what stands
+ * between the blocks stays as written.
+ */
+export function spellBlocks(
+    markdown: string,
+    slide: DocumentSlide,
+    spell: (words: string, block: DocumentBlock) => string | null
+): string | null {
+    const pieces: string[] = [];
+    let position = slide.markerTo;
+    for (const block of slide.blocks) {
+        const words = spell(markdown.slice(block.contentFrom, block.to), block);
+        if (words === null) return null;
+        pieces.push(markdown.slice(position, block.contentFrom), words);
+        position = block.to;
+    }
+    pieces.push(markdown.slice(position, slide.to));
+    return pieces.join('');
 }
 
 /**
  * Indexes source ranges without rewriting or rendering Markdown. bodyStart is the
  * first offset after the already recognized frontmatter. Invalid structural
- * directives return null so consumers cannot navigate or decorate stale ranges.
+ * directives, and words that stand in no block, return null so consumers cannot
+ * navigate or decorate a file MarkdownPoint refuses.
  */
 export function indexPresentation(markdown: string, bodyStart: number): PresentationDocument | null {
     const slides: DocumentSlide[] = [];
-    const compositions: DocumentSlide[] = [];
     const sections: DocumentSection[] = [];
+    const laterMarkers: { from: number; markerTo: number }[] = [];
     const seen = new Set<string>();
     const sectionIds = new Set<string>();
-    let part: DocumentSlide | null = null;
+    let slide: DocumentSlide | null = null;
     let section: DocumentSection | null = null;
+    // The section whose heading the lines read stand in
+    let heading: DocumentSection | null = null;
     let block: DocumentBlock | null = null;
-    let container: 'slide' | 'composition' | null = null;
-    let payloadFrom = bodyStart;
-    let hasFence = false;
-    // Where, in the current field's normalized text, the code block that last took in a marker begins
-    let swallowedFrom: number | null = null;
-    let openFence: string | null = null;
-    // Bare CR can introduce lexer lines inside one source line. Keep full context there.
-    const scanFences = !/\r(?!\n)/.test(markdown);
+    // Which lines stand in a fenced code block, read as MarkdownPoint reads them, a field at a time: each field is its own
+    // Markdown block, so HTML or a fence-like line in one never changes how the next is read.
+    let code = markdownFenceReader();
+    // Where, in the field's lines as the reader counts them, the top-level code block that took in a marker's line opened
+    let swallowed: number | null = null;
     let offset = bodyStart;
-    let lineNumber = markdown.slice(0, bodyStart).split('\n').length - 1;
+    let lineNumber = markdown.slice(0, bodyStart).split(LINE_END).length - 1;
+    const newerMinor = formatStanding(statedMarkdownVersion(markdown)) === 'newer-minor';
+    const opensNote = noteOpener(markdown);
+    // Where words would stand in no block, before the first marker and after a slide's marker until its first block, or
+    // null where the words read stand in one. MarkdownPoint refuses words there, which no save could keep.
+    let unclaimed: number | null = bodyStart;
+    const strayWords = (to: number) => unclaimed !== null && markdown.slice(unclaimed, to).trim().length > 0;
 
     while (offset < markdown.length) {
-        const newline = markdown.indexOf('\n', offset);
-        const end = newline < 0 ? markdown.length : newline + 1;
-        const line = markdown.slice(offset, newline < 0 ? end : newline).replace(/\r$/, '');
-        // A leading fence cannot later become part of a preceding link definition.
-        // Once Marked identifies it, scan to its closing line once.
-        // Retokenizing its growing payload at every example marker is quadratic.
-        if (openFence) {
-            if (closesFence(openFence, line)) {
-                openFence = null;
-                payloadFrom = end;
-                hasFence = false;
-                swallowedFrom = null;
-            }
+        const ending = lineEnd(markdown, offset);
+        const end = ending?.next ?? markdown.length;
+        const line = markdown.slice(offset, ending?.at ?? end);
+        // As MarkdownPoint reads a line: a marker names its block by ids, a line shaped as one with a word that is no id
+        // refuses the file, and a line of more words, as `text: ask Anna`, is a comment, as is one that opens a note.
+        // A marker is read without the spaces or tabs before it, as after it.
+        const bare = line.replace(/^[ \t]+/, '');
+        const found = marker.exec(bare);
+        const match = found && (found[2] === undefined || isStableId(found[2])) ? found : null;
+        // In a newer minor's file, a later minor's marker opens a block of that minor's, which MarkdownPoint keeps as written
+        const later = newerMinor && laterMarkerShaped(bare);
+        const structural = later || match !== null || (markerLike.test(bare) && !opensNote(bare, end));
+        // A line in a fenced code block is the code's words, a marker's shape among them. A block at the top level takes
+        // in the rest of the file while it stays open; one in a list item or a quote ends with them.
+        if (code.line(line)) {
+            if (structural) swallowed = code.open()?.start ?? swallowed;
             offset = end;
             lineNumber++;
             continue;
         }
-        hasFence ||= line.includes('```') || line.includes('~~~');
-        // Each field is its own Markdown block. HTML or a fence-like line in one
-        // field must not change how the next field is interpreted.
-        const match = marker.exec(line);
-        if (match || markerLike.test(line)) {
-            const code = hasFence ? containingCode(markdown.slice(payloadFrom, end), line) : undefined;
-            if (code) {
-                swallowedFrom = code.start;
-                const fence = /^ {0,3}(`{3,}|~{3,})/.exec(code.raw)?.[1];
-                if (fence && code.leading && scanFences) openFence = fence;
-                offset = end;
-                lineNumber++;
-                continue;
-            }
-            if (!match || newline < 0) return null;
-            const kind = match[1];
-            const id = match[2];
-            if (kind === 'notes' ? id !== undefined : !id || !id.split('.').every(isStableId)) return null;
-            if (kind !== 'text' && id?.includes('.')) return null;
-
+        if (structural) {
+            if (strayWords(offset)) return null;
+            unclaimed = null;
+            // Each marker ends the words and the heading before it. A later minor's block stands where it is, in a page or
+            // after a section's heading, so the page or the section goes on past it.
             if (block) block.to = offset;
             block = null;
+            if (heading) heading.headingTo = offset;
+            heading = null;
+            code = markdownFenceReader();
+            swallowed = null;
+        }
+        if (later) laterMarkers.push({ from: offset, markerTo: end });
+        if (structural && !later) {
+            if (!match || !ending) return null;
+            const kind = match[1];
+            const id = match[2];
+            if (kind === 'notes' ? id !== undefined : !isStableId(id)) return null;
+
             if (section) section.to = offset;
             section = null;
-            if (kind === 'slide' || kind === 'composition' || kind === 'section') {
-                if (part) part.to = offset;
-                part = null;
-                container = kind === 'section' ? null : kind;
+            if (kind === 'slide' || kind === 'section') {
+                if (slide) slide.to = offset;
+                slide = null;
                 if (kind === 'section' && id) {
                     if (sectionIds.has(id)) return null;
                     sectionIds.add(id);
-                    section = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length };
+                    section = { id, from: offset, markerTo: end, line: lineNumber, headingTo: markdown.length, to: markdown.length };
+                    heading = section;
                     sections.push(section);
                 }
-                if ((kind === 'slide' || kind === 'composition') && id) {
+                if (kind === 'slide' && id) {
                     if (seen.has(id)) return null;
                     seen.add(id);
-                    part = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length, blocks: [] };
-                    (kind === 'slide' ? slides : compositions).push(part);
+                    slide = { id, from: offset, markerTo: end, line: lineNumber, to: markdown.length, blocks: [] };
+                    unclaimed = end;
+                    slides.push(slide);
                 }
             } else {
-                if (!container || (kind === 'control' && container !== 'composition')) return null;
-                if (part && (kind === 'text' || kind === 'notes' || kind === 'control')) {
-                    block = { kind, id: id ?? null, from: offset, contentFrom: end, to: markdown.length };
-                    part.blocks.push(block);
-                }
+                if (!slide) return null;
+                block = { kind: kind === 'notes' ? 'notes' : 'text', id: id ?? null, from: offset, contentFrom: end, to: markdown.length };
+                slide.blocks.push(block);
             }
-            payloadFrom = end;
-            hasFence = false;
-            swallowedFrom = null;
         }
         offset = end;
         lineNumber++;
     }
-    if (openFence) return null;
     // A code block that takes in a marker and never closes holds the rest of the file, so its slides would go missing.
     // Another fence left open at the end only holds that field's words, as the MarkdownPoint app reads it.
-    if (swallowedFrom !== null) {
-        const source = markdown.slice(payloadFrom).replace(/\r\n?/g, '\n');
-        const last = blockTokens(source).at(-1);
-        if (last?.type === 'code' && source.length - last.raw.length === swallowedFrom) {
-            const fence = /^ {0,3}(`{3,}|~{3,})/.exec(last.raw)?.[1];
-            const closing = last.raw.replace(/\n+$/, '').split('\n').at(-1) ?? '';
-            if (fence && !closesFence(fence, closing)) return null;
-        }
-    }
-    return { slides, compositions, sections };
+    if (swallowed !== null && code.open()?.start === swallowed) return null;
+    if (strayWords(markdown.length)) return null;
+    return { slides, sections, laterMarkers };
 }

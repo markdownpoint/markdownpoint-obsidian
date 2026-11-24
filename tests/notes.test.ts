@@ -66,8 +66,8 @@ test('creating notes preserves existing source and leaves a writable insertion c
         }
 });
 
-test('notes insertion respects CRLF and stays within its slide before a section or composition', () => {
-    for (const next of ['<!-- section: next -->\r\n# Later\r\n', '<!-- composition: reusable -->\r\n']) {
+test('notes insertion respects CRLF and stays within its slide before a section', () => {
+    for (const next of ['<!-- section: next -->\r\n# Later\r\n']) {
         const markdown = '<!-- slide: first -->\r\n<!-- text: body -->\r\nBody.\r\n\r\n' + next;
         const document = indexPresentation(markdown, 0)!;
         const at = slideNotes(markdown, document, 'Notes')[0]!.at;

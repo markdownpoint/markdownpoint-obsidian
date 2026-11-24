@@ -36,21 +36,40 @@ test('copied slide links follow their new identities without rewriting labels, t
     assert.equal(remapMarkdownSlideLinks(source, new Map([['two', 'two']])), source);
 });
 
-test('literal code, images, escaped links, reference syntax and autolinks remain unchanged', () => {
+test('literal code, images, escaped links, reference syntax and plain words remain unchanged', () => {
     for (const source of [
         '`[code](slide:two)`',
         '```md\n[code](slide:two)\n```\n',
         '    [code](slide:two)\n',
         '\\[escaped](slide:two)',
         '![picture](slide:two)',
-        '![alt [link](slide:two)](assets/picture.png)',
+        '![alt [link](slide:two)](media/picture.png)',
         '[reference][two]\n\n[two]: slide:two "Title"\n',
-        '<slide:two>',
         'slide:two',
+        '`<slide:two>`',
+        '\\<slide:two>',
+        '<slide\\:two>',
+        '<slide&#58;two>',
+        '![alt][<slide:two>]\n\n[<slide:two>]: image.png\n',
+        '<slide:elsewhere>',
+        '<div>\n<slide:two>\n</div>\n',
         '<div>\n[inside HTML](slide:two)\n</div>\n',
         '<!-- [comment](slide:two) -->'
     ])
         assert.equal(rewrite(source), source, source);
+});
+
+test('an autolink to a copied slide follows it wherever MarkdownPoint reads it as a link', () => {
+    for (const source of [
+        '<slide:two>',
+        'See <slide:two> and [back](slide:one).',
+        '**<slide:two>** in a <span><slide:two></span>',
+        '> - [see <slide:two>]',
+        '[A <slide:two> label](slide:elsewhere)'
+    ])
+        assert.equal(rewrite(source), source.replace(/slide:two/g, 'slide:copy-two').replace('(slide:one)', '(slide:copy-one)'), source);
+    const table = '| Header |\n| --- |\n| <slide:two> |\n';
+    assert.equal(remapMarkdownSlideLinks(table, ids, 'table'), table.replace('slide:two', 'slide:copy-two'));
 });
 
 test('nested Markdown uses exact source offsets through lists, quotes, tables and CRLF', () => {
@@ -92,10 +111,30 @@ test('identical table source stays literal in rich text and relinks only in a ta
         assert.equal(remapMarkdownSlideLinks(source, ids, 'table'), source.replace('slide:two', 'slide:copy-two'));
 });
 
+test('a table whose cell holds a line feed or a carriage return by a character reference is no table to relink', () => {
+    const table = (words: string) => `| Header |\n| --- |\n| ${words} |\n`;
+    for (const words of ['a&#10;b', 'a&#13;b', 'a&#xA;b', 'a&#x0d;b', 'a&NewLine;b', '**a&#10;b**', 'b&#10;']) {
+        const source = table(`[Go](slide:two) ${words}`);
+        assert.equal(remapMarkdownSlideLinks(source, ids, 'table'), source, words);
+    }
+    const linked = table('[Go&#10;now](slide:two)');
+    assert.equal(remapMarkdownSlideLinks(linked, ids, 'table'), linked);
+    const header = '| a&#10;b |\n| --- |\n| [Go](slide:two) |\n';
+    assert.equal(remapMarkdownSlideLinks(header, ids, 'table'), header);
+    // Code and Markdown kept as written keep their characters, and an escaped or spelled ampersand starts no reference.
+    for (const words of ['`a&#10;b`', '<abbr title="a&#10;b">x</abbr>', '\\&#10;', '&amp;#10;']) {
+        const source = table(`[Go](slide:two) ${words}`);
+        assert.equal(remapMarkdownSlideLinks(source, ids, 'table'), source.replace('slide:two', 'slide:copy-two'), words);
+    }
+});
+
 test('decoded destinations change while angle brackets, source encoding elsewhere and link titles survive', () => {
     assert.equal(rewrite('[A](<slide:two> "Label")'), '[A](<slide:copy-two> "Label")');
     assert.equal(rewrite('[A](slide&#58;two "Keep &amp; here")'), '[A](slide:copy-two "Keep &amp; here")');
     assert.equal(rewrite('[A](sl&#105;de:two)'), '[A](slide:copy-two)');
+    // A number of more digits than CommonMark reads names no character: the destination is no slide link.
+    assert.equal(rewrite('[A](slide&#00000058;two)'), '[A](slide&#00000058;two)');
+    assert.equal(rewrite('<slide&#x000003A;two>'), '<slide&#x000003A;two>');
     assert.equal(rewrite('[A](slide\\:two)'), '[A](slide:copy-two)');
     assert.equal(rewrite('[A](slide%3Atwo)'), '[A](slide%3Atwo)');
     assert.equal(rewrite('[Go](slide:two\r\n "Title")'), '[Go](slide:copy-two\r\n "Title")');
@@ -199,6 +238,13 @@ test('MarkdownPoint formatting boundaries keep adjacent real links separate from
         '~~ftp://x~~[Go](slide:two)',
         '[ftp://x]{color=accent}[Go](slide:two)',
         '[ftp://x]{color="#F0A"}[Go](slide:two)',
+        '[ftp://x]{}[Go](slide:two)',
+        '[**ftp://x**]{}[***y***]{}[*z*]{}[Go](slide:two)',
+        '[ftp://x]{font-weight=600}[Go](slide:two)',
+        '[ftp://x]{font-weight="900"}[Go](slide:two)',
+        '[ftp://x]{color=muted font-weight=600}[Go](slide:two)',
+        '[ftp://x]{font-weight=300 color="#2F7D4F"}[Go](slide:two)',
+        '[[ftp://x]{}]{color=accent}[Go](slide:two)',
         '==`a==b` [Go](slide:two)==',
         '[`a]b` [Go](slide:two)]{color=accent}',
         '==![a==b](picture.png) [Go](slide:two)==',
@@ -213,10 +259,16 @@ test('MarkdownPoint formatting boundaries keep adjacent real links separate from
         '~~[ftp://x~~b](invalid[Go](slide:two)',
         '==[a==b](https://example.com/a(b)) [Go](slide:two)==',
         '==[a==b](<https://example.com/)> "title )") [Go](slide:two)==',
-        '==[reference][a\\]==b] [Go](slide:two)==\n\n[a\\]==b]: https://example.com'
+        '==[reference][a\\]==b] [Go](slide:two)==\n\n[a\\]==b]: https://example.com',
+        // A span holding an attribute the app doesn't take is a span all the same, so the address ends with it.
+        '[ftp://x]{color=not_valid}[Go](slide:two)',
+        '[ftp://x]{font-weight=450}[Go](slide:two)',
+        '[ftp://x]{font-weight=600.0}[Go](slide:two)',
+        '[ftp://x]{color=accent-}[Go](slide:two)',
+        '[ftp://x]{size=2}[Go](slide:two)'
     ])
         assert.equal(rewrite(source), source.replace('[Go](slide:two)', '[Go](slide:copy-two)'));
-    for (const literal of ['~ftp://x~[Go](slide:two)', '[ftp://x]{color=not_valid}[Go](slide:two)', '**==ftp://x**[Go](slide:two)==**']) {
+    for (const literal of ['~ftp://x~[Go](slide:two)', '**==ftp://x**[Go](slide:two)==**', '[]{}ftp://x[Go](slide:two)']) {
         assert.equal(rewrite(literal), literal);
     }
 });

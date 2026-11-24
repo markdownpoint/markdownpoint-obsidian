@@ -19,23 +19,24 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { prepareCopiedPart } from '../src/format/prepare-copy.ts';
+import type { TextSchema } from '../src/format/text-schemas.ts';
 
 const slides = new Map([
     ['one', 'copy-one'],
     ['two', 'copy-two']
 ]);
-const compositions = new Map([['card', 'copy-card']]);
-const schemas = new Map<string, 'rich-text' | 'table'>([
-    ['body', 'rich-text'],
-    ['card.caption', 'rich-text'],
-    ['data', 'table']
+const schemas = new Map<string, TextSchema>([
+    ['text:body', 'rich-text'],
+    ['text:caption', 'rich-text'],
+    ['text:data', 'table'],
+    ['notes:', 'rich-text']
 ]);
 
 test('complete slide preparation changes only identity and actual Markdown/JSON references', () => {
     const markdown =
-        '<!--  slide: one  --> \r\n<!-- author comment -->\r\n<!-- text: body -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n\r\n<!-- text: card.caption -->\r\n[Back](slide:one).\r\n<!-- notes -->\r\n[Next](slide:two).\r\n\r\n \t';
-    const record = String.raw`{ "layout":"title", "future":9007199254740993, "escaped":"\u0061", "objects":["title",{"id":"card","type":"composition","composition":"card","link":"slide:two"}] }`;
-    const result = prepareCopiedPart({ id: 'one', markdown, record }, 'slide', slides, compositions, schemas)!;
+        '<!--  slide: one  --> \r\n<!-- text: body -->\r\n<!-- author comment -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n\r\n<!-- text: caption -->\r\n[Back](slide:one).\r\n<!-- notes -->\r\n[Next](slide:two).\r\n\r\n \t';
+    const record = String.raw`{ "layout":"title", "future":9007199254740993, "escaped":"\u0061", "objects":["title",{"id":"card","type":"shape","link":"slide:two"}] }`;
+    const result = prepareCopiedPart({ id: 'one', markdown, record }, slides, schemas)!;
     assert.ok(result);
     assert.equal(result.id, 'copy-one');
     assert.equal(
@@ -46,66 +47,86 @@ test('complete slide preparation changes only identity and actual Markdown/JSON 
             .replace('[Back](slide:one)', '[Back](slide:copy-one)')
             .replace('[Next](slide:two)', '[Next](slide:copy-two)')
     );
+    assert.equal(result.record, record.replace('"link":"slide:two"', '"link":"slide:copy-two"'));
+});
+
+test("a copied slide's note shaped as a later minor's marker is escaped, as MarkdownPoint writes it, so every minor reads it as a note", () => {
+    const words = (note: string) =>
+        `Before.\r\n${note}\r\n<!-- id: p-kept -->\r\n<!--\\ done -->\r\n<!-- three words here -->\r\n\`\`\`\r\n<!-- code -->\r\n\`\`\`\r\nAfter.\r\n`;
+    const markdown = `<!-- slide: one -->\r\n<!-- text: body -->\r\n${words('  <!-- todo -->\t')}<!-- notes -->\r\n<!-- aside: x -->\r\nSay it.\r\n`;
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, slides, schemas)!;
     assert.equal(
-        result.record,
-        record.replace('"composition":"card"', '"composition":"copy-card"').replace('"link":"slide:two"', '"link":"slide:copy-two"')
+        result.markdown,
+        `<!-- slide: copy-one -->\r\n<!-- text: body -->\r\n${words('  <!--\\ todo -->\t')}<!-- notes -->\r\n<!--\\ aside: x -->\r\nSay it.\r\n`
     );
 });
 
-test('composition defaults and text use copied slide destinations without changing controls or bindings', () => {
-    const markdown = '<!--composition:card-->\n<!-- control: caption -->\n[Default](slide:two)\n<!-- text: body -->\n[Words](slide:one)\n';
-    const record =
-        '{"controls":{"caption":{"type":"text"},"link":{"type":"color","default":"accent"}},"objects":[{"id":"label","type":"text","bind":{"text":"caption"},"link":"slide:two"}]}';
-    const result = prepareCopiedPart({ id: 'card', markdown, record }, 'composition', slides, compositions, schemas)!;
+test("a copied slide's note of another shape, or with other white space than spaces and tabs, stays as written, while one with tabs is escaped", () => {
+    const notes = ['<!-- todo: fix- -->', '<!-- todo: a--b -->', '<!-- todo: a.b.c -->', '<!--\u00a0todo -->', '<!-- todo\u2003-->'].join(
+        '\r\n'
+    );
+    const markdown = `<!-- slide: one -->\r\n<!-- text: body -->\r\n${notes}\r\n<!--\ttodo:\tcard.title\t-->\r\n`;
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, slides, schemas)!;
+    assert.equal(result.markdown, `<!-- slide: copy-one -->\r\n<!-- text: body -->\r\n${notes}\r\n<!--\\\ttodo:\tcard.title\t-->\r\n`);
+});
+
+test('a copied slide whose marker ends in a bare CR keeps it and takes its new id', () => {
+    const markdown = '<!-- slide: one -->\r<!-- text: body -->\rWords.\r';
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, slides, schemas);
+    assert.equal(result?.markdown, markdown.replace('slide: one', 'slide: copy-one'));
+});
+
+test('a copied slide whose marker has spaces or tabs before it keeps them and takes its new id', () => {
+    for (const indent of [' ', '\t', '    ']) {
+        const markdown = `${indent}<!-- slide: one -->\n${indent}<!-- text: body -->\nWords.\n`;
+        const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, slides, schemas);
+        assert.equal(result?.markdown, markdown.replace('slide: one', 'slide: copy-one'), JSON.stringify(indent));
+    }
+});
+
+test('a copied slide keeps its groups and spans as written and remaps the links among them', () => {
+    const words =
+        '# [**Mark**]{}[***do***]{}[*wn*]{}[Go](slide:two)\n\n[x]{font-weight=600}[Back](slide:one) [y]{color=muted font-weight=900}\n';
+    const markdown = `<!-- slide: one -->\n<!-- text: body -->\n${words}\n<!-- notes -->\n[*Sa*]{}[**y**]{}[Next](slide:two)\n`;
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{"layout":"title"}' }, slides, schemas)!;
     assert.ok(result);
-    assert.equal(result.id, 'copy-card');
     assert.equal(
         result.markdown,
         markdown
-            .replace('composition:card', 'composition:copy-card')
-            .replace('slide:two', 'slide:copy-two')
-            .replace('slide:one', 'slide:copy-one')
+            .replace('slide: one', 'slide: copy-one')
+            .replace('[Go](slide:two)', '[Go](slide:copy-two)')
+            .replace('[Back](slide:one)', '[Back](slide:copy-one)')
+            .replace('[Next](slide:two)', '[Next](slide:copy-two)')
     );
-    assert.equal(result.record, record.replace('"link":"slide:two"', '"link":"slide:copy-two"'));
 });
 
 test('the caller supplies real field schemas while literal tables and code retain their source', () => {
     const table = '| Heading |\n| --- |\n| [Go](slide:two) |\n';
     const markdown =
         '<!-- slide: one -->\n<!-- text: body -->\n' + table + '\n<!-- text: data -->\n' + table + '\n<!-- notes -->\n' + table;
-    const result = prepareCopiedPart({ id: 'one', markdown, record: '{}' }, 'slide', slides, compositions, schemas)!;
+    const result = prepareCopiedPart({ id: 'one', markdown, record: '{}' }, slides, schemas)!;
     assert.equal(
         result.markdown,
         markdown
             .replace('slide: one', 'slide: copy-one')
             .replace('<!-- text: data -->\n' + table, '<!-- text: data -->\n' + table.replace('slide:two', 'slide:copy-two'))
     );
-    assert.equal(prepareCopiedPart({ id: 'one', markdown, record: '{}' }, 'slide', slides, compositions, new Map()), null);
+    assert.equal(prepareCopiedPart({ id: 'one', markdown, record: '{}' }, slides, new Map()), null);
     const fenced = '<!-- slide: one -->\n<!-- text: body -->\n```md\n<!-- slide: example -->\n[Go](slide:two)\n```\n';
     assert.equal(
-        prepareCopiedPart({ id: 'one', markdown: fenced, record: '{}' }, 'slide', slides, compositions, schemas)!.markdown,
+        prepareCopiedPart({ id: 'one', markdown: fenced, record: '{}' }, slides, schemas)!.markdown,
         fenced.replace('slide: one', 'slide: copy-one')
     );
 });
 
 test('preparation refuses mismatched or incomplete captured parts without producing partial copies', () => {
     const one = '<!-- slide: one -->\n';
-    for (const markdown of [
-        '',
-        'prefix\n' + one,
-        one + '<!-- slide: two -->\n',
-        one + '<!-- section: end -->\n# End\n',
-        one + '<!-- composition: card -->\n'
-    ]) {
-        assert.equal(prepareCopiedPart({ id: 'one', markdown, record: '{}' }, 'slide', slides, compositions, schemas), null);
+    for (const markdown of ['', 'prefix\n' + one, one + '<!-- slide: two -->\n', one + '<!-- section: end -->\n# End\n']) {
+        assert.equal(prepareCopiedPart({ id: 'one', markdown, record: '{}' }, slides, schemas), null);
     }
-    assert.equal(prepareCopiedPart({ id: 'wrong', markdown: one, record: '{}' }, 'slide', slides, compositions, schemas), null);
-    assert.equal(prepareCopiedPart({ id: 'one', markdown: one, record: '{}' }, 'composition', slides, compositions, schemas), null);
-    assert.equal(prepareCopiedPart({ id: 'one', markdown: one, record: '{' }, 'slide', slides, compositions, schemas), null);
-    assert.equal(
-        prepareCopiedPart({ id: 'one', markdown: one, record: '{}' }, 'slide', new Map([['one', 'Bad ID']]), compositions, schemas),
-        null
-    );
+    assert.equal(prepareCopiedPart({ id: 'wrong', markdown: one, record: '{}' }, slides, schemas), null);
+    assert.equal(prepareCopiedPart({ id: 'one', markdown: one, record: '{' }, slides, schemas), null);
+    assert.equal(prepareCopiedPart({ id: 'one', markdown: one, record: '{}' }, new Map([['one', 'Bad ID']]), schemas), null);
     const unchanged = { id: 'one', markdown: one, record: '{ "extra":9007199254740993 }' };
-    assert.deepEqual(prepareCopiedPart(unchanged, 'slide', new Map(), new Map(), new Map()), unchanged);
+    assert.deepEqual(prepareCopiedPart(unchanged, new Map(), new Map()), unchanged);
 });

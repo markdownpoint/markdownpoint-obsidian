@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { prepareNewSlide, orderedLayouts, layoutName } from '../src/format/new-slide.ts';
+import { prepareNewSlide, orderedLayouts, layoutName, layoutTextPlaceholders, slideTextPlaceholders } from '../src/format/new-slide.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { planSlideInsertion } from '../src/format/insert.ts';
 import type { EmbeddedTheme } from '../src/format/embedded-theme.ts';
@@ -51,23 +51,22 @@ const layouts = theme({
     text: { title: 'Do not save sample words', branding: 'Fixed artwork' }
 });
 
-test('a new slide exposes empty writing slots in reading order without persisting samples or images', () => {
+test("a new slide is its marker and its first placeholder's, the layout giving the other empty placeholders without samples or images", () => {
     const part = prepareNewSlide(layouts, 'title', 'new-slide')!;
     assert.deepEqual(JSON.parse(part.record), { layout: 'title' });
-    const document = indexPresentation(part.markdown, 0)!;
+    assert.equal(part.markdown, '<!-- slide: new-slide -->\n\n<!-- text: eyebrow -->\n');
     assert.deepEqual(
-        document.slides[0]!.blocks.map(block => [block.kind, block.id]),
-        [
-            ['text', 'eyebrow'],
-            ['text', 'title'],
-            ['text', 'body']
-        ]
+        indexPresentation(part.markdown, 0)!.slides[0]!.blocks.map(block => [block.kind, block.id]),
+        [['text', 'eyebrow']]
     );
-    assert.equal(part.markdown, '<!-- slide: new-slide -->\n\n<!-- text: eyebrow -->\n\n<!-- text: title -->\n\n<!-- text: body -->\n');
-    assert.equal(part.markdown.includes('sample'), false);
-    assert.equal(part.markdown.includes('picture'), false);
-    assert.equal(part.markdown.includes('footer'), false);
-    for (const block of document.slides[0]!.blocks) assert.equal(part.markdown.slice(block.contentFrom, block.to).trim(), '');
+    assert.deepEqual(layoutTextPlaceholders(layouts, 'title'), ['eyebrow', 'title', 'body']);
+    assert.deepEqual(layoutTextPlaceholders(layouts, 'blank'), []);
+    assert.deepEqual(slideTextPlaceholders({ layout: 'title', overrides: { eyebrow: null, title: { frame: {} } } }, layouts), [
+        'title',
+        'body'
+    ]);
+    assert.deepEqual(slideTextPlaceholders({ layout: 'missing' }, layouts), []);
+    assert.deepEqual(slideTextPlaceholders({ layout: 'title' }, null), []);
 });
 
 test('a blank layout creates a valid slide without persisting an empty notes marker', () => {
@@ -94,8 +93,20 @@ test('new slide insertion keeps surrounding source and metadata intact', () => {
 
 test('layout inventory preserves declared order and rejects unsafe or duplicate writing identities', () => {
     assert.deepEqual(orderedLayouts(layouts), ['title', 'blank']);
+    // The layouts `layout-order` leaves out follow by key, not in the order the vault lists their files.
+    const unlisted = {
+        ...layouts,
+        layouts: new Map([
+            ['content-with-header', layouts.layouts.get('blank')!],
+            ['quote', layouts.layouts.get('blank')!],
+            ['content', layouts.layouts.get('blank')!],
+            ['title', layouts.layouts.get('title')!]
+        ])
+    };
+    assert.deepEqual(orderedLayouts(unlisted), ['title', 'content', 'content-with-header', 'quote']);
     assert.equal(layoutName('text-image', {}), 'Text image');
     assert.equal(layoutName('internal', { name: 'Two ideas' }), 'Two ideas');
+    assert.equal(layoutName('internal', { name: ' Two ideas ' }), ' Two ideas ', 'as the file spells it');
     assert.equal(prepareNewSlide(layouts, 'missing', 'new'), null);
     assert.equal(prepareNewSlide(layouts, 'title', 'bad -->'), null);
     assert.equal(
@@ -129,11 +140,26 @@ test('multicolumn writing reads down each column under a spanning title', () => 
             field('left-heading', 40, 160, 400, 80)
         ]
     });
-    const part = prepareNewSlide(columns, 'title', 'new')!;
-    assert.deepEqual(
-        indexPresentation(part.markdown, 0)!
-            .slides[0]!.blocks.filter(block => block.kind === 'text')
-            .map(block => block.id),
-        ['title', 'left-heading', 'left-body', 'right-heading', 'right-body']
-    );
+    assert.deepEqual(layoutTextPlaceholders(columns, 'title'), ['title', 'left-heading', 'left-body', 'right-heading', 'right-body']);
+});
+
+test('a placeholder whose newer auto-size word may grow a side its frame leaves out is passed over, as MarkdownPoint passes it over', () => {
+    const newer = theme({
+        objects: [
+            { id: 'title', type: 'text', placeholder: true, frame: { x: 80, y: 150, width: 600, height: 100 } },
+            { id: 'body', type: 'text', placeholder: true, 'auto-size': 'fit', frame: { x: 80, y: 300, width: 600 } },
+            { id: 'caption', type: 'text', placeholder: true, 'auto-size': 'fit', frame: { x: 80, y: 600, width: 600, height: 60 } }
+        ]
+    });
+    assert.deepEqual(layoutTextPlaceholders(newer, 'title'), ['title', 'caption'], 'a full frame reads, whatever the word');
+});
+
+test('a title that grows to its words, holding no height, still reads before the body under it', () => {
+    const growing = theme({
+        objects: [
+            { id: 'body', type: 'text', placeholder: true, frame: { x: 80, y: 300, width: 600, height: 240 } },
+            { id: 'title', type: 'text', placeholder: true, 'auto-size': 'height', frame: { x: 80, y: 150, width: 600 } }
+        ]
+    });
+    assert.deepEqual(layoutTextPlaceholders(growing, 'title'), ['title', 'body']);
 });

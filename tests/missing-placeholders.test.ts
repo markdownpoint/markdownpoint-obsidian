@@ -1,0 +1,191 @@
+/*
+ * MarkdownPoint - Plugin for Obsidian
+ * Copyright (c) 2026 Johan Sanneblad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+import assert from 'node:assert/strict';
+import { test } from 'vitest';
+import { EditorState } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
+import { editorInfoField, editorLivePreviewField } from './support/obsidian.ts';
+import { indexPresentation } from '../src/format/document.ts';
+import { planSlideInsertion } from '../src/format/insert.ts';
+import { isRecord } from '../src/format/recognition.ts';
+import { prepareNewSlide } from '../src/format/new-slide.ts';
+import type { EmbeddedTheme } from '../src/format/embedded-theme.ts';
+import type { TextFieldLabels } from '../src/format/text-binding.ts';
+import { slideInsertionTransaction } from '../src/editor/insert.ts';
+import { missingPlaceholders, validatedPlaceholderInsertion } from '../src/editor/writing-fields.ts';
+import { PresentationEditor } from '../src/editor/presentation-editor.ts';
+import { NotesUi } from '../src/settings/notes-ui.ts';
+import type { PresentationReader } from '../src/presentation/reader.ts';
+
+const labels: TextFieldLabels = {
+    names: { title: 'Title', body: 'Body', eyebrow: 'Eyebrow' },
+    text: 'Text',
+    numbered: ({ name, number }) => `${name} ${number}`
+};
+const deck =
+    '<!-- slide: empty -->\n\n' +
+    '<!-- slide: words -->\n<!-- text: body -->\nWords.\n\n' +
+    '<!-- slide: noted -->\n<!-- text: title -->\nA title\n<!-- notes -->\nSay it.\n\n' +
+    '<!-- slide: own -->\n<!-- text: chart -->\nNorth\n\n<!-- notes -->\nPoint.\n';
+const placeholders = new Map<string, readonly string[]>([
+    ['empty', ['eyebrow', 'title', 'body']],
+    ['words', ['title', 'body']],
+    ['noted', ['title', 'body']],
+    ['own', ['title', 'body']]
+]);
+const at = (text: string) => deck.indexOf(text);
+
+test("a layout's placeholders without blocks go in its reading order among the placeholder blocks, else after the words, before notes", () => {
+    const missing = missingPlaceholders(indexPresentation(deck, 0)!, placeholders, labels);
+    assert.deepEqual(
+        missing.map(placeholder => [placeholder.slideId, placeholder.id, placeholder.label, placeholder.at, placeholder.opening]),
+        [
+            ['empty', 'eyebrow', 'Eyebrow', at('<!-- slide: words'), true],
+            ['empty', 'title', 'Title', at('<!-- slide: words'), true],
+            ['empty', 'body', 'Body', at('<!-- slide: words'), true],
+            ['words', 'title', 'Title', at('<!-- text: body'), true],
+            ['noted', 'body', 'Body', at('<!-- notes -->\nSay'), false],
+            ['own', 'title', 'Title', at('<!-- notes -->\nPoint'), false],
+            ['own', 'body', 'Body', at('<!-- notes -->\nPoint'), false]
+        ]
+    );
+});
+
+test("in a newer minor's file a missing placeholder goes after the later minor's blocks that follow the block before it", () => {
+    const front = '---\nmarkdownpoint: "1.1"\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n';
+    const later =
+        `${front}<!-- slide: noted -->\n<!-- text: title -->\nA title\n<!-- sticker: t -->\nTilted.\n<!-- notes -->\nSay it.\n\n` +
+        '<!-- slide: own -->\n<!-- text: chart -->\nNorth\n\n<!-- glow -->\nAfter the words.\n';
+    const missing = missingPlaceholders(indexPresentation(later, front.length)!, placeholders, labels);
+    assert.deepEqual(
+        missing.map(placeholder => [placeholder.slideId, placeholder.id, placeholder.at]),
+        [
+            ['noted', 'body', later.indexOf('<!-- notes -->')],
+            ['own', 'title', later.length],
+            ['own', 'body', later.length]
+        ]
+    );
+});
+
+test('writing in a missing placeholder adds only its marker, with the caret on its writable line', () => {
+    const document = indexPresentation(deck, 0)!;
+    const write = (slideId: string, id: string) => {
+        const placeholder = missingPlaceholders(document, placeholders, labels).find(
+            placeholder => placeholder.slideId === slideId && placeholder.id === id
+        )!;
+        const insertion = validatedPlaceholderInsertion(deck, document, placeholder)!;
+        assert.ok(insertion);
+        const written = deck.slice(0, insertion.from) + insertion.insert + deck.slice(insertion.from);
+        const block = indexPresentation(written, 0)!
+            .slides.find(slide => slide.id === slideId)!
+            .blocks.find(block => block.id === id)!;
+        assert.equal(block.contentFrom, insertion.cursor);
+        return written;
+    };
+    assert.equal(write('empty', 'title'), deck.replace('<!-- slide: empty -->\n\n', '<!-- slide: empty -->\n\n<!-- text: title -->\n\n'));
+    assert.equal(write('words', 'title'), deck.replace('<!-- slide: words -->\n', '<!-- slide: words -->\n\n<!-- text: title -->\n\n'));
+    assert.equal(write('noted', 'body'), deck.replace('A title\n', 'A title\n\n<!-- text: body -->\n\n'));
+    const document2 = indexPresentation(write('words', 'title'), 0)!;
+    assert.equal(
+        missingPlaceholders(document2, placeholders, labels).some(placeholder => placeholder.slideId === 'words'),
+        false
+    );
+    const stale = missingPlaceholders(document, placeholders, labels).find(placeholder => placeholder.slideId === 'words')!;
+    assert.equal(validatedPlaceholderInsertion(write('words', 'title'), document2, stale), null);
+});
+
+/** The draft's fields for placeholders without blocks; the widget class is internal to the editor. */
+function missingFields(state: EditorState): number {
+    let fields = 0;
+    for (const decorations of state.facet(EditorView.decorations)) {
+        if (typeof decorations === 'function') continue;
+        for (const cursor = decorations.iter(); cursor.value; cursor.next()) {
+            const spec: unknown = cursor.value.spec;
+            if (isRecord(spec) && spec.widget?.constructor.name === 'MissingField') fields++;
+        }
+    }
+    return fields;
+}
+
+test('Live Preview shows each missing placeholder as an empty field until its marker stands, mapped while parsing stops', () => {
+    const reader = {
+        snapshot(_file: unknown, markdown: string) {
+            const document = indexPresentation(markdown, 0);
+            return (
+                document && {
+                    id: 'presentation',
+                    bodyStart: 0,
+                    document,
+                    images: new Map(),
+                    placeholders,
+                    outline: { slides: document.slides.map(slide => ({ id: slide.id, skipped: false })), sections: [] }
+                }
+            );
+        },
+        matchesIdentity: () => true
+    } as unknown as PresentationReader;
+    const notes = new NotesUi({ loadLocalStorage: () => null, saveLocalStorage: () => undefined });
+    const owner = new PresentationEditor(reader, notes, () => undefined);
+    let state = EditorState.create({ doc: deck, extensions: [editorInfoField, editorLivePreviewField, owner.extension] });
+    assert.equal(missingFields(state), 7);
+    state = state.update({ changes: { from: at('<!-- text: body'), insert: '<!-- text: title -->\nHeader\n' } }).state;
+    assert.equal(missingFields(state), 6);
+    state = state.update({ changes: { from: state.doc.toString().indexOf('Words.'), insert: '~~~js\n' } }).state;
+    assert.equal(indexPresentation(state.doc.toString(), 0), null);
+    assert.equal(missingFields(state), 6);
+});
+
+function layoutTheme(): EmbeddedTheme {
+    const value = {
+        objects: [
+            { id: 'body', type: 'text', placeholder: true, frame: { x: 80, y: 300, width: 600, height: 240 } },
+            { id: 'title', type: 'text', placeholder: true, frame: { x: 80, y: 150, width: 600, height: 100 } }
+        ]
+    };
+    return {
+        key: 'basic',
+        id: 'theme',
+        root: 'deck/themes/basic',
+        master: { path: 'master.json', source: '{}', value: {} },
+        layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(value), value }]])
+    };
+}
+
+test('a new slide opens on its first placeholder in Live Preview and Source mode, the others shown until they have words', () => {
+    const source = '<!-- slide: one -->\n<!-- text: title -->\nOne\n\n<!-- slide: two -->\n<!-- text: title -->\nTwo\n';
+    const part = prepareNewSlide(layoutTheme(), 'title', 'new')!;
+    for (const [after, livePreview, expected] of [
+        ['one', true, source.replace('<!-- slide: two', '<!-- slide: new -->\n\n<!-- text: title -->\n\n<!-- slide: two')],
+        ['one', false, source.replace('<!-- slide: two', '<!-- slide: new -->\n\n<!-- text: title -->\n\n<!-- slide: two')],
+        ['two', true, source + '\n<!-- slide: new -->\n\n<!-- text: title -->\n']
+    ] as const) {
+        const state = EditorState.create({ doc: source });
+        const plan = planSlideInsertion(source, indexPresentation(source, 0)!, '{"slides":{"one":{},"two":{}}}', [part], after, 0)!;
+        const next = state.update(slideInsertionTransaction(state, plan, 'new', livePreview)!).state;
+        assert.equal(next.doc.toString(), expected, `${after} ${livePreview}`);
+        const document = indexPresentation(expected, 0)!;
+        const slide = document.slides.find(slide => slide.id === 'new')!;
+        assert.equal(next.selection.main.head, slide.blocks[0]!.contentFrom);
+        const others = missingPlaceholders(document, new Map([['new', ['title', 'body']]]), labels);
+        assert.deepEqual(
+            others.map(placeholder => [placeholder.id, placeholder.at]),
+            [['body', slide.blocks[0]!.to]]
+        );
+    }
+});

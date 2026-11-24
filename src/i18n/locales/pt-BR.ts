@@ -64,13 +64,21 @@ export const ptBR: Translations = {
         cancel: 'Cancelar',
         invalidName: 'Digite um nome sem barras nem caracteres reservados.',
         exists: 'Já existe um arquivo ou uma pasta com este nome.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `O MarkdownPoint não pode criar uma apresentação dentro de “${presentation}”. Escolha uma pasta fora de “${presentation}”.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `O MarkdownPoint não pode abrir a apresentação “${presentation}” enquanto ela estiver dentro de “${outer}”. Mova a pasta “${presentation}” para fora de “${outer}” e abra-a.`,
         failed: 'Não foi possível criar a apresentação. Verifique a pasta e tente novamente.',
         openFailed: 'A apresentação foi criada, mas não pôde ser aberta. Abra o slides.md na pasta dela.',
         openChanged: 'A apresentação mudou ou não pôde ser lida. Tente novamente.',
         handoffFailed: 'Não foi possível salvar e abrir a apresentação.',
         themeChanged: 'O tema mudou ou está indisponível. Reabra esta janela e escolha-o novamente.',
         newerFormat: ({ version }: { version: string }) =>
-            `Esta apresentação usa um formato mais novo do MarkdownPoint (${version}). Atualize o plugin MarkdownPoint para abri-la como apresentação.`
+            `Esta apresentação usa um formato mais novo do MarkdownPoint (${version}). Atualize o plugin MarkdownPoint para abri-la como apresentação.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `O MarkdownPoint não consegue ler “${file}” em “${presentation}”. Abra a apresentação no app MarkdownPoint para ver o que corrigir.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `O MarkdownPoint não consegue ler a apresentação em “${presentation}”. Abra-a no app MarkdownPoint para ver o que corrigir.`
     },
     slides: {
         new: 'Novo slide',

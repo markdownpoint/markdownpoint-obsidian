@@ -23,11 +23,11 @@ import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.
 import { prepareSlideCopies } from '../src/format/copy.ts';
 
 const uuid = '11111111-1111-4111-8111-111111111111';
-const origin = { vault: uuid, document: uuid, path: 'Presentations/Å calm place/slides.md' };
+const origin = { vault: uuid, presentationId: uuid, path: 'Presentations/Å calm place/slides.md' };
 const paths = embeddedThemePaths(origin.path, { theme: 'basic' }, ['title'])!;
 const masterSource =
-    '\uFEFF{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","future":9007199254740993}';
-const layoutSource = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+    '\uFEFF{"markdownpoint":"1.0","type":"master","id":"11111111-1111-4111-8111-111111111111","name":"Own test","future":9007199254740993}';
+const layoutSource = '{"markdownpoint":"1.0","type":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,
@@ -37,35 +37,26 @@ const theme = {
         ['title', { path: paths.layouts.get('title')!, source: layoutSource, value: themeDocument(layoutSource, 'layout')! }]
     ])
 };
-const captured = {
-    slides: [
-        {
-            id: 'one',
-            markdown:
-                '<!-- slide: one -->\r\n<!-- text: body -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n<!-- notes -->\r\nKeep these notes.\r\n',
-            record: String.raw`{"layout":"title","future":9007199254740993,"escaped":"\u0061"}`
-        },
-        {
-            id: 'two',
-            markdown: '<!-- slide: two -->\n<!-- text: instance.caption -->\nOwn words.\n',
-            record: '{"layout":"title","objects":[{"id":"instance","type":"composition","composition":"card"}]}'
-        }
-    ],
-    compositions: [
-        {
-            id: 'card',
-            markdown: '<!-- composition: card -->\n<!-- control: caption -->\nDefault words.\n',
-            record: '{"controls":{"caption":{"type":"text"}}}'
-        }
-    ]
-};
+const table = (cell: string) => `| Go |\n| --- |\n| ${cell} |\n`;
+const captured = [
+    {
+        id: 'one',
+        markdown:
+            '<!-- slide: one -->\r\n<!-- text: body -->\r\n[Go](slide:two) and `[No](slide:two)`.\r\n<!-- notes -->\r\nKeep these notes.\r\n',
+        record: String.raw`{"layout":"title","future":9007199254740993,"escaped":"\u0061"}`
+    },
+    {
+        id: 'two',
+        markdown: `<!-- slide: two -->\n<!-- text: prices -->\n${table('[Cell](slide:one)')}`,
+        record: '{"layout":"title","objects":[{"id":"prices","type":"table"}]}'
+    }
+];
 const encoded = () => encodeSlideClipboard(uuid, origin, captured, theme)!;
 const transport = () => ({
-    version: 2,
+    version: 5 as number,
     token: uuid,
     origin: { ...origin },
-    slides: captured.slides.map(part => ({ ...part })),
-    compositions: captured.compositions.map(part => ({ ...part })),
+    slides: captured.map(part => ({ ...part })),
     theme: { key: 'basic', id: uuid, master: masterSource, layouts: [{ key: 'title', source: layoutSource }] }
 });
 const mutate = (change: (value: ReturnType<typeof transport> & { schemas?: unknown }) => void) => {
@@ -83,8 +74,8 @@ test('whole-slide clipboard round trips keep complete raw fields, records, Theme
     assert.equal(result.theme.master.source, masterSource);
     assert.equal(result.theme.layouts.get('title')!.source, layoutSource);
     assert.equal(result.theme.root, paths.root);
-    assert.equal(result.schemas.get('one')!.get('body'), 'rich-text');
-    assert.equal(result.schemas.get('two')!.get('instance.caption'), 'rich-text');
+    assert.equal(result.schemas.get('one')!.get('text:body'), 'rich-text');
+    assert.equal(result.schemas.get('two')!.get('text:prices'), 'table');
     assert.notEqual(SLIDE_CLIPBOARD_MIME, 'web application/x-markdownpoint-slides');
 });
 
@@ -94,9 +85,18 @@ test('text and incompatible, malformed or ambiguous transport data are never tre
         '{',
         '[]',
         '{"version":1,"version":2}',
-        JSON.stringify({ markdownpoint: 1, kind: 'slides', root: '/tmp', slides: [] }),
+        JSON.stringify({ markdownpoint: 1, type: 'slides', root: '/tmp', slides: [] }),
         mutate(value => {
-            value.version = 1;
+            value.version = 2;
+        }),
+        mutate(value => {
+            value.version = 3;
+        }),
+        mutate(value => {
+            value.version = 4;
+        }),
+        mutate(value => {
+            value.version = 6;
         }),
         mutate(value => {
             value.token = 'invalid';
@@ -105,7 +105,7 @@ test('text and incompatible, malformed or ambiguous transport data are never tre
             value.origin.vault = 'invalid';
         }),
         mutate(value => {
-            value.origin.document = 'invalid';
+            value.origin.presentationId = 'invalid';
         }),
         mutate(value => {
             value.origin.path = '../slides.md';
@@ -120,13 +120,10 @@ test('text and incompatible, malformed or ambiguous transport data are never tre
         assert.equal(decodeSlideClipboard(source), null);
 });
 
-test('missing layouts, definitions and duplicate identities refuse incomplete clipboard groups', () => {
+test('missing layouts, unreadable records and duplicate identities refuse incomplete clipboard groups', () => {
     for (const source of [
         mutate(value => {
             value.theme.layouts = [];
-        }),
-        mutate(value => {
-            value.compositions = [];
         }),
         mutate(value => {
             value.theme.layouts.push(value.theme.layouts[0]!);
@@ -147,25 +144,31 @@ test('missing layouts, definitions and duplicate identities refuse incomplete cl
             value.slides.push(value.slides[0]!);
         }),
         mutate(value => {
-            value.compositions[0]!.id = 'one';
-        }),
-        mutate(value => {
             value.slides[0]!.record = '{"layout":"title","layout":"title"}';
         }),
         mutate(value => {
             value.slides[0]!.record = 'null';
+        }),
+        mutate(value => {
+            value.slides[1]!.record = '{"layout":"title","objects":[7]}';
+        }),
+        mutate(value => {
+            value.slides[1]!.record = '{"layout":"title","objects":{"prices":{"type":"table"}}}';
         })
     ])
         assert.equal(decodeSlideClipboard(source), null);
 });
 
-test('source identities, kinds and field boundaries must match the supplied records', () => {
+test('source identities and field boundaries must match the supplied records', () => {
     for (const source of [
         mutate(value => {
             value.slides[0]!.id = 'mismatch';
         }),
         mutate(value => {
-            value.slides[0]!.markdown = value.compositions[0]!.markdown;
+            value.slides[0]!.markdown = '<!-- text: body -->\nWords.\n';
+        }),
+        mutate(value => {
+            value.slides[0]!.markdown = '<!-- slide: one -->\n<!-- text: card.body -->\nWords.\n';
         }),
         mutate(value => {
             value.slides[0]!.markdown += value.slides[1]!.markdown;
@@ -187,40 +190,27 @@ test('supplied schema claims cannot change the grammar derived from the copied T
     const source = mutate(value => {
         value.schemas = { one: { body: 'table' } };
     });
-    assert.equal(decodeSlideClipboard(source)!.schemas.get('one')!.get('body'), 'rich-text');
+    assert.equal(decodeSlideClipboard(source)!.schemas.get('one')!.get('text:body'), 'rich-text');
     const decoded = decodeSlideClipboard(source)!;
     let next = 0;
-    const copies = prepareSlideCopies(
-        decoded.captured,
-        decoded.captured.compositions,
-        new Set(['existing']),
-        decoded.schemas,
-        () => `new-${++next}`
-    )!;
+    const copies = prepareSlideCopies(decoded.captured, new Set(['existing']), decoded.schemas, () => `new-${++next}`)!;
     assert.ok(copies);
-    assert.equal(copies.compositions.length, 0);
-    assert.ok(copies.slides[0]!.markdown.includes('[Go](slide:new-2) and `[No](slide:two)`'));
+    assert.ok(copies[0]!.markdown.includes('[Go](slide:new-2) and `[No](slide:two)`'));
+});
+
+test("a table's words keep their links aimed at the copied slides", () => {
+    const decoded = decodeSlideClipboard(encoded())!;
+    let next = 0;
+    const copies = prepareSlideCopies(decoded.captured, new Set(['one', 'two']), decoded.schemas, () => `new-${++next}`)!;
+    const [one, two] = copies.map(part => part.id);
+    assert.equal(copies[1]!.markdown, `<!-- slide: ${two} -->\n<!-- text: prices -->\n${table(`[Cell](slide:${one})`)}`);
 });
 
 test('encoding carries only declared transport fields while raw presentation metadata stays complete', () => {
-    const extra = { ...captured, slides: captured.slides.map(part => ({ ...part, privateContext: 'not clipboard data' })) };
+    const extra = captured.map(part => ({ ...part, privateContext: 'not clipboard data' }));
     const context = { ...origin, privateContext: 'not clipboard data' };
     const source = encodeSlideClipboard(uuid, context, extra, theme);
     assert.ok(source);
     assert.equal(source.includes('privateContext'), false);
     assert.deepEqual(decodeSlideClipboard(source)!.captured, captured);
-});
-
-test('a record that still holds the words before 1.0 is neither copied nor pasted, in any presentation', () => {
-    for (const record of [
-        '{"layout":"title","objects":[{"id":"photo","type":"image","asset":"media/photo.png"}]}',
-        '{"layout":"title","objects":[{"id":"instance","type":"composition","source":"card"}]}',
-        '{"layout":"title","objects":[{"id":"photo","type":"image","file":"media/a.png","image-result":{"source":"generated/b.png"}}]}',
-        '{"layout":"title","overrides":{"body":{"model":{"asset":"generated/letters.glb"}}}}',
-        '{"layout":"title","background":{"image":"media/back.png","image-result":{"source":"generated/b.png"}}}'
-    ]) {
-        const slides = [{ ...captured.slides[0]!, record }];
-        assert.equal(encodeSlideClipboard(uuid, origin, { slides, compositions: [] }, theme), null, record);
-        assert.equal(decodeSlideClipboard(mutate(value => (value.slides = [{ ...value.slides[0]!, record }]))), null, record);
-    }
 });

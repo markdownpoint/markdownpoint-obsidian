@@ -19,12 +19,15 @@
 import { applyEdits, parseTree } from 'jsonc-parser';
 import type { Edit, Node, ParseError } from 'jsonc-parser';
 
-export type CompanionMap = 'slides' | 'compositions';
-
-function objectTree(source: string): Node | null {
+/**
+ * A JSON object's tree, its nodes at their offsets in `source`. A companion may start with a byte order mark, which
+ * MarkdownPoint reads past and the tree leaves where it is.
+ */
+function objectTree(source: string, companion = false): Node | null {
     const errors: ParseError[] = [];
     const tree = parseTree(source, errors, { disallowComments: true, allowTrailingComma: false });
-    return !errors.length && tree?.type === 'object' ? tree : null;
+    const bom = companion && source.charCodeAt(0) === 0xfeff;
+    return errors.every(error => bom && error.offset === 0 && error.length === 1) && tree?.type === 'object' ? tree : null;
 }
 
 export function isSlideRecordSource(source: string): boolean {
@@ -32,11 +35,7 @@ export function isSlideRecordSource(source: string): boolean {
 }
 
 /** Update only known navigation/reference values, retaining every other source byte. */
-export function remapRecordReferences(
-    source: string,
-    slides: ReadonlyMap<string, string>,
-    compositions: ReadonlyMap<string, string>
-): string | null {
+export function remapRecordReferences(source: string, slides: ReadonlyMap<string, string>): string | null {
     const root = objectTree(source);
     if (!root) return null;
     // Match JSON's last-value semantics without serializing its unknown numbers,
@@ -46,24 +45,21 @@ export function remapRecordReferences(
             ? object.children?.filter(property => property.children?.[0]?.value === name).at(-1)?.children?.[1]
             : undefined;
     const edits: Edit[] = [];
-    const replace = (node: Node | undefined, ids: ReadonlyMap<string, string>, prefix = ''): void => {
+    // A link names a slide as `slide:` and its id.
+    const replace = (node: Node | undefined): void => {
         const value: unknown = node?.value;
-        if (!node || node.type !== 'string' || typeof value !== 'string' || !value.startsWith(prefix)) return;
-        const next = ids.get(value.slice(prefix.length));
-        if (next !== undefined && prefix + next !== value)
-            edits.push({ offset: node.offset, length: node.length, content: JSON.stringify(prefix + next) });
+        if (!node || node.type !== 'string' || typeof value !== 'string' || !value.startsWith('slide:')) return;
+        const next = slides.get(value.slice('slide:'.length));
+        if (next !== undefined && `slide:${next}` !== value)
+            edits.push({ offset: node.offset, length: node.length, content: JSON.stringify(`slide:${next}`) });
     };
     const objects = field(root, 'objects');
-    if (objects?.type === 'array')
-        for (const object of objects.children ?? []) {
-            replace(field(object, 'link'), slides, 'slide:');
-            if (field(object, 'type')?.value === 'composition') replace(field(object, 'composition'), compositions);
-        }
+    if (objects?.type === 'array') for (const object of objects.children ?? []) replace(field(object, 'link'));
     const overrides = field(root, 'overrides');
     if (overrides?.type === 'object') {
         const effective = new Map<unknown, Node | undefined>();
         for (const property of overrides.children ?? []) effective.set(property.children?.[0]?.value, property.children?.[1]);
-        for (const override of effective.values()) replace(field(override, 'link'), slides, 'slide:');
+        for (const override of effective.values()) replace(field(override, 'link'));
     }
     return applyEdits(source, edits);
 }
@@ -89,9 +85,9 @@ export class CompanionDocument {
         );
     }
 
-    static read(source: string, mapName: CompanionMap = 'slides'): CompanionDocument | null {
-        const root = objectTree(source);
-        const maps = root?.children?.filter(property => property.children?.[0]?.value === mapName);
+    static read(source: string): CompanionDocument | null {
+        const root = objectTree(source, true);
+        const maps = root?.children?.filter(property => property.children?.[0]?.value === 'slides');
         const map = maps?.length === 1 ? maps[0]?.children?.[1] : undefined;
         if (map?.type !== 'object') return null;
         const properties = map.children ?? [];
@@ -102,25 +98,6 @@ export class CompanionDocument {
             names.push(name);
         }
         return new Set(names).size === names.length ? new CompanionDocument(source, map, properties, names) : null;
-    }
-
-    /** Prepare an absent map without overwriting a malformed or duplicate one. */
-    static ensure(source: string, mapName: CompanionMap): CompanionDocument | null {
-        const existing = CompanionDocument.read(source, mapName);
-        if (existing) return existing;
-        const root = objectTree(source);
-        if (!root || root.children?.some(property => property.children?.[0]?.value === mapName)) return null;
-        const first = root.children?.[0];
-        const last = root.children?.at(-1);
-        const gap = first ? source.slice(root.offset + 1, first.offset) || ' ' : ' ';
-        const changed = applyEdits(source, [
-            {
-                offset: last ? last.offset + last.length : root.offset + 1,
-                length: 0,
-                content: (last ? ',' : '') + gap + JSON.stringify(mapName) + ': {}'
-            }
-        ]);
-        return CompanionDocument.read(changed, mapName);
     }
 
     /** Null removes a record. A string inserts/replaces its complete JSON object. */
@@ -148,19 +125,54 @@ export class CompanionDocument {
             const to = properties[index]?.offset ?? last.offset + last.length;
             edits.push({ offset: from, length: to - from, content: '' });
         }
-        const added = [...updates].filter(([id, value]) => value !== null && !this.records.has(id));
-        if (added.length) {
+        // MarkdownPoint writes a map's records in the order of their ids (`<`), so an added record, as Undo of a delete
+        // puts one back, goes before the first record left whose id follows its own, else after the last.
+        const added = [...updates]
+            .filter((entry): entry is [string, string] => entry[1] !== null && !this.records.has(entry[0]))
+            .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+        const gap = properties[0] ? source.slice(this.map.offset + 1, properties[0].offset) || ' ' : ' ';
+        const kept = properties.flatMap((property, index) =>
+            updates.get(names[index]!) === null ? [] : [{ property, name: names[index]! }]
+        );
+        const before = new Map<Node, string[]>();
+        const after: string[] = [];
+        // In id order, the first record left that follows an added one never comes earlier than the last one's did.
+        let next = 0;
+        for (const [id, value] of added) {
+            while (next < kept.length && !(id < kept[next]!.name)) next++;
+            const entry = `${JSON.stringify(id)}: ${value}`;
+            const at = kept[next]?.property;
+            if (!at) after.push(entry);
+            else if (before.has(at)) before.get(at)!.push(entry);
+            else before.set(at, [entry]);
+        }
+        for (const [at, entries] of before) edits.push({ offset: at.offset, length: 0, content: entries.join(',' + gap) + ',' + gap });
+        if (after.length) {
             const last = properties.at(-1);
-            const gap = properties[0] ? source.slice(this.map.offset + 1, properties[0].offset) || ' ' : ' ';
-            const content = added.map(([id, value]) => `${JSON.stringify(id)}: ${value}`).join(',' + gap);
             edits.push({
                 offset: last ? last.offset + last.length : this.map.offset + 1,
                 length: 0,
-                content: (remaining ? ',' + gap : '') + content
+                content: (remaining ? ',' + gap : '') + after.join(',' + gap)
             });
         }
-        return applyEdits(source, edits);
+        return applyInOnePass(source, edits);
     }
+}
+
+/**
+ * Edits that never overlap, applied in one pass over the source: a large paste places records between many others, and
+ * applying each edit to the whole text, as `applyEdits` does, rebuilds the companion once per place. At one offset, an
+ * insertion goes before a removal, as `applyEdits` orders them.
+ */
+function applyInOnePass(source: string, edits: readonly Edit[]): string {
+    const sorted = [...edits].sort((a, b) => a.offset - b.offset || a.length - b.length);
+    let text = '';
+    let at = 0;
+    for (const edit of sorted) {
+        text += source.slice(at, edit.offset) + edit.content;
+        at = edit.offset + edit.length;
+    }
+    return text + source.slice(at);
 }
 
 export interface ReconciledSlideRecords {
@@ -168,14 +180,13 @@ export interface ReconciledSlideRecords {
     readonly remembered: ReadonlyMap<string, string>;
 }
 
-/** Only explicitly managed records follow markers of their own kind through native undo. */
+/** Only explicitly managed records follow their slides' markers through native undo. */
 export function reconcileSlideRecords(
     companion: string,
     remembered: ReadonlyMap<string, string>,
-    present: ReadonlySet<string>,
-    mapName: CompanionMap = 'slides'
+    present: ReadonlySet<string>
 ): ReconciledSlideRecords | null {
-    const document = mapName === 'compositions' ? CompanionDocument.ensure(companion, mapName) : CompanionDocument.read(companion, mapName);
+    const document = CompanionDocument.read(companion);
     if (!document) return null;
     const next = new Map(remembered);
     const changes = new Map<string, string | null>();

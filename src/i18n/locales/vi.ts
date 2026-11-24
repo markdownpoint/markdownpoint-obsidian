@@ -64,13 +64,21 @@ export const vi: Translations = {
         cancel: 'Hủy',
         invalidName: 'Hãy nhập tên không có dấu gạch chéo hoặc ký tự dành riêng.',
         exists: 'Đã có tệp hoặc thư mục cùng tên.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint không thể tạo bài thuyết trình bên trong “${presentation}”. Hãy chọn một thư mục bên ngoài “${presentation}”.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint không thể mở “${presentation}” khi nó nằm bên trong “${outer}”. Hãy di chuyển thư mục “${presentation}” ra khỏi “${outer}”, rồi mở lại.`,
         failed: 'Không thể tạo bài thuyết trình. Hãy kiểm tra thư mục và thử lại.',
         openFailed: 'Đã tạo bài thuyết trình nhưng không thể mở. Hãy mở slides.md trong thư mục của bài thuyết trình.',
         openChanged: 'Bài thuyết trình đã thay đổi hoặc không đọc được. Hãy thử lại.',
         handoffFailed: 'Không thể lưu và mở bài thuyết trình.',
         themeChanged: 'Chủ đề đã thay đổi hoặc không khả dụng. Hãy mở lại hộp thoại này và chọn lại chủ đề.',
         newerFormat: ({ version }: { version: string }) =>
-            `Bài thuyết trình này dùng định dạng MarkdownPoint mới hơn (${version}). Hãy cập nhật plugin MarkdownPoint để mở dưới dạng bài thuyết trình.`
+            `Bài thuyết trình này dùng định dạng MarkdownPoint mới hơn (${version}). Hãy cập nhật plugin MarkdownPoint để mở dưới dạng bài thuyết trình.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint không thể đọc “${file}” trong “${presentation}”. Hãy mở bài thuyết trình trong ứng dụng MarkdownPoint để xem cần sửa gì.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint không thể đọc bài thuyết trình trong “${presentation}”. Hãy mở nó trong ứng dụng MarkdownPoint để xem cần sửa gì.`
     },
     slides: {
         new: 'Trang chiếu mới',

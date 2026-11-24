@@ -25,12 +25,12 @@ const field = { id: 'title', type: 'text', placeholder: true, frame: { x: 100, y
 const staticText = { id: 'footer', type: 'text', frame: { x: 100, y: 800, width: 500, height: 60 } };
 const master = {
     markdownpoint: '1.0',
-    kind: 'master',
+    type: 'master',
     size: { width: 1600, height: 900 },
     objects: [staticText],
     text: { footer: 'Fixed' }
 };
-const layout = { markdownpoint: '1.0', kind: 'layout', objects: [field] };
+const layout = { markdownpoint: '1.0', type: 'layout', objects: [field] };
 const theme: EmbeddedTheme = {
     key: 'basic',
     id: 'id',
@@ -42,7 +42,104 @@ test('structural preview resolves actual frame dimensions and partial inherited 
     const preview = slideStructure({ layout: 'title', overrides: { title: { frame: { x: 300 } }, footer: null } }, theme)!;
     assert.equal(preview.width, 1600);
     assert.equal(preview.height, 900);
-    assert.deepEqual(preview.regions, [{ x: 300, y: 100, width: 800, height: 180, rotation: 0, kind: 'text', columns: 1, gutter: 48 }]);
+    assert.deepEqual(preview.regions, [
+        { x: 300, y: 100, width: 800, height: 180, rotation: 0, pivot: { x: 700, y: 190 }, kind: 'text', columns: 1, gutter: 48 }
+    ]);
+});
+
+test('a turned area turns about its anchor point, a part a level leaves out over the point a growing text grows from, as MarkdownPoint turns it', () => {
+    const regions = (title: Record<string, unknown>, overrides: Record<string, unknown> = {}) => {
+        const own = { ...layout, objects: [title] };
+        const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
+        return slideStructure({ layout: 'title', overrides: { footer: null, ...overrides } }, shown)!.regions.map(
+            ({ x, y, width, height, pivot }) => ({ x, y, width, height, pivot })
+        );
+    };
+    const turned = { ...field, rotation: 30, frame: { x: 100, y: 100, width: 400, height: 200 } };
+    assert.deepEqual(
+        regions(turned),
+        [{ x: 100, y: 100, width: 400, height: 200, pivot: { x: 300, y: 200 } }],
+        'without one it turns about its center'
+    );
+    assert.deepEqual(regions({ ...turned, 'anchor-point': { x: 0, y: 0.5 } }), [
+        { x: 100, y: 100, width: 400, height: 200, pivot: { x: 100, y: 200 } }
+    ]);
+    assert.deepEqual(regions({ ...turned, 'anchor-point': { x: 0 } }), regions(turned), 'an own anchor point needs both parts');
+    // As far as MarkdownPoint reads an anchor, 2³³ frames either way, and past it none.
+    assert.deepEqual(regions({ ...turned, 'anchor-point': { x: 2 ** 33, y: 0.5 } })[0]?.pivot, { x: 100 + 2 ** 33 * 400, y: 200 });
+    for (const x of [1e308, -1e308, 2 ** 33 + 1])
+        assert.deepEqual(regions({ ...turned, 'anchor-point': { x, y: 0.5 } }), regions(turned), `${x} is past the reach`);
+    // A text that grows down from its top, turned, grows in its own frame once it has an anchor point, and turns about it.
+    const grows = { ...field, 'auto-size': 'height', rotation: 90, frame: { x: 100, y: 100, width: 400 } };
+    assert.deepEqual(
+        regions({ ...grows, 'anchor-point': { x: 1e308, y: 0.5 } }),
+        regions(grows),
+        'a growing text with one past the reach has none'
+    );
+    assert.deepEqual(regions({ ...grows, 'anchor-point': { x: 0.5, y: 0.5 } }), [
+        { x: 100, y: 100, width: 400, height: 48, pivot: { x: 300, y: 124 } }
+    ]);
+    // An anchor point a level gives moves the point its x and y name: with neither given, the box grows from the point
+    // the inherited box grows from, and turns about the anchor.
+    assert.deepEqual(regions(grows, { title: { 'anchor-point': { x: 0.1 } } }), [
+        { x: 100, y: 100, width: 400, height: 48, pivot: { x: 140, y: 100 } }
+    ]);
+    assert.deepEqual(
+        regions(grows, { title: { 'anchor-point': { x: 0.1 }, frame: { x: 120, y: 100 } } }),
+        [{ x: 120, y: 100, width: 400, height: 48, pivot: { x: 160, y: 100 } }],
+        "a level's x stands over the top it grows from"
+    );
+    // A level that makes a box sized by hand grow gives the part it leaves out from its own growth: the top.
+    assert.deepEqual(regions({ ...turned, rotation: 0 }, { title: { 'auto-size': 'height', 'anchor-point': { x: 0.1 } } })[0]?.pivot, {
+        x: 140,
+        y: 100
+    });
+});
+
+test("a master's size lays its slides out as MarkdownPoint reads it, and a size MarkdownPoint refuses gives no schematic", () => {
+    const { size: _size, ...sizeless } = master;
+    const at = (value: Record<string, unknown>) =>
+        slideStructure({ layout: 'title' }, { ...theme, master: { ...theme.master, source: JSON.stringify(value), value } });
+    assert.deepEqual([at(sizeless)?.width, at(sizeless)?.height], [1920, 1080]);
+    // [the master's version, its size, MarkdownPoint core's reading (`masterJsonSize`)]
+    const readings: [string, unknown, [number, number] | null][] = [
+        ['1.0', { width: 1280, height: 720 }, [1280, 720]],
+        ['1.0', { width: 1920.0000004, height: 1080 }, [1920, 1080]],
+        ['1.0', { width: 1919.9999996, height: 1080 }, [1920, 1080]],
+        ['1.0', { width: 8192.0000004, height: 1080 }, [8192, 1080]],
+        ['1.0', { width: 1920.4, height: 1080 }, null],
+        ['1.0', { width: 8193, height: 1080 }, null],
+        ['1.0', { width: 0, height: 1080 }, null],
+        ['1.0', { width: 0.0000004, height: 1080 }, null],
+        ['1.0', { width: 1280, height: 720, depth: 1 }, null],
+        ['1.0', { width: '1280', height: 720 }, null],
+        ['1.0', { width: 1600 }, null],
+        ['1.0', 'wide', null],
+        ['1.0', null, null],
+        // JSON.parse reads 1e999 as Infinity, which MarkdownPoint refuses.
+        ['1.0', { width: Infinity, height: 1080 }, null],
+        ['1.1', { width: 8193, height: 1080 }, [1920, 1080]],
+        ['1.1', { width: 1280, height: 720.5 }, [1920, 1080]],
+        ['1.1', { width: -5, height: 1080 }, [1920, 1080]],
+        ['1.1', { width: 1280.0000004, height: 720 }, [1280, 720]],
+        ['1.1', { width: 1280, height: 720, depth: 1 }, [1280, 720]],
+        ['1.10', { width: 1280, height: 720 }, [1280, 720]],
+        // The width is read first, and a side outside the range decides before the next is read.
+        ['1.1', { width: 720.5, height: null }, [1920, 1080]],
+        ['1.1', { width: 1280.5, height: '720' }, [1920, 1080]],
+        ['1.1', { height: 720.5, width: 'x' }, null],
+        ['1.1', { width: Infinity, height: 720.5 }, null],
+        ['1.1', { width: null, height: 720 }, null],
+        ['1.1', { width: '1280', height: 720 }, null],
+        ['1.1', { width: 1280 }, null],
+        ['1.1', { height: 720.5 }, null],
+        ['1.1', [], null],
+        ['1.1', 'wide', null]
+    ];
+    for (const [markdownpoint, size, reading] of readings) {
+        const preview = at({ ...master, markdownpoint, size });
+        assert.deepEqual(preview ? [preview.width, preview.height] : null, reading, `${markdownpoint} ${String(JSON.stringify(size))}`);
+    }
 });
 
 test('text areas retain their whole frame and column divisions', () => {
@@ -53,17 +150,22 @@ test('text areas retain their whole frame and column divisions', () => {
     assert.equal(preview.regions[0]!.columns, 2);
     assert.equal(preview.regions[0]!.gutter, 40);
     assert.equal(preview.regions[0]!.height, 180);
+    // A text style has no columns, as MarkdownPoint reads one: an object's own count and gutter are its only ones.
+    const styled = { ...master, 'text-styles': { body: { 'column-count': 3, 'column-gutter': 10 } } };
+    const styledTheme = { ...theme, master: { ...theme.master, source: JSON.stringify(styled), value: styled } };
+    const plain = slideStructure({ layout: 'title', overrides: { footer: null, title: { 'text-style': 'body' } } }, styledTheme)!;
+    assert.deepEqual([plain.regions[0]!.columns, plain.regions[0]!.gutter], [1, 48]);
 });
 
 test('unknown geometry, hidden objects and hierarchy are omitted; framed media stays neutral', () => {
     const preview = slideStructure(
         {
             layout: 'title',
-            overrides: { footer: null, title: { hidden: true } },
+            overrides: { footer: null, title: { visible: false } },
             objects: [
                 { ...field, id: 'nested', parent: 'group' },
                 { ...field, id: 'scaled', scale: { x: 2, y: 2 } },
-                { id: 'model', type: 'model', location: { x: 1, y: 2, z: 3 } },
+                { id: 'model', type: 'model', position: { x: 1, y: 2, z: 3 } },
                 { ...field, id: 'photo', type: 'image', rotation: 15, file: 'media/private-name.jpg' }
             ]
         },
@@ -75,6 +177,23 @@ test('unknown geometry, hidden objects and hierarchy are omitted; framed media s
     assert.equal(preview.key.includes('private-name'), false);
     assert.equal(slideStructure({ layout: 'missing' }, theme), null);
     assert.equal(slideStructure({ layout: 'title' }, null), null);
+});
+
+test('a repeated object stays out of the schematic, since only the MarkdownPoint app places its copies', () => {
+    const dots = { id: 'dots', type: 'image', file: 'media/dot.png', frame: { x: 100, y: 400, width: 80, height: 80 } };
+    const regions = (object: Record<string, unknown>) =>
+        slideStructure({ layout: 'title', overrides: { footer: null, title: null }, objects: [object] }, theme)!.regions.length;
+    assert.equal(regions(dots), 1);
+    assert.equal(regions({ ...dots, repeater: { copies: 3, position: { x: 120, y: 0 } } }), 0);
+});
+
+test('a scaled chart stays out of the schematic, as a scaled shape does, and stands at a scale of 1', () => {
+    const chart = { ...field, id: 'figure', type: 'chart', placeholder: false, frame: { x: 100, y: 540, width: 800, height: 140 } };
+    const regions = (object: Record<string, unknown>) =>
+        slideStructure({ layout: 'title', overrides: { footer: null, title: null }, objects: [object] }, theme)!.regions.length;
+    assert.equal(regions(chart), 1);
+    assert.equal(regions({ ...chart, scale: { x: 0.05, y: 0.05 } }), 0);
+    assert.equal(regions({ ...chart, scale: { x: 1, y: 1 } }), 1);
 });
 
 test('an own object cannot replace an inherited frame by colliding with its identity', () => {
@@ -123,4 +242,88 @@ test('partial scale overrides merge inherited components before testing flat geo
     const preview = slideStructure({ layout: 'title', overrides: { title: { scale: { x: 1 } }, footer: null } }, scaled)!;
     assert.equal(preview.regions.length, 1);
     assert.equal(preview.regions[0]!.width, 800);
+});
+
+test('a text that grows to its words, holding no height, stands a line tall or at its least height, as the app stands it before measuring', () => {
+    const grows = { ...field, 'auto-size': 'height', frame: { x: 100, y: 100, width: 800 } };
+    const growing = (title: Record<string, unknown>, overrides: Record<string, unknown> = {}) => {
+        const own = { ...layout, objects: [title] };
+        const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
+        return slideStructure({ layout: 'title', overrides: { footer: null, ...overrides } }, shown)!.regions.map(region => region.height);
+    };
+    assert.deepEqual(growing(grows), [48]);
+    assert.deepEqual(growing({ ...grows, 'auto-size': 'both', 'min-height': 120 }), [120]);
+    assert.deepEqual(
+        growing(field, { title: { 'auto-size': 'height' } }),
+        [48],
+        'a slide that makes a fixed box grow drops the height it inherits'
+    );
+    assert.deepEqual(growing({ ...field, 'auto-size': 'height', 'text-path': 'M0 0 L1 0' }), [180], 'words on a path keep their frame');
+});
+
+test('a text whose width follows its words, holding no width, stands a width no page measured yet about the point its alignment holds', () => {
+    const regions = (title: Record<string, unknown>) => {
+        const own = { ...layout, objects: [title] };
+        const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
+        return slideStructure({ layout: 'title', overrides: { footer: null } }, shown)!.regions.map(({ x, y, width, height }) => ({
+            x,
+            y,
+            width,
+            height
+        }));
+    };
+    const point = { x: 400, y: 100 };
+    // Its x and y name the point its growth holds: set left its left edge, centered its middle, set right its right edge.
+    assert.deepEqual(regions({ ...field, 'auto-size': 'both', frame: point }), [{ x: 400, y: 100, width: 48, height: 48 }]);
+    assert.deepEqual(regions({ ...field, 'auto-size': 'both', align: 'center', frame: point }), [
+        { x: 376, y: 100, width: 48, height: 48 }
+    ]);
+    assert.deepEqual(
+        regions({ ...field, 'auto-size': 'both', 'text-direction': 'rtl', frame: point }),
+        [{ x: 352, y: 100, width: 48, height: 48 }],
+        'right to left, it holds the side its lines start on'
+    );
+    // A width alone grows about the point at mid-height, its height its own.
+    assert.deepEqual(regions({ ...field, 'auto-size': 'width', align: 'right', frame: { ...point, height: 80 } }), [
+        { x: 352, y: 100, width: 48, height: 80 }
+    ]);
+    // In columns its width is its own.
+    assert.deepEqual(regions({ ...field, 'auto-size': 'width', 'column-count': 2, frame: { ...point, width: 600, height: 80 } }), [
+        { x: 400, y: 100, width: 600, height: 80 }
+    ]);
+    // Its column count reads to the millionth, as MarkdownPoint reads it: 2.0000004 is two columns, 1.0000004 one.
+    assert.deepEqual(regions({ ...field, 'auto-size': 'width', 'column-count': 2.0000004, frame: { ...point, width: 600, height: 80 } }), [
+        { x: 400, y: 100, width: 600, height: 80 }
+    ]);
+    assert.deepEqual(regions({ ...field, 'auto-size': 'width', 'column-count': 1.0000004, frame: { ...point, height: 80 } }), [
+        { x: 400, y: 100, width: 48, height: 80 }
+    ]);
+});
+
+test("a slide's change of what decides a text's point puts its box in the inherited box's place with each part of its frame it leaves out, as MarkdownPoint converts it", () => {
+    const regions = (title: Record<string, unknown>, change: Record<string, unknown>) => {
+        const own = { ...layout, objects: [title] };
+        const shown = { ...theme, layouts: new Map([['title', { path: 'title.json', source: JSON.stringify(own), value: own }]]) };
+        return slideStructure({ layout: 'title', overrides: { footer: null, title: change } }, shown)!.regions.map(
+            ({ x, y, width, height }) => ({ x, y, width, height })
+        );
+    };
+    // Set left, its left edge holds as its words set its width: nothing moves, so it follows its layout.
+    assert.deepEqual(regions(field, { 'auto-size': 'width' }), [{ x: 100, y: 100, width: 48, height: 180 }]);
+    // Centered, it grows about the middle of its layout's box, as a slide that gives that middle's x does.
+    const centered = { ...field, align: 'center' };
+    assert.deepEqual(regions(centered, { 'auto-size': 'width' }), [{ x: 476, y: 100, width: 48, height: 180 }]);
+    assert.deepEqual(regions(centered, { 'auto-size': 'width', frame: { x: 500 } }), regions(centered, { 'auto-size': 'width' }));
+    assert.deepEqual(
+        regions(centered, { 'auto-size': 'width', frame: { x: 600 } }),
+        [{ x: 576, y: 100, width: 48, height: 180 }],
+        'a part it gives is its own'
+    );
+    // A height that grows holds the top of its middle, which no alignment moves.
+    const tall = { ...field, 'auto-size': 'height', frame: { x: 100, y: 100, width: 800 } };
+    assert.deepEqual(regions(tall, { align: 'center' }), [{ x: 100, y: 100, width: 800, height: 48 }]);
+    // A slide that fixes the height of a turned box that grows down from its top stands where that box draws at that
+    // height: the top of its middle at (300, 100), turned a quarter.
+    const turned = { ...field, 'auto-size': 'height', rotation: 90, frame: { x: 100, y: 100, width: 400 } };
+    assert.deepEqual(regions(turned, { 'auto-size': 'none', frame: { height: 120 } }), [{ x: 40, y: 40, width: 400, height: 120 }]);
 });

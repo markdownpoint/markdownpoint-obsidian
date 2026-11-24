@@ -64,13 +64,21 @@ export const pt: Translations = {
         cancel: 'Cancelar',
         invalidName: 'Introduza um nome sem barras nem caracteres reservados.',
         exists: 'Já existe um ficheiro ou uma pasta com este nome.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `O MarkdownPoint não pode criar uma apresentação dentro de “${presentation}”. Escolha uma pasta fora de “${presentation}”.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `O MarkdownPoint não pode abrir a apresentação “${presentation}” enquanto estiver dentro de “${outer}”. Mova a pasta “${presentation}” para fora de “${outer}” e depois abra-a.`,
         failed: 'Não foi possível criar a apresentação. Verifique a pasta e tente novamente.',
         openFailed: 'A apresentação foi criada, mas não foi possível abri-la. Abra o slides.md na pasta da apresentação.',
         openChanged: 'A apresentação foi alterada ou não foi possível lê-la. Tente novamente.',
         handoffFailed: 'Não foi possível guardar e abrir a apresentação.',
         themeChanged: 'O tema foi alterado ou não está disponível. Volte a abrir esta caixa de diálogo e escolha-o novamente.',
         newerFormat: ({ version }: { version: string }) =>
-            `Esta apresentação usa um formato MarkdownPoint mais recente (${version}). Atualize o plugin MarkdownPoint para a abrir como apresentação.`
+            `Esta apresentação usa um formato MarkdownPoint mais recente (${version}). Atualize o plugin MarkdownPoint para a abrir como apresentação.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `O MarkdownPoint não consegue ler “${file}” em “${presentation}”. Abra a apresentação na aplicação MarkdownPoint para ver o que corrigir.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `O MarkdownPoint não consegue ler a apresentação em “${presentation}”. Abra-a na aplicação MarkdownPoint para ver o que corrigir.`
     },
     slides: {
         new: 'Novo diapositivo',

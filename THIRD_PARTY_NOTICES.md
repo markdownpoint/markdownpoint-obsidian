@@ -92,12 +92,58 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
+## Unicode CLDR 48.2.0
+
+The chart number rules a paste between presentations respells a chart's numbers by, in `src/core/chart-number-rules.ts`, are drawn from Unicode CLDR 48.2.0, its `cldr-numbers-full` and `cldr-core` data: how each language writes a number's decimal mark, group mark and digit groups. The data's license follows.
+
+UNICODE LICENSE V3
+
+COPYRIGHT AND PERMISSION NOTICE
+
+Copyright © 2004-2026 Unicode, Inc.
+
+NOTICE TO USER: Carefully read the following legal agreement. BY
+DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of data files and any associated documentation (the "Data Files") or
+software and any associated documentation (the "Software") to deal in the
+Data Files or Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, and/or sell
+copies of the Data Files or Software, and to permit persons to whom the
+Data Files or Software are furnished to do so, provided that either (a)
+this copyright and permission notice appear with all copies of the Data
+Files or Software, or (b) this copyright and permission notice appear in
+associated Documentation.
+
+THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+THIRD PARTY RIGHTS.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+FILES OR SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall
+not be used in advertising or otherwise to promote the sale, use or other
+dealings in these Data Files or Software without prior written
+authorization of the copyright holder.
+
+SPDX-License-Identifier: Unicode-3.0
+
 ## MarkdownPoint Basic theme
 
-The bundled Basic theme JSON comes from the public MarkdownPoint file-format examples at revision `41d14274ce3fe8cc73c4aa8db80874419db87aee`:
-https://github.com/markdownpoint/format/tree/41d14274ce3fe8cc73c4aa8db80874419db87aee/examples/first-deck/themes/basic
+The bundled Basic theme, its JSON and its layout preview picture, `media/layout-preview.jpg`, is MarkdownPoint's own, unchanged, as the public MarkdownPoint file-format examples hold it at revision `0bc63c178a66280fd9d94f264e859bb105ca504d`:
+https://github.com/markdownpoint/format/tree/0bc63c178a66280fd9d94f264e859bb105ca504d/examples/first-deck/themes/basic
 
-The only adaptation removes the sample picture, `media/layout-preview.jpg`, from the image placeholders, so a new slide starts without one. The source's license follows.
+The source's license follows.
 
 MIT License
 

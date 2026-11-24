@@ -32,6 +32,7 @@ import type { SlideReorder } from './format/reorder.ts';
 import { PresentationStorage } from './presentation/storage.ts';
 import type { ListSelection } from './selection/list-selection.ts';
 import { SlideMenus } from './editor/slide-menus.ts';
+import { hideReadingSpans } from './editor/span-marks.ts';
 import type { SlideMenuTarget } from './editor/slide-menus.ts';
 import { SharedSettings } from './settings/shared.ts';
 import { SlideCreation } from './presentation/new-slide.ts';
@@ -173,10 +174,7 @@ export default class MarkdownPointPlugin extends Plugin {
             this.app,
             (presentation, editor) => {
                 if (presentation) this.followPresentation(presentation, editor);
-                else {
-                    this.outline.follow(null);
-                    this.refreshOutline();
-                }
+                else if (this.outline.follow(null)) this.refreshOutline();
             },
             file => this.presentationEditor?.refresh(file),
             this.storage.data
@@ -213,6 +211,7 @@ export default class MarkdownPointPlugin extends Plugin {
         );
         this.registerEditorExtension(this.slideMenus.extension);
         this.registerMarkdownPostProcessor((element, context) => this.slideMenus?.readingSection(element, context));
+        this.registerMarkdownPostProcessor((element, context) => hideReadingSpans(this.app.vault, element, context));
     }
 
     onunload(): void {
@@ -241,11 +240,11 @@ export default class MarkdownPointPlugin extends Plugin {
     /** The format adapter must verify the presentation before publishing it through this handoff. */
     followPresentation(presentation: OutlinePresentation, editor: MarkdownView | null): void {
         if (!this.running || (editor && editor.file?.path !== presentation.path)) return;
-        this.outline.follow(presentation);
+        const changed = this.outline.follow(presentation);
         this.editorLeaf = editor?.leaf ?? null;
         // Content updates do not reopen a tab the author closed. Placement belongs
         // to initialization, the side setting, and the explicit focus command.
-        this.refreshOutline();
+        if (changed) this.refreshOutline();
     }
 
     async setOutlineSide(side: OutlineSide): Promise<void> {
@@ -358,12 +357,9 @@ export default class MarkdownPointPlugin extends Plugin {
                 this.app,
                 {
                     file,
-                    documentId: presentation.documentId,
+                    presentationId: presentation.id,
                     view,
-                    current: () =>
-                        this.running &&
-                        this.presentation?.path === presentation.path &&
-                        this.presentation.documentId === presentation.documentId
+                    current: () => this.running && this.presentation?.path === presentation.path && this.presentation.id === presentation.id
                 },
                 this.storage?.data ?? null
             )
@@ -375,8 +371,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const file = presentation && this.app.vault.getFileByPath(presentation.path);
         if (!presentation || !file) return;
         const after = this.activeSlideId;
-        const current = () =>
-            this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
+        const current = () => this.running && this.presentation?.path === presentation.path && this.presentation.id === presentation.id;
         const owner = this.currentEditorLeaf()?.view;
         const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
         this.run(async () => {
@@ -417,7 +412,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const current = () =>
             this.running &&
             this.presentation?.path === presentation.path &&
-            this.presentation.documentId === presentation.documentId &&
+            this.presentation.id === presentation.id &&
             this.outline.state.selection === selection;
         const owner = this.currentEditorLeaf()?.view;
         const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
@@ -433,7 +428,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const current = () =>
             this.running &&
             this.presentation?.path === presentation.path &&
-            this.presentation.documentId === presentation.documentId &&
+            this.presentation.id === presentation.id &&
             this.outline.state.selection === selection;
         const owner = this.currentEditorLeaf()?.view;
         const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
@@ -461,8 +456,7 @@ export default class MarkdownPointPlugin extends Plugin {
         const presentation = this.presentation;
         const file = presentation && this.app.vault.getFileByPath(presentation.path);
         if (!presentation || !file) return;
-        const current = () =>
-            this.running && this.presentation?.path === presentation.path && this.presentation.documentId === presentation.documentId;
+        const current = () => this.running && this.presentation?.path === presentation.path && this.presentation.id === presentation.id;
         const owner = this.currentEditorLeaf()?.view;
         const view = owner instanceof MarkdownView && owner.file === file ? owner : null;
         this.run(async () => {

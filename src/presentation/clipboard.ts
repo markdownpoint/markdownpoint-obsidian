@@ -21,6 +21,7 @@ import type { App, TFile } from 'obsidian';
 import { decodeSlideClipboard, SLIDE_CLIPBOARD_MIME } from '../format/clipboard.ts';
 import { clipboardVaultId, clipboardDigest, ownsClipboardCut, CLIPBOARD_CUT_KEY } from '../settings/clipboard.ts';
 import { uiText } from '../ui-text.ts';
+import { mintId } from '../format/id-allocation.ts';
 import { readJsonObject } from '../format/json.ts';
 import { prepareClipboardPaste, sameClipboardPresentation, sameClipboardTheme } from '../format/paste.ts';
 import type { PresentationEditor } from '../editor/presentation-editor.ts';
@@ -29,8 +30,8 @@ import { SlideCopy } from './copy.ts';
 import type { SlideCopyResult } from './copy.ts';
 import type { PresentationReader } from './reader.ts';
 import { readEmbeddedTheme } from './theme-reader.ts';
-import { ThemeArtworkMismatch, transferSlideAssets } from './transfer-assets.ts';
-import type { TransferredSlides } from './transfer-assets.ts';
+import { ThemeArtworkMismatch, transferSlideFiles } from './transfer-files.ts';
+import type { TransferredSlides } from './transfer-files.ts';
 
 interface CopyContext {
     readonly view: MarkdownView | null;
@@ -65,7 +66,7 @@ export class PresentationClipboard extends Component {
                 const snapshot = reader.snapshot(context.file, markdown);
                 const companion = snapshot && reader.companionFor(context.file, snapshot);
                 return snapshot && companion !== null
-                    ? { path: context.path, documentId: snapshot.id, markdown, companion, index: snapshot.document }
+                    ? { path: context.path, id: snapshot.id, markdown, companion, index: snapshot.document }
                     : null;
             },
             theme: (source, metadata, layouts) => readEmbeddedTheme(app.vault, source.path, metadata, layouts),
@@ -141,7 +142,7 @@ export class PresentationClipboard extends Component {
                 if (!snapshot || !companion || !metadata || !this.current(context)) return;
                 const theme = await readEmbeddedTheme(this.app.vault, context.path, metadata, packet.theme.layouts.keys());
                 if (!this.current(context)) return;
-                const origin = { vault: clipboardVaultId(this.app), path: context.path, document: snapshot.id };
+                const origin = { vault: clipboardVaultId(this.app), path: context.path, presentationId: snapshot.id };
                 if (packet.origin.vault !== origin.vault) {
                     new Notice(uiText.slides.pasteVault);
                     return;
@@ -172,7 +173,7 @@ export class PresentationClipboard extends Component {
                 let inserted = false;
                 try {
                     if (!samePresentation)
-                        transferred = await transferSlideAssets(
+                        transferred = await transferSlideFiles(
                             this.app,
                             packet,
                             context.file,
@@ -183,17 +184,12 @@ export class PresentationClipboard extends Component {
                         );
                     const incoming = transferred ? { ...packet, captured: transferred.captured } : packet;
                     const digest = samePresentation ? await clipboardDigest(result.source!) : null;
-                    const remembered = new Map([
-                        ...(this.data?.remembered(context.path, snapshot.id) ?? []),
-                        ...(this.data?.remembered(context.path, snapshot.id, 'compositions') ?? [])
-                    ]);
                     const prepared = prepareClipboardPaste(
                         incoming,
-                        markdown,
                         snapshot.document,
                         companion,
-                        remembered,
-                        () => `id-${crypto.randomUUID()}`,
+                        this.data?.remembered(context.path, snapshot.id) ?? new Map(),
+                        mintId,
                         digest !== null && ownsClipboardCut(this.app, digest)
                     );
                     const valid = () => current() && (!transferred || transferred.current());
@@ -201,7 +197,7 @@ export class PresentationClipboard extends Component {
                         if (this.current(context)) new Notice(uiText.slides.pasteChanged);
                         return;
                     }
-                    inserted = await this.editor.insertSlides(view.editor, prepared.slides, after, valid, prepared.compositions);
+                    inserted = await this.editor.insertSlides(view.editor, prepared, after, valid);
                     if (!inserted && this.current(context)) new Notice(uiText.slides.pasteChanged);
                 } finally {
                     controller.abort();
@@ -232,7 +228,7 @@ export class PresentationClipboard extends Component {
                 intent === this.intent &&
                 this.current(context) &&
                 view.getViewData() === copied.source.markdown &&
-                this.reader.snapshot(input.file, view.getViewData())?.id === copied.source.documentId &&
+                this.reader.snapshot(input.file, view.getViewData())?.id === copied.source.id &&
                 this.reader.companionFor(input.file, this.reader.snapshot(input.file, view.getViewData())!) === copied.source.companion;
             if (!current()) return;
             digest = await clipboardDigest(copied.encoded);

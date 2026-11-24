@@ -21,6 +21,7 @@ import type { EditorView } from '@codemirror/view';
 import { setIcon, setTooltip } from 'obsidian';
 import type { SlideStructure } from '../format/structure.ts';
 import type { SlideImagePreview } from '../presentation/image-reader.ts';
+import { knownOrientation, readPictureOrientation } from '../presentation/picture-orientation.ts';
 import { renderThumbnail } from '../outline/thumbnail.ts';
 import { imageSpacing, imageSpaceNeeded, setImageSpacing } from './image-spacing.ts';
 import { uiText } from '../ui-text.ts';
@@ -54,7 +55,7 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                         )
                     );
                     const current = view.state.field(imageSpacing);
-                    const heights = new Map(current.id === available.id ? current.heights : []);
+                    const heights = new Map(current.presentationId === available.id ? current.heights : []);
                     for (const id of heights.keys()) if (!available.slides.get(id)?.images.length) heights.delete(id);
                     const items: { id: string; chrome: SlideChrome; top: number; right: number }[] = [];
                     for (const boundary of view.contentDOM.querySelectorAll<HTMLElement>('.markdownpoint-slide-boundary[data-slide]')) {
@@ -81,9 +82,9 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                             else heights.delete(id);
                         }
                     }
-                    return { items, id: available.id, heights, document: view.state.doc };
+                    return { items, presentationId: available.id, heights, document: view.state.doc };
                 },
-                write: ({ items, id: documentId, heights, document }) => {
+                write: ({ items, presentationId, heights, document }) => {
                     if (!active) return;
                     let changed = false;
                     const keep = new Set(items.map(item => item.id));
@@ -144,24 +145,40 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                             images.empty();
                             changed = true;
                             for (const preview of chrome.images) {
-                                const image = images.createEl('img', {
-                                    cls: 'markdownpoint-slide-image',
+                                // The picture drawn from its pixels as stored, turned by the orientation MarkdownPoint
+                                // reads, never the browser's: hidden in its box until that is known.
+                                const box = images.createSpan({ cls: 'markdownpoint-slide-image' });
+                                const image = box.createEl('img', {
                                     attr: {
-                                        src: preview.src,
                                         alt: preview.name || uiText.images.preview,
                                         loading: 'lazy',
                                         decoding: 'async',
-                                        draggable: 'false'
+                                        draggable: 'false',
+                                        crossorigin: 'anonymous'
                                     }
                                 });
+                                const turn = (orientation: number) => box.setAttribute('data-orientation', String(orientation));
+                                const known = knownOrientation(preview.src);
+                                if (known !== undefined) turn(known);
+                                else
+                                    // Lazy pictures mount past the view, so only one that loads is read.
+                                    image.addEventListener(
+                                        'load',
+                                        () =>
+                                            void readPictureOrientation(image.win, preview.src, preview.path, preview.size).then(
+                                                orientation => turn(orientation ?? 1)
+                                            ),
+                                        { once: true }
+                                    );
                                 image.addEventListener(
                                     'error',
                                     () => {
-                                        image.remove();
+                                        box.remove();
                                         if (active) measure();
                                     },
                                     { once: true }
                                 );
+                                image.src = preview.src;
                             }
                         }
                         column.toggleClass('has-images', chrome.images.length > 0);
@@ -170,15 +187,15 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                     }
                     const previous = view.state.field(imageSpacing);
                     const different =
-                        previous.id !== documentId ||
+                        previous.presentationId !== presentationId ||
                         previous.heights.size !== heights.size ||
                         [...heights].some(([id, height]) => previous.heights.get(id) !== height);
                     if (different && !pendingSpacing) {
                         pendingSpacing = true;
                         view.dom.ownerDocument.defaultView!.queueMicrotask(() => {
                             pendingSpacing = false;
-                            if (active && view.state.doc === document && readState(view).id === documentId)
-                                view.dispatch({ effects: setImageSpacing.of({ id: documentId, heights }) });
+                            if (active && view.state.doc === document && readState(view).id === presentationId)
+                                view.dispatch({ effects: setImageSpacing.of({ presentationId, heights }) });
                         });
                     }
                     if (changed)

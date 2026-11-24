@@ -161,7 +161,7 @@ export function steppedOrder<Id>(order: readonly Id[], among: readonly Id[], mov
         if (stepping.has(shown[index]!) && !stepping.has(shown[beside]!)) [shown[beside], shown[index]] = [shown[index]!, shown[beside]!];
     }
     if (shown.every((id, index) => id === among[index])) return null;
-    const places = new Set(among);
+    const shownIds = new Set(among);
     let next = 0;
-    return order.map(id => (places.has(id) ? shown[next++]! : id));
+    return order.map(id => (shownIds.has(id) ? shown[next++]! : id));
 }

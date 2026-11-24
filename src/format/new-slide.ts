@@ -19,17 +19,19 @@
 import type { EmbeddedTheme } from './embedded-theme.ts';
 import type { PreparedPart } from './insert.ts';
 import { isRecord, isStableId } from './recognition.ts';
+import { passedOverText, standingFrame } from './text-growth.ts';
 
 export function layoutName(key: string, value: Record<string, unknown>): string {
-    if (typeof value.name === 'string' && value.name.trim()) return value.name.trim();
+    if (typeof value.name === 'string' && value.name.trim()) return value.name;
     const words = key.replace(/[-_]+/g, ' ');
     return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** The theme's layouts in its master's `layout-order`, then those it doesn't list, sorted by key, as the format publishes. */
 export function orderedLayouts(theme: EmbeddedTheme): string[] {
     const order = theme.master.value['layout-order'];
     const first = Array.isArray(order) ? order.filter((key): key is string => typeof key === 'string' && theme.layouts.has(key)) : [];
-    return [...new Set([...first, ...theme.layouts.keys()])];
+    return [...new Set([...first, ...[...theme.layouts.keys()].sort()])];
 }
 
 interface NewField {
@@ -67,10 +69,13 @@ function writingOrder(fields: readonly NewField[]): NewField[] {
     return [...result, ...fields.filter(field => field.frame === null)];
 }
 
-/** A new slide owns empty layout text slots; sample words remain in the theme. */
-export function prepareNewSlide(theme: EmbeddedTheme, layoutKey: string, id: string): PreparedPart | null {
+/**
+ * A layout's text placeholders, those a slide fills with its own words, in writing order. Null when the layout
+ * cannot give a slide its words: an unsafe or repeated identity.
+ */
+export function layoutTextPlaceholders(theme: EmbeddedTheme, layoutKey: string): string[] | null {
     const layout = theme.layouts.get(layoutKey)?.value;
-    if (!isStableId(id) || !layout) return null;
+    if (!layout) return null;
     const objects = layout.objects ?? [];
     if (!Array.isArray(objects)) return null;
     const inherited = new Set(
@@ -84,11 +89,13 @@ export function prepareNewSlide(theme: EmbeddedTheme, layoutKey: string, id: str
             !isRecord(object) ||
             object.type !== 'text' ||
             object.placeholder !== true ||
+            passedOverText(object) ||
             (typeof object.id === 'string' && inherited.has(object.id))
         )
             continue;
         if (!isStableId(object.id) || fields.some(field => field.id === object.id)) return null;
-        const frame = isRecord(object.frame) ? object.frame : {};
+        const standing = standingFrame(object);
+        const frame = isRecord(standing) ? standing : {};
         const box =
             !object.parent &&
             typeof frame.x === 'number' &&
@@ -102,9 +109,23 @@ export function prepareNewSlide(theme: EmbeddedTheme, layoutKey: string, id: str
                 : null;
         fields.push({ id: object.id, frame: box });
     }
-    return {
-        id,
-        record: JSON.stringify({ layout: layoutKey }),
-        markdown: [`<!-- slide: ${id} -->`, ...writingOrder(fields).map(field => `<!-- text: ${field.id} -->`)].join('\n\n') + '\n'
-    };
+    return writingOrder(fields).map(field => field.id);
+}
+
+/** The text placeholders a slide's layout gives it, but those its overrides take out. */
+export function slideTextPlaceholders(record: Record<string, unknown>, theme: EmbeddedTheme | null): readonly string[] {
+    if (!theme || typeof record.layout !== 'string') return [];
+    const overrides = isRecord(record.overrides) ? record.overrides : {};
+    return (layoutTextPlaceholders(theme, record.layout) ?? []).filter(id => overrides[id] !== null);
+}
+
+/**
+ * A new slide is its marker and its first placeholder's, where the author starts writing. Every other placeholder
+ * gets its marker once it has words, as the MarkdownPoint app writes a slide; sample words stay in the theme.
+ */
+export function prepareNewSlide(theme: EmbeddedTheme, layoutKey: string, id: string): PreparedPart | null {
+    const placeholders = layoutTextPlaceholders(theme, layoutKey);
+    if (!isStableId(id) || !placeholders) return null;
+    const markers = [`<!-- slide: ${id} -->`, ...placeholders.slice(0, 1).map(placeholder => `<!-- text: ${placeholder} -->`)];
+    return { id, record: JSON.stringify({ layout: layoutKey }), markdown: markers.join('\n\n') + '\n' };
 }

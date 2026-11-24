@@ -17,7 +17,9 @@ updates:
         patterns:
           - '*'
     ignore:
-      # The CodeMirror packages match the versions Obsidian bundles; the plugin never ships them.
+      # The CodeMirror packages match the versions Obsidian 1.13.4, the first public 1.13, bundles: view 6.43.5 and
+      # state 6.7.0, read in its app.js. The plugin never ships them. The 1.13.0 declarations pin older peers, which
+      # an override in package.json points at these.
       - dependency-name: '@codemirror/*'
       # The API declarations stay at the minimum supported Obsidian version in manifest.json.
       - dependency-name: obsidian

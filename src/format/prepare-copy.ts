@@ -18,54 +18,37 @@
 
 import type { CapturedPart } from './capture.ts';
 import { remapRecordReferences } from './companion.ts';
-import { indexPresentation } from './document.ts';
+import { escapeMarkerShapedNotes, indexPresentation, spellBlocks } from './document.ts';
 import { isStableId } from './recognition.ts';
 import { remapMarkdownSlideLinks } from './slide-links.ts';
+import { blockField, type PartTextSchemas } from './text-schemas.ts';
 
 /**
- * Prepare one complete captured part using destination IDs and verified text
- * schemas. Identity allocation, dependency reuse and clipboard validation belong
- * to the caller. Notes and control defaults are always rich text.
+ * Prepare one complete captured slide using destination IDs and verified text
+ * schemas, each block's words read in its block's grammar and its marker-shaped
+ * notes escaped, as MarkdownPoint writes them in every file. Identity allocation
+ * and clipboard validation belong to the caller.
  */
 export function prepareCopiedPart(
     part: CapturedPart,
-    kind: 'slide' | 'composition',
     slides: ReadonlyMap<string, string>,
-    compositions: ReadonlyMap<string, string>,
-    textSchemas: ReadonlyMap<string, 'rich-text' | 'table'>
+    textSchemas: PartTextSchemas
 ): CapturedPart | null {
     const document = indexPresentation(part.markdown, 0);
-    const parts = kind === 'slide' ? document?.slides : document?.compositions;
-    const other = kind === 'slide' ? document?.compositions : document?.slides;
-    const indexed = parts?.[0];
-    if (
-        !document ||
-        parts?.length !== 1 ||
-        other?.length ||
-        document.sections.length ||
-        !indexed ||
-        indexed.from !== 0 ||
-        indexed.id !== part.id
-    )
+    const indexed = document?.slides[0];
+    if (!document || document.slides.length !== 1 || document.sections.length || !indexed || indexed.from !== 0 || indexed.id !== part.id)
         return null;
-    const id = (kind === 'slide' ? slides : compositions).get(part.id) ?? part.id;
+    const id = slides.get(part.id) ?? part.id;
     if (!isStableId(id)) return null;
-    const record = remapRecordReferences(part.record, slides, compositions);
+    const record = remapRecordReferences(part.record, slides);
     if (record === null) return null;
     const marker = part.markdown.slice(0, indexed.markerTo);
-    const match = /^(<!--\s*(?:slide|composition):\s*)([^\s]+)(\s*-->[ \t]*\r?\n)$/.exec(marker);
+    const match = /^([ \t]*<!--[ \t]*slide:[ \t]*)([^\s]+)([ \t]*-->[ \t]*(?:\r\n|\r|\n))$/.exec(marker);
     if (!match || match[2] !== part.id) return null;
-    const pieces = [match[1]! + id + match[3]!];
-    let position = indexed.markerTo;
-    for (const block of indexed.blocks) {
-        const schema = block.kind === 'text' ? textSchemas.get(block.id!) : 'rich-text';
-        if (schema === undefined) return null;
-        pieces.push(
-            part.markdown.slice(position, block.contentFrom),
-            remapMarkdownSlideLinks(part.markdown.slice(block.contentFrom, block.to), slides, schema)
-        );
-        position = block.to;
-    }
-    pieces.push(part.markdown.slice(position));
-    return { id, markdown: pieces.join(''), record };
+    const words = spellBlocks(part.markdown, indexed, (words, block) => {
+        const schema = textSchemas.get(blockField(block));
+        return schema === undefined ? null : remapMarkdownSlideLinks(escapeMarkerShapedNotes(words), slides, schema);
+    });
+    if (words === null) return null;
+    return { id, markdown: match[1]! + id + match[3]! + words, record };
 }

@@ -43,6 +43,22 @@ test('HTML tags and leading single-line or multiline comments are omitted from o
     }
 });
 
+test("in a newer minor's file a later minor's block names no slide or section in the outline", () => {
+    const front = '---\nmarkdownpoint: "1.1"\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n';
+    const markdown =
+        `${front}<!-- section: intro -->\n# Intro\n\n<!-- aside -->\n[intro]: /elsewhere\n\n` +
+        '<!-- slide: first -->\n<!-- text: title -->\n\n<!-- sticker: t -->\nTilted words.\n\n<!-- text: body -->\nThe body.\n';
+    const document = indexPresentation(markdown, front.length)!;
+    assert.deepEqual(
+        outlineSlides(markdown, document, 'Title', new Set()).map(slide => slide.title),
+        ['The body.']
+    );
+    assert.deepEqual(
+        outlineSections(markdown, document).map(section => section.title),
+        ['Intro']
+    );
+});
+
 test('populated Title takes precedence over earlier Eyebrow and Body fields, with authored fallbacks', () => {
     const markdown =
         '<!-- slide: first -->\n<!-- text: eyebrow -->\nOpening thought\n<!-- text: body -->\nEarlier body.\n<!-- text: title -->\n**A place to begin**\n<!-- notes -->\nA reminder.\n<!-- slide: empty-title -->\n<!-- text: eyebrow -->\nA useful lead\n<!-- text: title -->\n\n<!-- text: body -->\nDetails.\n<!-- slide: comment-title -->\n<!-- text: title -->\n<!-- An annotation. -->\n<!-- text: body -->\nA real fallback.\n';
@@ -54,9 +70,16 @@ test('populated Title takes precedence over earlier Eyebrow and Body fields, wit
 });
 
 test('a numbered or duplicated Title keeps priority over earlier body text', () => {
-    for (const id of ['title-2', 'title-id-b7d9e1', 'title-2-id-b7d9e1', 'card.title']) {
+    for (const id of ['title-2', 'title-id-b7d9e1', 'title-2-id-b7d9e1']) {
         const markdown = `<!-- slide: first -->\n<!-- text: body -->\nEarlier body\n<!-- text: ${id} -->\nThe main idea\n`;
         assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, 'Title', new Set())[0]!.title, 'The main idea', id);
+    }
+});
+
+test("a field is a Title only by its whole id, never by a word at its id's end", () => {
+    for (const id of ['intro-title', 'step-1-title']) {
+        const markdown = `<!-- slide: first -->\n<!-- text: body -->\nEarlier body\n<!-- text: ${id} -->\nNot the title\n`;
+        assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, 'Title', new Set())[0]!.title, 'Earlier body', id);
     }
 });
 
@@ -67,7 +90,7 @@ test('sections keep authored names, empty sections, and continuous numbers aroun
     const sections = outlineSections(markdown, document);
     const slides = outlineSlides(markdown, document, 'Title', new Set(['skipped']));
     assert.deepEqual(
-        outlineRows({ documentId: 'test-document', path: 'slides.md', slides, sections }, String).map(row => [row.kind, row.label]),
+        outlineRows({ id: 'test-presentation', path: 'slides.md', slides, sections }, String).map(row => [row.kind, row.label]),
         [
             ['section', 'A beginning & a promise'],
             ['slide', '1. First idea.'],
@@ -80,15 +103,25 @@ test('sections keep authored names, empty sections, and continuous numbers aroun
     );
     const allSkipped = slides.map(slide => ({ ...slide, skipped: true }));
     assert.ok(
-        outlineRows({ documentId: 'test-document', path: 'slides.md', slides: allSkipped, sections }, String)
+        outlineRows({ id: 'test-presentation', path: 'slides.md', slides: allSkipped, sections }, String)
             .filter(row => row.kind === 'slide')
             .every(row => row.label.startsWith('– '))
     );
-    assert.equal(outlineRows({ documentId: 'test-document', path: 'slides.md', slides: [], sections }, String).length, 4);
+    assert.equal(outlineRows({ id: 'test-presentation', path: 'slides.md', slides: [], sections }, String).length, 4);
 });
 
 test('a temporary empty or incomplete section heading keeps the slide structure available', () => {
-    for (const words of ['', '# ', 'Plain words', '## Subheading', '# Invalid\u0007name']) {
+    for (const words of [
+        '',
+        '# ',
+        'Plain words',
+        '## Subheading',
+        '# Invalid\u0007name',
+        '# Start <!-- id: s1 -->',
+        '# Start <!-- note -->',
+        '# *Start <!-- note -->*',
+        '# Start <span>'
+    ]) {
         const markdown = `<!-- section: opening -->\n${words}\n<!-- slide: first -->\n`;
         const document = indexPresentation(markdown, 0)!;
         assert.deepEqual(

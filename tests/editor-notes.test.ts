@@ -34,7 +34,7 @@ function autoDirectionLines(markdown: string, open: boolean): number[] {
     const slots = slideNotes(markdown, indexPresentation(markdown, 0)!, 'Notes');
     const opened = new Set(open ? slots.map(slot => slot.slideId) : []);
     const actions = { toggle: () => undefined, edit: () => undefined };
-    return notesDecorations(EditorState.create({ doc: markdown }), slots, opened, false, new Set(), actions)
+    return notesDecorations(EditorState.create({ doc: markdown }), slots, opened, false, new Set(), actions, new Set())
         .filter(range => {
             const spec: unknown = range.value.spec;
             return isRecord(spec) && isRecord(spec.attributes) && spec.attributes.dir === 'auto';
@@ -70,10 +70,11 @@ test('slides without notes keep their notes row while an unclosed fence stops pa
             const document = indexPresentation(markdown, 0);
             return (
                 document && {
-                    id: 'document',
+                    id: 'presentation',
                     bodyStart: 0,
                     document,
                     images: new Map(),
+                    placeholders: new Map(),
                     outline: { slides: document.slides.map(slide => ({ id: slide.id, skipped: false })), sections: [] }
                 }
             );

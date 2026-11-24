@@ -60,13 +60,21 @@ export const zhTW: Translations = {
         cancel: '取消',
         invalidName: '請輸入不含斜線或保留字元的名稱。',
         exists: '已有同名的檔案或資料夾。',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint 無法在「${presentation}」中建立簡報。請選擇「${presentation}」以外的資料夾。`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint 無法開啟「${presentation}」，因為它位於「${outer}」中。請將「${presentation}」資料夾移出「${outer}」，然後再開啟。`,
         failed: '無法建立簡報。請檢查資料夾後再試一次。',
         openFailed: '已建立簡報，但無法開啟。請開啟其資料夾中的 slides.md。',
         openChanged: '簡報已變更或無法讀取。請再試一次。',
         handoffFailed: '無法儲存並開啟簡報。',
         themeChanged: '主題已變更或無法使用。請重新開啟此對話框並再次選擇。',
         newerFormat: ({ version }: { version: string }) =>
-            `此簡報使用較新的 MarkdownPoint 格式（${version}）。請更新 MarkdownPoint 外掛程式，才能將其作為簡報開啟。`
+            `此簡報使用較新的 MarkdownPoint 格式（${version}）。請更新 MarkdownPoint 外掛程式，才能將其作為簡報開啟。`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint 無法讀取「${presentation}」中的「${file}」。請在 MarkdownPoint 應用程式中開啟此簡報，查看需要修正的地方。`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint 無法讀取「${presentation}」中的簡報。請在 MarkdownPoint 應用程式中開啟它，查看需要修正的地方。`
     },
     slides: {
         new: '新增投影片',

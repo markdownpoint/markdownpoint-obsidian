@@ -65,13 +65,21 @@ export const uk: Translations = {
         cancel: 'Скасувати',
         invalidName: 'Введіть назву без скісних рисок і зарезервованих символів.',
         exists: 'Файл або тека з такою назвою вже існує.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint не може створити презентацію всередині «${presentation}». Виберіть теку поза «${presentation}».`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint не може відкрити презентацію «${presentation}», поки вона перебуває всередині «${outer}». Перемістіть теку «${presentation}» з «${outer}», а потім відкрийте її.`,
         failed: 'Не вдалося створити презентацію. Перевірте теку й спробуйте ще раз.',
         openFailed: 'Презентацію створено, але не вдалося відкрити. Відкрийте slides.md у її теці.',
         openChanged: 'Презентація змінилася або її не вдалося прочитати. Спробуйте ще раз.',
         handoffFailed: 'Не вдалося зберегти й відкрити презентацію.',
         themeChanged: 'Тема змінилася або недоступна. Відкрийте це вікно знову й виберіть її ще раз.',
         newerFormat: ({ version }: { version: string }) =>
-            `Ця презентація використовує новіший формат MarkdownPoint (${version}). Оновіть додаток MarkdownPoint, щоб відкрити її як презентацію.`
+            `Ця презентація використовує новіший формат MarkdownPoint (${version}). Оновіть додаток MarkdownPoint, щоб відкрити її як презентацію.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint не може прочитати «${file}» у «${presentation}». Відкрийте презентацію в застосунку MarkdownPoint, щоб побачити, що виправити.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint не може прочитати презентацію в «${presentation}». Відкрийте її в застосунку MarkdownPoint, щоб побачити, що виправити.`
     },
     slides: {
         new: 'Новий слайд',

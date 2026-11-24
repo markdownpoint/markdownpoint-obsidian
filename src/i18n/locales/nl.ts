@@ -64,13 +64,21 @@ export const nl: Translations = {
         cancel: 'Annuleren',
         invalidName: 'Voer een naam in zonder schuine strepen of gereserveerde tekens.',
         exists: 'Er bestaat al een bestand of map met deze naam.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint kan geen presentatie aanmaken in “${presentation}”. Kies een map buiten “${presentation}”.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint kan de presentatie “${presentation}” niet openen zolang deze in “${outer}” staat. Verplaats de map “${presentation}” uit “${outer}” en open deze daarna.`,
         failed: 'Kon de presentatie niet aanmaken. Controleer de map en probeer het opnieuw.',
         openFailed: 'De presentatie is aangemaakt, maar kon niet worden geopend. Open slides.md in de map van de presentatie.',
         openChanged: 'De presentatie is gewijzigd of kon niet worden gelezen. Probeer het opnieuw.',
         handoffFailed: 'Kon de presentatie niet opslaan en openen.',
         themeChanged: 'Het thema is gewijzigd of niet beschikbaar. Open dit venster opnieuw en kies het thema nogmaals.',
         newerFormat: ({ version }: { version: string }) =>
-            `Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling (${version}). Werk de MarkdownPoint-plug-in bij om deze als presentatie te openen.`
+            `Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling (${version}). Werk de MarkdownPoint-plug-in bij om deze als presentatie te openen.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint kan “${file}” in “${presentation}” niet lezen. Open de presentatie in de MarkdownPoint-app om te zien wat er hersteld moet worden.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint kan de presentatie in “${presentation}” niet lezen. Open deze in de MarkdownPoint-app om te zien wat er hersteld moet worden.`
     },
     slides: {
         new: 'Nieuwe dia',

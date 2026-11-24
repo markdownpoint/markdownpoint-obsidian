@@ -1,12 +1,17 @@
 {
   "markdownpoint": "1.0",
-  "kind": "layout",
+  "type": "layout",
   "objects": [
     {
       "id": "body",
       "type": "text",
       "placeholder": true,
-      "frame": {"x":120,"y":120,"width":1680,"height":800},
+      "frame": {
+        "x": 96,
+        "y": 120,
+        "width": 1728,
+        "height": 800
+      },
       "text-style": "body",
       "align": "center",
       "vertical-align": "center"

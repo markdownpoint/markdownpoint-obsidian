@@ -16,24 +16,38 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/** Source before the one organizational blank line at a MarkdownPoint block boundary. */
+import { markdownOpenFence } from '../readers/markdownpoint-readers.js';
+import { lineEnd } from './document.ts';
+
+/**
+ * Source through the last line of a MarkdownPoint block that holds more than spaces, its line break included. Blank
+ * lines only separate blocks, however many stand there, and an empty paragraph is written `<br>`, so the blank lines at a
+ * block's end are organizational; but a code block the words leave open runs to the file's end, and its blank lines are
+ * its code, all but the last, as MarkdownPoint reads them.
+ */
 export function payloadContentEnd(markdown: string, from: number, to: number): number {
+    // Only a block that runs to the file's end can leave a code block open: one would take in the marker after it.
+    const words = to === markdown.length ? markdown.slice(from) : '';
+    // A line end is CRLF, a bare LF or a bare CR, and the LF of a CRLF starts no line of its own.
+    if (leavesCodeOpen(words))
+        return from + words.replace(/(^|[\r\n])[ \t]+$/, '$1').replace(/(^|\r\n|\n|\r(?!\n))[ \t]*(?:\r\n|\r|\n)$/, '$1').length;
     let end = to;
-    // An unterminated tail of horizontal whitespace is not another empty line.
-    while (end > from && (markdown[end - 1] === ' ' || markdown[end - 1] === '\t')) end--;
-    if (end === from || markdown[end - 1] !== '\n') return end;
-    let start = end - 1;
-    if (start > from && markdown[start - 1] === '\r') start--;
-    while (start > from && (markdown[start - 1] === ' ' || markdown[start - 1] === '\t')) start--;
-    // Only that final wholly blank, terminated line is organizational. All
-    // earlier lines, including leading/interior/trailing empty paragraphs, stay.
-    return start === from || markdown[start - 1] === '\n' ? start : end;
+    while (end > from && ' \t\r\n'.includes(markdown[end - 1]!)) end--;
+    if (end === from) return from;
+    // The line break that ends the last line with words is its own; an unterminated tail of spaces is not.
+    const ending = lineEnd(markdown, end);
+    return !ending || ending.at >= to ? end : ending.next;
 }
 
 /** Close a block before its next neighbor without creating another authored blank line. */
 export function terminateSourceBlock(source: string, newline: string): string {
-    if (!source || source.endsWith('\n')) return source;
+    if (!source || /[\r\n]$/.test(source)) return source;
     // Fold an unterminated whitespace tail into the existing organizational line.
-    const closed = source.replace(/(^|\n)([ \t]*)(\r?\n)([ \t]+)$/, '$1$2$4$3');
-    return closed.endsWith('\n') ? closed : closed + newline;
+    const closed = source.replace(/(^|\r\n|\n|\r(?!\n))([ \t]*)(\r\n|\r|\n)([ \t]+)$/, '$1$2$4$3');
+    return /[\r\n]$/.test(closed) ? closed : closed + newline;
+}
+
+/** Whether Markdown words leave a fenced code block open at their end, as MarkdownPoint reads them. */
+function leavesCodeOpen(words: string): boolean {
+    return markdownOpenFence(words.replace(/\r\n?/g, '\n')) !== null;
 }

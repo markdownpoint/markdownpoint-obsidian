@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { holdsOldWords } from './file-words.ts';
+import { isLayoutKey, isThemeFilePath, isThemeKey } from './file-paths.ts';
 import { readJsonObject } from './json.ts';
 import { opensFormatVersion } from './format-version.ts';
-import { isDocumentId, isRecord, isStableId, presentationCompanionPath } from './recognition.ts';
+import { isRecord, isUuid, presentationCompanionPath } from './recognition.ts';
 
 export interface EmbeddedThemeDocument {
     readonly path: string;
@@ -42,11 +42,6 @@ export interface EmbeddedThemePaths {
     readonly layouts: ReadonlyMap<string, string>;
 }
 
-/** Theme folder keys are readable stable names that every supported filesystem accepts. */
-export function isThemeKey(value: unknown): value is string {
-    return isStableId(value) && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(value);
-}
-
 /** Current format1 embedded snapshot paths; global Theme discovery is separate. */
 export function embeddedThemePaths(markdownPath: string, companion: unknown, layoutKeys: Iterable<string>): EmbeddedThemePaths | null {
     if (
@@ -58,9 +53,7 @@ export function embeddedThemePaths(markdownPath: string, companion: unknown, lay
     )
         return null;
     const keys = new Set(layoutKeys);
-    for (const key of keys) {
-        if (!isThemeKey(key) || key === 'master' || key === 'manifest') return null;
-    }
+    for (const key of keys) if (!isLayoutKey(key)) return null;
     const root = markdownPath.slice(0, markdownPath.lastIndexOf('/') + 1) + `themes/${companion.theme}`;
     return {
         key: companion.theme,
@@ -71,28 +64,18 @@ export function embeddedThemePaths(markdownPath: string, companion: unknown, lay
 }
 
 /** Validate the supported Theme envelope while keeping its original source separately. */
-export function themeDocument(source: string, kind: 'master' | 'layout'): Record<string, unknown> | null {
+export function themeDocument(source: string, type: 'master' | 'layout'): Record<string, unknown> | null {
     const value = readJsonObject(source);
-    if (!value || !opensFormatVersion(value.markdownpoint) || value.kind !== kind || (kind === 'master' && !isDocumentId(value.id)))
-        return null;
-    // Every theme path reads its documents here, so none can carry a key the MarkdownPoint app refuses into a presentation
-    return holdsOldWords(value) ? null : value;
+    if (!value || !opensFormatVersion(value.markdownpoint) || value.type !== type || (type === 'master' && !isUuid(value.id))) return null;
+    return value;
 }
 
 /** Files declared by a theme's media objects, overrides, and embedded fonts. */
-export function themeAssetPaths(theme: EmbeddedTheme): readonly string[] | null {
+export function themeFilePaths(theme: EmbeddedTheme): readonly string[] | null {
     const paths = new Set<string>();
     const add = (value: unknown): boolean => {
         if (value === undefined || value === null) return true;
-        if (
-            typeof value !== 'string' ||
-            !value ||
-            value.includes('\\') ||
-            value.includes(':') ||
-            value.split('/').some(part => !part || part.startsWith('.')) ||
-            ['manifest.json', 'previews', 'example'].includes(value.split('/')[0]!)
-        )
-            return false;
+        if (!isThemeFilePath(value)) return false;
         paths.add(value);
         return true;
     };
@@ -104,7 +87,7 @@ export function themeAssetPaths(theme: EmbeddedTheme): readonly string[] | null 
             if (!isRecord(object)) continue;
             const files = isRecord(object.file) ? Object.values(object.file) : [object.file];
             if (!files.every(add)) return null;
-            if (typeof object['poster-frame'] === 'string' && !add(object['poster-frame'])) return null;
+            if (typeof object.poster === 'string' && !add(object.poster)) return null;
         }
     }
     const fonts = theme.master.value['font-files'];

@@ -17,10 +17,28 @@
  */
 
 import { formatStanding, opensFormatVersion } from './format-version.ts';
+import { VERSION_ID, VERSIONS_FOLDER } from '../readers/markdownpoint-readers.js';
+
+/**
+ * Whether the file at `path` lies under a presentation's `versions/`, which MarkdownPoint never opens as a presentation of
+ * its own, as the app refuses it: in a folder there named by a save time, or anywhere below it where the folder around
+ * `versions/` holds a presentation file, as it does around a Finder or File Explorer copy of a version's folder.
+ * `holdsPresentation` says whether the vault's folder at a path holds one; without it, only a save time's name counts.
+ * `ignoresCase` says the vault's volume finds a name in another case, as a Mac's or a Windows disk does, so `Versions/`
+ * there is the folder the app reads as `versions/`.
+ */
+export function inSavedVersions(path: string, holdsPresentation: (folder: string) => boolean = () => false, ignoresCase = false): boolean {
+    const folders = path.split('/').slice(0, -1);
+    return folders.some(
+        (name, at) =>
+            (name === VERSIONS_FOLDER || (ignoresCase && name.toLowerCase() === VERSIONS_FOLDER)) &&
+            (VERSION_ID.test(folders[at + 1] ?? '') || holdsPresentation(folders.slice(0, at).join('/')))
+    );
+}
 
 export function presentationCompanionPath(markdownPath: string): string | null {
     const slash = markdownPath.lastIndexOf('/');
-    if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md') return null;
+    if (markdownPath.slice(slash + 1).toLowerCase() !== 'slides.md' || inSavedVersions(markdownPath)) return null;
     return markdownPath.slice(0, slash + 1) + 'presentation.mdpoint';
 }
 
@@ -31,30 +49,28 @@ export function presentationMember(name: string): 'markdown' | 'companion' | nul
     return /^slides(?![a-z])/i.test(name) && lower.endsWith('.md') ? 'markdown' : null;
 }
 
-/** Discover one unambiguous fixed pair, preserving the spelling stored by the vault. */
-export function presentationPairNames(names: readonly string[]): { markdown: string; companion: string } | null {
-    const markdown = names.filter(name => presentationMember(name) === 'markdown');
-    const companion = names.filter(name => presentationMember(name) === 'companion');
-    if (
-        markdown.length !== 1 ||
-        companion.length !== 1 ||
-        markdown[0]!.toLowerCase() !== 'slides.md' ||
-        companion[0]!.toLowerCase() !== 'presentation.mdpoint'
-    )
-        return null;
-    return { markdown: markdown[0]!, companion: companion[0]! };
-}
-
 export function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function isDocumentId(value: unknown): value is string {
+/**
+ * A record's own entry by a name the author chose, as a scheme's: a name may be one JavaScript gives every object, as
+ * `__proto__` and `toString` are, which a record lacking it doesn't hold.
+ */
+export function ownEntry(record: Readonly<Record<string, unknown>>, name: string): unknown {
+    return Object.hasOwn(record, name) ? record[name] : undefined;
+}
+
+export function isUuid(value: unknown): value is string {
     return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
 }
 
+/** A stable id as a pattern's part: a lowercase letter, then letters, digits and single hyphens, ending in a letter or a digit. */
+export const STABLE_ID_BODY = '[a-z][a-z0-9]*(?:-[a-z0-9]+)*';
+const STABLE_ID = new RegExp(`^${STABLE_ID_BODY}$`);
+
 export function isStableId(value: unknown): value is string {
-    return typeof value === 'string' && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value);
+    return typeof value === 'string' && STABLE_ID.test(value);
 }
 
 /**
@@ -64,10 +80,10 @@ export function isStableId(value: unknown): value is string {
  */
 export function presentationIdentity(frontmatter: unknown, companion: unknown): string | null {
     if (!isRecord(frontmatter) || !isRecord(companion)) return null;
-    if (!opensFormatVersion(frontmatter.markdownpoint) || !opensFormatVersion(companion.markdownpoint) || companion.kind !== 'presentation')
+    if (!opensFormatVersion(frontmatter.markdownpoint) || !opensFormatVersion(companion.markdownpoint) || companion.type !== 'presentation')
         return null;
     const id = frontmatter.id;
-    if (!isDocumentId(id)) return null;
+    if (!isUuid(id)) return null;
     return companion.id === id ? id : null;
 }
 
@@ -77,8 +93,8 @@ export function presentationIdentity(frontmatter: unknown, companion: unknown): 
  * The app never renames these envelope keys, so a newer major is recognized through them.
  */
 export function newerFormat(frontmatter: unknown, companion: unknown): string | null {
-    if (!isRecord(frontmatter) || !isRecord(companion) || companion.kind !== 'presentation') return null;
-    if (!isDocumentId(frontmatter.id) || companion.id !== frontmatter.id) return null;
+    if (!isRecord(frontmatter) || !isRecord(companion) || companion.type !== 'presentation') return null;
+    if (!isUuid(frontmatter.id) || companion.id !== frontmatter.id) return null;
     const versions = [companion.markdownpoint, frontmatter.markdownpoint];
     if (versions.some(version => formatStanding(version) === 'invalid')) return null;
     const newer = versions.find(version => formatStanding(version) === 'newer');

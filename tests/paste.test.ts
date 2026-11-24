@@ -26,10 +26,10 @@ import { embeddedThemePaths, themeDocument } from '../src/format/embedded-theme.
 
 const uuid = '11111111-1111-4111-8111-111111111111';
 const path = 'deck/slides.md';
-const origin = { vault: uuid, path, document: uuid };
+const origin = { vault: uuid, path, presentationId: uuid };
 const paths = embeddedThemePaths(path, { theme: 'basic' }, ['title'])!;
-const master = '{"markdownpoint":"1.0","kind":"master","id":"11111111-1111-4111-8111-111111111111"}';
-const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
+const master = '{"markdownpoint":"1.0","type":"master","id":"11111111-1111-4111-8111-111111111111"}';
+const layout = '{"markdownpoint":"1.0","type":"layout","objects":[{"id":"body","type":"text","placeholder":true}]}';
 const theme = {
     key: 'basic',
     id: uuid,
@@ -39,19 +39,17 @@ const theme = {
 };
 const markdown = '<!-- slide: first -->\n<!-- text: body -->\nFirst words.\n<!-- notes -->\nRemember this.\n';
 const record = '{"layout":"title","unknown":{"value":9007199254740993},"objects":[{"id":"photo","type":"image","file":"media/photo.jpg"}]}';
-const packet = decodeSlideClipboard(
-    encodeSlideClipboard(uuid, origin, { slides: [{ id: 'first', markdown, record }], compositions: [] }, theme)!
-)!;
+const packet = decodeSlideClipboard(encodeSlideClipboard(uuid, origin, [{ id: 'first', markdown, record }], theme)!)!;
 
 test('same-presentation paste keeps raw fields, notes and metadata while creating independent IDs', () => {
     let source = markdown;
     let companion = '{"slides":{"first":' + record + '}}';
     for (let count = 0; count < 3; count++) {
         const document = indexPresentation(source, 0)!;
-        const prepared = prepareClipboardPaste(packet, source, document, companion, new Map(), () => `new-${count}`)!;
-        assert.equal(prepared.slides[0]!.record, record);
-        assert.equal(prepared.slides[0]!.markdown, markdown.replace('slide: first', `slide: new-${count}`));
-        const plan = planSlideInsertion(source, document, companion, prepared.slides, 'first', 0, prepared.compositions)!;
+        const prepared = prepareClipboardPaste(packet, document, companion, new Map(), () => `new-${count}`)!;
+        assert.equal(prepared[0]!.record, record);
+        assert.equal(prepared[0]!.markdown, markdown.replace('slide: first', `slide: new-${count}`));
+        const plan = planSlideInsertion(source, document, companion, prepared, 'first', 0)!;
         source = [...plan.changes]
             .reverse()
             .reduce((text, change) => text.slice(0, change.from) + change.insert + text.slice(change.to), source);
@@ -65,27 +63,27 @@ test('same-presentation paste keeps raw fields, notes and metadata while creatin
 
 test('an empty presentation accepts the first pasted slide', () => {
     const document = indexPresentation('', 0)!;
-    const prepared = prepareClipboardPaste(packet, '', document, '{"slides":{}}', new Map(), () => 'fresh')!;
-    assert.ok(planSlideInsertion('', document, '{"slides":{}}', prepared.slides, null, 0));
+    const prepared = prepareClipboardPaste(packet, document, '{"slides":{}}', new Map(), () => 'fresh')!;
+    assert.ok(planSlideInsertion('', document, '{"slides":{}}', prepared, null, 0));
 });
 
 test('orphaned and recoverable identities are not recycled by a copied slide', () => {
     const document = indexPresentation(markdown, 0)!;
     assert.equal(
-        prepareClipboardPaste(packet, markdown, document, '{"slides":{"first":{},"orphan":{}}}', new Map(), () => 'orphan'),
+        prepareClipboardPaste(packet, document, '{"slides":{"first":{},"orphan":{}}}', new Map(), () => 'orphan'),
         null
     );
     assert.equal(
-        prepareClipboardPaste(packet, markdown, document, '{"slides":{"first":{}}}', new Map([['recoverable', '{}']]), () => 'recoverable'),
+        prepareClipboardPaste(packet, document, '{"slides":{"first":{}}}', new Map([['recoverable', '{}']]), () => 'recoverable'),
         null
     );
 });
 
-test('same-origin asset references require the original vault, document, path and theme sources', () => {
+test('same-origin file references require the original vault, presentation, path and theme sources', () => {
     assert.equal(sameClipboardPresentation(packet, origin), true);
     assert.equal(sameClipboardPresentation(packet, { ...origin, path: 'deck/Slides.MD' }), true);
     assert.equal(sameClipboardPresentation(packet, { ...origin, path: 'other/slides.md' }), false);
-    for (const key of ['vault', 'path', 'document'] as const)
+    for (const key of ['vault', 'path', 'presentationId'] as const)
         assert.equal(sameClipboardPresentation(packet, { ...origin, [key]: 'different' }), false);
     assert.equal(sameClipboardTheme(packet, theme), true);
     assert.equal(sameClipboardTheme(packet, { ...theme, root: 'other/themes/basic' }), true);
@@ -96,21 +94,13 @@ test('same-origin asset references require the original vault, document, path an
 test('a locally owned Cut restores identity once; repeated Paste and Undo Cut clone instead', () => {
     const empty = indexPresentation('', 0)!;
     const companion = '{"slides":{}}';
-    const restored = prepareClipboardPaste(packet, '', empty, companion, new Map([['first', record]]), () => 'copy', true)!;
-    assert.equal(restored.slides[0]!.id, 'first');
+    const restored = prepareClipboardPaste(packet, empty, companion, new Map([['first', record]]), () => 'copy', true)!;
+    assert.equal(restored[0]!.id, 'first');
     const standing = indexPresentation(markdown, 0)!;
-    const repeated = prepareClipboardPaste(
-        packet,
-        markdown,
-        standing,
-        '{"slides":{"first":' + record + '}}',
-        new Map(),
-        () => 'copy',
-        true
-    )!;
-    assert.equal(repeated.slides[0]!.id, 'copy');
-    const newer = prepareClipboardPaste(packet, '', empty, companion, new Map([['first', '{"newer":true}']]), () => 'copy', true)!;
-    assert.equal(newer.slides[0]!.id, 'copy');
-    const unauthenticated = prepareClipboardPaste(packet, '', empty, companion, new Map(), () => 'copy')!;
-    assert.equal(unauthenticated.slides[0]!.id, 'copy');
+    const repeated = prepareClipboardPaste(packet, standing, '{"slides":{"first":' + record + '}}', new Map(), () => 'copy', true)!;
+    assert.equal(repeated[0]!.id, 'copy');
+    const newer = prepareClipboardPaste(packet, empty, companion, new Map([['first', '{"newer":true}']]), () => 'copy', true)!;
+    assert.equal(newer[0]!.id, 'copy');
+    const unauthenticated = prepareClipboardPaste(packet, empty, companion, new Map(), () => 'copy')!;
+    assert.equal(unauthenticated[0]!.id, 'copy');
 });

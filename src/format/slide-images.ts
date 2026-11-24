@@ -17,16 +17,13 @@
  */
 
 import type { EmbeddedTheme } from './embedded-theme.ts';
-import { isRecord, presentationCompanionPath } from './recognition.ts';
+import { isAuthoredFilePath, isPresentationFilePath, isThemeFilePath } from './file-paths.ts';
+import { isRecord, ownEntry, presentationCompanionPath } from './recognition.ts';
 
 export interface SlideImageReference {
     readonly path: string;
     readonly name: string | null;
     readonly category: 'background' | 'placeholder' | 'image';
-}
-interface Ancestor {
-    readonly composition: string;
-    readonly parent: Ancestor | null;
 }
 interface ImageObject {
     raw: Record<string, unknown>;
@@ -34,24 +31,18 @@ interface ImageObject {
     scope: string;
     placeholder: boolean;
 }
-const imageExtension = /\.(?:png|apng|jpe?g|gif|webp|svg|avif|bmp)$/i;
+const imageExtension = /\.(?:png|jpe?g|gif|webp|svg|avif|bmp)$/i;
+const videoExtension = /\.(?:mp4|m4v|mov|webm|ogv)$/i;
 
 function imagePath(value: unknown, scope: string, presentation: boolean): string | null {
-    if (
-        typeof value !== 'string' ||
-        !imageExtension.test(value) ||
-        value.includes('\\') ||
-        value.includes(':') ||
-        [...value].some(character => character.charCodeAt(0) < 32)
-    )
-        return null;
-    const parts = value.split('/');
-    if (parts.some(part => !part || part === '.' || part === '..') || (presentation && !['media', 'generated'].includes(parts[0]!)))
-        return null;
-    return scope + value;
+    return typeof value === 'string' &&
+        imageExtension.test(value) &&
+        (presentation ? isPresentationFilePath(value) : isThemeFilePath(value))
+        ? scope + value
+        : null;
 }
 
-/** List assigned pictures, not generation history or unused composition defaults. */
+/** List assigned pictures, not generation history. */
 export function assignedSlideImages(
     markdownPath: string,
     companion: unknown,
@@ -63,11 +54,18 @@ export function assignedSlideImages(
     if (!isRecord(slide)) return [];
     const root = markdownPath.slice(0, markdownPath.lastIndexOf('/') + 1);
     const layout = theme && typeof slide.layout === 'string' ? theme.layouts.get(slide.layout)?.value : undefined;
-    const scheme = typeof slide.scheme === 'string' ? slide.scheme : typeof layout?.scheme === 'string' ? layout.scheme : 'light';
-    const schemes = theme?.master.value.schemes;
-    const definition = isRecord(schemes) ? schemes[scheme] : undefined;
-    const appearance = isRecord(definition) && definition.appearance === 'dark' ? 'dark' : scheme === 'dark' ? 'dark' : 'light';
-    const picture = (value: unknown) => (isRecord(value) ? (value[scheme] ?? value[appearance] ?? value.light) : value);
+    // The scheme the slide shows, as MarkdownPoint shows it: its own, else its layout's, the first of these its theme has,
+    // else light.
+    const masterSchemes = theme?.master.value.schemes;
+    const schemes = isRecord(masterSchemes) ? masterSchemes : {};
+    const scheme =
+        [slide.scheme, layout?.scheme].find((name): name is string => typeof name === 'string' && isRecord(ownEntry(schemes, name))) ??
+        'light';
+    const definition = ownEntry(schemes, scheme);
+    // Every scheme states its appearance, light and dark included.
+    const appearance = isRecord(definition) && definition.appearance === 'dark' ? 'dark' : 'light';
+    // Only a theme's own object holds a file per scheme; a slide's object and every override name one file.
+    const picture = (value: unknown) => (isRecord(value) ? (ownEntry(value, scheme) ?? value[appearance] ?? value.light) : value);
     const objects = new Map<string, ImageObject>();
     const addLevel = (level: Record<string, unknown>, scope: string, inherited: boolean) => {
         const held = new Set(objects.keys());
@@ -77,13 +75,16 @@ export function assignedSlideImages(
                 if (!current) continue;
                 if (override === null) objects.delete(id);
                 else if (isRecord(override)) {
-                    const file = picture(override.file);
-                    const replacement = typeof file === 'string';
-                    objects.set(id, {
-                        ...current,
-                        raw: { ...current.raw, ...override, type: current.raw.type },
-                        ...(replacement ? { file, scope } : {})
-                    });
+                    // As MarkdownPoint applies an override: a picture's or a video's file takes the inherited one's place,
+                    // null clears it, and anything else leaves it.
+                    const file = override.file;
+                    const shown =
+                        file === null
+                            ? { file: undefined }
+                            : isAuthoredFilePath(file) && (imageExtension.test(file) || videoExtension.test(file))
+                              ? { file, scope }
+                              : {};
+                    objects.set(id, { ...current, raw: { ...current.raw, ...override, type: current.raw.type }, ...shown });
                 }
             }
         if (Array.isArray(level.objects))
@@ -93,7 +94,7 @@ export function assignedSlideImages(
                     raw: object,
                     scope,
                     placeholder: inherited && object.placeholder === true,
-                    file: inherited && object.placeholder === true ? undefined : picture(object.file)
+                    file: !inherited ? object.file : object.placeholder === true ? undefined : picture(object.file)
                 });
             }
     };
@@ -103,51 +104,28 @@ export function assignedSlideImages(
     }
     addLevel(slide, root, false);
     const references: SlideImageReference[] = [];
-    const ownBackground = isRecord(slide.background) ? slide.background.image : undefined;
-    const background =
-        ownBackground !== undefined ? ownBackground : isRecord(companion.background) ? companion.background.image : undefined;
-    const backgroundPath = imagePath(background, root, true);
+    // The background a slide shows, each whole: its own, else its layout's, else its master's, whose picture is the
+    // theme's, one file per scheme.
+    const ownBackground = isRecord(slide.background) ? slide.background : undefined;
+    const themeBackground = ownBackground || !theme ? undefined : [layout?.background, theme.master.value.background].find(isRecord);
+    const ownImage = isRecord(ownBackground?.image) ? ownBackground.image : undefined;
+    const themeImage = isRecord(themeBackground?.image) ? themeBackground.image : undefined;
+    const backgroundPath = ownImage
+        ? imagePath(ownImage.file, root, true)
+        : themeImage && theme
+          ? imagePath(picture(themeImage.file), theme.root + '/', false)
+          : undefined;
     if (backgroundPath) references.push({ path: backgroundPath, name: null, category: 'background' });
-    const pending = [...objects.values()].map(object => ({ object, parent: null as Ancestor | null }));
-    const expanded = new Set<string>();
-    for (let index = 0; index < pending.length; index++) {
-        const { object, parent } = pending[index]!;
+    for (const object of objects.values()) {
         const raw = object.raw;
-        if (raw.type === 'image' || raw.type === 'video') {
-            const path = imagePath(object.file, object.scope, object.scope === root);
-            if (path)
-                references.push({
-                    path,
-                    name: typeof raw.alt === 'string' ? raw.alt : typeof raw.name === 'string' ? raw.name : null,
-                    category: object.placeholder ? 'placeholder' : 'image'
-                });
-        }
-        if (raw.type !== 'composition' || typeof raw.composition !== 'string' || !isRecord(companion.compositions)) continue;
-        let cycle = false;
-        for (let ancestor = parent; ancestor; ancestor = ancestor.parent)
-            if (ancestor.composition === raw.composition) {
-                cycle = true;
-                break;
-            }
-        if (cycle) continue;
-        const composition = companion.compositions[raw.composition];
-        if (!isRecord(composition) || !Array.isArray(composition.objects)) continue;
-        const controls = isRecord(composition.controls) ? composition.controls : {};
-        const values = isRecord(raw.controls) ? raw.controls : {};
-        const instance = JSON.stringify([raw.composition, values]);
-        if (expanded.has(instance)) continue;
-        expanded.add(instance);
-        for (const member of composition.objects) {
-            if (!isRecord(member)) continue;
-            const binding = isRecord(member.bind) && typeof member.bind.file === 'string' ? member.bind.file : null;
-            const control = binding ? controls[binding] : undefined;
-            const bound = binding !== null && isRecord(control) && control.type === 'media';
-            const file = bound ? (values[binding] ?? control.default) : member.file;
-            pending.push({
-                object: { raw: member, scope: root, file, placeholder: bound },
-                parent: { composition: raw.composition, parent }
+        if (raw.type !== 'image' && raw.type !== 'video') continue;
+        const path = imagePath(object.file, object.scope, object.scope === root);
+        if (path)
+            references.push({
+                path,
+                name: typeof raw.alt === 'string' ? raw.alt : typeof raw.name === 'string' ? raw.name : null,
+                category: object.placeholder ? 'placeholder' : 'image'
             });
-        }
     }
     const rank = { background: 0, placeholder: 1, image: 2 };
     const seen = new Set<string>();

@@ -17,12 +17,13 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
-import type { App, TFile as ObsidianFile } from 'obsidian';
+import type { App, TFile as ObsidianFile, Vault } from 'obsidian';
 import { TFile, TFolder } from './support/obsidian.ts';
 import { readEmbeddedTheme } from '../src/presentation/theme-reader.ts';
 import { decodeSlideClipboard, encodeSlideClipboard } from '../src/format/clipboard.ts';
-import { ThemeArtworkMismatch, transferSlideAssets } from '../src/presentation/transfer-assets.ts';
+import { ThemeArtworkMismatch, transferSlideFiles } from '../src/presentation/transfer-files.ts';
 
 const sourceId = '11111111-1111-4111-8111-111111111111';
 const targetId = '22222222-2222-4222-8222-222222222222';
@@ -69,6 +70,7 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
         },
         getAbstractFileByPath: (path: string) => nodes.get(path) ?? null,
         read: (file: TFile) => Promise.resolve(new TextDecoder().decode(file.bytes)),
+        readBinary: (file: TFile) => Promise.resolve(file.bytes.slice().buffer),
         getResourcePath: (file: TFile) => 'vault:' + encodeURIComponent(file.path),
         createFolder: (path: string) => {
             if (nodes.has(path)) throw new Error('Occupied');
@@ -78,7 +80,8 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
             state.beforeCopy(path);
             copies.push(path);
             return Promise.resolve(add(path, file.bytes));
-        }
+        },
+        create: (path: string, text: string) => Promise.resolve(add(path, text))
     };
     const app = {
         vault,
@@ -99,13 +102,17 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
             return Promise.resolve(file ? new Response(file.bytes.slice().buffer) : new Response(null, { status: 404 }));
         }
     } as unknown as Window;
+    // MarkdownPoint's Basic master under its own id, with a picture of its own when asked
+    const basic = JSON.parse(readFileSync(new URL('../src/themes/basic/master.json', import.meta.url), 'utf8')) as { objects: unknown[] };
     const master = JSON.stringify({
-        markdownpoint: '1.0',
-        kind: 'master',
+        ...basic,
         id: themeId,
-        objects: artwork ? [{ id: 'logo', type: 'image', file: 'media/logo.svg' }] : []
+        objects: [
+            ...basic.objects,
+            ...(artwork ? [{ id: 'logo', type: 'image', file: 'media/logo.svg', frame: { x: 0, y: 0, width: 100, height: 100 } }] : [])
+        ]
     });
-    const layout = '{"markdownpoint":"1.0","kind":"layout","objects":[]}';
+    const layout = '{"markdownpoint":"1.0","type":"layout","objects":[]}';
     for (const [root, id] of [
         ['source', sourceId],
         ['target', targetId]
@@ -113,24 +120,24 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
         add(root + '/slides.md', header(id) + '<!-- slide: one -->\n');
         add(
             root + '/presentation.mdpoint',
-            JSON.stringify({ markdownpoint: '1.0', kind: 'presentation', id, theme: 'basic', slides: { one: { layout: 'title' } } })
+            JSON.stringify({ markdownpoint: '1.0', type: 'presentation', id, theme: 'basic', slides: { one: { layout: 'title' } } })
         );
         add(root + '/themes/basic/master.json', master);
         add(root + '/themes/basic/title.json', layout);
         if (artwork) add(root + '/themes/basic/media/logo.svg', new Uint8Array([1, 2, 3]));
     }
     for (const path of media) add('source/' + path, new Uint8Array([4, 5, 6]));
-    const sourceTheme = (await readEmbeddedTheme(vault, 'source/slides.md', { theme: 'basic' }, ['title']))!;
-    const theme = (await readEmbeddedTheme(vault, 'target/slides.md', { theme: 'basic' }, ['title']))!;
+    const sourceTheme = (await readEmbeddedTheme(vault as unknown as Vault, 'source/slides.md', { theme: 'basic' }, ['title']))!;
+    const theme = (await readEmbeddedTheme(vault as unknown as Vault, 'target/slides.md', { theme: 'basic' }, ['title']))!;
     const record = JSON.stringify({
         layout: 'title',
-        objects: media.map((asset, index) => ({ id: `image-${index}`, type: 'image', file: asset }))
+        objects: media.map((file, index) => ({ id: `image-${index}`, type: 'image', file }))
     });
     const packet = decodeSlideClipboard(
         encodeSlideClipboard(
             token,
-            { vault: sourceId, path: 'source/slides.md', document: sourceId },
-            { slides: [{ id: 'one', markdown: '<!-- slide: one -->\n', record }], compositions: [] },
+            { vault: sourceId, path: 'source/slides.md', presentationId: sourceId },
+            [{ id: 'one', markdown: '<!-- slide: one -->\n', record }],
             sourceTheme
         )!
     )!;
@@ -146,7 +153,7 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
         ownerWindow,
         target,
         transfer: (current = () => true, signal = new AbortController().signal) =>
-            transferSlideAssets(app, packet, target as unknown as ObsidianFile, theme, ownerWindow, current, signal)
+            transferSlideFiles(app, packet, target as unknown as ObsidianFile, theme, ownerWindow, current, signal)
     };
 }
 
@@ -155,8 +162,8 @@ test('transfer copies media independently and repeated paste reuses its unchange
     const first = await f.transfer();
     const second = await f.transfer();
     assert.equal(f.copies.length, 2);
-    assert.equal(first.captured.slides[0]!.record, second.captured.slides[0]!.record);
-    assert.equal(first.captured.slides[0]!.markdown, f.packet.captured.slides[0]!.markdown);
+    assert.equal(first.captured[0]!.record, second.captured[0]!.record);
+    assert.equal(first.captured[0]!.markdown, f.packet.captured[0]!.markdown);
     assert.equal(first.current(), true);
     assert.ok(f.copies.some(path => path.startsWith('target/generated/')));
     const copied = f.nodes.get(f.copies[0]!);
@@ -174,7 +181,7 @@ test('an edited destination image is preserved and a new copy is reused on later
     const second = await f.transfer();
     const third = await f.transfer();
     assert.equal(f.copies.length, 2);
-    assert.equal(second.captured.slides[0]!.record, third.captured.slides[0]!.record);
+    assert.equal(second.captured[0]!.record, third.captured[0]!.record);
     assert.deepEqual(edited.bytes, new Uint8Array([9, 9, 9]));
 });
 

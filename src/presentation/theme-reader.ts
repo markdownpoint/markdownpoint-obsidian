@@ -16,51 +16,78 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { isDocumentId } from '../format/recognition.ts';
+import { TFile } from 'obsidian';
+import type { Vault } from 'obsidian';
+import { isUuid } from '../format/recognition.ts';
 import { embeddedThemePaths, themeDocument } from '../format/embedded-theme.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
+import { readPresentationTheme } from '../readers/markdownpoint-readers.js';
 
-interface ThemeVault<File> {
-    getFileByPath(path: string): File | null;
-    read(file: File): Promise<string>;
+/** Whether two reads of a file gave the same bytes. */
+function sameBytes(first: ArrayBuffer, second: ArrayBuffer): boolean {
+    if (first.byteLength !== second.byteLength) return false;
+    const [left, right] = [new Uint8Array(first), new Uint8Array(second)];
+    return left.every((byte, at) => byte === right[at]);
 }
 
-/** A user operation reads its required embedded documents once and verifies the same bytes before returning. */
-export async function readEmbeddedTheme<File>(
-    vault: ThemeVault<File>,
+/** A theme file's text as Obsidian reads it, a byte order mark kept. */
+const themeText = (bytes: ArrayBuffer) => new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes);
+
+/**
+ * A presentation's theme as MarkdownPoint reads it, from every JSON file of its folder, with each of `layoutKeys` the theme
+ * has and MarkdownPoint reads: none when MarkdownPoint reads no master there, as it then refuses every slide. Every file
+ * of the folder decides that, so a folder whose files changed while they were read gives none, and no poll or retry.
+ */
+export async function readEmbeddedTheme(
+    vault: Vault,
     markdownPath: string,
     companion: unknown,
     layoutKeys: Iterable<string>
 ): Promise<EmbeddedTheme | null> {
     const paths = embeddedThemePaths(markdownPath, companion, layoutKeys);
     if (!paths) return null;
-    const targets = [
-        { key: null, path: paths.master, kind: 'master' as const },
-        ...[...paths.layouts].map(([key, path]) => ({ key, path, kind: 'layout' as const }))
-    ];
     try {
-        const reads = await Promise.all(
-            targets.map(async target => {
-                const file = vault.getFileByPath(target.path);
-                if (!file) return null;
-                const source = await vault.read(file);
-                const value = themeDocument(source, target.kind);
-                return value ? { ...target, file, document: { path: target.path, source, value } } : null;
-            })
+        const listed = () =>
+            (vault.getFolderByPath(paths.root)?.children ?? []).filter(
+                (file): file is TFile => file instanceof TFile && file.name.toLowerCase().endsWith('.json')
+            );
+        const files = listed();
+        const named = files.map(file => file.path);
+        const bytes = await Promise.all(files.map(file => vault.readBinary(file)));
+        const reading = readPresentationTheme(
+            paths.key,
+            files.map((file, at) => ({ name: file.name, bytes: new Uint8Array(bytes[at]!) }))
         );
-        if (reads.some(read => read === null)) return null;
-        const documents = reads.filter(read => read !== null);
-        const stable = await Promise.all(
-            documents.map(
-                async read =>
-                    vault.getFileByPath(read.path) === read.file &&
-                    (await vault.read(read.file)) === read.document.source &&
-                    vault.getFileByPath(read.path) === read.file
-            )
-        );
-        if (stable.some(value => !value)) return null;
+        if (!reading.reads) return null;
+        const reads = new Set(reading.theme.layouts.flatMap(layout => (layout.reads ? [layout.key] : [])));
+        const targets = [
+            { key: null, path: paths.master, type: 'master' as const },
+            ...[...paths.layouts].flatMap(([key, path]) => (reads.has(key) ? [{ key, path, type: 'layout' as const }] : []))
+        ];
+        const documents = [];
+        for (const target of targets) {
+            const at = files.findIndex(file => `${paths.root}/${file.name}` === target.path);
+            const file = files[at];
+            const source = file && themeText(bytes[at]!);
+            const value = source !== undefined && themeDocument(source, target.type);
+            // The master is the theme's; a layout MarkdownPoint reads that the plugin doesn't is left out, as one it doesn't read
+            if (!file || !value) {
+                if (target.key === null) return null;
+                continue;
+            }
+            documents.push({ ...target, file, document: { path: target.path, source, value } });
+        }
+        const again = await Promise.all(files.map(file => vault.readBinary(file)));
+        const now = listed();
+        if (
+            now.length !== files.length ||
+            // A file renamed keeps its object
+            files.some((file, at) => file.path !== named[at] || !now.includes(file)) ||
+            again.some((read, at) => !sameBytes(read, bytes[at]!))
+        )
+            return null;
         const id = documents[0]!.document.value.id;
-        if (!isDocumentId(id)) return null;
+        if (!isUuid(id)) return null;
         return {
             key: paths.key,
             id,

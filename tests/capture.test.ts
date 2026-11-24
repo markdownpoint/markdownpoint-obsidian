@@ -19,119 +19,45 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { captureSlides } from '../src/format/capture.ts';
-import { CompanionDocument } from '../src/format/companion.ts';
 import { indexPresentation } from '../src/format/document.ts';
 
 const one = '<!-- slide: one -->\r\n<!-- text: title -->\r\nSee [Two](slide:two).\r\n<!-- notes -->\r\nKeep the whole thought.\r\n\r\n';
-const two = '<!-- slide: two -->\r\n<!-- text: card.caption -->\r\nAn instance value.\r\n\r\n';
-const card =
-    '<!-- composition: card -->\r\n<!-- control: caption -->\r\nDefault [link](slide:two).\r\n<!-- text: label -->\r\nA reusable label.\r\n';
-const badge = '<!-- composition: badge -->\r\n<!-- text: label -->\r\nA small detail.\r\n';
-const source = '<!-- section: intro -->\r\n# Introduction\r\n' + one + '<!-- section: end -->\r\n# Ending\r\n' + two + card + badge;
+const two = '<!-- slide: two -->\r\n<!-- text: caption -->\r\nA caption.\r\n\r\n';
+const source = '<!-- section: intro -->\r\n# Introduction\r\n' + one + '<!-- section: end -->\r\n# Ending\r\n' + two;
 const firstRecord =
-    '{"layout":"title","skipped":true,"future":9007199254740993,"escaped":"\\u0061","objects":[{"id":"photo","type":"image","file":"assets/picture.png"}]}';
-const secondRecord =
-    '{"layout":"body","objects":[{"id":"card","type":"composition","composition":"card"},{"id":"again","type":"composition","composition":"card"}]}';
-const cardRecord =
-    '{"size":{"width":320,"height":160},"controls":{"caption":{"type":"text"}},"objects":[{"id":"detail","type":"composition","composition":"badge"}]}';
-const badgeRecord = '{"size":{"width":20,"height":20},"objects":[]}';
-const companion = `{"slides":{"one":${firstRecord},"two":${secondRecord}},"compositions":{"card":${cardRecord},"badge":${badgeRecord}},"comments":{"unrelated":"keep private"}}`;
+    '{"layout":"title","skipped":true,"future":9007199254740993,"escaped":"\\u0061","objects":[{"id":"photo","type":"image","file":"media/picture.png"}]}';
+const secondRecord = '{"layout":"body","objects":[{"id":"caption","type":"text"}]}';
+const companion = `{"slides":{"one":${firstRecord},"two":${secondRecord}},"comments":{"unrelated":"keep private"}}`;
 const capture = (markdown = source, data = companion, ids = ['two', 'one']) =>
     captureSlides(markdown, indexPresentation(markdown, 0)!, data, ids);
 
 test('capture preserves complete selected source and raw metadata in source order without section headers', () => {
     const result = capture()!;
     assert.ok(result);
-    assert.deepEqual(result.slides, [
+    assert.deepEqual(result, [
         { id: 'one', markdown: one, record: firstRecord },
         { id: 'two', markdown: two, record: secondRecord }
     ]);
-    assert.equal(result.slides[0]!.record.includes('9007199254740993'), true);
-    assert.equal(result.slides[0]!.record.includes('\\u0061'), true);
+    assert.equal(result[0]!.record.includes('9007199254740993'), true);
+    assert.equal(result[0]!.record.includes('\\u0061'), true);
     assert.equal(JSON.stringify(result).includes('keep private'), false);
-    assert.deepEqual(capture(source, companion, ['one'])!.compositions, []);
-});
-
-test('capture includes each transitive composition once with default controls and instance text intact', () => {
-    const result = capture()!;
-    assert.deepEqual(result.compositions, [
-        { id: 'card', markdown: card, record: cardRecord },
-        { id: 'badge', markdown: badge, record: badgeRecord }
-    ]);
-    assert.equal(result.slides[1]!.markdown, two);
-    const cycle = companion.replace('"objects":[]', '"objects":[{"type":"composition","composition":"card"}]');
-    assert.deepEqual(
-        capture(source, cycle)!.compositions.map(part => part.id),
-        ['card', 'badge']
-    );
 });
 
 test('literal fenced directives, authored EOF whitespace and unknown records are copied unchanged', () => {
     const markdown = '<!-- slide: one -->\n<!-- text: body -->\n```md\n<!-- slide: example -->\n```\n\n\n \t';
-    assert.equal(capture(markdown, companion, ['one'])!.slides[0]!.markdown, markdown);
-    assert.equal(capture(markdown, companion, ['one'])!.slides[0]!.record, firstRecord);
+    assert.equal(capture(markdown, companion, ['one'])![0]!.markdown, markdown);
+    assert.equal(capture(markdown, companion, ['one'])![0]!.record, firstRecord);
 });
 
 test('slide paint order retains inherited object names among complete own objects', () => {
-    const ordered = companion.replace('"objects":[{"id":"card"', '"objects":["title",{"id":"card"');
+    const ordered = companion.replace('"objects":[{"id":"caption"', '"objects":["title",{"id":"caption"');
     const result = capture(source, ordered)!;
     assert.ok(result);
-    assert.equal(result.slides[1]!.record, secondRecord.replace('"objects":[', '"objects":["title",'));
-    assert.deepEqual(
-        result.compositions.map(part => part.id),
-        ['card', 'badge']
-    );
-    for (const invalid of [12, null, true, 'Invalid name']) {
-        assert.equal(capture(source, ordered.replace('"objects":["title",', '"objects":[' + JSON.stringify(invalid) + ',')), null);
-    }
-    assert.equal(capture(source, companion.replace('"objects":[]', '"objects":["title"]')), null);
+    assert.equal(result[1]!.record, secondRecord.replace('"objects":[', '"objects":["title",'));
 });
 
-test('incomplete selection or dependency source refuses capture instead of silently losing content', () => {
+test('incomplete selection or slide source refuses capture instead of silently losing content', () => {
     for (const ids of [[], ['missing'], ['one', 'missing']]) assert.equal(capture(source, companion, ids), null);
     assert.equal(capture(source, companion.replace('"two":', '"other":')), null);
-    assert.equal(capture(source.replace(badge, '')), null);
-    assert.equal(capture(source, companion.replace('"badge":', '"missing":')), null);
-    assert.equal(capture(source, companion.replace('"composition":"card"', '"composition":12')), null);
-    assert.equal(capture(source, companion.replace('"objects":[{"id":"card"', '"objects":[null,{"id":"card"')), null);
     assert.equal(capture(source, companion.replace('"slides":{', '"slides":{},"slides":{')), null);
-    assert.equal(capture(source, companion.replace('"compositions":{', '"compositions":{},"compositions":{')), null);
-});
-
-test('composition raw-record maps use the same lossless updates as slide maps', () => {
-    const data = CompanionDocument.read(companion, 'compositions')!;
-    assert.equal(data.records.get('card'), cardRecord);
-    const changed = data.change(
-        new Map([
-            ['badge', null],
-            ['extra', '{"precision":9007199254740995}']
-        ])
-    )!;
-    assert.equal(CompanionDocument.read(changed)!.records.get('one'), firstRecord);
-    assert.equal(CompanionDocument.read(changed, 'compositions')!.records.get('extra'), '{"precision":9007199254740995}');
-    assert.equal(CompanionDocument.read(changed, 'compositions')!.records.has('badge'), false);
-});
-
-test('deep shared composition graphs are captured iteratively without duplication', () => {
-    const count = 1200;
-    const parts = Array.from({ length: count }, (_, index) => `<!-- composition: c${index} -->\n<!-- text: body -->\nWords ${index}\n`);
-    const metadata = Object.fromEntries(
-        parts.map((_part, index) => [
-            `c${index}`,
-            {
-                objects:
-                    index + 1 < count
-                        ? [
-                              { type: 'composition', composition: `c${index + 1}` },
-                              { type: 'composition', composition: `c${index + 1}` }
-                          ]
-                        : []
-            }
-        ])
-    );
-    const markdown = '<!-- slide: one -->\n' + parts.join('');
-    const data = JSON.stringify({ slides: { one: { objects: [{ type: 'composition', composition: 'c0' }] } }, compositions: metadata });
-    const result = capture(markdown, data, ['one'])!;
-    assert.equal(result.compositions.length, count);
-    assert.equal(result.compositions.at(-1)!.id, `c${count - 1}`);
 });

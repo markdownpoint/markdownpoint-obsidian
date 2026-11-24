@@ -17,61 +17,38 @@
  */
 
 import { CompanionDocument, isSlideRecordSource, reconcileSlideRecords } from '../format/companion.ts';
-import type { CompanionMap } from '../format/companion.ts';
-import { holdsOldWords } from '../format/file-words.ts';
 import { FORMAT_VERSION } from '../format/format-version.ts';
-import { readJsonObject } from '../format/json.ts';
-import { isDocumentId, isRecord, isStableId, presentationCompanionPath, presentationIdentity } from '../format/recognition.ts';
+import { readJsonObject, withoutByteOrderMark } from '../format/json.ts';
+import { isRecord, isStableId, isUuid, presentationCompanionPath, presentationIdentity } from '../format/recognition.ts';
 export interface SlideDataHost {
     loadRecovery(): Promise<unknown>;
     saveRecovery(data: unknown): Promise<void>;
     process(path: string, update: (source: string) => Promise<string>, canCommit: () => boolean): Promise<void>;
-    failed(path: string, document: string, error: unknown): void;
-    saved?(path: string, document: string): void;
-}
-
-interface RecordMembership {
-    readonly slides: ReadonlySet<string>;
-    readonly compositions: ReadonlySet<string>;
+    failed(path: string, presentationId: string, error: unknown): void;
+    saved?(path: string, presentationId: string): void;
 }
 
 interface SavedSlides {
     path: string;
-    readonly document: string;
+    readonly presentationId: string;
     records: ReadonlyMap<string, string>;
-    compositions: ReadonlyMap<string, string>;
-    present: RecordMembership | null;
+    present: ReadonlySet<string> | null;
     source: string | null;
     dirty: boolean;
     saving: Promise<void> | null;
 }
 
 const empty: ReadonlyMap<string, string> = new Map();
-const sameMembers = (first: ReadonlySet<string>, second: ReadonlySet<string>) =>
-    first.size === second.size && [...second].every(id => first.has(id));
-const sameMembership = (first: RecordMembership | null, second: RecordMembership) =>
-    first !== null && sameMembers(first.slides, second.slides) && sameMembers(first.compositions, second.compositions);
+const sameMembers = (first: ReadonlySet<string> | null, second: ReadonlySet<string>) =>
+    first !== null && first.size === second.size && [...second].every(id => first.has(id));
 
 function recoveryRecords(value: unknown): ReadonlyMap<string, string> {
     const records = new Map<string, string>();
     if (isRecord(value))
         for (const [id, raw] of Object.entries(value)) {
-            if (!isStableId(id) || typeof raw !== 'string' || !isSlideRecordSource(raw)) continue;
-            // A record remembered before format 1.0 holds words the MarkdownPoint app refuses; restoring it would break the file
-            const record = readJsonObject(raw);
-            if (record && !holdsOldWords(record)) records.set(id, raw);
+            if (isStableId(id) && typeof raw === 'string' && isSlideRecordSource(raw) && readJsonObject(raw)) records.set(id, raw);
         }
     return records;
-}
-
-/** Both maps share one disk update and one durable recovery snapshot. */
-function reconcile(source: string, entry: SavedSlides, present: RecordMembership) {
-    const slides = reconcileSlideRecords(source, entry.records, present.slides);
-    if (!slides) return null;
-    const compositions = entry.compositions.size
-        ? reconcileSlideRecords(slides.companion, entry.compositions, present.compositions, 'compositions')
-        : { companion: slides.companion, remembered: entry.compositions };
-    return compositions && { companion: compositions.companion, records: slides.remembered, compositions: compositions.remembered };
 }
 
 /** Local complete records make native text undo recoverable, including after a tab closes. */
@@ -97,18 +74,16 @@ export class SlideData {
                 typeof value.path !== 'string' ||
                 value.path.includes('\\') ||
                 value.path.split('/').some(part => !part || part === '.' || part === '..') ||
-                !isDocumentId(value.document) ||
+                !isUuid(value.presentationId) ||
                 !isRecord(value.records)
             )
                 continue;
             const records = recoveryRecords(value.records);
-            const compositions = recoveryRecords(value.compositions);
-            if (records.size || compositions.size)
-                this.entries.set(this.key(value.path, value.document), {
+            if (records.size)
+                this.entries.set(this.key(value.path, value.presentationId), {
                     path: value.path,
-                    document: value.document,
+                    presentationId: value.presentationId,
                     records,
-                    compositions,
                     present: null,
                     source: null,
                     dirty: false,
@@ -121,75 +96,48 @@ export class SlideData {
         this.running = false;
     }
 
-    remembered(path: string, document: string, kind: CompanionMap = 'slides'): ReadonlyMap<string, string> {
-        const entry = this.entries.get(this.key(path, document));
-        return (kind === 'slides' ? entry?.records : entry?.compositions) ?? empty;
+    remembered(path: string, presentationId: string): ReadonlyMap<string, string> {
+        return this.entries.get(this.key(path, presentationId))?.records ?? empty;
     }
 
     /** Save complete current records before any native transaction removes their text. */
-    async remember(
-        path: string,
-        document: string,
-        companion: string,
-        ids: Iterable<string>,
-        compositionIds: Iterable<string> = []
-    ): Promise<boolean> {
+    async remember(path: string, presentationId: string, companion: string, ids: Iterable<string>): Promise<boolean> {
         await this.ready;
-        if (!this.running || !presentationCompanionPath(path) || !this.matches(companion, document)) return false;
+        if (!this.running || !presentationCompanionPath(path) || !this.matches(companion, presentationId)) return false;
         const data = CompanionDocument.read(companion);
-        const definitions = CompanionDocument.read(companion, 'compositions');
         const selected = new Set(ids);
-        const selectedCompositions = new Set(compositionIds);
-        if (
-            !data ||
-            (!selected.size && !selectedCompositions.size) ||
-            [...selected].some(id => !data.records.has(id)) ||
-            [...selectedCompositions].some(id => !definitions?.records.has(id) || selected.has(id))
-        )
-            return false;
-        const key = this.key(path, document);
+        if (!data || !selected.size || [...selected].some(id => !data.records.has(id))) return false;
+        const key = this.key(path, presentationId);
         const entry = this.entries.get(key) ?? {
             path,
-            document,
+            presentationId,
             records: empty,
-            compositions: empty,
             present: null,
             source: null,
             dirty: false,
             saving: null
         };
         entry.records = new Map([...entry.records, ...[...selected].map(id => [id, data.records.get(id)!] as const)]);
-        entry.compositions = new Map([
-            ...entry.compositions,
-            ...[...selectedCompositions].map(id => [id, definitions!.records.get(id)!] as const)
-        ]);
         this.entries.set(key, entry);
         await this.persist();
         return true;
     }
 
     /** Ordinary typing with the same membership does no companion work. */
-    observe(
-        path: string,
-        document: string,
-        companion: string,
-        slides: ReadonlySet<string>,
-        compositions: ReadonlySet<string> = new Set()
-    ): void {
-        const present = { slides, compositions };
-        const entry = this.entries.get(this.key(path, document));
+    observe(path: string, presentationId: string, companion: string, slides: ReadonlySet<string>): void {
+        const entry = this.entries.get(this.key(path, presentationId));
         if (
             !this.running ||
             !entry ||
-            (entry.source === companion && sameMembership(entry.present, present)) ||
-            !this.matches(companion, document)
+            (entry.source === companion && sameMembers(entry.present, slides)) ||
+            !this.matches(companion, presentationId)
         )
             return;
-        const next = reconcile(companion, entry, present);
+        const next = reconcileSlideRecords(companion, entry.records, slides);
         if (!next) return;
         entry.source = companion;
-        const membershipChanged = !sameMembership(entry.present, present);
-        entry.present = { slides: new Set(slides), compositions: new Set(compositions) };
+        const membershipChanged = !sameMembers(entry.present, slides);
+        entry.present = new Set(slides);
         // Observed snapshots can precede an in-flight write. Only the atomic disk
         // callback replaces a recovery record with newer external contents.
         if (next.companion !== companion || (entry.saving && membershipChanged)) {
@@ -197,20 +145,30 @@ export class SlideData {
             this.save(entry);
         } else if (!entry.saving && entry.dirty) {
             entry.dirty = false;
-            this.host.saved?.(entry.path, entry.document);
+            this.host.saved?.(entry.path, entry.presentationId);
         }
     }
 
-    retry(path: string, document: string): boolean {
-        const entry = this.entries.get(this.key(path, document));
+    retry(path: string, presentationId: string): boolean {
+        const entry = this.entries.get(this.key(path, presentationId));
         if (!this.running || !entry?.present || !presentationCompanionPath(path)) return false;
         entry.dirty = true;
         this.save(entry);
         return true;
     }
 
-    async settled(path: string, document: string): Promise<boolean> {
-        const entry = this.entries.get(this.key(path, document));
+    /**
+     * The companion as this presentation's saves leave it for the slides its Markdown holds: each record kept for it
+     * restored or removed. `companion` itself when none is kept for it or it is another presentation's.
+     */
+    reconciled(path: string, presentationId: string, companion: string, slides: ReadonlySet<string>): string {
+        const entry = this.entries.get(this.key(path, presentationId));
+        if (!this.running || !entry || !this.matches(companion, presentationId)) return companion;
+        return reconcileSlideRecords(companion, entry.records, slides)?.companion ?? companion;
+    }
+
+    async settled(path: string, presentationId: string): Promise<boolean> {
+        const entry = this.entries.get(this.key(path, presentationId));
         while (entry?.saving) await entry.saving;
         return entry?.dirty !== true;
     }
@@ -223,7 +181,7 @@ export class SlideData {
             if (entry.path !== from && !entry.path.startsWith(from + '/')) continue;
             this.entries.delete(key);
             entry.path = to + entry.path.slice(from.length);
-            this.entries.set(this.key(entry.path, entry.document), entry);
+            this.entries.set(this.key(entry.path, entry.presentationId), entry);
             changed = true;
         }
         if (changed) await this.persist();
@@ -243,13 +201,12 @@ export class SlideData {
                         path,
                         async source => {
                             if (!this.running || !entry.present) return source;
-                            if (!this.matches(source, entry.document))
+                            if (!this.matches(source, entry.presentationId))
                                 throw new Error('Presentation identity changed before saving slide data');
-                            const next = reconcile(source, entry, entry.present);
+                            const next = reconcileSlideRecords(source, entry.records, entry.present);
                             if (!next) throw new Error('Cannot update malformed presentation data');
                             // Capture newer external record contents before removing them from disk.
-                            entry.records = next.records;
-                            entry.compositions = next.compositions;
+                            entry.records = next.remembered;
                             // The backup transaction must complete before the companion is changed.
                             // This also retries a prior failure after updating the in-memory copy.
                             if (next.companion !== source) await this.persist();
@@ -258,12 +215,12 @@ export class SlideData {
                         () => this.running
                     );
                 }
-                if (this.running) this.host.saved?.(entry.path, entry.document);
+                if (this.running) this.host.saved?.(entry.path, entry.presentationId);
             })
             .catch((error: unknown) => {
                 failed = true;
                 entry.dirty = true;
-                if (this.running) this.host.failed(entry.path, entry.document, error);
+                if (this.running) this.host.failed(entry.path, entry.presentationId, error);
             })
             .finally(() => {
                 entry.saving = null;
@@ -275,23 +232,25 @@ export class SlideData {
         return this.host.saveRecovery(
             [...this.entries.values()].map(entry => ({
                 path: entry.path,
-                document: entry.document,
-                records: Object.fromEntries(entry.records),
-                ...(entry.compositions.size ? { compositions: Object.fromEntries(entry.compositions) } : {})
+                presentationId: entry.presentationId,
+                records: Object.fromEntries(entry.records)
             }))
         );
     }
 
-    private matches(source: string, document: string): boolean {
+    private matches(source: string, presentationId: string): boolean {
         try {
             // The companion alone must belong to the presentation; the frontmatter half restates the remembered id
-            return presentationIdentity({ markdownpoint: FORMAT_VERSION, id: document }, JSON.parse(source)) === document;
+            return (
+                presentationIdentity({ markdownpoint: FORMAT_VERSION, id: presentationId }, JSON.parse(withoutByteOrderMark(source))) ===
+                presentationId
+            );
         } catch {
             return false;
         }
     }
 
-    private key(path: string, document: string): string {
-        return JSON.stringify([path, document]);
+    private key(path: string, presentationId: string): string {
+        return JSON.stringify([path, presentationId]);
     }
 }

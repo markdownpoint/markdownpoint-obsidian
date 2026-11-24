@@ -60,13 +60,21 @@ export const zh: Translations = {
         cancel: '取消',
         invalidName: '请输入不含斜杠或保留字符的名称。',
         exists: '已存在同名文件或文件夹。',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint 无法在“${presentation}”中创建演示文稿。请选取“${presentation}”之外的文件夹。`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint 无法打开“${presentation}”，因为它位于“${outer}”中。请把“${presentation}”文件夹移出“${outer}”，然后打开它。`,
         failed: '无法创建演示文稿。请检查文件夹，然后重试。',
         openFailed: '演示文稿已创建，但无法打开。请打开其文件夹中的 slides.md。',
         openChanged: '演示文稿已更改或无法读取。请重试。',
         handoffFailed: '无法保存并打开演示文稿。',
         themeChanged: '主题已更改或不可用。请重新打开此对话框，然后再次选择它。',
         newerFormat: ({ version }: { version: string }) =>
-            `此演示文稿使用较新的 MarkdownPoint 格式（${version}）。请更新 MarkdownPoint 插件，以便作为演示文稿打开它。`
+            `此演示文稿使用较新的 MarkdownPoint 格式（${version}）。请更新 MarkdownPoint 插件，以便作为演示文稿打开它。`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint 无法读取“${presentation}”中的“${file}”。请在 MarkdownPoint 应用中打开演示文稿，以便查看需要修复的内容。`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint 无法读取“${presentation}”中的演示文稿。请在 MarkdownPoint 应用中打开它，以便查看需要修复的内容。`
     },
     slides: {
         new: '新建幻灯片',

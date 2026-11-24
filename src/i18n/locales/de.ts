@@ -65,13 +65,21 @@ export const de: Translations = {
         cancel: 'Abbrechen',
         invalidName: 'Gib einen Namen ohne Schrägstriche oder reservierte Zeichen ein.',
         exists: 'Eine Datei oder ein Ordner mit diesem Namen existiert bereits.',
+        insidePresentation: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint kann in „${presentation}“ keine Präsentation erstellen. Wähle einen Ordner außerhalb davon.`,
+        nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
+            `MarkdownPoint kann die Präsentation „${presentation}“ nicht öffnen, solange sie in „${outer}“ liegt. Verschiebe den Ordner „${presentation}“ aus „${outer}“ und öffne dann „${presentation}“.`,
         failed: 'Die Präsentation konnte nicht erstellt werden. Prüfe den Ordner und versuche es erneut.',
         openFailed: 'Die Präsentation wurde erstellt, konnte aber nicht geöffnet werden. Öffne slides.md in ihrem Ordner.',
         openChanged: 'Die Präsentation hat sich geändert oder konnte nicht gelesen werden. Versuche es erneut.',
         handoffFailed: 'Die Präsentation konnte nicht gespeichert und geöffnet werden.',
         themeChanged: 'Das Thema hat sich geändert oder ist nicht verfügbar. Öffne diesen Dialog erneut und wähle es noch einmal.',
         newerFormat: ({ version }: { version: string }) =>
-            `Diese Präsentation verwendet ein neueres MarkdownPoint-Format (${version}). Aktualisiere die MarkdownPoint-Erweiterung, um sie als Präsentation zu öffnen.`
+            `Diese Präsentation verwendet ein neueres MarkdownPoint-Format (${version}). Aktualisiere die MarkdownPoint-Erweiterung, um sie als Präsentation zu öffnen.`,
+        unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
+            `MarkdownPoint kann „${file}“ in „${presentation}“ nicht lesen. Öffne die Präsentation in der MarkdownPoint-App, um zu sehen, was zu korrigieren ist.`,
+        unreadable: ({ presentation }: { presentation: string }) =>
+            `MarkdownPoint kann die Präsentation in „${presentation}“ nicht lesen. Öffne sie in der MarkdownPoint-App, um zu sehen, was zu korrigieren ist.`
     },
     slides: {
         new: 'Neue Folie',

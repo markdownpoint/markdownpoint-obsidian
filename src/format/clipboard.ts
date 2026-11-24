@@ -16,15 +16,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { compositionSources } from './capture.ts';
-import type { CapturedPart, CapturedSlides } from './capture.ts';
+import type { CapturedPart } from './capture.ts';
 import { indexPresentation } from './document.ts';
-import { embeddedThemePaths, isThemeKey, themeDocument } from './embedded-theme.ts';
-import { holdsOldWords } from './file-words.ts';
+import { embeddedThemePaths, themeDocument } from './embedded-theme.ts';
+import { isThemeKey } from './file-paths.ts';
 import { readJsonObject } from './json.ts';
-import { isDocumentId, isRecord, isStableId } from './recognition.ts';
-import { copyTextSchemas } from './text-schemas.ts';
+import { isRecord, isStableId, isUuid } from './recognition.ts';
+import { blockField, copyTextSchemas } from './text-schemas.ts';
 import type { EmbeddedTheme } from './embedded-theme.ts';
+import type { PartTextSchemas } from './text-schemas.ts';
 
 export const SLIDE_CLIPBOARD_MIME = 'web application/x-markdownpoint-obsidian-slides+json';
 
@@ -33,32 +33,30 @@ export interface ClipboardOrigin {
     readonly vault: string;
     /** Vault-relative slides.md path captured by the copy operation. */
     readonly path: string;
-    readonly document: string;
+    readonly presentationId: string;
 }
 
 export interface SlideClipboard {
     /** A local cut owner must also recognize this token before reusing identities. */
     readonly token: string;
     readonly origin: ClipboardOrigin;
-    readonly captured: CapturedSlides;
+    readonly captured: readonly CapturedPart[];
     readonly theme: EmbeddedTheme;
-    readonly schemas: ReadonlyMap<string, ReadonlyMap<string, 'rich-text' | 'table'>>;
+    readonly schemas: ReadonlyMap<string, PartTextSchemas>;
 }
 
 /** Only this plugin's versioned custom format carries whole slides. */
 export function encodeSlideClipboard(
     token: string,
     origin: ClipboardOrigin,
-    captured: CapturedSlides,
+    captured: readonly CapturedPart[],
     theme: EmbeddedTheme
 ): string | null {
-    const parts = (values: readonly CapturedPart[]) => values.map(({ id, markdown, record }) => ({ id, markdown, record }));
     const source = JSON.stringify({
-        version: 2,
+        version: 5,
         token,
-        origin: { vault: origin.vault, path: origin.path, document: origin.document },
-        slides: parts(captured.slides),
-        compositions: parts(captured.compositions),
+        origin: { vault: origin.vault, path: origin.path, presentationId: origin.presentationId },
+        slides: captured.map(({ id, markdown, record }) => ({ id, markdown, record })),
         theme: {
             key: theme.key,
             id: theme.id,
@@ -74,23 +72,22 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
     const value = readJsonObject(source);
     if (
         !value ||
-        value.version !== 2 ||
-        !isDocumentId(value.token) ||
+        value.version !== 5 ||
+        !isUuid(value.token) ||
         !isRecord(value.origin) ||
-        !isDocumentId(value.origin.vault) ||
-        !isDocumentId(value.origin.document) ||
+        !isUuid(value.origin.vault) ||
+        !isUuid(value.origin.presentationId) ||
         typeof value.origin.path !== 'string' ||
         !Array.isArray(value.slides) ||
         !value.slides.length ||
-        !Array.isArray(value.compositions) ||
         !isRecord(value.theme) ||
         !isThemeKey(value.theme.key) ||
-        !isDocumentId(value.theme.id) ||
+        !isUuid(value.theme.id) ||
         typeof value.theme.master !== 'string' ||
         !Array.isArray(value.theme.layouts)
     )
         return null;
-    const origin = { vault: value.origin.vault, path: value.origin.path, document: value.origin.document };
+    const origin = { vault: value.origin.vault, path: value.origin.path, presentationId: value.origin.presentationId };
     const layouts = new Map<string, { source: string; value: Record<string, unknown> }>();
     for (const entry of value.theme.layouts) {
         if (!isRecord(entry) || typeof entry.key !== 'string' || typeof entry.source !== 'string' || layouts.has(entry.key)) return null;
@@ -109,59 +106,40 @@ export function decodeSlideClipboard(source: string): SlideClipboard | null {
         layouts: new Map([...layouts].map(([key, document]) => [key, { ...document, path: paths.layouts.get(key)! }]))
     };
     const slides: CapturedPart[] = [];
-    const compositions: CapturedPart[] = [];
-    const seen = new Set<string>();
-    const referenced = new Set<string>();
-    const schemas = new Map<string, ReadonlyMap<string, 'rich-text' | 'table'>>();
-    for (const [kind, incoming, target] of [
-        ['slide', value.slides, slides],
-        ['composition', value.compositions, compositions]
-    ] as const) {
-        for (const part of incoming) {
-            if (
-                !isRecord(part) ||
-                !isStableId(part.id) ||
-                seen.has(part.id) ||
-                typeof part.markdown !== 'string' ||
-                typeof part.record !== 'string'
-            )
-                return null;
-            seen.add(part.id);
-            const document = indexPresentation(part.markdown, 0);
-            const record = readJsonObject(part.record);
-            // Every copy and paste passes here, so a record the MarkdownPoint app would refuse never reaches a destination
-            if (record && holdsOldWords(record)) return null;
-            const parts = kind === 'slide' ? document?.slides : document?.compositions;
-            const indexed = parts?.[0];
-            if (
-                !document ||
-                !record ||
-                parts?.length !== 1 ||
-                document.sections.length ||
-                document[kind === 'slide' ? 'compositions' : 'slides'].length ||
-                !indexed ||
-                indexed.from !== 0 ||
-                indexed.id !== part.id
-            )
-                return null;
-            const fields = indexed.blocks.map(block => `${block.kind}:${block.id ?? ''}`);
-            if (new Set(fields).size !== fields.length) return null;
-            const sources = compositionSources(record, kind === 'slide');
-            if (!sources) return null;
-            for (const id of sources) referenced.add(id);
-            const layout = typeof record.layout === 'string' ? layouts.get(record.layout) : undefined;
-            const resolved = copyTextSchemas(
-                indexed,
-                kind,
-                record,
-                layout ? { master, layout: layout.value, layoutKey: String(record.layout) } : null
-            );
-            if (!resolved) return null;
-            schemas.set(part.id, resolved);
-            target.push({ id: part.id, markdown: part.markdown, record: part.record });
-        }
+    const schemas = new Map<string, PartTextSchemas>();
+    for (const part of value.slides) {
+        if (
+            !isRecord(part) ||
+            !isStableId(part.id) ||
+            schemas.has(part.id) ||
+            typeof part.markdown !== 'string' ||
+            typeof part.record !== 'string'
+        )
+            return null;
+        const document = indexPresentation(part.markdown, 0);
+        const record = readJsonObject(part.record);
+        const indexed = document?.slides[0];
+        if (
+            !document ||
+            !record ||
+            document.slides.length !== 1 ||
+            document.sections.length ||
+            !indexed ||
+            indexed.from !== 0 ||
+            indexed.id !== part.id
+        )
+            return null;
+        const fields = indexed.blocks.map(blockField);
+        if (new Set(fields).size !== fields.length) return null;
+        const layout = typeof record.layout === 'string' ? layouts.get(record.layout) : undefined;
+        const resolved = copyTextSchemas(
+            indexed,
+            record,
+            layout ? { master, layout: layout.value, layoutKey: String(record.layout) } : null
+        );
+        if (!resolved) return null;
+        schemas.set(part.id, resolved);
+        slides.push({ id: part.id, markdown: part.markdown, record: part.record });
     }
-    const available = new Set(compositions.map(part => part.id));
-    if ([...referenced].some(id => !available.has(id))) return null;
-    return { token: value.token, origin, captured: { slides, compositions }, theme, schemas };
+    return { token: value.token, origin, captured: slides, theme, schemas };
 }

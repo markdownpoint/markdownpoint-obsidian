@@ -16,7 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { PresentationDocument } from '../format/document.ts';
+import { indexPresentation } from '../format/document.ts';
+import type { DocumentBlock, DocumentSlide, PresentationDocument } from '../format/document.ts';
 import { payloadContentEnd } from '../format/payload.ts';
 import { textBindingLabel, textBindingName } from '../format/text-binding.ts';
 import type { TextFieldLabels } from '../format/text-binding.ts';
@@ -60,4 +61,92 @@ export function writingFields(markdown: string, document: PresentationDocument, 
             });
         }
     return fields;
+}
+
+/** A layout's placeholder a slide gives no block yet: it shows as its empty field, and writing there writes its marker. */
+export interface MissingPlaceholder {
+    readonly key: string;
+    readonly slideId: string;
+    readonly id: string;
+    readonly role: WritingField['role'];
+    readonly label: string;
+    /** Where its block goes: in the layout's reading order among the placeholder blocks, else after the slide's words, before its notes. */
+    readonly at: number;
+    readonly opening: boolean;
+}
+
+function placeholderPosition(slide: DocumentSlide, order: readonly string[], index: number): number {
+    const rank = (id: string | null) => (id === null ? -1 : order.indexOf(id));
+    const words = slide.blocks.filter(block => block.kind !== 'notes');
+    // What stands after a block up to the next one stays after it: a later minor's block stays after the block it follows
+    const following = (block: DocumentBlock) => slide.blocks[slide.blocks.indexOf(block) + 1]?.from ?? slide.to;
+    const before = words.filter(block => rank(block.id) >= 0 && rank(block.id) < index).at(-1);
+    if (before) return following(before);
+    const after = words.find(block => rank(block.id) > index);
+    const last = words.at(-1);
+    return after?.from ?? (last ? following(last) : (slide.blocks[0]?.from ?? slide.to));
+}
+
+/** The placeholders each slide's layout gives it, `placeholders` by slide, that its source has no text block for. */
+export function missingPlaceholders(
+    document: PresentationDocument,
+    placeholders: ReadonlyMap<string, readonly string[]>,
+    labels: TextFieldLabels
+): MissingPlaceholder[] {
+    const missing: MissingPlaceholder[] = [];
+    for (const slide of document.slides) {
+        const order = placeholders.get(slide.id) ?? [];
+        const written = new Set(slide.blocks.flatMap(block => (block.kind === 'text' && block.id ? [block.id] : [])));
+        for (const [index, id] of order.entries()) {
+            if (written.has(id)) continue;
+            const name = textBindingName(id);
+            const at = placeholderPosition(slide, order, index);
+            missing.push({
+                key: `${slide.id}:text:${id}`,
+                slideId: slide.id,
+                id,
+                role: name.name === 'title' || name.name === 'eyebrow' ? name.name : 'body',
+                label: textBindingLabel(name, labels),
+                at,
+                opening: at === (slide.blocks[0]?.from ?? slide.to)
+            });
+        }
+    }
+    return missing;
+}
+
+export interface BlockInsertion {
+    readonly from: number;
+    readonly insert: string;
+    readonly cursor: number;
+}
+
+/** A block's marker at `at`, its caret on the block's writable line; all existing bytes and the companion stay intact. */
+export function blockInsertion(markdown: string, at: number, marker: string): BlockInsertion {
+    const newline = markdown.includes('\r\n') ? '\r\n' : '\n';
+    // Keep a following source newline as the empty payload's writable line.
+    // Redo then maps the insertion caret into the block, before the next marker.
+    const from = at < markdown.length && markdown.slice(at - newline.length, at) === newline ? at - newline.length : at;
+    const before = markdown.slice(0, from);
+    const gap = before.endsWith(newline + newline) ? '' : before.endsWith(newline) ? newline : newline + newline;
+    const prefix = gap + marker + newline;
+    return { from, insert: prefix, cursor: from + prefix.length };
+}
+
+/** The marker a missing placeholder gets when the author starts writing there, checked against the whole source. */
+export function validatedPlaceholderInsertion(
+    markdown: string,
+    document: PresentationDocument,
+    placeholder: MissingPlaceholder
+): BlockInsertion | null {
+    const slide = document.slides.find(slide => slide.id === placeholder.slideId);
+    if (!slide || slide.blocks.some(block => block.kind === 'text' && block.id === placeholder.id)) return null;
+    const insertion = blockInsertion(markdown, placeholder.at, `<!-- text: ${placeholder.id} -->`);
+    const proposed = markdown.slice(0, insertion.from) + insertion.insert + markdown.slice(insertion.from);
+    const start = Math.min(document.slides[0]?.from ?? 0, document.sections[0]?.from ?? Infinity);
+    const indexed = indexPresentation(proposed, start);
+    const blocks = indexed?.slides
+        .find(slide => slide.id === placeholder.slideId)
+        ?.blocks.filter(block => block.kind === 'text' && block.id === placeholder.id);
+    return blocks?.length === 1 && blocks[0]!.contentFrom === insertion.cursor ? insertion : null;
 }

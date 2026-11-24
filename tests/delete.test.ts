@@ -57,31 +57,26 @@ test('every selected subset removes its Markdown and JSON records in their indep
     }
 });
 
-test('unknown metadata, surviving raw JSON values, sections, and compositions stay byte-identical', () => {
+test('unknown metadata, surviving raw JSON values and sections stay byte-identical', () => {
     const header = '---\nmarkdownpoint: "1.0"\ncustom: keep me\n---\n\n';
     const opening = '<!-- section: opening -->\n# Opening\n\n';
     const ending = '<!-- section: ending -->\n# Ending\n\n';
-    const composition = '<!-- composition: shared -->\n<!-- control: caption -->\nKeep this reusable text.\n';
-    const markdown = header + opening + block('a') + block('b') + ending + block('c') + composition;
+    const markdown = header + opening + block('a') + block('b') + ending + block('c');
     const raw = String.raw`{ "layout" : "content", "future": { "number": 900719925474099312345, "escape": "\u00e9", "array": [ 1, 2 ] } }`;
-    const companion = `{\n  "id": "unchanged",\n  "slides" : {"a":{"layout":"title"}, "b":${raw}, "c":{"layout":"end"}},\n  "comments": {"thread":{"slide":"a","text":"Retain this thread"}},\n  "compositions": {"shared":{"controls":{}}}\n}\n`;
+    const companion = `{\n  "id": "unchanged",\n  "slides" : {"a":{"layout":"title"}, "b":${raw}, "c":{"layout":"end"}},\n  "comments": {"thread":{"slide":"a","text":"Retain this thread"}}\n}\n`;
     const plan = planSlideDeletion(markdown, indexPresentation(markdown, header.length)!, companion, ['a', 'c'])!;
-    assert.equal(apply(markdown, plan.changes), header + opening + block('b') + ending + composition);
+    assert.equal(apply(markdown, plan.changes), header + opening + block('b') + ending);
     assert.ok(plan.companion.includes(raw));
     assert.ok(plan.companion.endsWith(companion.slice(companion.indexOf(',\n  "comments"'))));
     assert.equal(plan.companion.slice(0, plan.companion.indexOf('"slides"')), companion.slice(0, companion.indexOf('"slides"')));
 });
 
-test('deleting all slides retains empty sections and reusable compositions', () => {
+test('deleting all slides retains empty sections', () => {
     const section = '<!-- section: empty -->\n# A section\n\n';
-    const composition = '<!-- composition: shared -->\n<!-- text: caption -->\nReusable words\n';
-    const markdown = section + block('a') + block('b') + composition;
-    const plan = planSlideDeletion(markdown, indexPresentation(markdown, 0)!, '{"slides":{"a":{},"b":{}},"compositions":{"shared":{}}}', [
-        'b',
-        'a'
-    ])!;
-    assert.equal(apply(markdown, plan.changes), section + composition);
-    assert.deepEqual(JSON.parse(plan.companion), { slides: {}, compositions: { shared: {} } });
+    const markdown = section + block('a') + block('b');
+    const plan = planSlideDeletion(markdown, indexPresentation(markdown, 0)!, '{"slides":{"a":{},"b":{}}}', ['b', 'a'])!;
+    assert.equal(apply(markdown, plan.changes), section);
+    assert.deepEqual(JSON.parse(plan.companion), { slides: {} });
     assert.deepEqual(plan.document.slides, []);
     assert.equal(plan.document.sections[0]!.id, 'empty');
 });

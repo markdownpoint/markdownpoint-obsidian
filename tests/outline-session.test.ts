@@ -23,7 +23,7 @@ import type { OutlinePresentation } from '../src/outline/model.ts';
 
 function deck(ids: readonly string[], path = 'presentation/slides.md'): OutlinePresentation {
     return {
-        documentId: 'test-document',
+        id: 'test-presentation',
         path,
         sections: [],
         slides: ids.map((id, index) => ({ id, title: id, line: index * 8, skipped: false }))
@@ -61,6 +61,20 @@ test('caret movement and content updates preserve the selected group and selecti
     assert.equal(session.state.activeSlideId, 'two');
     assert.equal(session.state.selection, selection);
     assert.equal(session.state.presentation?.slides[1]?.title, 'Edited words');
+});
+
+test('a save handing back the outline already followed changes nothing, so the outline draws nothing', () => {
+    const session = new OutlineSession();
+    assert.equal(session.follow(null), false);
+    const presentation = deck(['one', 'two']);
+    assert.equal(session.follow(presentation), true);
+    session.select({ kind: 'toggle', id: 'two' });
+    const state = session.state;
+    assert.equal(session.follow(presentation), false);
+    assert.equal(session.state, state);
+    assert.equal(session.follow(deck(['one', 'two'])), true);
+    assert.equal(session.state.selection, state.selection);
+    assert.equal(session.follow(null), true);
 });
 
 test('external removal and reorder reconcile stable IDs without selecting section rows', () => {
@@ -125,7 +139,7 @@ test('replacing a presentation at the same path invalidates a captured action se
     session.follow(original);
     session.selectForMenu('two');
     const captured = session.state.selection;
-    session.follow({ ...original, documentId: 'another-document' });
+    session.follow({ ...original, id: 'another-presentation' });
     assert.notEqual(session.state.selection, captured);
     assert.equal(session.state.selection.cursor, 'one');
 });
