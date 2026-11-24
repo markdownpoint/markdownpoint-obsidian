@@ -100,7 +100,7 @@ export interface OutlineRow {
     readonly label: string;
 }
 
-/** Section headers and skipped slides never consume a slide number. */
+/** Section headers never take a slide number; a skipped slide keeps its own, in parentheses, as MarkdownPoint's slide list shows it. */
 export function outlineRows(presentation: OutlinePresentation, formatNumber: (number: number) => string): OutlineRow[] {
     const numbers = outlineSlideNumbers(presentation.slides, formatNumber);
     const slides = presentation.slides.map(slide => ({
@@ -122,6 +122,5 @@ export function outlineSlideNumbers(
     slides: readonly OutlineSlide[],
     formatNumber: (number: number) => string
 ): ReadonlyMap<string, string> {
-    let number = 0;
-    return new Map(slides.map(slide => [slide.id, slide.skipped ? '–' : formatNumber(++number)]));
+    return new Map(slides.map((slide, index) => [slide.id, slide.skipped ? `(${formatNumber(index + 1)})` : formatNumber(index + 1)]));
 }

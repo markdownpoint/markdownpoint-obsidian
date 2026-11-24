@@ -46,6 +46,11 @@ export interface ReleaseNote {
 /** Newest first. A new release goes at the top. */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '1.0.3',
+        date: '2026-11-24',
+        changed: ['Skipped slides are numbered in the outline and on their dividers. Their numbers are in parentheses.']
+    },
+    {
         version: '1.0.2',
         date: '2026-11-24',
         fixed: [

@@ -83,7 +83,7 @@ test("a field is a Title only by its whole id, never by a word at its id's end",
     }
 });
 
-test('sections keep authored names, empty sections, and continuous numbers around skipped slides', () => {
+test('sections keep authored names and empty sections, and a skipped slide keeps its number in parentheses', () => {
     const markdown =
         '<!-- section: intro -->\r\n# *A beginning* &amp; a promise\r\n\r\n<!-- slide: first -->\r\n<!-- text: title -->\r\nFirst idea.\r\n<!-- slide: skipped -->\r\n<!-- text: title -->\r\nAn aside.\r\n<!-- section: empty -->\r\n# Room to think\r\n<!-- section: closing -->\r\n# Closing\r\n<!-- slide: last -->\r\n<!-- text: title -->\r\nA last thought.\r\n<!-- section: trailing -->\r\n# Later\r\n';
     const document = indexPresentation(markdown, 0)!;
@@ -94,10 +94,10 @@ test('sections keep authored names, empty sections, and continuous numbers aroun
         [
             ['section', 'A beginning & a promise'],
             ['slide', '1. First idea.'],
-            ['slide', '– An aside.'],
+            ['slide', '(2) An aside.'],
             ['section', 'Room to think'],
             ['section', 'Closing'],
-            ['slide', '2. A last thought.'],
+            ['slide', '3. A last thought.'],
             ['section', 'Later']
         ]
     );
@@ -105,7 +105,7 @@ test('sections keep authored names, empty sections, and continuous numbers aroun
     assert.ok(
         outlineRows({ id: 'test-presentation', path: 'slides.md', slides: allSkipped, sections }, String)
             .filter(row => row.kind === 'slide')
-            .every(row => row.label.startsWith('– '))
+            .every((row, index) => row.label.startsWith(`(${index + 1}) `))
     );
     assert.equal(outlineRows({ id: 'test-presentation', path: 'slides.md', slides: [], sections }, String).length, 4);
 });
