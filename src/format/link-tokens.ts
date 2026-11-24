@@ -119,7 +119,7 @@ const spanSpace = String.raw`[ \t]*(?:\n[ \t]*)?`;
 const spanAttributes = new RegExp(String.raw`^\{${spanSpace}(?:(${spanPair}(?:(?=[ \t\n])${spanSpace}${spanPair})*)${spanSpace})?\}`);
 /**
  * The length of the attributes a span's closing bracket carries at the start of `source`: `key=value` pairs, such as a
- * color, a weight or both, `{color=muted font-weight=600}`, or none, `{}`. A value may be bare or in single or double
+ * color, a weight, an upright slant or several, `{color=muted font-weight=600 font-style=normal}`, or none, `{}`. A value may be bare or in single or double
  * quotes, and spaces, tabs and one line break may stand inside the braces and between the attributes, as Pandoc reads
  * them. A key or a value the app doesn't take leaves the span a span: the app skips it and applies the rest. 0 where no
  * attribute block reads.
@@ -129,8 +129,8 @@ export function spanAttributesLength(source: string): number {
 }
 
 /**
- * A bracketed span as the MarkdownPoint app reads one: words with a color, a weight or both, `[words]{color=muted
- * font-weight=600}`, or a group with neither, `[words]{}`. An attribute the app doesn't take leaves it a span.
+ * A bracketed span as the MarkdownPoint app reads one: words with a color, a weight, an upright slant or several,
+ * `[words]{color=muted font-weight=600}`, or a group with none, `[words]{}`. An attribute the app doesn't take leaves it a span.
  */
 export function presentationSpan(source: string): { length: number; content: string } | null {
     if (!source.startsWith('[')) return null;
