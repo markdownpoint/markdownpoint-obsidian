@@ -46,6 +46,26 @@ export interface ReleaseNote {
 /** Newest first. A new release goes at the top. */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '1.0.1',
+        date: '2026-11-24',
+        improved: [
+            'Click a slide’s divider to start writing on that slide.',
+            'Words you type on a slide with no text yet go into its first text area. When the layout has no text areas, they go into the slide’s presenter notes.',
+            'In Live Preview, a link whose words contain a span opens with a click. A span looks like `[words]{color=accent}`.',
+            'In Live Preview, bold, italic, and inline code appear formatted inside a span or a link’s words.'
+        ],
+        changed: [
+            'MarkdownPoint’s file format changed before the app’s release. Presentations made with plugin 1.0.0 no longer open as presentations. Create them again with **New presentation**.',
+            'The plugin can’t create or open a presentation inside another presentation’s folder.'
+        ],
+        fixed: [
+            'Rotated objects in slide thumbnails turn about the same point as in the MarkdownPoint app. The images under a thumbnail show the background the slide has in the app.',
+            'Numbers pasted into a chart’s table are written in the file’s number format.',
+            'A saved version in a presentation’s `versions` folder no longer opens as a separate presentation.',
+            'A code block with no closing fence keeps its blank lines.'
+        ]
+    },
+    {
         version: '1.0.0',
         date: '2026-10-25',
         new: ['First release 🎉']
