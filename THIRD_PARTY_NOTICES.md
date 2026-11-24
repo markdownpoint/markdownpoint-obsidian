@@ -140,8 +140,8 @@ SPDX-License-Identifier: Unicode-3.0
 
 ## MarkdownPoint Basic theme
 
-The bundled Basic theme, its JSON and its layout preview picture, `media/layout-preview.jpg`, is MarkdownPoint's own, unchanged, as the public MarkdownPoint file-format examples hold it at revision `0bc63c178a66280fd9d94f264e859bb105ca504d`:
-https://github.com/markdownpoint/format/tree/0bc63c178a66280fd9d94f264e859bb105ca504d/examples/first-deck/themes/basic
+The bundled Basic theme, its JSON and its layout preview picture, `media/layout-preview.jpg`, is MarkdownPoint's own, unchanged, as the public MarkdownPoint file-format examples hold it at revision `44f8fab60128c9436d703bbf8e885cc4b4b0215b`:
+https://github.com/markdownpoint/format/tree/44f8fab60128c9436d703bbf8e885cc4b4b0215b/examples/first-deck/themes/basic
 
 The source's license follows.
 
