@@ -48,7 +48,10 @@ const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '1.0.2',
         date: '2026-11-25',
-        fixed: ['Themes whose text styles MarkdownPoint sets in italic or aligns now open in the plugin.']
+        fixed: [
+            'Themes whose text styles MarkdownPoint sets in italic or aligns now open in the plugin.',
+            'Presentations with animation effects saved by MarkdownPoint 0.9.1 now open in the plugin.'
+        ]
     },
     {
         version: '1.0.1',
