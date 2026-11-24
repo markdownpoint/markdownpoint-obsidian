@@ -17,6 +17,7 @@
  */
 
 import { readFileSync, writeFileSync } from 'fs';
+import { releaseDatePattern, releaseNotesPath } from './scripts/read-release-notes.js';
 
 const targetVersion = process.env.npm_package_version;
 
@@ -30,3 +31,10 @@ writeFileSync('manifest.json', `${JSON.stringify(manifest, null, 2)}\n`);
 const versions = JSON.parse(readFileSync('versions.json', 'utf8'));
 versions[targetVersion] = minAppVersion;
 writeFileSync('versions.json', `${JSON.stringify(versions, null, 2)}\n`);
+
+// The release day goes into the version's entry in the release notes, so whoever writes the notes never picks it. The
+// release script refuses a bump whose entry has no date to replace; a bare npm version without an entry leaves the notes
+const now = new Date();
+const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()].map(part => String(part).padStart(2, '0')).join('-');
+const releaseNotes = readFileSync(releaseNotesPath, 'utf8');
+writeFileSync(releaseNotesPath, releaseNotes.replace(releaseDatePattern(targetVersion), `$1${today}$2`));

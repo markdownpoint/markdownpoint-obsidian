@@ -18,30 +18,35 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
+import { hasNotes, readReleaseNotes, releaseDatePattern, releaseNotesPath } from './read-release-notes.js';
 
 // One level up, because this script lives in scripts/ while every path it touches, and the
 // working directory every git command needs, is the repository root
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-// "current" publishes the version already in the files when it has never been tagged, such as the first release
-const releaseTypes = new Set(['current', 'patch', 'minor', 'major']);
+// "current" publishes the version already in the files when it has never been tagged, such as the first release.
+// "nightly" publishes the newest release notes as the next patch when they are untagged, and otherwise does nothing
+const releaseTypes = new Set(['current', 'patch', 'minor', 'major', 'nightly']);
 const versionFiles = ['manifest.json', 'package.json', 'package-lock.json', 'versions.json'];
+// version-bump.mjs writes the release day into the released entry, so a release commit carries this file unless the entry had that day
+const releaseNotesFile = 'src/release-notes.ts';
 
-function run(command, args, options = {}) {
-    return execFileSync(command, args, {
+function git(args, options = {}) {
+    return execFileSync('git', args, {
         cwd: projectRoot,
         encoding: 'utf8',
         stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit'
     })?.trim();
 }
 
-function git(args, options = {}) {
-    return run('git', args, options);
+// npm is a .cmd script on Windows, which only a shell starts. The arguments are fixed words, so joining them is safe
+function npm(args) {
+    execSync(['npm', ...args].join(' '), { cwd: projectRoot, stdio: 'inherit' });
 }
 
 function readJson(filename) {
@@ -80,10 +85,16 @@ function assertVersionFields(expectedVersion) {
 }
 
 function assertReleaseNotes(version) {
-    const source = readFileSync(join(projectRoot, 'src', 'release-notes.ts'), 'utf8');
-    const escaped = version.replace(/\./g, '\\.');
-    if (!new RegExp(`version:\\s*['"]${escaped}['"]`).test(source)) {
-        throw new Error(`src/release-notes.ts has no entry for ${version}`);
+    if (!readReleaseNotes().some(release => release.version === version)) {
+        throw new Error(`${releaseNotesFile} has no entry for ${version}`);
+    }
+}
+
+// version-bump.mjs writes the release day only into a date right after the version, checked here before npm version
+// changes any file
+function assertReleaseDate(version) {
+    if (!releaseDatePattern(version).test(readFileSync(releaseNotesPath, 'utf8'))) {
+        throw new Error(`The ${version} entry in ${releaseNotesFile} needs its date right after its version`);
     }
 }
 
@@ -138,7 +149,8 @@ function assertReleaseCommit(version) {
     assertTag(version);
 
     const changedFiles = git(['show', '--pretty=format:', '--name-only', 'HEAD'], { capture: true }).split('\n').filter(Boolean).sort();
-    if (changedFiles.join('\n') !== [...versionFiles].sort().join('\n')) {
+    const unexpected = changedFiles.some(file => file !== releaseNotesFile && !versionFiles.includes(file));
+    if (unexpected || versionFiles.some(file => !changedFiles.includes(file))) {
         throw new Error(`Release commit changed unexpected files:\n${changedFiles.join('\n')}`);
     }
 }
@@ -182,17 +194,23 @@ async function confirmRelease(currentVersion, targetVersion) {
 }
 
 function printUsage() {
-    console.log(`Usage: node scripts/release [current|patch|minor|major] [--dry-run] [--yes]
+    console.log(`Usage: node scripts/release [current|patch|minor|major|nightly] [--dry-run] [--yes]
 
 Examples:
   node scripts/release
   node scripts/release minor --dry-run
   node scripts/release current
+  CI=1 node scripts/release nightly
 
 The script requires a clean main branch that matches origin/main. It runs the full
 quality gate, then either uses npm version to create the version commit and annotated
 bare tag, or, for "current", tags the untagged version already in the files. It pushes
-the new tag (with main, after a version commit) and GitHub Actions publishes the release.`);
+the new tag (with main, after a version commit) and GitHub Actions publishes the release.
+
+"nightly" releases the newest entry in src/release-notes.ts as the next patch, without
+asking, when that entry holds notes and is not tagged yet. Otherwise, or when the entry
+is the next minor or major, it prints "Nothing to release" and changes nothing. npm
+version writes the release day into the entry.`);
 }
 
 async function main() {
@@ -219,13 +237,37 @@ async function main() {
         throw new Error(`${currentVersion} is already released. Choose patch, minor or major`);
     }
 
+    const nightly = releaseType === 'nightly';
+    if (nightly) releaseType = 'patch';
     const selectedFromMenu = releaseType === undefined;
     releaseType ??= await selectReleaseType(currentVersion, currentReleased);
+    // After the menu, which can stay open while main moves on, and before the nightly reads the notes main holds
+    assertCleanMain();
+
+    if (nightly) {
+        const newest = readReleaseNotes()[0];
+        if (!hasNotes(newest) || isTagged(newest.version)) {
+            console.log('Nothing to release');
+            return;
+        }
+
+        const patchVersion = nextVersion(currentVersion, releaseType);
+        if ([nextVersion(currentVersion, 'minor'), nextVersion(currentVersion, 'major')].includes(newest.version)) {
+            console.log(`Nothing to release: ${newest.version} is released by hand`);
+            return;
+        }
+        if (newest.version !== patchVersion) {
+            throw new Error(
+                `The newest entry in ${releaseNotesFile} is ${newest.version}, which is neither the next patch, ${patchVersion}, nor the next minor or major`
+            );
+        }
+    }
+
     const targetVersion = nextVersion(currentVersion, releaseType);
     assertReleaseNotes(targetVersion);
     // A bump records its compatibility through npm version; the current version must already have its entry
     if (releaseType === 'current') assertCompatibility(targetVersion);
-    assertCleanMain();
+    else assertReleaseDate(targetVersion);
     if (isTagged(targetVersion)) throw new Error(`Tag ${targetVersion} already exists`);
 
     console.log(releaseType === 'current' ? `Release ${targetVersion}` : `Release ${currentVersion} -> ${targetVersion}`);
@@ -236,12 +278,12 @@ async function main() {
         return;
     }
 
-    if (!selectedFromMenu && !args.includes('--yes') && !(await confirmRelease(currentVersion, targetVersion))) {
+    if (!selectedFromMenu && !nightly && !args.includes('--yes') && !(await confirmRelease(currentVersion, targetVersion))) {
         console.log('Release cancelled.');
         return;
     }
 
-    run('npm', ['run', 'check']);
+    npm(['run', 'check']);
     if (git(['status', '--porcelain'], { capture: true })) {
         throw new Error('The build changed tracked files. Commit the generated changes before releasing');
     }
@@ -251,9 +293,20 @@ async function main() {
         assertTag(targetVersion);
         git(['push', 'origin', `refs/tags/${targetVersion}`]);
     } else {
-        run('npm', ['version', releaseType]);
+        npm(['version', releaseType]);
         assertReleaseCommit(targetVersion);
-        git(['push', '--atomic', 'origin', 'main', `refs/tags/${targetVersion}`]);
+        try {
+            git(['push', '--atomic', 'origin', 'main', `refs/tags/${targetVersion}`]);
+        } catch (error) {
+            // By hand, the commit and tag stay for a retry of the push. The nightly run gives this release up, as a push
+            // racing another to main is refused for good, and leaves main as it found it for the next run: a local tag
+            // left behind would read as released. --keep never discards an edit made meanwhile
+            if (nightly) {
+                git(['tag', '--delete', targetVersion], { capture: true });
+                git(['reset', '--keep', 'HEAD~1'], { capture: true });
+            }
+            throw error;
+        }
     }
     console.log(`Released ${targetVersion}. GitHub Actions will build and publish the release assets.`);
 }

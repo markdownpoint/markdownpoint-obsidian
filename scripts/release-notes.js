@@ -18,31 +18,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
-
-const scriptDirectory = dirname(fileURLToPath(import.meta.url));
-const releaseNotesPath = join(scriptDirectory, '..', 'src', 'release-notes.ts');
-const content = readFileSync(releaseNotesPath, 'utf8');
-const releaseNotesMatch = content.match(/const\s+RELEASE_NOTES[\s\S]*?=\s*(\[[\s\S]*?\]);/);
-
-if (!releaseNotesMatch) {
-    console.error('Could not find RELEASE_NOTES in file');
-    process.exit(1);
-}
+import { readReleaseNotes } from './read-release-notes.js';
 
 let releases;
 try {
-    releases = vm.runInNewContext(`(${releaseNotesMatch[1]})`, {});
+    releases = readReleaseNotes();
 } catch (error) {
-    console.error(`Could not parse release notes: ${error instanceof Error ? error.message : String(error)}`);
-    process.exit(1);
-}
-
-if (!Array.isArray(releases) || releases.length === 0) {
-    console.error('No release notes found');
+    console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
 }
 

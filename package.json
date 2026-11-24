@@ -13,7 +13,7 @@
     "dev": "node esbuild.config.mjs --watch",
     "build": "tsc --noEmit && node esbuild.config.mjs",
     "check": "bash scripts/build.sh",
-    "version": "node version-bump.mjs && git add manifest.json versions.json",
+    "version": "node version-bump.mjs && git add manifest.json versions.json src/release-notes.ts",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --max-warnings=0 --fix",
     "lint:styles": "stylelint styles.css --max-warnings=0",
