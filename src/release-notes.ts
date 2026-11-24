@@ -47,7 +47,7 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '1.0.2',
-        date: '2026-11-25',
+        date: '2026-11-24',
         fixed: [
             'Themes whose text styles MarkdownPoint sets in italic or aligns now open in the plugin.',
             'Presentations with animation effects saved by MarkdownPoint 0.9.1 now open in the plugin.'
