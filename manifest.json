@@ -1,7 +1,7 @@
 {
   "id": "markdownpoint",
   "name": "MarkdownPoint",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.13.0",
   "description": "Write and organize presentations in a continuous draft, then finish them in MarkdownPoint.",
   "author": "Johan Sanneblad",
