@@ -47,7 +47,7 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '1.0.3',
-        date: '2026-11-24',
+        date: '2026-11-26',
         changed: [
             'Skipped slides are numbered in the outline and on their dividers. Their numbers are in parentheses.',
             'The outline names slides and sections as the MarkdownPoint app does.'
