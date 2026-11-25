@@ -20,8 +20,9 @@ import { EditorState, Text } from '@codemirror/state';
 import type { ChangeSpec, Extension, Transaction } from '@codemirror/state';
 import { Decoration, ViewPlugin } from '@codemirror/view';
 import type { DecorationSet, EditorView, ViewUpdate } from '@codemirror/view';
-import { blockTokens } from '../format/block-grammar.ts';
 import type { PresentationDocument } from '../format/document.ts';
+import { markdownTokens } from '../readers/markdownpoint-readers.js';
+import type { MarkdownToken } from '../readers/markdownpoint-readers.js';
 import { blockFields } from './span-marks.ts';
 
 /**
@@ -125,15 +126,6 @@ interface Block extends Range {
     wrapped?: Range & { id: string };
 }
 
-/** A token the block grammar reads, as far as the blocks of words need. */
-interface WordToken {
-    type: string;
-    raw: string;
-    text?: string;
-    tokens?: WordToken[];
-    items?: WordToken[];
-}
-
 const linesIn = (raw: string): number => raw.split('\n').length - 1;
 
 /** A task's box at the start of its words, as a loose list's paragraph keeps it. */
@@ -149,7 +141,7 @@ function startOf(line: string, at: number): number {
  * The id `next` gives the block before it, on `doc`'s line `at`: an HTML block of nothing but an id, right after the
  * block's last line with no blank line between, as a formatter that wraps a long last line leaves it.
  */
-function wrappedId(doc: Text, block: WordToken, next: WordToken | undefined, at: number): Pick<Block, 'wrapped'> {
+function wrappedId(doc: Text, block: MarkdownToken, next: MarkdownToken | undefined, at: number): Pick<Block, 'wrapped'> {
     const id = next?.type === 'html' && /(?:^|[^\n])\n$/.test(block.raw) ? WRAPPED_ID.exec(next.raw.trim()) : null;
     const line = id && at <= doc.lines ? doc.line(at) : null;
     const opens = line ? line.text.indexOf('<!--') : -1;
@@ -157,7 +149,7 @@ function wrappedId(doc: Text, block: WordToken, next: WordToken | undefined, at:
 }
 
 /**
- * The blocks of words of the lines from `from` up to `to`, as the block grammar reads them: each heading, paragraph and
+ * The blocks of words of the lines from `from` up to `to`, as the MarkdownPoint app reads them: each heading, paragraph and
  * list item's opening words, in quotes and list items too, and never code. A token's lines stand as the words' lines do,
  * a quote's marks and an item's indent taken off each, so each block is the lines its token reads. Null where a token's
  * first line is not the words' line it should stand on: those words are not read.
@@ -167,7 +159,7 @@ function blocksOf(doc: Text, from: number, to: number): Block[] | null {
     if (to <= from) return blocks;
     const first = doc.lineAt(from);
     let read = true;
-    const walk = (tokens: readonly WordToken[], line: number): void => {
+    const walk = (tokens: readonly MarkdownToken[], line: number): void => {
         for (const [at, token] of tokens.entries()) {
             if (token.type === 'paragraph' || token.type === 'heading' || token.type === 'text') {
                 // A heading underlined with `===` or `---` ends on its words' line, the underline after it.
@@ -202,7 +194,7 @@ function blocksOf(doc: Text, from: number, to: number): Block[] | null {
             line += linesIn(token.raw);
         }
     };
-    walk(blockTokens(doc.sliceString(first.from, to)), first.number);
+    walk(markdownTokens(doc.sliceString(first.from, to)), first.number);
     return read ? blocks : null;
 }
 
@@ -272,7 +264,8 @@ function gestureChanges(transaction: Transaction, document: PresentationDocument
     const split = !deleted && SPLIT.test(edit.inserted);
     if (!split && !(!edit.inserted && JOIN.test(deleted))) return [];
     const field = blockFields(document).find(each => each.from <= edit.fromA && edit.toA <= each.to);
-    if (!field) return [];
+    // Words with no id have none to keep, and most words hold none: their blocks go unread.
+    if (!field || !ANY_PARAGRAPH_ID.test(before.sliceString(before.lineAt(field.from).from, field.to))) return [];
     const old = blocksOf(before, field.from, field.to);
     const blocks = blocksOf(after, transaction.changes.mapPos(field.from, -1), transaction.changes.mapPos(field.to, 1));
     if (!old || !blocks) return [];

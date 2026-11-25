@@ -1,6 +1,5 @@
 {
   "files": {
-    "src/core/character-references.ts": "d96313c6aaaa8afe59679f4cca6772e6f3fd9be7a0f3b1ab5c3d1057ab2f121a",
     "src/core/new-presentation-style.ts": "c8b2d7534086ce2191318fe1c30e83b7a20fa5c64a365c0f9af0042d2ffbf18f",
     "src/themes/basic/blank.json": "121a789a439fb12fb1543e22fbebd9b89d884c69aace6b85ee869529a24a1a4e",
     "src/themes/basic/content-with-header.json": "bd5428c387995e0ae95045ccbd2c92dfd4301e7f55192ab7d7086fafcbd2599f",

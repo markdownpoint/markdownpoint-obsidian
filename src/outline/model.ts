@@ -20,7 +20,7 @@ import type { SlideStructure } from '../format/structure.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import type { ListSelection } from '../selection/list-selection.ts';
 import { textBindingName } from '../format/text-binding.ts';
-import { holdsHtml, inlineText, linkTokens, wordTokens } from '../format/link-tokens.ts';
+import { sectionName, slideName } from '../readers/markdownpoint-readers.js';
 
 export interface OutlineSlide {
     readonly id: string;
@@ -63,14 +63,8 @@ export function outlineSlides(
         const titles = new Set(text.filter(block => block.id && textBindingName(block.id).name === 'title'));
         const blocks = [...titles, ...text.filter(block => !titles.has(block))];
         for (const block of blocks) {
-            // Tokenize the payload together so a multiline HTML comment is omitted as
-            // one token rather than exposing its middle lines as an outline label.
-            const source = markdown.slice(block.contentFrom, block.to).replace(/^#{1,6}[ \t]+/gm, '');
-            title =
-                inlineText(wordTokens(source))
-                    .split(/\r?\n/)
-                    .find(line => line.trim())
-                    ?.trim() ?? '';
+            // As MarkdownPoint's slide list names a slide: the first line its words show.
+            title = slideName(markdown.slice(block.contentFrom, block.to));
             if (title) break;
         }
         return { id: slide.id, title: title || emptyTitle, line: slide.line, skipped: skipped.has(slide.id) };
@@ -81,15 +75,8 @@ export function outlineSlides(
 export function outlineSections(markdown: string, document: PresentationDocument): OutlineSection[] {
     const sections: OutlineSection[] = [];
     for (const section of document.sections) {
-        const tokens = linkTokens(markdown.slice(section.markerTo, section.headingTo).replace(/\r\n?/g, '\n').trim()).filter(
-            token => token.type !== 'space'
-        );
-        const heading = tokens[0];
-        const words = heading?.type === 'heading' && heading.depth === 1 ? (heading.tokens ?? []) : [];
         // MarkdownPoint refuses a heading line with a comment, a paragraph id's included, or a tag: it names no section.
-        let title = holdsHtml(words) ? '' : inlineText(words).trim();
-        if ([...title].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) title = '';
-        sections.push({ id: section.id, title, line: section.line });
+        sections.push({ id: section.id, title: sectionName(markdown.slice(section.markerTo, section.headingTo)), line: section.line });
     }
     return sections;
 }

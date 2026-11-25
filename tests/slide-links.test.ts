@@ -70,6 +70,21 @@ test('an autolink to a copied slide follows it wherever MarkdownPoint reads it a
         assert.equal(rewrite(source), source.replace(/slide:two/g, 'slide:copy-two').replace('(slide:one)', '(slide:copy-one)'), source);
     const table = '| Header |\n| --- |\n| <slide:two> |\n';
     assert.equal(remapMarkdownSlideLinks(table, ids, 'table'), table.replace('slide:two', 'slide:copy-two'));
+    // Its address follows as written, as MarkdownPoint's paste reads it: one spelled with a character reference stays,
+    // while a link's destination in angle brackets follows as read.
+    assert.equal(rewrite('<slide:tw&#111;>'), '<slide:tw&#111;>');
+    assert.equal(rewrite('[A](<slide:tw&#111;>)'), '[A](<slide:copy-two>)');
+    assert.equal(rewrite('\\[A](<slide:tw&#111;>)'), '\\[A](<slide:tw&#111;>)');
+});
+
+test("a table past MarkdownPoint's 25,000-cell drawing budget relinks the links of every cell, as the app reads them", () => {
+    const rows = Array.from({ length: 12_600 }, (_, row) => `| ${row} | x |`);
+    rows[rows.length - 1] = '| last | [Go](slide:two) and <slide:one> |';
+    const table = `| A | B |\n| --- | --- |\n${rows.join('\n')}\n`;
+    assert.equal(
+        remapMarkdownSlideLinks(table, ids, 'table'),
+        table.replace('slide:two', 'slide:copy-two').replace('slide:one', 'slide:copy-one')
+    );
 });
 
 test('nested Markdown uses exact source offsets through lists, quotes, tables and CRLF', () => {

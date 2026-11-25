@@ -21,19 +21,21 @@ import { Decoration, EditorView, ViewPlugin } from '@codemirror/view';
 import type { DecorationSet, ViewUpdate } from '@codemirror/view';
 import type { MarkdownPostProcessorContext, Vault } from 'obsidian';
 import type { PresentationDocument } from '../format/document.ts';
-import { markdownWords, spanAttributesLength } from '../format/link-tokens.ts';
 import { readsAsPresentation } from '../presentation/reader.ts';
+import { decodeCharacterReferences, markdownTokens, markdownWords } from '../readers/markdownpoint-readers.js';
 import { fieldSpans } from '../format/spans.ts';
 import type { SpanStyle, WordSpan } from '../format/spans.ts';
 
-const hiddenMark = Decoration.replace({});
+// Hidden by a class rather than replaced: the buffers CodeMirror sets beside a replaced range let a line wrap inside a word.
+const hiddenMark = Decoration.mark({ class: 'markdownpoint-hidden-mark' });
 const spanWords = Decoration.mark({ class: 'markdownpoint-span' });
 // Obsidian draws all of the words of a span that holds a link as one link, with no destination of its own.
 const linkedWords = Decoration.mark({ class: 'markdownpoint-span markdownpoint-span-linked' });
 const linkWords = Decoration.mark({ class: 'markdownpoint-span-link' });
 // Obsidian's own classes for the styles and code it reads nowhere inside brackets inside brackets.
-const codeWords = Decoration.mark({ class: 'cm-inline-code' });
-const styleMarks = new Map<string, Decoration>();
+const styleMarks = new Map<SpanStyle, Decoration>();
+/** The styles Obsidian draws inside one pair of brackets wherever MarkdownPoint reads them, whose background drawn twice would darken. */
+const bracketedStyles = new Set<SpanStyle>(['highlight', 'inline-code']);
 
 /** Every stretch of a presentation's source that holds words: text, notes and section headings. */
 function wordFields(document: PresentationDocument): { from: number; to: number }[] {
@@ -57,15 +59,14 @@ export class SpanIndex {
             if (!source.includes(']{')) continue;
             const found = next.get(source) ?? this.known.get(source) ?? fieldSpans(source);
             next.set(source, found);
-            for (const span of found)
-                spans.push({
-                    ...span,
-                    from: field.from + span.from,
-                    to: field.from + span.to,
-                    wordsFrom: field.from + span.wordsFrom,
-                    wordsTo: field.from + span.wordsTo,
-                    ...(span.code ? { code: span.code.map(run => ({ from: field.from + run.from, to: field.from + run.to })) } : {})
-                });
+            const shift = <T extends { from: number; to: number; wordsFrom: number; wordsTo: number }>(at: T): T => ({
+                ...at,
+                from: field.from + at.from,
+                to: field.from + at.to,
+                wordsFrom: field.from + at.wordsFrom,
+                wordsTo: field.from + at.wordsTo
+            });
+            for (const span of found) spans.push({ ...shift(span), ...(span.marks ? { marks: span.marks.map(shift) } : {}) });
         }
         this.known = next;
         return spans.sort((a, b) => a.from - b.from);
@@ -73,11 +74,12 @@ export class SpanIndex {
 }
 
 /**
- * Hide each span's brackets, attributes and enclosing delimiters, and the backticks of code in its words, so its word
- * reads as styled words, and the brackets and destination of a link in its words, so only the link's words read as a
- * link. A span inside another span or a link draws the styles of the delimiters it hides and its code's look itself, as
- * Obsidian reads neither there. A selection on any span of a word shows the whole word's source, as Obsidian shows its
- * own marks where the caret is.
+ * Hide each span's brackets and attributes, and the delimiters of emphasis, highlights, strikethroughs and code in its
+ * words, so its word reads as styled words, and the brackets and destination of a link in its words, so only the link's
+ * words read as a link. The plugin draws the emphasis and strikethrough whose delimiters it hides, which Obsidian reads
+ * otherwise beside punctuation and drawn twice look as once, and a span inside another span or a link draws its
+ * highlights and its code's look too, as Obsidian reads none there. A selection on any span of a word shows the whole
+ * word's source, as Obsidian shows its own marks where the caret is.
  */
 export function spanDecorations(state: EditorState, spans: readonly WordSpan[]): { hidden: DecorationSet; words: DecorationSet } {
     const hidden: Range<Decoration>[] = [];
@@ -92,14 +94,13 @@ export function spanDecorations(state: EditorState, spans: readonly WordSpan[]):
             const word = spans.slice(first, last + 1);
             for (const span of word) {
                 hidden.push(hiddenMark.range(span.from, span.wordsFrom), hiddenMark.range(span.wordsTo, span.to));
-                for (const run of span.code ?? []) hidden.push(hiddenMark.range(run.from, run.to));
+                for (const mark of span.marks ?? [])
+                    hidden.push(hiddenMark.range(mark.from, mark.wordsFrom), hiddenMark.range(mark.wordsTo, mark.to));
                 const linked = word.some(link => link.href !== undefined && span.wordsFrom <= link.from && link.to <= span.wordsTo);
                 words.push((span.href !== undefined ? linkWords : linked ? linkedWords : spanWords).range(span.wordsFrom, span.wordsTo));
-                if (!span.styles && !span.code) continue;
-                if (!word.some(other => other !== span && other.wordsFrom <= span.from && span.to <= other.wordsTo)) continue;
-                if (span.styles) words.push(styleMark(span.styles).range(span.wordsFrom, span.wordsTo));
-                const code = span.code ?? [];
-                for (let run = 0; run + 1 < code.length; run += 2) words.push(codeWords.range(code[run]!.to, code[run + 1]!.from));
+                const nested = word.some(other => other !== span && other.wordsFrom <= span.from && span.to <= other.wordsTo);
+                for (const mark of span.marks ?? [])
+                    if (nested || !bracketedStyles.has(mark.style)) words.push(styleMark(mark.style).range(mark.wordsFrom, mark.wordsTo));
             }
         }
         first = last + 1;
@@ -108,11 +109,10 @@ export function spanDecorations(state: EditorState, spans: readonly WordSpan[]):
     return { hidden: Decoration.set(hidden, true), words: Decoration.set(words, true) };
 }
 
-/** The mark that draws `styles` with Obsidian's classes, one for each set of them. */
-function styleMark(styles: readonly SpanStyle[]): Decoration {
-    const classes = styles.map(style => `cm-${style}`).join(' ');
-    let mark = styleMarks.get(classes);
-    if (!mark) styleMarks.set(classes, (mark = Decoration.mark({ class: classes })));
+/** The mark that draws `style` with Obsidian's class for it. */
+function styleMark(style: SpanStyle): Decoration {
+    let mark = styleMarks.get(style);
+    if (!mark) styleMarks.set(style, (mark = Decoration.mark({ class: `cm-${style}` })));
     return mark;
 }
 
@@ -209,16 +209,28 @@ interface RenderedTextLocation {
     readonly offset: number;
 }
 
+/** The words MarkdownPoint reads in a section's source: a section that is one table as a table object's words, any other as a text's. */
+function sourceWords(source: string): string {
+    const blocks = markdownTokens(source).filter(token => token.type !== 'space');
+    return markdownWords(source, blocks.length === 1 && blocks[0]!.type === 'table' ? 'table' : 'rich-text');
+}
+
 /**
  * Take a span's `[` and `]{…}` out of the words reading view rendered from `source`, Obsidian having read them as plain
- * characters: only when the words then read as the source's own do, whichever brackets the rendering pairs. Otherwise
- * the words keep every character. A table cell's code also drops the backslash Obsidian keeps of each `\|`, which GFM
- * and MarkdownPoint read as `|`.
+ * characters: each `]` its span's attributes follow, in the order the source closes them, with the `[` it closes, only
+ * when the words then read as MarkdownPoint reads the source's. Otherwise the words keep every character. A table cell's
+ * code also drops the backslash Obsidian keeps of each `\|`, which GFM and MarkdownPoint read as `|`.
  */
 export function hideRenderedSpans(element: HTMLElement, source: string): void {
-    // Reading view renders a link in a span's words as a link.
-    const count = fieldSpans(source).filter(span => span.href === undefined).length;
-    if (!count) return;
+    // Reading view renders a link in a span's words as a link; the others close in the order of their `]`.
+    const spans = fieldSpans(source)
+        .filter(span => span.href === undefined)
+        .sort((a, b) => a.wordsTo - b.wordsTo);
+    if (!spans.length) return;
+    // As reading view renders them, each escape and character reference read.
+    const attributes = spans.map(span =>
+        decodeCharacterReferences(source.slice(span.wordsTo + 1, span.to).replace(/\\([!-/:-@[-`{-~])/g, '$1'))
+    );
     let words = '';
     const opened: RenderedTextLocation[] = [];
     const removals: (RenderedTextLocation & { readonly length: number })[] = [];
@@ -230,26 +242,28 @@ export function hideRenderedSpans(element: HTMLElement, source: string): void {
                 if (text.data[at] === '[') opened.push({ node: text, at, offset: words.length + at });
                 else if (text.data[at] === ']' && opened.length) {
                     const open = opened.pop()!;
-                    const attributes = spanAttributesLength(text.data.slice(at + 1));
-                    if (!attributes) continue;
-                    removals.push({ ...open, length: 1 }, { node: text, at, offset: words.length + at, length: 1 + attributes });
-                    at += attributes;
+                    const block = attributes[removals.length / 2];
+                    if (block === undefined || !text.data.startsWith(block, at + 1)) continue;
+                    removals.push({ ...open, length: 1 }, { node: text, at, offset: words.length + at, length: 1 + block.length });
+                    at += block.length;
                 }
             }
             if (code && cell && text.data.includes('\\|')) escaped.push(text);
             words += code && cell ? text.data.replaceAll('\\|', '|') : text.data;
         }
         const name = node.nodeType === ELEMENT_NODE ? node.nodeName : '';
+        // A task's box, drawn as a checkbox, reads as MarkdownPoint reads it.
+        if (name === 'INPUT' && (node as HTMLInputElement).type === 'checkbox') words += (node as HTMLInputElement).checked ? '[x]' : '[ ]';
         node.childNodes.forEach(child => visit(child, code || name === 'CODE' || name === 'PRE', cell || name === 'TD' || name === 'TH'));
     };
     visit(element, false, false);
-    if (removals.length !== count * 2) return;
+    if (removals.length !== attributes.length * 2) return;
     // From the end, so an earlier offset in the same text stays where it was.
     removals.sort((a, b) => b.offset - a.offset);
     let shown = words;
     for (const removal of removals) shown = shown.slice(0, removal.offset) + shown.slice(removal.offset + removal.length);
-    const bare = (text: string) => text.replace(/\s+/g, '');
-    if (bare(shown) !== bare(markdownWords(source))) return;
+    const bare = (text: string) => text.replace(/\s+/g, '').replaceAll('[X]', '[x]');
+    if (bare(shown) !== bare(sourceWords(source))) return;
     for (const removal of removals) removal.node.deleteData(removal.at, removal.length);
     for (const text of escaped) text.data = text.data.replaceAll('\\|', '|');
 }

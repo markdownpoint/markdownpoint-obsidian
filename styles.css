@@ -153,6 +153,11 @@
     display: none;
 }
 
+/* A span's marks, out of sight until a selection touches its word */
+.markdownpoint-presentation .markdownpoint-hidden-mark {
+    display: none;
+}
+
 /* Obsidian reads a span's brackets as a bare link; its words keep the look of the words around them */
 .markdownpoint-presentation .markdownpoint-span {
     --link-external-decoration-hover: none;

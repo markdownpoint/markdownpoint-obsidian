@@ -2,7 +2,7 @@
 
 ## Marked 18.1.1
 
-The document index uses Marked to identify code blocks. The following is its upstream license notice; the contribution language refers to Marked.
+MarkdownPoint's readers, in `src/readers/markdownpoint-readers.js`, use Marked to read Markdown as MarkdownPoint reads it. The following is its upstream license notice; the contribution language refers to Marked.
 
 # License information
 
@@ -49,9 +49,9 @@ Redistribution and use in source and binary forms, with or without modification,
 
 This software is provided by the copyright holders and contributors “as is” and any express or implied warranties, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose are disclaimed. In no event shall the copyright owner or contributors be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited to, procurement of substitute goods or services; loss of use, data, or profits; or business interruption) however caused and on any theory of liability, whether in contract, strict liability, or tort (including negligence or otherwise) arising in any way out of the use of this software, even if advised of the possibility of such damage.
 
-## Entities 8.1.0 and 9.0.0
+## Entities 8.1.0
 
-Used to decode authored text entities in outline labels.
+MarkdownPoint's readers, in `src/readers/markdownpoint-readers.js`, use it to read the character references Markdown holds.
 
 Copyright (c) Felix Böhm
 All rights reserved.

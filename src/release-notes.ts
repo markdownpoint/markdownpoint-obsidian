@@ -48,11 +48,16 @@ const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '1.0.3',
         date: '2026-11-24',
-        changed: ['Skipped slides are numbered in the outline and on their dividers. Their numbers are in parentheses.'],
+        changed: [
+            'Skipped slides are numbered in the outline and on their dividers. Their numbers are in parentheses.',
+            'The outline names slides and sections as the MarkdownPoint app does.'
+        ],
         fixed: [
             'Outline labels such as `**Big *news*!** today` no longer show their asterisks. In Live Preview, bold and italic around a span match the MarkdownPoint app.',
             'A section name with a superscript or a subscript, such as `E = mc<sup>2</sup>`, appears in the outline.',
-            'A line break ends a slide’s label in the outline.'
+            'A line break ends a slide’s label in the outline.',
+            'Live Preview hides every bold, italic, highlight, and strikethrough mark in a span such as `[**Mark *it*!**]{color=accent}`.',
+            'When you paste slides that link to one another, links in a table of more than 25,000 cells point to the pasted slides.'
         ]
     },
     {

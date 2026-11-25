@@ -16,18 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { Token } from 'marked';
-import { blockTokens } from './block-grammar.ts';
-import { decodeCharacterReferences } from '../core/character-references.ts';
-import { destinationEnd, literalEnd, presentationSpan, wordTokens } from './link-tokens.ts';
+import { decodeCharacterReferences, markdownTokens } from '../readers/markdownpoint-readers.js';
+import type { MarkdownToken } from '../readers/markdownpoint-readers.js';
 
 /**
  * A span, `[words]{color=accent}`: words with a color, a weight or both, or a group with neither, `[words]{}`, which the
  * MarkdownPoint app writes for each run whose style changes inside a word, such as `[**Mark**]{}[***do***]{}[*wn*]{}`.
- * `wordsFrom` and `wordsTo` bound what an author reads: the words without the brackets, the attributes and the emphasis
- * delimiters that enclose all of the span's words. A link in a span's words, `[words](https://example.com)`, reads as one
- * too, with its destination as `href`: Obsidian takes the span's brackets for a link of their own and the link for words.
- * So does a link whose words hold a span, `[[*a*]{}b](slide:one)`: Obsidian's link ends at the first `]`, the span's.
+ * `wordsFrom` and `wordsTo` bound its words, inside its brackets. A link in a span's words, `[words](https://example.com)`,
+ * reads as one too, with its destination as `href`: Obsidian takes the span's brackets for a link of their own and the
+ * link for words. So does a link whose words hold a span, `[[*a*]{}b](slide:one)`: Obsidian's link ends at the first
+ * `]`, the span's.
  */
 export interface WordSpan {
     readonly from: number;
@@ -36,93 +34,224 @@ export interface WordSpan {
     readonly wordsTo: number;
     readonly href?: string;
     /**
-     * The backtick runs of each code span in its own words, not in a span inside them. Obsidian keeps every mark inside
-     * brackets it reads as an unresolved link in view, a code span's backticks among them, while it styles the code.
+     * The marks of its own words, not of a span or a link inside them. Obsidian keeps every mark inside brackets it reads
+     * as an unresolved link in view while it draws the style it reads, and inside brackets inside brackets it reads none.
      */
-    readonly code?: readonly { readonly from: number; readonly to: number }[];
-    /**
-     * The styles the delimiters it hides draw, outermost first. Obsidian reads no emphasis and no code inside brackets
-     * inside brackets, so for a span in another span or a link the plugin draws them.
-     */
-    readonly styles?: readonly SpanStyle[];
+    readonly marks?: readonly SpanMark[];
 }
 
-/** A style an enclosing delimiter draws, by the name of Obsidian's class for it, `cm-em` for `*`. */
-export type SpanStyle = 'em' | 'strong' | 'highlight' | 'strikethrough';
+/**
+ * Emphasis, a highlight, a strikethrough or code in a span's words, as the MarkdownPoint app reads them: its delimiters
+ * run from `from` to `wordsFrom` and from `wordsTo` to `to`, and `style` names the look they give the words between, by
+ * Obsidian's class for it, `cm-em` for `*`.
+ */
+export interface SpanMark {
+    readonly from: number;
+    readonly to: number;
+    readonly wordsFrom: number;
+    readonly wordsTo: number;
+    readonly style: SpanStyle;
+}
 
-const delimiterStyles: Readonly<Record<string, SpanStyle>> = {
-    '*': 'em',
-    _: 'em',
-    '**': 'strong',
-    __: 'strong',
-    '==': 'highlight',
-    '~~': 'strikethrough'
+export type SpanStyle = 'em' | 'strong' | 'highlight' | 'strikethrough' | 'inline-code';
+
+/** The look of each token that marks words, by its type. */
+const markStyles: Readonly<Record<string, SpanStyle>> = {
+    em: 'em',
+    strong: 'strong',
+    mp_highlight: 'highlight',
+    mp_strike: 'strikethrough',
+    codespan: 'inline-code'
 };
 
 /** Code, HTML and a reference definition keep their characters as written; so does a block that holds one. */
-function keepsSource(token: Token): boolean {
+function keepsSource(token: MarkdownToken): boolean {
     if (token.type === 'code' || token.type === 'html' || token.type === 'def') return true;
-    const children: Token[] = [];
-    if ('tokens' in token && Array.isArray(token.tokens)) children.push(...token.tokens);
-    if ('items' in token && Array.isArray(token.items)) children.push(...(token.items as Token[]));
-    return children.some(keepsSource);
+    if (token.type === 'blockquote') return (token.tokens ?? []).some(keepsSource);
+    return token.type === 'list' && (token.items ?? []).some(item => (item.tokens ?? []).some(keepsSource));
 }
 
-/** The tokens a run of delimiters around words reads as: `*` and `_` as an em or a strong, `==` and `~~` as their own. */
-const enclosingTokens = new Set(['em', 'strong', 'mp_highlight', 'mp_strike']);
+const linesIn = (raw: string): number => raw.split('\n').length - 1;
+
+/** Where a token's words stand in the field, by their offset in the words the token reads. */
+type Place = (at: number) => number;
+
+/** Words as the field writes them: a table cell's words write each pipe as `\|`, which GFM reads as `|`. */
+type Spell = (words: string) => string;
+
+const asWritten: Spell = words => words;
+const cellWords: Spell = words => words.replaceAll('|', '\\|');
 
 /**
- * How many of `lead`'s delimiters pair around all of `content`'s words, as the MarkdownPoint app pairs them, all or none,
- * and the style each pair draws, which its characters name.
+ * Where the words `text` of a block whose lines are `raw`'s stand, from the field's line `line`: each line of `raw` ends
+ * where its line of the source does, a quote's marks and an item's indent taken off its start, and each line of `text`
+ * where its line of `raw` does, its indent taken off as the lexer may take it. A blank line of `text` where `raw` has
+ * words is one the lexer added, and stands at the end of the line before. Null where a line isn't one of the source's
+ * own.
  */
-function enclosing(content: string, lead: string): { width: number; styles: SpanStyle[] } {
-    const none = { width: 0, styles: [] };
-    let words = content;
-    let width = 0;
-    const styles: SpanStyle[] = [];
-    while (width < lead.length) {
-        const tokens = wordTokens(words);
-        const token = tokens.length === 1 ? tokens[0]! : null;
-        if (!token || token.raw !== words || !enclosingTokens.has(token.type) || typeof token.text !== 'string') return none;
-        const delimiter = (words.length - token.text.length) / 2;
-        if (!(delimiter >= 1) || words.slice(delimiter, words.length - delimiter) !== token.text) return none;
-        styles.push(delimiterStyles[words.slice(0, delimiter)]!);
-        width += delimiter;
-        words = token.text;
+function linePlace(source: Field, line: number, raw: string, text = raw): Place | null {
+    const lines = raw.split('\n');
+    const bases: number[] = [];
+    const columns: number[] = [];
+    let base = 0;
+    let index = 0;
+    for (const words of text.split('\n')) {
+        if (!words.trim() && lines[index]?.trim() && bases.length) {
+            bases.push(base);
+            columns.push(columns.at(-1)! + base - 1 - bases.at(-2)!);
+        } else {
+            const own = source.lines[line + index];
+            const end = own?.trimEnd().length ?? -1;
+            if (own === undefined || !own.slice(0, end).endsWith(words.trim())) return null;
+            bases.push(base);
+            columns.push(source.starts[line + index]! + end - words.trim().length - (words.length - words.trimStart().length));
+            index++;
+        }
+        base += words.length + 1;
     }
-    return width === lead.length && words.length > 0 ? { width, styles } : none;
+    return index === lines.length
+        ? at => {
+              // The last line that starts at or before `at`.
+              let low = 0;
+              for (let high = bases.length - 1; low < high;) {
+                  const middle = (low + high + 1) >> 1;
+                  if (bases[middle]! <= at) low = middle;
+                  else high = middle - 1;
+              }
+              return columns[low]! + at - bases[low]!;
+          }
+        : null;
 }
 
-function spanAt(source: string, at: number): WordSpan | null {
-    const span = presentationSpan(source.slice(at));
-    if (!span) return null;
-    const content = span.content;
-    // Delimiters that enclose the words read as their style; any other run stays where the author can see it.
-    const { width, styles } = enclosing(content, /^(?:==|~~|[*_])*/.exec(content)![0]);
-    return {
-        from: at,
-        to: at + span.length,
-        wordsFrom: at + 1 + width,
-        wordsTo: at + 1 + content.length - width,
-        ...(styles.length ? { styles } : {})
-    };
+/** A field's Markdown, by its lines and where each starts. */
+interface Field {
+    readonly text: string;
+    readonly lines: readonly string[];
+    readonly starts: readonly number[];
+}
+
+/** Whether `raw` stands from `from` to `to` in the field: its first line where it starts, its last where it ends. */
+function placed(field: Field, raw: string, from: number, to: number): boolean {
+    const lines = raw.split('\n');
+    const last = lines.length > 1 ? lines.at(-1)!.trimStart() : lines[0]!;
+    return from <= to && field.text.startsWith(lines[0]!, from) && field.text.slice(to - last.length, to) === last;
+}
+
+/** Where a token's own words start in its Markdown, or -1: after a span's or a link's `[`, a tag, or a delimiter run. */
+function wordsStart(token: MarkdownToken): number {
+    const text = token.text ?? '';
+    const at =
+        token.type === 'mp_baseline' ? token.raw.indexOf('>') + 1 : token.raw.startsWith('[') ? 1 : (token.raw.length - text.length) / 2;
+    return Number.isInteger(at) && at > 0 && token.raw.startsWith(text, at) ? at : -1;
+}
+
+/** A span or a link found in a field, its marks gathered as its words are read. */
+interface Found extends WordSpan {
+    readonly marks: SpanMark[];
+}
+
+/** What a field's words hold: its spans, and the links in their words or whose words hold one. */
+interface Reading {
+    readonly field: Field;
+    readonly spans: Found[];
+    readonly links: Found[];
 }
 
 /**
- * The link whose words run from `from` to `close` and whose destination ends at `to`, as the lexer reads one. An image,
- * after a `!` no backslash escapes, is none, and a link without words or with a destination past its line keeps its
- * source: Live Preview can't hide marks across a line, and there would be no words to show.
+ * Reads words whose tokens start at `start` in the words `place` places: their spans and links, inside one another too,
+ * and the marks of each one's own words, in `owner`'s while they stand in no span or link of their own.
  */
-function linkAt(source: string, from: number, close: number, to: number): WordSpan | null {
-    let escapes = 0;
-    while (source[from - 2 - escapes] === '\\') escapes++;
-    const image = source[from - 1] === '!' && escapes % 2 === 0;
-    if (image || close === from + 1 || source.slice(close, to).includes('\n')) return null;
-    const tokens = wordTokens(source.slice(from, to));
-    const link = tokens.length === 1 ? tokens[0]! : null;
-    if (link?.type !== 'link' || link.raw.length !== to - from || typeof link.href !== 'string') return null;
-    // Marked already removed punctuation escapes while reading the href.
-    return { from, to, wordsFrom: from + 1, wordsTo: close, href: decodeCharacterReferences(link.href) };
+function readWords(reading: Reading, tokens: readonly MarkdownToken[], start: number, place: Place, spell: Spell, owner?: Found): void {
+    let at = start;
+    for (const token of tokens) {
+        const begin = at;
+        at += token.raw.length;
+        const from = place(begin);
+        const to = place(at);
+        if (!placed(reading.field, spell(token.raw), from, to)) continue;
+        const text = token.text ?? '';
+        const inner = wordsStart(token);
+        const style = markStyles[token.type];
+        if (token.type === 'mp_span' && inner > 0) {
+            const span: Found = { from, to, wordsFrom: place(begin + 1), wordsTo: place(begin + 1 + text.length), marks: [] };
+            reading.spans.push(span);
+            readWords(reading, token.tokens ?? [], begin + 1, place, spell, span);
+        } else if (token.type === 'link' && inner > 0) {
+            // An inline link's words and destination on one line, where Live Preview can hide its marks: never a reference.
+            const destination = token.raw.slice(1 + text.length);
+            const link: Found | undefined =
+                text && destination.startsWith('](') && !destination.includes('\n') && typeof token.href === 'string'
+                    ? {
+                          from,
+                          to,
+                          wordsFrom: place(begin + 1),
+                          wordsTo: place(begin + 1 + text.length),
+                          href: decodeCharacterReferences(token.href),
+                          marks: []
+                      }
+                    : undefined;
+            if (link) reading.links.push(link);
+            readWords(reading, token.tokens ?? [], begin + 1, place, spell, link ?? owner);
+        } else if (style === 'inline-code') {
+            const run = /^`+/.exec(token.raw)?.[0].length ?? 0;
+            if (owner && run) owner.marks.push({ from, to, wordsFrom: place(begin + run), wordsTo: place(at - run), style });
+        } else if ((style || token.type === 'mp_baseline') && inner > 0) {
+            if (owner && style)
+                owner.marks.push({ from, to, wordsFrom: place(begin + inner), wordsTo: place(begin + inner + text.length), style });
+            readWords(reading, token.tokens ?? [], begin + inner, place, spell, owner);
+        }
+    }
+}
+
+/**
+ * Reads the words of a table's cells, each found in its row's line, where each pipe of its words is written `\|`: a row
+ * stops at a cell its line doesn't spell so.
+ */
+function readTable(reading: Reading, table: MarkdownToken, line: number): void {
+    const rows = [table.header ?? [], ...(table.rows ?? [])];
+    for (const [index, cells] of rows.entries()) {
+        const row = index ? line + index + 1 : line;
+        const text = reading.field.lines[row] ?? '';
+        let cursor = 0;
+        for (const cell of cells) {
+            const spelled = cellWords(cell.text);
+            const at = text.indexOf(spelled, cursor);
+            if (at < 0) break;
+            cursor = at + spelled.length;
+            // Where each place in the words is written, each pipe before it with its backslash.
+            const places: number[] = [reading.field.starts[row]! + at];
+            for (let char = 0; char < cell.text.length; char++) places.push(places[char]! + (cell.text[char] === '|' ? 2 : 1));
+            readWords(reading, cell.tokens, 0, offset => places[offset]!, cellWords);
+        }
+    }
+}
+
+/**
+ * Reads the blocks of words `tokens` hold from the field's line `line`: each heading's, paragraph's and list item's, in
+ * quotes and lists too, and each table cell's.
+ */
+function readBlocks(reading: Reading, tokens: readonly MarkdownToken[], line: number): void {
+    for (const token of tokens) {
+        if (token.type === 'heading') {
+            const raw = token.raw.replace(/\n+$/, '');
+            // Its words follow its opening `#` run, or open its first line under a `===` or `---` underline.
+            const words = raw.indexOf(token.text ?? '', /^ {0,3}#{1,6}(?=[ \t]|$)/.exec(raw)?.[0].length ?? 0);
+            const place = words < 0 ? null : linePlace(reading.field, line, raw);
+            if (place) readWords(reading, token.tokens ?? [], 0, at => place(words + at), asWritten);
+        } else if (token.type === 'paragraph' || token.type === 'text') {
+            // Its words as the lexer reads them: a line's indent may be taken off, as a quote's lazy line's is.
+            const place = linePlace(reading.field, line, token.raw.replace(/\n+$/, ''), (token.text ?? '').replace(/\n+$/, ''));
+            if (place) readWords(reading, token.tokens ?? [], 0, place, asWritten);
+        } else if (token.type === 'blockquote') readBlocks(reading, token.tokens ?? [], line);
+        else if (token.type === 'list') {
+            let item = line;
+            for (const each of token.items ?? []) {
+                readBlocks(reading, each.tokens ?? [], item);
+                item += linesIn(each.raw);
+            }
+        } else if (token.type === 'table') readTable(reading, token, line);
+        line += linesIn(token.raw);
+    }
 }
 
 /**
@@ -133,55 +262,21 @@ function linkAt(source: string, from: number, close: number, to: number): WordSp
  */
 export function fieldSpans(source: string): WordSpan[] {
     if (!source.includes(']{')) return [];
-    const tokens = blockTokens(source);
+    const tokens = markdownTokens(source);
     if (tokens.map(token => token.raw).join('') !== source) return [];
-    const spans: WordSpan[] = [];
-    const links: WordSpan[] = [];
-    const codes: { from: number; to: number; run: number }[] = [];
-    let from = 0;
+    const lines = source.split('\n');
+    const starts: number[] = [];
+    for (let at = 0, index = 0; index < lines.length; at += lines[index++]!.length + 1) starts.push(at);
+    const reading: Reading = { field: { text: source, lines, starts }, spans: [], links: [] };
+    let line = 0;
     for (const token of tokens) {
-        const to = from + token.raw.length;
-        // Offsets stay the field's, and nothing reads past the block's end.
-        const block = source.slice(0, to);
-        const opened: number[] = [];
-        if (token.raw.includes(']{') && !keepsSource(token))
-            for (let at = from; at < to;) {
-                const end = literalEnd(block, at);
-                if (end > at) {
-                    // A run of backticks no run of its length closes is no code span.
-                    const run = block[at] === '`' ? /^`+/.exec(block.slice(at))![0].length : 0;
-                    if (run && end - at > run) codes.push({ from: at, to: end, run });
-                    at = end;
-                    continue;
-                }
-                if (block.startsWith('](', at)) {
-                    const label = opened.pop();
-                    const destination = destinationEnd(block, at + 1);
-                    const link = label !== undefined && destination > at + 1 ? linkAt(block, label, at, destination) : null;
-                    if (link) links.push(link);
-                    at = Math.max(at + 1, destination);
-                    continue;
-                }
-                if (block[at] === '[') {
-                    opened.push(at);
-                    const span = spanAt(block, at);
-                    if (span) spans.push(span);
-                } else if (block[at] === ']') opened.pop();
-                at++;
-            }
-        from = to;
+        if (token.raw.includes(']{') && !keepsSource(token)) readBlocks(reading, [token], line);
+        line += linesIn(token.raw);
     }
     const within = (inner: WordSpan, outer: WordSpan): boolean => outer.wordsFrom <= inner.from && inner.to <= outer.wordsTo;
-    for (const link of links) if (spans.some(span => within(link, span) || within(span, link))) spans.push(link);
-    // Each code span's runs go with the innermost span whose words hold it, which starts its words last.
-    const runs = new Map<WordSpan, { from: number; to: number }[]>();
-    for (const code of codes) {
-        let holder: WordSpan | undefined;
-        for (const span of spans)
-            if (span.wordsFrom <= code.from && code.to <= span.wordsTo && (!holder || span.wordsFrom > holder.wordsFrom)) holder = span;
-        if (!holder) continue;
-        if (!runs.has(holder)) runs.set(holder, []);
-        runs.get(holder)!.push({ from: code.from, to: code.from + code.run }, { from: code.to - code.run, to: code.to });
-    }
-    return spans.map(span => (runs.has(span) ? { ...span, code: runs.get(span)! } : span)).sort((a, b) => a.from - b.from);
+    const spans: WordSpan[] = [
+        ...reading.spans,
+        ...reading.links.filter(link => reading.spans.some(span => within(link, span) || within(span, link)))
+    ];
+    return spans.map(({ marks, ...span }) => (marks?.length ? { ...span, marks } : span)).sort((a, b) => a.from - b.from);
 }

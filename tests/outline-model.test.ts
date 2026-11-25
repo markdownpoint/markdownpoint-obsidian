@@ -38,7 +38,8 @@ test('outline labels use the first authored text, omit formatting, and ignore pr
 
 test('outline labels read bold and italic as MarkdownPoint pairs their delimiters, and a line break ends the first line', () => {
     for (const [text, title] of [
-        ['**a <kbd>b *c*</kbd>** d', 'a b c d'],
+        // MarkdownPoint draws a tag it doesn't take as words, and its slide list names the slide so.
+        ['**a <kbd>b *c*</kbd>** d', 'a <kbd>b c</kbd> d'],
         ['**a *c*!** d', 'a c! d'],
         ['First<br>Second', 'First']
     ] as const) {
@@ -47,8 +48,8 @@ test('outline labels read bold and italic as MarkdownPoint pairs their delimiter
     }
 });
 
-test('HTML tags and leading single-line or multiline comments are omitted from outline labels', () => {
-    for (const text of ['<span>Heading</span>', '<!-- annotation -->\nHeading', '<!--\nAn annotation.\n-->\n# Heading']) {
+test('leading single-line or multiline comments are omitted from outline labels', () => {
+    for (const text of ['<!-- annotation -->\nHeading', '<!--\nAn annotation.\n-->\n# Heading', '# <!-- annotation --> Heading']) {
         const markdown = `<!-- slide: first -->\n<!-- text: heading -->\n${text}\n`;
         assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, 'Title', new Set())[0]!.title, 'Heading');
     }
@@ -135,7 +136,6 @@ test('a temporary empty or incomplete section heading keeps the slide structure 
         '# ',
         'Plain words',
         '## Subheading',
-        '# Invalid\u0007name',
         '# Start <!-- id: s1 -->',
         '# Start <!-- note -->',
         '# *Start <!-- note -->*',
@@ -151,4 +151,10 @@ test('a temporary empty or incomplete section heading keeps the slide structure 
         );
         assert.equal(document.slides.length, 1);
     }
+    // MarkdownPoint takes a control character out of a section's name, as it does from one a paste carries.
+    const markdown = '<!-- section: opening -->\n# Invalid\u0007name\n<!-- slide: first -->\n';
+    assert.deepEqual(
+        outlineSections(markdown, indexPresentation(markdown, 0)!).map(section => section.title),
+        ['Invalidname']
+    );
 });

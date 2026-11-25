@@ -22,7 +22,7 @@ import { EditorSelection, EditorState } from '@codemirror/state';
 import type { DecorationSet } from '@codemirror/view';
 import { indexPresentation } from '../src/format/document.ts';
 import { fieldSpans } from '../src/format/spans.ts';
-import { presentationSpan } from '../src/format/link-tokens.ts';
+import type { SpanStyle } from '../src/format/spans.ts';
 import { SpanIndex, spanDecorations, hideRenderedSpans, pressLinkWords } from '../src/editor/span-marks.ts';
 import { outlineSections, outlineSlides } from '../src/outline/model.ts';
 import { readsAsPresentation } from '../src/presentation/reader.ts';
@@ -31,13 +31,21 @@ import type { Vault } from 'obsidian';
 
 const word = '[**Mark**]{}[***do***]{}[*wn*]{}';
 
-/** Each span as its source and the words an author reads. */
+/** Each span as its source and its words. */
 function read(source: string): [string, string][] {
     return fieldSpans(source).map(span => [source.slice(span.from, span.to), source.slice(span.wordsFrom, span.wordsTo)]);
 }
 
+/** Each span's words, and each mark in them as the words it marks and its style. */
+function marks(source: string): [string, [string, SpanStyle][]][] {
+    return fieldSpans(source).map(span => [
+        source.slice(span.wordsFrom, span.wordsTo),
+        (span.marks ?? []).map(mark => [source.slice(mark.wordsFrom, mark.wordsTo), mark.style])
+    ]);
+}
+
 test('spans read as the MarkdownPoint app reads them: a group, a color, a weight or both, and any other attribute block', () => {
-    assert.deepEqual(presentationSpan('[ab]{} c'), { length: 6, content: 'ab' });
+    assert.deepEqual(read('[ab]{} c'), [['[ab]{}', 'ab']]);
     for (const span of [
         '[ab]{font-weight=600}',
         '[ab]{font-weight="900"}',
@@ -66,45 +74,73 @@ test('spans read as the MarkdownPoint app reads them: a group, a color, a weight
         '[ab]{color=accent glow=3}',
         '[ab]{color=accent data-3d=yes}'
     ])
-        assert.deepEqual(presentationSpan(span), { length: span.length, content: 'ab' }, span);
+        assert.deepEqual(read(span), [[span, 'ab']], span);
     for (const literal of ['[]{}', '[ab] {}', `[ab]{color="accent'}`, '[ab]{color="accent"font-weight=600}'])
-        assert.equal(presentationSpan(literal), null, literal);
+        assert.deepEqual(read(literal), [], literal);
 });
 
-test("a span's words drop the delimiters that enclose all of them, and keep any other run in view", () => {
-    assert.deepEqual(read(word), [
-        ['[**Mark**]{}', 'Mark'],
-        ['[***do***]{}', 'do'],
-        ['[*wn*]{}', 'wn']
+test("a span's words hold their emphasis, highlights, strikethroughs and code as marks, paired as the MarkdownPoint app pairs them", () => {
+    assert.deepEqual(marks(word), [
+        ['**Mark**', [['Mark', 'strong']]],
+        [
+            '***do***',
+            [
+                ['**do**', 'em'],
+                ['do', 'strong']
+            ]
+        ],
+        ['*wn*', [['wn', 'em']]]
     ]);
-    assert.deepEqual(read('A [==hi==]{}[~~gh~~]{}[**==x==**]{} b'), [
-        ['[==hi==]{}', 'hi'],
-        ['[~~gh~~]{}', 'gh'],
-        ['[**==x==**]{}', 'x']
+    assert.deepEqual(marks('A [==hi==]{}[~~gh~~]{}[**==x==**]{} b'), [
+        ['==hi==', [['hi', 'highlight']]],
+        ['~~gh~~', [['gh', 'strikethrough']]],
+        [
+            '**==x==**',
+            [
+                ['==x==', 'strong'],
+                ['x', 'highlight']
+            ]
+        ]
     ]);
-    assert.deepEqual(read('[*a* b*]{}[**a*b**]{}[***do***]{}'), [
-        ['[*a* b*]{}', '*a* b*'],
-        ['[**a*b**]{}', 'a*b'],
-        ['[***do***]{}', 'do']
+    // A run the lexer pairs with none stays a character of the words.
+    assert.deepEqual(marks('[*a* b*]{}[**a*b**]{}[**a** b]{}[** c**]{}[a]{}'), [
+        ['*a* b*', [['a', 'em']]],
+        ['**a*b**', [['a*b', 'strong']]],
+        ['**a** b', [['a', 'strong']]],
+        ['** c**', []],
+        ['a', []]
     ]);
-    assert.deepEqual(read('[**a** b]{}[** c**]{}[a]{}'), [
-        ['[**a** b]{}', '**a** b'],
-        ['[** c**]{}', '** c**'],
-        ['[a]{}', 'a']
+    assert.deepEqual(marks('[**Mark *it*!**]{color=accent} and [*a* `b`]{font-weight=600} [x]{color="#2F7D4F" font-weight=700}'), [
+        [
+            '**Mark *it*!**',
+            [
+                ['Mark *it*!', 'strong'],
+                ['it', 'em']
+            ]
+        ],
+        [
+            '*a* `b`',
+            [
+                ['a', 'em'],
+                ['b', 'inline-code']
+            ]
+        ],
+        ['x', []]
     ]);
-    assert.deepEqual(read('[**ink**]{color=accent} and [*a* b]{font-weight=600} [x]{color="#2F7D4F" font-weight=700}'), [
-        ['[**ink**]{color=accent}', 'ink'],
-        ['[*a* b]{font-weight=600}', '*a* b'],
-        ['[x]{color="#2F7D4F" font-weight=700}', 'x']
-    ]);
+    // A span's words may run over a quote's lines, and stand on a lazy line whose indent the quote's words drop.
+    assert.deepEqual(read('> Quote\n    [label]{}'), [['[label]{}', 'label']]);
+    assert.deepEqual(read('> Intro\n    continuation\n> [Title]{color=accent}'), [['[Title]{color=accent}', 'Title']]);
+    assert.deepEqual(read('> Intro\n    [Title]{}\n> > Nested'), [['[Title]{}', 'Title']]);
+    assert.deepEqual(read('> quoted [a\n> **b**]{color=accent}'), [['[a\n> **b**]{color=accent}', 'a\n> **b**']]);
+    assert.deepEqual(marks('> quoted [a\n> **b**]{color=accent}'), [['a\n> **b**', [['b', 'strong']]]]);
 });
 
 test('spans stand outside code, HTML and destinations, and inside links and other spans', () => {
     assert.deepEqual(read('[[*a*]{}b](slide:one) and [[*c*]{}d]{color=accent}'), [
         ['[[*a*]{}b](slide:one)', '[*a*]{}b'],
-        ['[*a*]{}', 'a'],
+        ['[*a*]{}', '*a*'],
         ['[[*c*]{}d]{color=accent}', '[*c*]{}d'],
-        ['[*c*]{}', 'c']
+        ['[*c*]{}', '*c*']
     ]);
     for (const literal of [
         '`[a]{}`',
@@ -121,12 +157,16 @@ test('spans stand outside code, HTML and destinations, and inside links and othe
         '[ref]: https://example.com/[slug]{}\n'
     ])
         assert.deepEqual(read(literal), [], literal);
-    assert.deepEqual(read('[*x*]{}y [ref]\n\n[ref]: https://example.com/[slug]{}\n'), [['[*x*]{}', 'x']]);
+    assert.deepEqual(read('[*x*]{}y [ref]\n\n[ref]: https://example.com/[slug]{}\n'), [['[*x*]{}', '*x*']]);
     assert.deepEqual(read('[a]{size=2}'), [['[a]{size=2}', 'a']], 'an attribute the app skips leaves a span');
+    assert.deepEqual(read('# # [a]{}\n\n[b]{}\n===\n'), [
+        ['[a]{}', 'a'],
+        ['[b]{}', 'b']
+    ]);
     assert.deepEqual(read('# [*a*]{}b\n\n- [*c*]{}d\n- e\n\n| [*f*]{}g |\n| --- |\n'), [
-        ['[*a*]{}', 'a'],
-        ['[*c*]{}', 'c'],
-        ['[*f*]{}', 'f']
+        ['[*a*]{}', '*a*'],
+        ['[*c*]{}', '*c*'],
+        ['[*f*]{}', '*f*']
     ]);
 });
 
@@ -140,7 +180,7 @@ test("a link in a span's words reads as one, with its destination, as no other l
     assert.deepEqual(linked('[**see [the [plan]](<https://x.com/a b> "Title") now**]{font-weight=600}'), [
         [
             '[**see [the [plan]](<https://x.com/a b> "Title") now**]{font-weight=600}',
-            'see [the [plan]](<https://x.com/a b> "Title") now',
+            '**see [the [plan]](<https://x.com/a b> "Title") now**',
             null
         ],
         ['[the [plan]](<https://x.com/a b> "Title")', 'the [plan]', 'https://x.com/a b']
@@ -194,7 +234,7 @@ test("the index finds a presentation's spans in text, notes and section headings
     const spans = index.read(state, document);
     assert.deepEqual(
         spans.map(span => deck.slice(span.wordsFrom, span.wordsTo)),
-        ['Mark', 'do', 'wn', 'x', 'here', 'it', 'now', 'Pa', 'No']
+        ['**Mark**', '***do***', '*wn*', '*x*', 'here', '**it**', 'now', '*Pa*', '*No*']
     );
     assert.deepEqual(index.read(state, document), spans);
     const linked = deck.replace('[here]{color=accent}', '[see [here](https://example.com)]{color=accent}');
@@ -205,11 +245,11 @@ test("the index finds a presentation's spans in text, notes and section headings
     // A code span's backticks in a span's words stand where the presentation has them.
     const coded = deck.replace('[here]{color=accent}', '[`he`re]{color=accent}');
     const code = coded.indexOf('`he`');
-    const runs = new SpanIndex().read(EditorState.create({ doc: coded }), indexPresentation(coded, 0)!).flatMap(span => span.code ?? []);
-    assert.deepEqual(runs, [
-        { from: code, to: code + 1 },
-        { from: code + 3, to: code + 4 }
-    ]);
+    const found = new SpanIndex().read(EditorState.create({ doc: coded }), indexPresentation(coded, 0)!);
+    assert.deepEqual(
+        found.flatMap(span => span.marks ?? []).filter(mark => mark.style === 'inline-code'),
+        [{ from: code, to: code + 4, wordsFrom: code + 1, wordsTo: code + 3, style: 'inline-code' }]
+    );
 });
 
 test("in a newer minor's file a later minor's block holds no span of the words or the heading before it", () => {
@@ -234,12 +274,18 @@ test("Live Preview hides a word's group marks until a selection touches any grou
     const doc = `${word} and [*x*]{}y`;
     const groups = fieldSpans(doc);
     const away = spanDecorations(EditorState.create({ doc, selection: { anchor: doc.indexOf(' and') + 2 } }), groups);
-    assert.deepEqual(ranges(away.hidden, doc), ['[**', '**]{}', '[***', '***]{}', '[*', '*]{}', '[*', '*]{}']);
-    assert.deepEqual(ranges(away.words, doc), ['Mark', 'do', 'wn', 'x']);
+    assert.deepEqual(ranges(away.hidden, doc), [
+        ...['[', '**', '**', ']{}'],
+        ...['[', '*', '**', '**', '*', ']{}'],
+        ...['[', '*', '*', ']{}'],
+        ...['[', '*', '*', ']{}']
+    ]);
+    // Each span's words, and the bold and italic its hidden delimiters give.
+    assert.deepEqual(ranges(away.words, doc), ['**Mark**', 'Mark', '***do***', '**do**', 'do', '*wn*', 'wn', '*x*', 'x']);
     for (const anchor of [0, doc.indexOf('do'), word.length]) {
         const near = spanDecorations(EditorState.create({ doc, selection: { anchor } }), groups);
-        assert.deepEqual(ranges(near.hidden, doc), ['[*', '*]{}'], String(anchor));
-        assert.deepEqual(ranges(near.words, doc), ['x']);
+        assert.deepEqual(ranges(near.hidden, doc), ['[', '*', '*', ']{}'], String(anchor));
+        assert.deepEqual(ranges(near.words, doc), ['*x*', 'x']);
     }
     const both = spanDecorations(
         EditorState.create({
@@ -256,13 +302,17 @@ test("Live Preview hides a color or weight span's marks as a group's, until a se
     const doc = 'A [**ink**]{color=accent} and [bold]{font-weight=600}[*er*]{} b';
     const spans = fieldSpans(doc);
     const away = spanDecorations(EditorState.create({ doc, selection: { anchor: 0 } }), spans);
-    assert.deepEqual(ranges(away.hidden, doc), ['[**', '**]{color=accent}', '[', ']{font-weight=600}', '[*', '*]{}']);
-    assert.deepEqual(ranges(away.words, doc), ['ink', 'bold', 'er']);
+    assert.deepEqual(ranges(away.hidden, doc), [
+        ...['[', '**', '**', ']{color=accent}'],
+        ...['[', ']{font-weight=600}'],
+        ...['[', '*', '*', ']{}']
+    ]);
+    assert.deepEqual(ranges(away.words, doc), ['**ink**', 'ink', 'bold', '*er*', 'er']);
     const near = spanDecorations(EditorState.create({ doc, selection: { anchor: doc.indexOf('}') } }), spans);
-    assert.deepEqual(ranges(near.hidden, doc), ['[', ']{font-weight=600}', '[*', '*]{}']);
+    assert.deepEqual(ranges(near.hidden, doc), ['[', ']{font-weight=600}', '[', '*', '*', ']{}']);
     // The weight span and the group after it make one word, so the caret on either shows both.
     const word = spanDecorations(EditorState.create({ doc, selection: { anchor: doc.indexOf('er*') } }), spans);
-    assert.deepEqual(ranges(word.hidden, doc), ['[**', '**]{color=accent}']);
+    assert.deepEqual(ranges(word.hidden, doc), ['[', '**', '**', ']{color=accent}']);
 });
 
 test("Live Preview hides a link's marks in a span's words with the span's, and only the link's words read as a link", () => {
@@ -322,13 +372,13 @@ test("Live Preview reads a link whose words hold a span as a link, which Obsidia
     const grouped = 'A [[*a*]{}b](slide:one) c';
     assert.deepEqual(
         ranges(spanDecorations(EditorState.create({ doc: grouped, selection: { anchor: 0 } }), fieldSpans(grouped)).hidden, grouped),
-        [...['[', '[*', '*]{}', '](slide:one)']]
+        [...['[', '[', '*', '*', ']{}', '](slide:one)']]
     );
     assert.deepEqual(
         wordClasses(grouped).filter(([, classes]) => classes.startsWith('markdownpoint')),
         [
             ['[*a*]{}b', 'markdownpoint-span-link'],
-            ['a', 'markdownpoint-span']
+            ['*a*', 'markdownpoint-span']
         ]
     );
     // Code cut into a group in a link, as MarkdownPoint writes a pipe after an odd run of backslashes in a table cell.
@@ -347,20 +397,32 @@ test('Live Preview draws the styles and code a span inside another span or a lin
     const drawn = (doc: string) => wordClasses(doc).filter(([, classes]) => classes.startsWith('cm-'));
     // A group in a link, as MarkdownPoint writes a style change inside a link's word.
     assert.deepEqual(drawn('A [[*a*]{}b](slide:one) c'), [['a', 'cm-em']]);
-    // A span in a span, each style its delimiters draw, outermost first.
+    // A span in a span, each style its delimiters draw, outermost first, and the style of a mark inside its words.
     assert.deepEqual(drawn('A [[*c*]{}d]{color=accent}'), [['c', 'cm-em']]);
-    assert.deepEqual(drawn('A [x[**b**]{}[==h==]{}[~~s~~]{}[***bi***]{}[**==bh==**]{}]{color=accent}'), [
+    assert.deepEqual(drawn('A [x[**b**]{}[==h==]{}[~~s~~]{}[***bi***]{}[**==bh==**]{}[**Mark *it*!**]{}]{color=accent}'), [
         ['b', 'cm-strong'],
         ['h', 'cm-highlight'],
         ['s', 'cm-strikethrough'],
-        ['bi', 'cm-em cm-strong'],
-        ['bh', 'cm-strong cm-highlight']
+        ['**bi**', 'cm-em'],
+        ['bi', 'cm-strong'],
+        ['==bh==', 'cm-strong'],
+        ['bh', 'cm-highlight'],
+        ['Mark *it*!', 'cm-strong'],
+        ['it', 'cm-em']
     ]);
     // The code of a group in a link or in a color span; the link's and the span's own code is Obsidian's.
     assert.deepEqual(drawn('see [` x\\ `[`\\|`]{}](https://example.com) now'), [['\\|', 'cm-inline-code']]);
     assert.deepEqual(drawn('A [` x\\ `[`` \\|` ``]{}]{color=accent}'), [[' \\|` ', 'cm-inline-code']]);
-    // Obsidian draws a span's own styles and code outside other brackets, and the source shows them with the caret in it.
-    assert.deepEqual(drawn('A [**Mark**]{}[***do***]{}[*wn*]{} [`a\\|b`]{} [**ink**]{color=accent}'), []);
+    // Outside other brackets the plugin draws the bold and italic whose delimiters it hides, which Obsidian reads otherwise
+    // beside punctuation and drawn twice look as once, and Obsidian alone a span's highlights and code.
+    assert.deepEqual(drawn('A [**Mark**]{}[***do***]{}[*wn*]{} [`a\\|b`]{} [==hi==]{} [**ink**]{color=accent} [a**!b**]{}'), [
+        ['Mark', 'cm-strong'],
+        ['**do**', 'cm-em'],
+        ['do', 'cm-strong'],
+        ['wn', 'cm-em'],
+        ['ink', 'cm-strong'],
+        ['!b', 'cm-strong']
+    ]);
     const near = '[[*c*]{}d]{color=accent}';
     assert.deepEqual(spanDecorations(EditorState.create({ doc: near, selection: { anchor: 3 } }), fieldSpans(near)).words.size, 0);
 });
@@ -416,12 +478,13 @@ function element(name: string, ...childNodes: FakeNode[]): FakeNode {
 
 const shown = (node: FakeNode): string => (node.nodeType === 3 ? node.data : node.childNodes.map(shown).join(''));
 
+/** `root`'s words once reading view drops the span marks it can. */
 function hidden(source: string, root: FakeNode): string {
     hideRenderedSpans(root as unknown as HTMLElement, source);
     return shown(root);
 }
 
-test('reading view drops the group marks it renders as characters, only where they pair as the source does', () => {
+test('reading view drops the group marks it renders as characters, only where the words then read as MarkdownPoint reads them', () => {
     const heading = element(
         'H1',
         text('['),
@@ -434,21 +497,42 @@ test('reading view drops the group marks it renders as characters, only where th
         element('CODE', text('[a]{}'))
     );
     assert.equal(hidden(`# ${word} \`[a]{}\``, heading), 'Markdown [a]{}');
-    // An escaped bracket renders as one, so the rendered pairs outnumber the source's groups.
+    // An escaped bracket renders as one, and stays.
     const escaped = element('P', text('['), element('EM', text('x')), text(']{} and [y]{}'));
-    assert.equal(hidden('[*x*]{} and \\[y]{}', escaped), '[x]{} and [y]{}');
+    assert.equal(hidden('[*x*]{} and \\[y]{}', escaped), 'x and [y]{}');
     const linked = element('P', element('A', text('['), element('EM', text('a')), text(']{}b')));
     assert.equal(hidden('[[*a*]{}b](slide:one)', linked), 'ab');
-    // An escaped bracket inside a group renders as one too: the pair it makes holds other words than the group's.
-    const inside = element('P', text('[a[b]{}'));
-    assert.equal(hidden('[a\\[b]{}', inside), '[a[b]{}');
     const nested = element('P', text('[a[b]{}c]{}'));
     assert.equal(hidden('[a[b]{}c]{}', nested), 'abc');
+    const balanced = element('P', text('[Use [x]]{color=accent} and [Real]{}'));
+    assert.equal(hidden('[Use \\[x\\]]{color=accent} and [Real]{}', balanced), 'Use [x] and Real');
+    const spelled = element(
+        'P',
+        element('CODE', text('\\[')),
+        text(' then ] and ['),
+        element('EM', text('Label')),
+        text(']{color=accent}.')
+    );
+    assert.equal(hidden('`\\[` then \\] and [*Label*]{color=accent}.', spelled), '\\[ then ] and Label.');
+    // A span's attributes read as rendered.
+    assert.equal(hidden('[Title]{color=accent note="R&amp;D"}', element('P', text('[Title]{color=accent note="R&D"}'))), 'Title');
+    assert.equal(hidden('[Title]{note="draft\\_one"}', element('P', text('[Title]{note="draft_one"}'))), 'Title');
+    // Where the brackets the rendering pairs are not the spans' own, the words read otherwise and keep every character.
+    for (const [source, words] of [
+        ['[a\\[b]{}', '[a[b]{}'],
+        ['[]{} before [Title]{}', '[]{} before [Title]{}'],
+        ['[literal]\\{} [Real]{}', '[literal]{} [Real]{}']
+    ] as const)
+        assert.equal(hidden(source, element('P', text(words))), words, source);
     // With a definition, Obsidian links the group's words and renders the escaped brackets alone as a pair.
     const referenced = element('P', element('A', text('x')), text('{} and [x]{}'));
     assert.equal(hidden('[x]{} and \\[x]{}\n\n[x]: https://example.com\n', referenced), 'x{} and [x]{}');
     const listed = element('UL', element('LI', text('['), element('EM', text('a')), text(']{}b')), element('LI', text('c')));
     assert.equal(hidden('- [*a*]{}b\n- c\n', listed), 'abc');
+    // A task's box reading view draws as a checkbox.
+    const box = (checked: boolean): FakeNode => ({ ...element('INPUT'), type: 'checkbox', checked }) as FakeNode;
+    const tasks = element('UL', element('LI', box(true), text(' [Done]{color=accent}')), element('LI', box(false), text(' Open')));
+    assert.equal(hidden('- [X] [Done]{color=accent}\n- [ ] Open\n', tasks), ' Done Open');
     const entity = element('P', text('['), element('STRONG', text('A&B')), text(']{}'));
     assert.equal(hidden('[**A&amp;B**]{}', entity), 'A&B');
 });
@@ -501,6 +585,15 @@ test("reading view drops a table's span marks, and the backslash Obsidian keeps 
         rows.map(each => shown(each.childNodes[1]!)),
         ['\\|', 'a\\|b', '\\|\\|', 'see x\\| now', 'x\\|', 'plain words']
     );
+    // Brackets in two cells make a pair the source doesn't: the words keep every character.
+    const across = '| A | B | C |\n| --- | --- | --- |\n| [opening | closing]{} | [Title]{} |\n';
+    const cells = [element('TD', text('[opening')), element('TD', text('closing]{}')), element('TD', text('[Title]{}'))];
+    hideRenderedSpans(element('TABLE', element('TBODY', element('TR', ...cells))) as unknown as HTMLElement, across);
+    assert.deepEqual(cells.map(shown), ['[opening', 'closing]{}', '[Title]{}']);
+    // A cell's words are inline, so a `#` opening one is a character of them.
+    const heading = element('TR', element('TD', text('# Title')), element('TD', text('[Choice]{}')));
+    hideRenderedSpans(element('TABLE', element('TBODY', heading)) as unknown as HTMLElement, '| # Title | [Choice]{} |\n| --- | --- |\n');
+    assert.equal(shown(heading), '# TitleChoice');
     // Outside a table, code keeps its backslash, as it reads.
     const paragraph = element('P', code('a\\'), text('['), code('\\|b'), text(']{}'));
     assert.equal(hidden('` a\\ `[`\\|b`]{}', paragraph), 'a\\\\|b');
@@ -514,21 +607,24 @@ test('outline titles read the words of groups and spans, not their marks', () =>
     const document = indexPresentation(markdown, 0)!;
     assert.equal(outlineSlides(markdown, document, 'Title', new Set())[0]!.title, 'Markdown and bold ink');
     assert.equal(outlineSections(markdown, document)[0]!.title, 'Part one');
+    const linked = '<!-- section: intro -->\n# [Introduction](https://example.com) [*Pa*]{}rt\n\n<!-- slide: a -->\n';
+    assert.equal(outlineSections(linked, indexPresentation(linked, 0)!)[0]!.title, 'Introduction Part');
+    // A section's block holds its heading alone: with a definition after it, MarkdownPoint names no section.
     const referenced = '<!-- section: intro -->\n# [Introduction][intro] [*Pa*]{}rt\n\n[intro]: https://example.com\n\n<!-- slide: a -->\n';
-    assert.equal(outlineSections(referenced, indexPresentation(referenced, 0)!)[0]!.title, 'Introduction Part');
+    assert.equal(outlineSections(referenced, indexPresentation(referenced, 0)!)[0]!.title, '');
 });
 
 test('a span inside another hides both, inner marks first where they stand', () => {
     const doc = 'A [*a*[b]{}c*]{} d';
     const decorations = spanDecorations(EditorState.create({ doc, selection: { anchor: doc.length } }), fieldSpans(doc));
     // The lexer pairs only `*a*`, so the outer group's last star is a character of its words.
-    assert.deepEqual(ranges(decorations.hidden, doc), ['[', '[', ']{}', ']{}']);
-    assert.deepEqual(ranges(decorations.words, doc), ['*a*[b]{}c*', 'b']);
+    assert.deepEqual(ranges(decorations.hidden, doc), ['[', '*', '*', '[', ']{}', ']{}']);
+    assert.deepEqual(ranges(decorations.words, doc), ['*a*[b]{}c*', 'a', 'b']);
     const colored = 'A [[*c*]{}d]{color=accent} e';
     const away = spanDecorations(EditorState.create({ doc: colored, selection: { anchor: colored.length } }), fieldSpans(colored));
-    assert.deepEqual(ranges(away.hidden, colored), ['[', '[*', '*]{}', ']{color=accent}']);
-    // The inner group's `c` is marked twice: as a span's words, and with the italic it draws inside another span.
-    assert.deepEqual(ranges(away.words, colored), ['[*c*]{}d', 'c', 'c']);
+    assert.deepEqual(ranges(away.hidden, colored), ['[', '[', '*', '*', ']{}', ']{color=accent}']);
+    // The inner group's words are marked as a span's, and its `c` with the italic it draws inside another span.
+    assert.deepEqual(ranges(away.words, colored), ['[*c*]{}d', '*c*', 'c']);
     // The spans inside a span and those right after it make one word, so the caret on any of them shows all of them.
     const joined = 'A [[b]{font-weight=600}c]{color=accent}[d]{} e';
     const spans = fieldSpans(joined);
