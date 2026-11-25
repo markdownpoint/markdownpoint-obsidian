@@ -47,18 +47,24 @@ const deployToTestVault = {
 };
 
 // A file imported with ?raw is its text, byte for byte, as Vite gives it to the tests: Basic's theme files travel as
-// MarkdownPoint ships them.
+// MarkdownPoint ships them. The bundle names each such file by its namespace path, so that path is relative to the
+// repository: a rebuild in another folder, such as the community directory's check, gives the same bytes.
+const repositoryRoot = fileURLToPath(new URL('.', import.meta.url));
 const rawText = {
     name: 'raw-text',
     setup(builder) {
-        builder.onResolve({ filter: /\?raw$/ }, args => ({
-            path: path.join(args.resolveDir, args.path.slice(0, -'?raw'.length)),
-            namespace: 'raw-text'
-        }));
+        builder.onResolve({ filter: /\?raw$/ }, args => {
+            const file = path.join(args.resolveDir, args.path.slice(0, -'?raw'.length));
+            return {
+                path: path.relative(repositoryRoot, file).split(path.sep).join('/'),
+                namespace: 'raw-text',
+                pluginData: file
+            };
+        });
         builder.onLoad({ filter: /.*/, namespace: 'raw-text' }, async args => ({
-            contents: await readFile(args.path),
+            contents: await readFile(args.pluginData),
             loader: 'text',
-            watchFiles: [args.path]
+            watchFiles: [args.pluginData]
         }));
     }
 };

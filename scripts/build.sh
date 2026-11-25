@@ -72,6 +72,13 @@ if ! npm run build; then
     exit 1
 fi
 
+# The community directory rebuilds each release from its tag in a folder of its own and compares the bundle with the
+# released one, so a bundle that names the folder it was built in never matches
+if grep -qF "$(pwd -P)" main.js; then
+    echo "❌ main.js names the build folder $(pwd -P), so a rebuild elsewhere differs"
+    exit 1
+fi
+
 echo ""
 echo "=== All checks passed ==="
 
