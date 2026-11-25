@@ -20,14 +20,15 @@ import { Marked, Tokenizer } from 'marked';
 import type { Lexer, Token, TokenizerObject, Tokens } from 'marked';
 import { MAX_MARKDOWN_NESTING } from '../readers/markdownpoint-readers.js';
 
-/** How many lists and quotes the block each lexer reads stands in. */
+/** How many lists and quotes the block each lexer reads stands in, or how much emphasis and how many spans its words. */
 const nesting = new WeakMap<object, number>();
 
 /**
- * A list's or a quote's token, read one level deeper; none past `MAX_MARKDOWN_NESTING`, where the marker reads as words,
- * as MarkdownPoint reads it, so Marked never recurses deep enough to overflow its stack.
+ * A list's, a quote's, an emphasis's or a span's token, read one level deeper; none past `MAX_MARKDOWN_NESTING`, where
+ * the marker reads as words, as MarkdownPoint reads it, so Marked never recurses deep enough to overflow its stack. Marked
+ * reads every block's words after its blocks, so the words count their own depth from none.
  */
-function nested<T>(lexer: object, read: () => T): T | undefined {
+export function nested<T>(lexer: object, read: () => T): T | undefined {
     const depth = nesting.get(lexer) ?? 0;
     if (depth >= MAX_MARKDOWN_NESTING) return undefined;
     nesting.set(lexer, depth + 1);

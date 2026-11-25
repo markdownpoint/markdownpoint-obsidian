@@ -20,6 +20,7 @@ import assert from 'node:assert/strict';
 import type { Token, Tokens } from 'marked';
 import { test } from 'vitest';
 import { blockTokens } from '../src/format/block-grammar.ts';
+import { wordTokens } from '../src/format/link-tokens.ts';
 import { MAX_MARKDOWN_NESTING } from '../src/readers/markdownpoint-readers.js';
 import { assertLinear } from './support/linear.ts';
 
@@ -44,6 +45,21 @@ test('lists and quotes nest as deep as MarkdownPoint reads them, and a marker de
         const deep = blockTokens(`${marker.repeat(5_000)}x`);
         assert.equal(depth(deep), MAX_MARKDOWN_NESTING, marker);
         assert.equal(deep.map(token => token.raw).join(''), `${marker.repeat(5_000)}x`, marker);
+    }
+});
+
+test('emphasis and spans nest as deep as MarkdownPoint reads them, and a marker deeper reads as words', () => {
+    const inlineDepth = (tokens: readonly Token[]): number =>
+        Math.max(0, ...tokens.map(token => (token.type === 'strong' || token.type === 'em' ? 1 + inlineDepth(token.tokens ?? []) : 0)));
+    // Marked would overflow its stack about a thousand `**` deep, and three thousand spans.
+    for (const [open, close, levels] of [
+        ['**', '**', 1_000],
+        ['[', ']{font-style=normal}', 3_000]
+    ] as const) {
+        const words = `${open.repeat(levels)}x${close.repeat(levels)}`;
+        const tokens = wordTokens(words);
+        assert.equal(inlineDepth(tokens), MAX_MARKDOWN_NESTING, open);
+        assert.equal(tokens.map(token => token.raw).join(''), words, open);
     }
 });
 

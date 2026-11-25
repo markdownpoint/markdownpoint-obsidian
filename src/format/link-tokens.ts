@@ -18,7 +18,7 @@
 
 import { Lexer, Marked, Tokenizer } from 'marked';
 import type { Token } from 'marked';
-import { blockRules } from './block-grammar.ts';
+import { blockRules, nested } from './block-grammar.ts';
 import { decodeCharacterReferences, tokenPlainWords } from '../core/character-references.ts';
 import { isRecord } from './recognition.ts';
 
@@ -172,29 +172,31 @@ const grammar = new Marked({
         del: () => undefined,
         emStrong(source, masked, previous = '') {
             if (source[0] !== '*' && source[0] !== '_') return false;
-            // Each lexer owns one field. Reuse its paragraph mask across emphasis starts.
-            const cache = emphasisMasks.get(this.lexer) ?? new Map<string, EmphasisMask>();
-            emphasisMasks.set(this.lexer, cache);
-            const from = masked.length - source.length;
-            const saved = cache.get(masked);
-            const prepared = saved && saved.from <= from ? saved : maskFormatting(source, masked);
-            if (prepared !== saved) cache.set(masked, prepared);
-            let shown = prepared.shown.slice(from - prepared.from);
-            let mask = prepared.mask;
-            if (source[0] === '*') {
-                // Only the opening neighbor is read from source; closing runs use the mask.
-                const opening = /^\*+[^*]?/u.exec(shown)![0];
-                const prefix = relaxedStars(previous + opening);
-                shown = prefix.slice(previous.length) + shown.slice(opening.length);
-                previous = prefix.slice(0, previous.length);
-                mask = prepared.stars;
-            }
-            const token = Tokenizer.prototype.emStrong.call(this, shown, mask, previous);
-            if (!token || shown === source) return token;
-            const raw = source.slice(0, token.raw.length);
-            const width = token.type === 'strong' ? 2 : 1;
-            const text = raw.slice(width, -width);
-            return { ...token, raw, text, tokens: this.lexer.inlineTokens(text) };
+            return nested(this.lexer, () => {
+                // Each lexer owns one field. Reuse its paragraph mask across emphasis starts.
+                const cache = emphasisMasks.get(this.lexer) ?? new Map<string, EmphasisMask>();
+                emphasisMasks.set(this.lexer, cache);
+                const from = masked.length - source.length;
+                const saved = cache.get(masked);
+                const prepared = saved && saved.from <= from ? saved : maskFormatting(source, masked);
+                if (prepared !== saved) cache.set(masked, prepared);
+                let shown = prepared.shown.slice(from - prepared.from);
+                let mask = prepared.mask;
+                if (source[0] === '*') {
+                    // Only the opening neighbor is read from source; closing runs use the mask.
+                    const opening = /^\*+[^*]?/u.exec(shown)![0];
+                    const prefix = relaxedStars(previous + opening);
+                    shown = prefix.slice(previous.length) + shown.slice(opening.length);
+                    previous = prefix.slice(0, previous.length);
+                    mask = prepared.stars;
+                }
+                const token = Tokenizer.prototype.emStrong.call(this, shown, mask, previous);
+                if (!token || shown === source) return token;
+                const raw = source.slice(0, token.raw.length);
+                const width = token.type === 'strong' ? 2 : 1;
+                const text = raw.slice(width, -width);
+                return { ...token, raw, text, tokens: this.lexer.inlineTokens(text) };
+            });
         }
     },
     extensions: [
@@ -208,12 +210,12 @@ const grammar = new Marked({
             tokenizer(source) {
                 const span = delimitedSpan(source) ?? presentationSpan(source);
                 if (!span) return undefined;
-                return {
+                return nested(this.lexer, () => ({
                     type: 'strong',
                     raw: source.slice(0, span.length),
                     text: span.content,
                     tokens: this.lexer.inlineTokens(span.content)
-                };
+                }));
             }
         }
     ]
