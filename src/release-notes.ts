@@ -48,7 +48,12 @@ const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '1.0.3',
         date: '2026-11-24',
-        changed: ['Skipped slides are numbered in the outline and on their dividers. Their numbers are in parentheses.']
+        changed: ['Skipped slides are numbered in the outline and on their dividers. Their numbers are in parentheses.'],
+        fixed: [
+            'Outline labels such as `**Big *news*!** today` no longer show their asterisks. In Live Preview, bold and italic around a span match the MarkdownPoint app.',
+            'A section name with a superscript or a subscript, such as `E = mc<sup>2</sup>`, appears in the outline.',
+            'A line break ends a slide’s label in the outline.'
+        ]
     },
     {
         version: '1.0.2',

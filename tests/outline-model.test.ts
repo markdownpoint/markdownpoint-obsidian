@@ -36,6 +36,17 @@ test('outline labels use the first authored text, omit formatting, and ignore pr
     assert.equal(slides[1]!.line, markdown.slice(0, document.slides[1]!.from).split('\n').length - 1);
 });
 
+test('outline labels read bold and italic as MarkdownPoint pairs their delimiters, and a line break ends the first line', () => {
+    for (const [text, title] of [
+        ['**a <kbd>b *c*</kbd>** d', 'a b c d'],
+        ['**a *c*!** d', 'a c! d'],
+        ['First<br>Second', 'First']
+    ] as const) {
+        const markdown = `<!-- slide: first -->\n<!-- text: title -->\n${text}\n`;
+        assert.equal(outlineSlides(markdown, indexPresentation(markdown, 0)!, 'Title', new Set())[0]!.title, title, text);
+    }
+});
+
 test('HTML tags and leading single-line or multiline comments are omitted from outline labels', () => {
     for (const text of ['<span>Heading</span>', '<!-- annotation -->\nHeading', '<!--\nAn annotation.\n-->\n# Heading']) {
         const markdown = `<!-- slide: first -->\n<!-- text: heading -->\n${text}\n`;
@@ -110,6 +121,14 @@ test('sections keep authored names and empty sections, and a skipped slide keeps
     assert.equal(outlineRows({ id: 'test-presentation', path: 'slides.md', slides: [], sections }, String).length, 4);
 });
 
+test("a section heading's superscript reads as its words, as MarkdownPoint reads it", () => {
+    const markdown = '<!-- section: energy -->\n# E = mc<sup>2</sup>\n<!-- slide: first -->\n';
+    assert.deepEqual(
+        outlineSections(markdown, indexPresentation(markdown, 0)!).map(section => section.title),
+        ['E = mc2']
+    );
+});
+
 test('a temporary empty or incomplete section heading keeps the slide structure available', () => {
     for (const words of [
         '',
@@ -120,7 +139,8 @@ test('a temporary empty or incomplete section heading keeps the slide structure 
         '# Start <!-- id: s1 -->',
         '# Start <!-- note -->',
         '# *Start <!-- note -->*',
-        '# Start <span>'
+        '# Start <span>',
+        '# Start<br>end'
     ]) {
         const markdown = `<!-- section: opening -->\n${words}\n<!-- slide: first -->\n`;
         const document = indexPresentation(markdown, 0)!;

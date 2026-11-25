@@ -20,15 +20,14 @@ import { Marked, Tokenizer } from 'marked';
 import type { Lexer, Token, TokenizerObject, Tokens } from 'marked';
 import { MAX_MARKDOWN_NESTING } from '../readers/markdownpoint-readers.js';
 
-/** How many lists and quotes the block each lexer reads stands in, or how much emphasis and how many spans its words. */
+/** How many lists and quotes the block each lexer reads stands in. */
 const nesting = new WeakMap<object, number>();
 
 /**
- * A list's, a quote's, an emphasis's or a span's token, read one level deeper; none past `MAX_MARKDOWN_NESTING`, where
- * the marker reads as words, as MarkdownPoint reads it, so Marked never recurses deep enough to overflow its stack. Marked
- * reads every block's words after its blocks, so the words count their own depth from none.
+ * A list's or a quote's token, read one level deeper; none past `MAX_MARKDOWN_NESTING`, where the marker reads as words,
+ * as MarkdownPoint reads it, so Marked never recurses deep enough to overflow its stack.
  */
-export function nested<T>(lexer: object, read: () => T): T | undefined {
+function nested<T>(lexer: object, read: () => T): T | undefined {
     const depth = nesting.get(lexer) ?? 0;
     if (depth >= MAX_MARKDOWN_NESTING) return undefined;
     nesting.set(lexer, depth + 1);
@@ -63,9 +62,9 @@ const FENCES =
 
 /**
  * Block rules where the MarkdownPoint app reads Markdown differently from Marked's defaults. They decide where code
- * and HTML blocks are, and so which marker lines are slide boundaries; every block-level lexer here uses them.
+ * and HTML blocks are, and so which marker lines are slide boundaries.
  */
-export const blockRules: TokenizerObject = {
+const blockRules: TokenizerObject = {
     fences(source) {
         // Marked reads the block's info and code, with CommonMark's closer
         const { rules } = this;

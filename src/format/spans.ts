@@ -68,9 +68,12 @@ function keepsSource(token: Token): boolean {
     return children.some(keepsSource);
 }
 
+/** The tokens a run of delimiters around words reads as: `*` and `_` as an em or a strong, `==` and `~~` as their own. */
+const enclosingTokens = new Set(['em', 'strong', 'mp_highlight', 'mp_strike']);
+
 /**
- * How many of `lead`'s delimiters pair around all of `content`'s words, as the lexer pairs them, all or none, and the
- * style each pair draws. The lexer reads `==` and `~~` as containers, so their characters name their style.
+ * How many of `lead`'s delimiters pair around all of `content`'s words, as the MarkdownPoint app pairs them, all or none,
+ * and the style each pair draws, which its characters name.
  */
 function enclosing(content: string, lead: string): { width: number; styles: SpanStyle[] } {
     const none = { width: 0, styles: [] };
@@ -80,8 +83,7 @@ function enclosing(content: string, lead: string): { width: number; styles: Span
     while (width < lead.length) {
         const tokens = wordTokens(words);
         const token = tokens.length === 1 ? tokens[0]! : null;
-        if (!token || token.raw !== words || (token.type !== 'em' && token.type !== 'strong') || typeof token.text !== 'string')
-            return none;
+        if (!token || token.raw !== words || !enclosingTokens.has(token.type) || typeof token.text !== 'string') return none;
         const delimiter = (words.length - token.text.length) / 2;
         if (!(delimiter >= 1) || words.slice(delimiter, words.length - delimiter) !== token.text) return none;
         styles.push(delimiterStyles[words.slice(0, delimiter)]!);

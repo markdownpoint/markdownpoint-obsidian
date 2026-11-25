@@ -18,7 +18,7 @@
 
 import { decodeCharacterReferences } from '../core/character-references.ts';
 import { linkTokens } from './link-tokens.ts';
-import type { Token, Tokens } from 'marked';
+import type { MarkdownTableCell, MarkdownToken } from '../readers/markdownpoint-readers.js';
 
 const punctuation = /\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])/g;
 const decode = (value: string): string => decodeCharacterReferences(value.replace(punctuation, '$1'));
@@ -41,14 +41,19 @@ function rowCells(line: string): { from: number; to: number }[] {
  * The one table a table block's words hold, no row wider than its header and no cell's words holding a line feed or a
  * carriage return by a character reference, or null when they hold anything else, as MarkdownPoint reads a table.
  */
-function blockTable(source: string): Tokens.Table | null {
+function blockTable(source: string): MarkdownToken | null {
     const trimmed = source.replace(/\r\n?/g, '\n').trim();
     const blocks = linkTokens(trimmed).filter(token => token.type !== 'space');
-    const table = blocks[0] as Tokens.Table | undefined;
+    const table = blocks[0];
     if (blocks.length !== 1 || table?.type !== 'table' || table.raw.trim() !== trimmed) return null;
-    const width = table.header.length;
+    const width = table.header?.length;
     if (!width || trimmed.split('\n').some(line => rowCells(line).length > width)) return null;
-    return [...table.header, ...table.rows.flat()].some(cell => breaksLine(cell.tokens)) ? null : table;
+    return tableCells(table).some(cell => breaksLine(cell.tokens)) ? null : table;
+}
+
+/** A table's cells, its header's and its rows'. */
+function tableCells(table: MarkdownToken): MarkdownTableCell[] {
+    return [...(table.header ?? []), ...(table.rows ?? []).flat()];
 }
 
 /**
@@ -56,21 +61,37 @@ function blockTable(source: string): Tokens.Table | null {
  * run of plain words, a bare address among them, and never in code, an escaped character, a picture, an autolink or
  * HTML, which it keeps as written.
  */
-function breaksLine(tokens: readonly Token[]): boolean {
+function breaksLine(tokens: readonly MarkdownToken[]): boolean {
     let words = '';
     const broken = (): boolean => /[\r\n]/.test(decodeCharacterReferences(words));
     for (const token of tokens) {
-        const nested = 'tokens' in token && token.tokens?.length ? token.tokens : undefined;
+        const nested = token.tokens?.length ? token.tokens : undefined;
         if ((token.type === 'text' && !nested) || (token.type === 'link' && !/^[[<]/.test(token.raw))) {
-            words += token.type === 'text' ? ((token as Tokens.Text).text ?? token.raw) : token.raw;
+            words += token.type === 'text' ? (token.text ?? token.raw) : token.raw;
             continue;
         }
         if (broken()) return true;
         words = '';
-        if (nested && token.type !== 'image' && !token.raw.startsWith('<') && breaksLine(nested)) return true;
+        // An autolink's address is kept as written; a superscript's or a subscript's tags hold words.
+        const autolink = token.type === 'link' && token.raw.startsWith('<');
+        if (nested && token.type !== 'image' && !autolink && breaksLine(nested)) return true;
     }
     return broken();
 }
+
+/** The tokens whose own words may hold a link: blocks, and the marks MarkdownPoint reads around words. */
+const wordsHolders = new Set([
+    'paragraph',
+    'heading',
+    'blockquote',
+    'text',
+    'strong',
+    'em',
+    'mp_highlight',
+    'mp_strike',
+    'mp_span',
+    'mp_baseline'
+]);
 
 /** Trace actual link destinations through a parse-only copy; saved source never receives probe text. */
 export function remapMarkdownSlideLinks(
@@ -123,7 +144,7 @@ export function remapMarkdownSlideLinks(
     const tokens = table ? [table] : linkTokens(annotated);
     const found = new Set<string>();
     const probes = new Map(candidates.map(candidate => [candidate.probe, candidate]));
-    const pending: Token[] = [...tokens];
+    const pending: MarkdownToken[] = [...tokens];
     while (pending.length) {
         const token = pending.pop()!;
         if (token.type === 'link') {
@@ -136,18 +157,13 @@ export function remapMarkdownSlideLinks(
                 if (probe && (inline || probe.literal)) found.add(probe.probe);
             }
             // A link's words may hold another, which MarkdownPoint reads as the link of those words.
-            if (inline) pending.push(...(token as Tokens.Link).tokens);
+            if (inline) pending.push(...(token.tokens ?? []));
         } else if (token.type === 'table') {
-            if (schema === 'table') {
-                const table = token as Tokens.Table;
-                for (const cell of [...table.header, ...table.rows.flat()]) pending.push(...cell.tokens);
-            }
+            if (schema === 'table') for (const cell of tableCells(token)) pending.push(...cell.tokens);
         } else if (token.type === 'list') {
-            for (const item of (token as Tokens.List).items) pending.push(...item.tokens);
-        } else if (['paragraph', 'heading', 'blockquote', 'strong', 'em', 'del', 'text'].includes(token.type)) {
-            const nested = token as
-                Tokens.Paragraph | Tokens.Heading | Tokens.Blockquote | Tokens.Strong | Tokens.Em | Tokens.Del | Tokens.Text;
-            pending.push(...(nested.tokens ?? []));
+            for (const item of token.items ?? []) pending.push(...(item.tokens ?? []));
+        } else if (wordsHolders.has(token.type)) {
+            pending.push(...(token.tokens ?? []));
         }
     }
     position = 0;

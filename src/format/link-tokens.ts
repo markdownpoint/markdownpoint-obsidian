@@ -16,26 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Lexer, Marked, Tokenizer } from 'marked';
-import type { Token } from 'marked';
-import { blockRules, nested } from './block-grammar.ts';
+import { Lexer, Tokenizer } from 'marked';
 import { decodeCharacterReferences, tokenPlainWords } from '../core/character-references.ts';
+import { markdownTokens, markdownWordTokens } from '../readers/markdownpoint-readers.js';
+import type { MarkdownToken } from '../readers/markdownpoint-readers.js';
 import { isRecord } from './recognition.ts';
-
-interface EmphasisMask {
-    from: number;
-    shown: string;
-    mask: string;
-    stars: string;
-}
-const emphasisMasks = new WeakMap<Lexer, Map<string, EmphasisMask>>();
-
-/** The MarkdownPoint app lets stars separate punctuation from adjacent words, including CJK. */
-function relaxedStars(source: string): string {
-    return source.replace(/(?!\*)[\p{P}\p{S}](?=\*+[^\s\p{P}\p{S}])|(?<=[^\s\p{P}\p{S}]\*+)(?!\*)[\p{P}\p{S}]/gu, char =>
-        'a'.repeat(char.length)
-    );
-}
 
 /** Advance over Markdown that keeps delimiter characters literal. */
 export function literalEnd(source: string, at: number): number {
@@ -83,34 +68,6 @@ function closingBracket(source: string, opening: number, nestedDestinations = fa
     return -1;
 }
 
-/** A malformed destination does not shield delimiters in its apparent label. */
-function protectedEnd(source: string, at: number): number {
-    const literal = literalEnd(source, at);
-    if (literal > at) return literal;
-    const opening = source.startsWith('![', at) ? at + 1 : source[at] === '[' ? at : -1;
-    if (opening < 0) return at;
-    const closing = closingBracket(source, opening);
-    if (closing < 0) return at;
-    if (source[closing + 1] === '(') {
-        const end = destinationEnd(source, closing + 1);
-        return end > closing + 1 ? end : at;
-    }
-    const reference = /^\[(?:\\[\s\S]|[^\]\\])*\]/.exec(source.slice(closing + 1));
-    return closing + 1 + (reference?.[0].length ?? 0);
-}
-
-function delimitedSpan(source: string): { length: number; content: string } | null {
-    const delimiter = source.slice(0, 2);
-    if ((delimiter !== '==' && delimiter !== '~~') || !/\S/.test(source[2] ?? '')) return null;
-    for (let at = 2; at < source.length;) {
-        if (at > 2 && source.startsWith(delimiter, at) && /\S/.test(source[at - 1]!))
-            return { length: at + 2, content: source.slice(2, at) };
-        const end = protectedEnd(source, at);
-        at = end > at ? end : at + 1;
-    }
-    return null;
-}
-
 /** A span's attribute, `key=value`, its value bare or in double or single quotes, on one line, as the app reads it. */
 const spanPair = String.raw`[a-z][a-z0-9-]*=(?:"[^"\n]*"|'[^'\n]*'|[^\s"'{}]+)`;
 /** Spaces and tabs with at most one line break among them, as Pandoc's reader skips them inside an attribute block. */
@@ -140,100 +97,26 @@ export function presentationSpan(source: string): { length: number; content: str
     return attributes ? { length: close + 1 + attributes, content: source.slice(1, close) } : null;
 }
 
-/** An enclosing emphasis delimiter cannot close inside another formatting span. */
-function maskFormatting(source: string, masked: string): EmphasisMask {
-    const offset = masked.length - source.length;
-    const pieces: string[] = [];
-    const shown: string[] = [];
-    let from = 0;
-    for (let at = 0; at < source.length;) {
-        const end = literalEnd(source, at);
-        if (end > at) {
-            at = end;
-            continue;
-        }
-        const span = delimitedSpan(source.slice(at)) ?? presentationSpan(source.slice(at));
-        if (span) {
-            pieces.push(masked.slice(offset + from, offset + at), 'a'.repeat(span.length));
-            shown.push(source.slice(from, at), 'a'.repeat(span.length));
-            at += span.length;
-            from = at;
-        } else at++;
-    }
-    const mask = pieces.length ? masked.slice(0, offset) + pieces.join('') + masked.slice(offset + from) : masked;
-    return { from: offset, shown: shown.length ? shown.join('') + source.slice(from) : source, mask, stars: relaxedStars(mask) };
+/**
+ * Markdown's blocks and their words as the MarkdownPoint app reads them, for finding navigation links and reading words
+ * as labels, never for rendering or serializing words.
+ */
+export function linkTokens(source: string): MarkdownToken[] {
+    return markdownTokens(source);
 }
 
-/** The MarkdownPoint app's extra inline formatting only contributes a container for its words. */
-const grammar = new Marked({
-    gfm: true,
-    tokenizer: {
-        ...blockRules,
-        del: () => undefined,
-        emStrong(source, masked, previous = '') {
-            if (source[0] !== '*' && source[0] !== '_') return false;
-            return nested(this.lexer, () => {
-                // Each lexer owns one field. Reuse its paragraph mask across emphasis starts.
-                const cache = emphasisMasks.get(this.lexer) ?? new Map<string, EmphasisMask>();
-                emphasisMasks.set(this.lexer, cache);
-                const from = masked.length - source.length;
-                const saved = cache.get(masked);
-                const prepared = saved && saved.from <= from ? saved : maskFormatting(source, masked);
-                if (prepared !== saved) cache.set(masked, prepared);
-                let shown = prepared.shown.slice(from - prepared.from);
-                let mask = prepared.mask;
-                if (source[0] === '*') {
-                    // Only the opening neighbor is read from source; closing runs use the mask.
-                    const opening = /^\*+[^*]?/u.exec(shown)![0];
-                    const prefix = relaxedStars(previous + opening);
-                    shown = prefix.slice(previous.length) + shown.slice(opening.length);
-                    previous = prefix.slice(0, previous.length);
-                    mask = prepared.stars;
-                }
-                const token = Tokenizer.prototype.emStrong.call(this, shown, mask, previous);
-                if (!token || shown === source) return token;
-                const raw = source.slice(0, token.raw.length);
-                const width = token.type === 'strong' ? 2 : 1;
-                const text = raw.slice(width, -width);
-                return { ...token, raw, text, tokens: this.lexer.inlineTokens(text) };
-            });
-        }
-    },
-    extensions: [
-        {
-            name: 'presentation-format',
-            level: 'inline',
-            start: source => {
-                const found = /==|~~|\[/.exec(source);
-                return found?.index;
-            },
-            tokenizer(source) {
-                const span = delimitedSpan(source) ?? presentationSpan(source);
-                if (!span) return undefined;
-                return nested(this.lexer, () => ({
-                    type: 'strong',
-                    raw: source.slice(0, span.length),
-                    text: span.content,
-                    tokens: this.lexer.inlineTokens(span.content)
-                }));
-            }
-        }
-    ]
-});
-
-/** Tokens for finding navigation links and reading words as labels, never for rendering or serializing words. */
-export function linkTokens(source: string): Token[] {
-    return grammar.lexer(source);
+/** Words alone as the MarkdownPoint app reads them, as `linkTokens` reads a block's. */
+export function wordTokens(source: string): MarkdownToken[] {
+    return markdownWordTokens(source);
 }
 
-/** Inline tokens for reading words as labels: a span's marks only contribute a container for its words. */
-export function wordTokens(source: string): Token[] {
-    return Lexer.lexInline(source, grammar.defaults);
-}
-
-/** Whether tokens hold HTML at any depth: a comment, a paragraph id's included, or a tag. */
+/** Whether tokens hold HTML at any depth: a comment, a paragraph id's included, or a tag, a line break's `<br>` among them. */
 export function holdsHtml(tokens: readonly unknown[]): boolean {
-    return tokens.some(token => isRecord(token) && (token.type === 'html' || (Array.isArray(token.tokens) && holdsHtml(token.tokens))));
+    return tokens.some(
+        token =>
+            isRecord(token) &&
+            (token.type === 'html' || token.type === 'mp_line_break' || (Array.isArray(token.tokens) && holdsHtml(token.tokens)))
+    );
 }
 
 /** Whether a token is one marked gives, which may be plain words. */
@@ -303,7 +186,9 @@ export function inlineText(tokens: readonly unknown[]): string {
 function tokenText(token: unknown): string {
     if (!isRecord(token)) return '';
     if (token.type === 'html' || token.type === 'def') return '';
-    if (token.type === 'br') return '\n';
+    if (token.type === 'br' || token.type === 'mp_line_break') return '\n';
+    // A field, `{{slide-number}}`, reads as written: a label has no slide to number.
+    if (token.type === 'mp_field') return typeof token.raw === 'string' ? token.raw : '';
     const children: unknown = token.tokens ?? token.items;
     if (Array.isArray(children)) return inlineText(children);
     const header: unknown = token.header;
