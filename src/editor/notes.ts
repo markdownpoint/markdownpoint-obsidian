@@ -32,10 +32,7 @@ export interface SlideNotes {
 export function slideNotes(markdown: string, document: PresentationDocument, placeholder: string): SlideNotes[] {
     const notes: SlideNotes[] = [];
     for (const slide of document.slides) {
-        const blocks = slide.blocks.filter(block => block.kind === 'notes');
-        // Duplicate notes are malformed input. Leave all of their source visible.
-        if (blocks.length > 1) continue;
-        const block = blocks[0];
+        const block = slide.blocks.find(block => block.kind === 'notes');
         notes.push({
             slideId: slide.id,
             at: block?.from ?? slide.to,

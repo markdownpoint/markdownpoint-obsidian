@@ -222,7 +222,7 @@ test("a link in a span's words reads as one, with its destination, as no other l
 });
 
 const deck =
-    '<!-- slide: first -->\n<!-- text: title -->\n# ' +
+    '<!-- section: start -->\n# Start\n\n<!-- slide: first -->\n<!-- text: title -->\n# ' +
     word +
     '\n\n<!-- text: body -->\nA [*x*]{}y [here]{color=accent}.\n\n<!-- notes -->\nSay [**it**]{}s [now]{font-weight=600}.\n\n' +
     '<!-- section: part -->\n# [*Pa*]{}rt\n\n<!-- slide: second -->\n<!-- text: label -->\n[*No*]{}rth\n';
@@ -601,12 +601,12 @@ test("reading view drops a table's span marks, and the backslash Obsidian keeps 
 
 test('outline titles read the words of groups and spans, not their marks', () => {
     const markdown =
-        '<!-- slide: first -->\n<!-- text: title -->\n# ' +
+        '<!-- section: start -->\n# Start\n\n<!-- slide: first -->\n<!-- text: title -->\n# ' +
         word +
         ' and [bold]{font-weight=600} [ink]{color=accent}\n\n<!-- section: part -->\n# [*Pa*]{}rt ==one==\n\n<!-- slide: second -->\n';
     const document = indexPresentation(markdown, 0)!;
     assert.equal(outlineSlides(markdown, document, 'Title', new Set())[0]!.title, 'Markdown and bold ink');
-    assert.equal(outlineSections(markdown, document)[0]!.title, 'Part one');
+    assert.equal(outlineSections(markdown, document)[1]!.title, 'Part one');
     const linked = '<!-- section: intro -->\n# [Introduction](https://example.com) [*Pa*]{}rt\n\n<!-- slide: a -->\n';
     assert.equal(outlineSections(linked, indexPresentation(linked, 0)!)[0]!.title, 'Introduction Part');
     // A section's block holds its heading alone: with a definition after it, MarkdownPoint names no section.

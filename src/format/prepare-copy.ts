@@ -18,7 +18,8 @@
 
 import type { CapturedPart } from './capture.ts';
 import { remapRecordReferences } from './companion.ts';
-import { escapeMarkerShapedNotes, indexPresentation, spellBlocks } from './document.ts';
+import { escapeMarkerShapedNotes } from '../readers/markdownpoint-readers.js';
+import { indexPresentation, spellBlocks } from './document.ts';
 import { isStableId } from './recognition.ts';
 import { remapMarkdownSlideLinks } from './slide-links.ts';
 import { blockField, type PartTextSchemas } from './text-schemas.ts';

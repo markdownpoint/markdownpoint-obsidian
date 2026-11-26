@@ -22,7 +22,7 @@ import { indexPresentation } from '../src/format/document.ts';
 import { slideForGap, slideForMenu } from '../src/editor/menu-target.ts';
 
 const source =
-    '\n<!-- section: opening -->\nOpening\n<!-- slide: one -->\n<!-- text: body -->\nFirst\n\n\n<!-- slide: two -->\n<!-- text: body -->\nSecond\n';
+    '\n<!-- section: opening -->\n# Opening\n<!-- slide: one -->\n<!-- text: body -->\nFirst\n\n\n<!-- slide: two -->\n<!-- text: body -->\nSecond\n';
 
 test('slide menu targets fields, inter-slide whitespace and EOF without targeting section names', () => {
     const document = indexPresentation(source, 0)!;
@@ -52,7 +52,7 @@ test("frontmatter does not borrow the first slide's actions", () => {
 
 test("the gap above a slide's rule belongs to the preceding slide; at the top and after a section's heading it stays the slide's own", () => {
     const source =
-        '<!-- slide: one -->\n\n<!-- text: body -->\nFirst\n\n<!-- slide: two -->\n\n<!-- text: body -->\nSecond\n\n' +
+        '<!-- section: first -->\n# First\n\n<!-- slide: one -->\n\n<!-- text: body -->\nFirst\n\n<!-- slide: two -->\n\n<!-- text: body -->\nSecond\n\n' +
         '<!-- section: more -->\n# More\n\n<!-- slide: three -->\n\n<!-- text: body -->\nThird\n';
     const document = indexPresentation(source, 0)!;
     const gap = (id: string) =>

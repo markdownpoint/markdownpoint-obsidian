@@ -65,9 +65,8 @@ export function isUuid(value: unknown): value is string {
     return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
 }
 
-/** A stable id as a pattern's part: a lowercase letter, then letters, digits and single hyphens, ending in a letter or a digit. */
-export const STABLE_ID_BODY = '[a-z][a-z0-9]*(?:-[a-z0-9]+)*';
-const STABLE_ID = new RegExp(`^${STABLE_ID_BODY}$`);
+/** A stable id: a lowercase letter, then letters, digits and single hyphens, ending in a letter or a digit. */
+const STABLE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 export function isStableId(value: unknown): value is string {
     return typeof value === 'string' && STABLE_ID.test(value);

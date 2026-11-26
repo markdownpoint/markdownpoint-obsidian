@@ -46,6 +46,13 @@ export interface ReleaseNote {
 /** Newest first. A new release goes at the top. */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '1.0.4',
+        date: '2026-11-26',
+        changed: [
+            'The outline is empty while you edit a presentation the MarkdownPoint app can’t read. For example, the app can’t read a slide before the first section.'
+        ]
+    },
+    {
         version: '1.0.3',
         date: '2026-11-26',
         changed: [

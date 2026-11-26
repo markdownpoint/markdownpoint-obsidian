@@ -18,13 +18,8 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import {
-    FORMAT_VERSION,
-    formatStanding,
-    opensFormatVersion,
-    readsFormatFully,
-    statedMarkdownVersion
-} from '../src/format/format-version.ts';
+import { FORMAT_VERSION, formatStanding, opensFormatVersion, readsFormatFully } from '../src/format/format-version.ts';
+import { statedMarkdownVersion } from '../src/readers/markdownpoint-readers.js';
 
 test('the plugin writes format 1.0', () => {
     assert.equal(FORMAT_VERSION, '1.0');

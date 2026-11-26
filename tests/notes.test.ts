@@ -36,9 +36,8 @@ test('notes preserve existing payload ranges and expose missing slots at their s
     assert.equal(slots[1]!.at, markdown.length);
 });
 
-test('duplicate notes stay raw and do not produce an additional notes slot', () => {
-    const markdown = '<!-- slide: first -->\n<!-- notes -->\nOne.\n<!-- notes -->\nTwo.\n';
-    assert.deepEqual(slideNotes(markdown, indexPresentation(markdown, 0)!, 'Notes'), []);
+test('a page with two notes is refused, as MarkdownPoint refuses it, so its source stays as written', () => {
+    assert.equal(indexPresentation('<!-- slide: first -->\n<!-- notes -->\nOne.\n<!-- notes -->\nTwo.\n', 0), null);
 });
 
 test('creating notes preserves existing source and leaves a writable insertion caret', () => {
@@ -68,7 +67,7 @@ test('creating notes preserves existing source and leaves a writable insertion c
 
 test('notes insertion respects CRLF and stays within its slide before a section', () => {
     for (const next of ['<!-- section: next -->\r\n# Later\r\n']) {
-        const markdown = '<!-- slide: first -->\r\n<!-- text: body -->\r\nBody.\r\n\r\n' + next;
+        const markdown = '<!-- section: opening -->\r\n# Opening\r\n<!-- slide: first -->\r\n<!-- text: body -->\r\nBody.\r\n\r\n' + next;
         const document = indexPresentation(markdown, 0)!;
         const at = slideNotes(markdown, document, 'Notes')[0]!.at;
         const change = notesInsertion(markdown, at);

@@ -32,8 +32,9 @@ const plan = (source: string, companion: string, slides: readonly PreparedPart[]
 
 test('insertion preserves independent source/JSON order and every surviving record byte', () => {
     const header = '---\nmarkdownpoint: "1.0"\nunknown: keep\n---\n\n';
+    const opening = '<!-- section: opening -->\n# Opening\n\n';
     const section = '<!-- section: ending -->\n# Ending\n\n';
-    const source = header + block('a') + block('b') + section + block('c');
+    const source = header + opening + block('a') + block('b') + section + block('c');
     const raw = String.raw`{ "layout":"title", "future": 900719925474099312345, "escape":"\u00e9" }`;
     const companion = `{ "before": true, "slides": { "c": {}, "a": ${raw}, "b": {} }, "comments": {"thread":{"slide":"a"}} }`;
     const added = {
@@ -44,7 +45,10 @@ test('insertion preserves independent source/JSON order and every surviving reco
     assert.ok(result);
     assert.equal(result.changes[0]!.from, source.indexOf(section));
     assert.equal(result.changes[0]!.from, result.changes[0]!.to);
-    assert.equal(apply(source, result), header + block('a') + block('b') + block('new') + block('another') + section + block('c'));
+    assert.equal(
+        apply(source, result),
+        header + opening + block('a') + block('b') + block('new') + block('another') + section + block('c')
+    );
     assert.ok(result.companion.includes(raw));
     assert.equal(result.companion.slice(result.companion.indexOf(', "comments"')), companion.slice(companion.indexOf(', "comments"')));
     const records = CompanionDocument.read(result.companion)!.records;

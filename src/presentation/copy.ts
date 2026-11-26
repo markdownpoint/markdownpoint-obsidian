@@ -21,7 +21,8 @@ import { encodeSlideClipboard } from '../format/clipboard.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 import { readJsonObject } from '../format/json.ts';
-import { formatStanding, readsFormatFully, statedMarkdownVersion } from '../format/format-version.ts';
+import { formatStanding, readsFormatFully } from '../format/format-version.ts';
+import { statedMarkdownVersion } from '../readers/markdownpoint-readers.js';
 
 export interface CopySource {
     readonly path: string;

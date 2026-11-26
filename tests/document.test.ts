@@ -477,13 +477,23 @@ test('a long line shaped as a marker reads in time in line with its length, in c
         );
 }, 30_000);
 
+test("blank lines after a section's heading read in time in line with their number, words after them or not", () => {
+    for (const after of ['', 'Words\n'])
+        assertLinear(
+            `blank lines after a heading${after ? ' and words' : ''}`,
+            count => `<!-- section: s -->\n# S${'\n'.repeat(count)}${after}<!-- slide: first -->\n`,
+            source => indexPresentation(source, 0),
+            2_000
+        );
+}, 30_000);
+
 test("in a newer minor's file a later minor's block ends the words and the heading before it, and stands in its page or section", () => {
     const front = (version: string) => `---\nmarkdownpoint: ${version}\nid: 0f8c4d0e-6a1b-4c2d-9e3f-5a6b7c8d9e0f\n---\n\n`;
     const body =
         '<!-- section: intro -->\n# Intro\n\n<!-- aside: s -->\nShiny [words]{color=accent}.\n\n' +
         '<!-- slide: a -->\n<!-- glow -->\nFirst.\n\n<!-- text: title -->\nHello.\n\n<!-- sticker: t -->\nTilted words.\n\n' +
         '<!-- notes -->\nSay hi.\n\n  <!-- glow-twice -->\t\nAfter notes.\n\n' +
-        '<!-- slide: b -->\n<!-- text: title -->\nB.\n\n<!-- tail -->';
+        '<!-- slide: b -->\n<!-- text: title -->\nB.\n\n<!-- tail -->\n';
     const read = (version: string, source = body) => {
         const markdown = front(version) + source;
         const document = indexPresentation(markdown, front(version).length)!;
@@ -503,8 +513,11 @@ test("in a newer minor's file a later minor's block ends the words and the headi
         assert.equal(later.heading, '# Intro\n\n', version);
         // The section and the pages hold their blocks, so a move or a deletion takes them along
         assert.equal(later.section, '<!-- section: intro -->\n# Intro\n\n<!-- aside: s -->\nShiny [words]{color=accent}.\n\n', version);
-        assert.ok(later.slides[0]!.includes('After notes.') && later.slides[1]!.endsWith('<!-- tail -->'), version);
-        assert.equal(later.last, later.length, 'a marker that ends the file needs no line break');
+        assert.ok(later.slides[0]!.includes('After notes.') && later.slides[1]!.endsWith('<!-- tail -->\n'), version);
+        assert.equal(later.last, later.length, version);
+        // A marker ends its line, the file's last included
+        const unended = front(version) + body.slice(0, -1);
+        assert.equal(indexPresentation(unended, front(version).length), null, version);
     }
     // In this minor's file, or one that states no version, the same lines are notes in the words, and words in no block
     // after a page's marker refuse the file
