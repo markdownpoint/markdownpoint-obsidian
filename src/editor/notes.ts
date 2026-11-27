@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { Line, RangeSet, RangeValue, Text } from '@codemirror/state';
 import { indexPresentation } from '../format/document.ts';
 import type { PresentationDocument } from '../format/document.ts';
 import { payloadContentEnd } from '../format/payload.ts';
@@ -53,6 +54,46 @@ export function slideNotes(markdown: string, document: PresentationDocument, pla
         });
     }
     return notes;
+}
+
+/**
+ * Where a caret the author's keys or pointer put past the last line shown stops while the last slide's notes, which
+ * run to the end of the file, are closed: at the end of that line, as at any document's last line, since closed notes
+ * and the hidden lines above them hold no caret, and the line below their row shows none. `hiding` are the ranges
+ * that hide source, the draft's and the editor's folds; an empty line is hidden only by a range that runs past its
+ * start. A compact field shows its ghost's line where no source does, entered at its place in `entries`. Null while
+ * the end of the file is shown, or nothing after `bodyStart` is.
+ */
+export function closedNotesEnd(
+    doc: Text,
+    notes: readonly SlideNotes[],
+    opened: ReadonlySet<string>,
+    hiding: readonly RangeSet<RangeValue>[],
+    bodyStart: number,
+    entries: readonly number[]
+): number | null {
+    const last = notes.find(slot => slot.field?.to === doc.length && !opened.has(slot.slideId));
+    if (!last) return null;
+    // Where the range that hides `line` starts, so a fold of many lines is passed in one step; null while it shows
+    const hiddenFrom = (line: Line) => {
+        let start: number | null = null;
+        for (const set of hiding)
+            set.between(line.from, line.to, (from, to) => {
+                if (from > line.from || (line.from < line.to ? to < line.to : to <= line.from)) return undefined;
+                start = Math.min(start ?? from, from);
+                return undefined;
+            });
+        return start;
+    };
+    const entry = Math.max(-1, ...entries.filter(at => at <= last.at));
+    let line = doc.lineAt(last.at - 1);
+    while (line.from >= bodyStart && line.to >= entry) {
+        const from = hiddenFrom(line);
+        if (from === null) return line.to;
+        if (line.from === 0) break;
+        line = doc.lineAt(from < line.from ? from : line.from - 1);
+    }
+    return entry >= bodyStart ? entry : null;
 }
 
 /** A minimal source insertion; all existing bytes and the companion stay intact. */

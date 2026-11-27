@@ -27,6 +27,9 @@ permissions: read-all
 
 jobs:
   release:
+    # The working repository holds the same file and tags each release too. Only the public repository's tag,
+    # which scripts/release.js pushes on the release's commit there, publishes it
+    if: github.repository == 'markdownpoint/markdownpoint-obsidian'
     runs-on: ubuntu-latest
     permissions:
       contents: write

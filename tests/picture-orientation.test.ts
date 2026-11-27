@@ -151,53 +151,19 @@ function orientation(bytes: Buffer, path: string, parts: number[] = []): number 
     return step.value;
 }
 
-interface Served {
-    fetched: number;
-    pulled: number;
-    canceled: boolean;
-}
-
-/** A window whose fetch serves `bytes` in chunks of `size`, an empty chunk after each where `empty`, counting what it hands over. */
-function serving(bytes: Buffer, size: number, { empty = false, fail = 0 } = {}): { window: Window; served: Served } {
-    const served: Served = { fetched: 0, pulled: 0, canceled: false };
+/** The vault's read of a file of `bytes`, failing its first `fail` reads, counting each. */
+function reading(bytes: Buffer, { fail = 0 } = {}): { read: () => Promise<ArrayBuffer>; served: { reads: number } } {
+    const served = { reads: 0 };
     let failures = fail;
-    const window = {
-        fetch: () => {
-            served.fetched += 1;
-            if (failures > 0) {
-                failures -= 1;
-                return Promise.reject(new Error('unreadable'));
-            }
-            let at = 0;
-            let gap = false;
-            const body = new ReadableStream<Uint8Array>(
-                {
-                    pull(controller) {
-                        if (empty && gap) {
-                            gap = false;
-                            controller.enqueue(new Uint8Array(0));
-                            return;
-                        }
-                        if (at >= bytes.length) {
-                            controller.close();
-                            return;
-                        }
-                        const chunk = new Uint8Array(bytes.subarray(at, at + size));
-                        at += chunk.length;
-                        served.pulled += chunk.length;
-                        gap = true;
-                        controller.enqueue(chunk);
-                    },
-                    cancel() {
-                        served.canceled = true;
-                    }
-                },
-                { highWaterMark: 0 }
-            );
-            return Promise.resolve(new Response(body));
+    const read = () => {
+        served.reads += 1;
+        if (failures > 0) {
+            failures -= 1;
+            return Promise.reject(new Error('unreadable'));
         }
+        return Promise.resolve(new Uint8Array(bytes).buffer);
     };
-    return { window: window as unknown as Window, served };
+    return { read, served };
 }
 
 let next = 0;
@@ -298,55 +264,44 @@ test("an AVIF's rotation and then its mirror orient it, as every browser draws i
 
 test('a WebP, GIF, BMP or SVG is drawn as stored, its bytes never read', async () => {
     for (const path of ['a.webp', 'a.gif', 'a.bmp', 'a.svg', 'noextension']) assert.equal(pictureOrientationReading(path, 100), null, path);
-    const { window, served } = serving(png([exif(6)]), 64);
-    assert.equal(await readPictureOrientation(window, address('a.webp'), 'media/a.webp', 100), 1);
-    assert.equal(served.fetched, 0);
+    const { read, served } = reading(png([exif(6)]));
+    assert.equal(await readPictureOrientation(read, address('a.webp'), 'media/a.webp', 100), 1);
+    assert.equal(served.reads, 0);
 });
 
-test('a picture is read from its resource stream until its orientation is known, then the stream is canceled', async () => {
+test("a picture's orientation is read from its bytes once, and known after", async () => {
     const picture = Buffer.concat([jpeg(exifSegment(6)), Buffer.alloc(4 * 1024 * 1024)]);
-    const { window, served } = serving(picture, 64 * 1024);
+    const { read, served } = reading(picture);
     const url = address('photo.jpg');
-    assert.equal(await readPictureOrientation(window, url, 'media/photo.jpg', picture.length), 6);
-    assert.equal(served.pulled, 64 * 1024, 'its first chunk alone');
-    assert.ok(served.canceled);
+    assert.equal(await readPictureOrientation(read, url, 'media/photo.jpg', picture.length), 6);
     assert.equal(knownOrientation(url), 6);
-    assert.equal(await readPictureOrientation(window, url, 'media/photo.jpg', picture.length), 6);
-    assert.equal(served.fetched, 1, 'a picture read once is known');
+    assert.equal(await readPictureOrientation(read, url, 'media/photo.jpg', picture.length), 6);
+    assert.equal(served.reads, 1, 'a picture read once is known');
 });
 
-test('a reading that steps back is served from the bytes the stream already gave, across chunks and empty ones', async () => {
+test('a reading that steps back reads the bytes it went past', async () => {
     const large = png([pngChunk('eXIf', Buffer.concat([tiffOrientation(8, true), Buffer.alloc(3 * 1024 * 1024)]))]);
-    const first = serving(large, 777_777, { empty: true });
-    assert.equal(await readPictureOrientation(first.window, address('large.png'), 'media/large.png', large.length), 8);
+    assert.equal(await readPictureOrientation(reading(large).read, address('large.png'), 'media/large.png', large.length), 8);
     const behind = avif(4032, 3024, [box('mdat', Buffer.alloc(3 * 1024 * 1024))], { turn: 3, mirror: 0 });
-    const second = serving(behind, 1_000_003, { empty: true });
-    assert.equal(await readPictureOrientation(second.window, address('behind.avif'), 'media/behind.avif', behind.length), 7);
-    for (const size of [1, 7, 4096]) {
-        const small = jpeg(exifSegment(5, true));
-        const { window } = serving(small, size, { empty: true });
-        assert.equal(await readPictureOrientation(window, address('small.jpg'), 'media/small.jpg', small.length), 5, `chunks of ${size}`);
-    }
+    assert.equal(await readPictureOrientation(reading(behind).read, address('behind.avif'), 'media/behind.avif', behind.length), 7);
 });
 
 test('a file that ends inside a part is read as far as it goes', async () => {
     const whole = png([exif(6)]);
     const cut = whole.subarray(0, 33 + 8 + 20);
-    const { window, served } = serving(cut, 16);
-    assert.equal(await readPictureOrientation(window, address('cut.png'), 'media/cut.png', whole.length), 1);
-    assert.equal(served.pulled, cut.length);
+    assert.equal(await readPictureOrientation(reading(cut).read, address('cut.png'), 'media/cut.png', whole.length), 1);
 });
 
 test('a read that fails is not kept, and pictures of one file share a read', async () => {
     const picture = png([exif(6)]);
-    const { window, served } = serving(picture, 64, { fail: 1 });
+    const { read, served } = reading(picture, { fail: 1 });
     const url = address('flaky.png');
-    assert.equal(await readPictureOrientation(window, url, 'media/flaky.png', picture.length), null);
+    assert.equal(await readPictureOrientation(read, url, 'media/flaky.png', picture.length), null);
     assert.equal(knownOrientation(url), undefined);
     const [one, two] = await Promise.all([
-        readPictureOrientation(window, url, 'media/flaky.png', picture.length),
-        readPictureOrientation(window, url, 'media/flaky.png', picture.length)
+        readPictureOrientation(read, url, 'media/flaky.png', picture.length),
+        readPictureOrientation(read, url, 'media/flaky.png', picture.length)
     ]);
     assert.deepEqual([one, two], [6, 6]);
-    assert.equal(served.fetched, 2, 'the failed read, then one shared read');
+    assert.equal(served.reads, 2, 'the failed read, then one shared read');
 });

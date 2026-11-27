@@ -32,17 +32,17 @@ export function knownOrientation(url: string): number | undefined {
 }
 
 /**
- * The orientation of the picture at vault `path`, `size` bytes, that the resource `url` serves, read from its bytes
- * through `window`, the picture's own; 1 for a picture drawn as stored, with no read. Null while its bytes can't be
- * read, which is never kept, so the next picture of it asks again.
+ * The orientation of the picture at vault `path`, `size` bytes, that the resource `url` serves, read from the bytes
+ * `read` gives through the vault; 1 for a picture drawn as stored, with no read. Null while its bytes can't be read,
+ * which is never kept, so the next picture of it asks again.
  */
-export function readPictureOrientation(window: Window, url: string, path: string, size: number): Promise<number | null> {
+export function readPictureOrientation(read: () => Promise<ArrayBuffer>, url: string, path: string, size: number): Promise<number | null> {
     const known = readings.get(url);
     if (known !== undefined) return Promise.resolve(known);
     let answer = reading.get(url);
     if (!answer) {
         const picture = pictureOrientationReading(path, size);
-        answer = (picture ? streamOrientation(window, url, picture) : Promise.resolve(1))
+        answer = (picture ? read().then(bytes => orientationFrom(picture, new Uint8Array(bytes))) : Promise.resolve(1))
             .then(
                 orientation => {
                     readings.set(url, orientation);
@@ -56,51 +56,9 @@ export function readPictureOrientation(window: Window, url: string, path: string
     return answer;
 }
 
-/**
- * What `picture` reads from the resource at `url`, served by a stream: the bytes read so far are kept, since a reading
- * steps back within what it has read, and each part waits for the bytes it reaches, or for the file's end, where it
- * comes short. The stream is canceled once the reading answers, so a picture whose orientation comes first is not read
- * on to its end.
- */
-async function streamOrientation(window: Window, url: string, picture: Generator<Part, number, Uint8Array>): Promise<number> {
-    const response = await window.fetch(url);
-    if (!response.ok || !response.body) throw new Error('A picture could not be read');
-    const stream = response.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    let ended = false;
-    try {
-        let step = picture.next();
-        while (!step.done) {
-            const { offset, length } = step.value;
-            while (!ended && total < offset + length) {
-                const next = await stream.read();
-                if (next.done) ended = true;
-                else if (next.value.length) {
-                    chunks.push(next.value);
-                    total += next.value.length;
-                }
-            }
-            step = picture.next(cut(chunks, offset, Math.min(offset + length, total)));
-        }
-        return step.value;
-    } finally {
-        void stream.cancel().catch(() => undefined);
-    }
-}
-
-/** The bytes from `start` to `end` of the stream `chunks` hold in order: a view into one chunk where it holds them all. */
-function cut(chunks: readonly Uint8Array[], start: number, end: number): Uint8Array {
-    let bytes: Uint8Array | null = null;
-    let at = 0;
-    for (const chunk of chunks) {
-        const next = at + chunk.length;
-        if (next > start && at < end) {
-            if (at <= start && next >= end) return chunk.subarray(start - at, end - at);
-            bytes ??= new Uint8Array(end - start);
-            bytes.set(chunk.subarray(Math.max(start - at, 0), Math.min(end - at, chunk.length)), Math.max(at - start, 0));
-        }
-        at = next;
-    }
-    return bytes ?? new Uint8Array(0);
+/** What `picture` reads from the file's `bytes`: each part it asks for, shorter where the file ends first. */
+function orientationFrom(picture: Generator<Part, number, Uint8Array>, bytes: Uint8Array): number {
+    let step = picture.next();
+    while (!step.done) step = picture.next(bytes.subarray(step.value.offset, step.value.offset + step.value.length));
+    return step.value;
 }

@@ -22,7 +22,7 @@ export const ja: Translations = {
     name: 'MarkdownPoint',
     outline: 'アウトライン',
     sidebar: 'サイドバー',
-    sidebarDescription: 'アウトラインを左または右のサイドバーに表示します。Notebook Navigatorを使う場合は右のままにしてください。',
+    sidebarDescription: 'アウトラインを表示するサイドバーです。Notebook Navigatorを使う場合は、アウトラインを右に置いてください。',
     left: '左',
     right: '右',
     emptySlide: 'タイトルなしのスライド',
@@ -63,64 +63,66 @@ export const ja: Translations = {
         creating: '作成中…',
         cancel: 'キャンセル',
         invalidName: 'スラッシュや使用できない文字を含まない名前を入力してください。',
-        exists: '同じ名前のファイルまたはフォルダがすでにあります。',
+        exists: '同じ名前のファイルまたはフォルダがすでにあります。別の名前を入力してください。',
         insidePresentation: ({ presentation }: { presentation: string }) =>
             `MarkdownPointは“${presentation}”の中にプレゼンテーションを作成できません。“${presentation}”の外にあるフォルダを選んでください。`,
         nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
             `“${presentation}”が“${outer}”の中にある間は、MarkdownPointは開けません。フォルダ“${presentation}”を“${outer}”の外に移動してから、開いてください。`,
-        failed: 'プレゼンテーションを作成できませんでした。フォルダを確認して、もう一度お試しください。',
-        openFailed: 'プレゼンテーションは作成されましたが、開けませんでした。そのフォルダのslides.mdを開いてください。',
-        openChanged: 'プレゼンテーションが変更されたか、読み込めませんでした。もう一度お試しください。',
+        failed: 'プレゼンテーションを作成できませんでした。もう一度お試しください。',
+        openFailed: 'MarkdownPointはプレゼンテーションを作成しましたが、開けませんでした。そのフォルダのslides.mdを開いてください。',
+        openChanged: 'MarkdownPointが開く前にプレゼンテーションが変更されました。もう一度お試しください。',
         handoffFailed: 'プレゼンテーションを保存して開くことができませんでした。',
-        themeChanged: 'テーマが変更されたか、利用できません。このダイアログを開き直して、もう一度テーマを選んでください。',
+        themeChanged:
+            '選んだテーマからプレゼンテーションを作成できませんでした。このダイアログを開き直して、もう一度テーマを選んでください。',
         newerFormat: ({ version }: { version: string }) =>
-            `このプレゼンテーションは新しいバージョンのMarkdownPointフォーマット（${version}）を使っています。プレゼンテーションとして開くには、MarkdownPointプラグインをアップデートしてください。`,
+            `このプレゼンテーションはMarkdownPointフォーマットの新しいバージョン${version}を使っています。プレゼンテーションとして開くには、MarkdownPointプラグインをアップデートしてください。`,
         unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
             `MarkdownPointは“${presentation}”の“${file}”を読み込めません。修正が必要な箇所を確認するには、MarkdownPointアプリでプレゼンテーションを開いてください。`,
         unreadable: ({ presentation }: { presentation: string }) =>
             `MarkdownPointは“${presentation}”のプレゼンテーションを読み込めません。修正が必要な箇所を確認するには、MarkdownPointアプリで開いてください。`
     },
     slides: {
-        new: '新規スライド',
+        new: 'スライドを追加',
         shortcut: 'ショートカット',
         noShortcut: 'なし',
-        shortcutHint: 'レイアウトの番号を押すと使えます。レイアウトを右クリックするとショートカットを割り当てられます。',
+        shortcutHint: 'レイアウトのショートカットを押すと選べます。レイアウトを右クリックするとショートカットを割り当てられます。',
         shortcutFailed: 'ショートカットを保存できませんでした。',
         layoutShortcutLabel: ({ name, digit }: { name: string; digit: string | null }) =>
             digit ? `${name}、ショートカット${digit}` : name,
         layoutsUnavailable: 'このプレゼンテーションで使えるレイアウトはありません。',
-        layoutChanged: 'レイアウトが変更されました。もう一度選んでください。',
-        newFailed: 'スライドを追加する前にプレゼンテーションが変更されました。もう一度お試しください。',
+        layoutChanged: 'MarkdownPointがスライドを追加する前にレイアウトが変更されました。もう一度お試しください。',
+        newFailed: 'MarkdownPointがスライドを追加する前にプレゼンテーションが変更されました。もう一度お試しください。',
         actions: 'スライドの操作',
-        copy: () => 'スライドをコピー',
-        cut: () => 'スライドをカット',
-        cutChanged: 'スライドをカットする前にプレゼンテーションが変更されたため、コピーのみ行いました。',
-        cutFailed: 'スライドをカットできなかったため、コピーのみ行いました。',
+        copy: 'スライドをコピー',
+        cut: 'スライドをカット',
+        cutChanged:
+            'MarkdownPointがスライドをカットする前にプレゼンテーションが変更されました。スライドはクリップボードにあり、プレゼンテーションにも残っています。',
+        cutFailed: 'スライドをカットできませんでした。スライドはクリップボードにあり、プレゼンテーションにも残っています。',
         paste: 'スライドをペースト',
         pasteEmpty: '先にObsidianでスライドをコピーしてください。',
         pasteDestination:
             'このプレゼンテーションのテーマはこれらのスライドと一致しません。MarkdownPointアプリでコピーしてペーストしてください。',
         pasteVault: 'これらのスライドは別の保管庫のものです。MarkdownPointアプリでコピーしてペーストしてください。',
         pasteArtwork:
-            'これらのプレゼンテーションではテーマのアートワークが異なります。MarkdownPointアプリでスライドをコピーしてペーストしてください。',
-        pasteChanged: 'スライドをペーストする前にプレゼンテーションが変更されました。もう一度お試しください。',
+            '2つのプレゼンテーションのテーマはアートワークが異なります。MarkdownPointアプリでスライドをコピーしてペーストしてください。',
+        pasteChanged: 'MarkdownPointがスライドをペーストする前にプレゼンテーションが変更されました。もう一度お試しください。',
         pasteFailed: 'スライドをペーストできませんでした。',
         copyFailed: 'スライドをコピーできませんでした。',
         copyUnavailable: 'プレゼンテーションまたはテーマのファイルを読み込めませんでした。',
-        copyChanged: 'スライドをコピーする前にプレゼンテーションが変更されました。もう一度お試しください。',
+        copyChanged: 'MarkdownPointがスライドをコピーする前にプレゼンテーションが変更されました。もう一度お試しください。',
         copyNewer:
             'このプレゼンテーションは新しいバージョンのMarkdownPointフォーマットを使っています。スライドをコピーまたはカットするには、MarkdownPointプラグインをアップデートしてください。',
-        delete: () => 'スライドを削除',
+        delete: 'スライドを削除',
         deleteFailed: 'スライドを削除できませんでした。',
         recoveryUnavailable: 'このデバイスの復元用コピーを読み込めませんでした。',
-        saveFailed: 'プレゼンテーションのデータを保存できませんでした。復元用コピーをこのデバイスに残しています。',
+        saveFailed: 'プレゼンテーションのデータを保存できませんでした。',
         retry: '再試行',
         empty: 'スライドがありません'
     },
     commands: {
         newPresentation: '新規プレゼンテーション',
         openInMarkdownPoint: 'MarkdownPointで開く',
-        newSlide: '新規スライド',
+        newSlide: 'スライドを追加',
         focusOutline: 'アウトラインにフォーカス',
         focusEditor: 'エディタにフォーカス',
         moveSlidesUp: 'スライドを上に移動',
@@ -137,8 +139,7 @@ export const ja: Translations = {
         section: 'リリースノート',
         setting: ({ version }: { version: string }) => `MarkdownPoint ${version}の新機能`,
         settingDescription: '最近のリリースで変わった点を確認します。',
-        view: '最近の更新を表示',
-        showOnUpdate: '更新後に新機能を表示',
-        showOnUpdateDescription: '更新のたびに新機能のダイアログを一度表示します。'
+        view: 'リリースノートを表示',
+        showOnUpdate: 'アップデート後にリリースノートを表示'
     }
 };

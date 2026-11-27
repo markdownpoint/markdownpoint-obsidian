@@ -27,7 +27,7 @@ export interface MarkdownPointBannerText {
 /** Keyed by Obsidian's language codes, as the plugin's own catalogs are */
 export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBannerText>> = {
     ar: {
-        heading: 'هل تستخدم Canva أو Keynote أو PowerPoint؟',
+        heading: 'هل تصنع عروضًا تقديمية؟',
         credit: 'من تطوير Johan Sanneblad',
         messages: [
             {
@@ -35,8 +35,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'اسحب النصوص والصور إلى حيث تريد.'
             },
             {
-                headline: 'بديل مجاني لـ PowerPoint.',
-                subtext: 'المشاركة والتعاون مجانيان أيضًا.'
+                headline: 'اصنع عروضك التقديمية مجانًا.',
+                subtext: 'المشاركة والتحرير المشترك مجانيان أيضًا.'
             },
             {
                 headline: 'كل عرض تقديمي مجلد على حاسوبك.',
@@ -48,7 +48,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'ضع نماذج ثلاثية الأبعاد على شرائحك.',
-                subtext: 'افتح ملف GLB أو glTF، أو أنشئ نموذجًا باستخدام Meshy.'
+                subtext: 'افتح ملف GLB أو glTF، أو ولّد نموذجًا باستخدام Meshy.'
             },
             {
                 headline: 'تعاون كما في Google Slides.',
@@ -56,15 +56,15 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'شاهد نصوص كل الشرائح في مكان واحد.',
-                subtext: 'افتح View > Outline وحرّرها بـ Markdown.'
+                subtext: 'اختر «View › Outline» وحرّر النص بـ Markdown.'
             },
             {
-                headline: 'حاذِ العناصر كما في Figma.',
-                subtext: 'تصطف حسب المسافات والأحجام والزوايا.'
+                headline: 'حاذِ العناصر في مكانها تلقائيًا.',
+                subtext: 'صُفّها حسب المسافات والأحجام والزوايا.'
             },
             {
                 headline: 'صدّر عرضك فيديو بدقة 4K.',
-                subtext: 'لا تحتاج إلى After Effects لتحريكه.'
+                subtext: 'لا تحتاج إلى After Effects لتحريك الشرائح.'
             },
             {
                 headline: 'اجعل الشخصيات ثلاثية الأبعاد تمشي أو تركض.',
@@ -72,14 +72,14 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'ميّز الكلمات بـ ==علامات التساوي==.',
-                subtext: '**الغامق** و*المائل* يعملان تمامًا كما في Obsidian.'
+                subtext: '**الغامق** و*المائل* يعملان كما في Obsidian.'
             },
             {
                 headline: 'ارسم مخططات من جدول أرقام.',
                 subtext: 'أعمدة أو أشرطة أو خطوط أو مخطط دائري أو عدّاد.'
             },
             {
-                headline: 'شارك عرضك برابط.',
+                headline: 'شارك عرضك كصفحة ويب.',
                 subtext: 'انشره على الإنترنت بحساب مجاني.'
             },
             {
@@ -91,7 +91,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'العروض ملفات نصية بصيغة Markdown وJSON.'
             },
             {
-                headline: 'تصفّح السمات كما في Obsidian.',
+                headline: 'تصفّح السمات دون مغادرة التطبيق.',
                 subtext: 'ثبّت سمة مجانية بنقرة واحدة.'
             },
             {
@@ -107,7 +107,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'تُحفظ في ملف الشرائح نفسه.'
             },
             {
-                headline: 'ادمج الأشكال كما في Figma.',
+                headline: 'ادمج الأشكال لتصنع أشكالًا جديدة.',
                 subtext: 'وحّد أو اطرح أو قاطع أو استبعد.'
             },
             {
@@ -121,7 +121,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     de: {
-        heading: 'Nutzt du Canva, Keynote oder PowerPoint?',
+        heading: 'Erstellst du Präsentationen?',
         credit: 'von Johan Sanneblad',
         messages: [
             {
@@ -129,7 +129,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Zieh Text und Bilder an die richtige Stelle.'
             },
             {
-                headline: 'Eine Gratis-Alternative zu PowerPoint.',
+                headline: 'Erstelle gratis Präsentationen.',
                 subtext: 'Auch Teilen und Zusammenarbeit sind gratis.'
             },
             {
@@ -150,10 +150,10 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Sieh alle Folientexte an einem Ort.',
-                subtext: 'Öffne View > Outline und bearbeite in Markdown.'
+                subtext: 'Öffne die Gliederung und bearbeite in Markdown.'
             },
             {
-                headline: 'Objekte rasten wie in Figma ein.',
+                headline: 'Lass Objekte einrasten.',
                 subtext: 'Ausrichten nach Abstand, Größe und Winkel.'
             },
             {
@@ -185,7 +185,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Es sind Markdown- und JSON-Textdateien.'
             },
             {
-                headline: 'Stöbere in Themes wie bei Obsidian.',
+                headline: 'Stöbere in Themes direkt in der App.',
                 subtext: 'Installiere ein Gratis-Theme mit einem Klick.'
             },
             {
@@ -201,7 +201,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Sie stehen in derselben Datei wie die Folien.'
             },
             {
-                headline: 'Kombiniere Formen wie in Figma.',
+                headline: 'Kombiniere Formen zu neuen.',
                 subtext: 'Vereinen, abziehen, schneiden oder ausschließen.'
             },
             {
@@ -215,7 +215,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     en: {
-        heading: 'Do you use Canva, Keynote or PowerPoint?',
+        heading: 'Do you make presentations?',
         credit: 'by Johan Sanneblad',
         messages: [
             {
@@ -223,20 +223,20 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Drag text and images where you want them.'
             },
             {
-                headline: 'A free alternative to PowerPoint.',
-                subtext: 'Sharing and collaboration are free too.'
+                headline: 'Make presentations for free.',
+                subtext: 'Sharing and editing together are free too.'
             },
             {
-                headline: 'Each deck is a folder on your computer.',
+                headline: 'Each presentation is a local folder.',
                 subtext: 'You don’t need an account to make slides.'
             },
             {
                 headline: 'Animate like Apple Motion.',
-                subtext: 'Use keyframes, paths and morphs.'
+                subtext: 'Use keyframes, paths, and morphs.'
             },
             {
                 headline: 'Put 3D models on your slides.',
-                subtext: 'Open a GLB or glTF file, or make one with Meshy.'
+                subtext: 'Open a GLB or glTF file, or generate one with Meshy.'
             },
             {
                 headline: 'Collaborate like Google Slides.',
@@ -244,15 +244,15 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'See every slide’s text in one place.',
-                subtext: 'Open View > Outline and edit as Markdown.'
+                subtext: 'Choose “View › Outline” and edit the Markdown.'
             },
             {
-                headline: 'Snap objects like Figma.',
-                subtext: 'Line up by spacing, size and angle.'
+                headline: 'Snap objects into place.',
+                subtext: 'Line them up by spacing, size, and angle.'
             },
             {
-                headline: 'Export your deck as a 4K video.',
-                subtext: 'You don’t need After Effects to animate it.'
+                headline: 'Export your presentation as a 4K video.',
+                subtext: 'You don’t need After Effects to animate the slides.'
             },
             {
                 headline: 'Make 3D characters walk or run.',
@@ -260,43 +260,43 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Highlight words with ==equal signs==.',
-                subtext: '**Bold** and *italic* work just like Obsidian.'
+                subtext: '**Bold** and *italic* work as they do in Obsidian.'
             },
             {
                 headline: 'Draw charts from a table of numbers.',
-                subtext: 'Columns, bars, lines, a pie or a counter.'
+                subtext: 'Columns, bars, lines, a pie, or a counter.'
             },
             {
-                headline: 'Share a deck with a link.',
+                headline: 'Share a presentation as a web page.',
                 subtext: 'Publish it online with a free account.'
             },
             {
                 headline: '3D lighting like Blender.',
-                subtext: 'Point, directional, spot and area lights with shadows.'
+                subtext: 'Point, directional, spot, and area lights with shadows.'
             },
             {
-                headline: 'Track your decks in Git.',
-                subtext: 'Decks are Markdown and JSON text files.'
+                headline: 'Track your presentations in Git.',
+                subtext: 'They’re Markdown and JSON text files.'
             },
             {
-                headline: 'Browse themes like in Obsidian.',
+                headline: 'Browse themes without leaving the app.',
                 subtext: 'Install a free theme in one click.'
             },
             {
-                headline: 'Keep your decks in a synced folder.',
-                subtext: 'Dropbox, iCloud Drive and OneDrive all work.'
+                headline: 'Keep presentations in a synced folder.',
+                subtext: 'Dropbox, iCloud Drive, and OneDrive all work.'
             },
             {
                 headline: '3D with rigid-body physics.',
-                subtext: 'Drop, tip or pile objects.'
+                subtext: 'Drop, tip, or pile objects.'
             },
             {
                 headline: 'Presenter notes are Markdown too.',
                 subtext: 'They’re saved in the same file as the slides.'
             },
             {
-                headline: 'Combine shapes like Figma.',
-                subtext: 'Unite, subtract, intersect or exclude.'
+                headline: 'Combine shapes into new ones.',
+                subtext: 'Unite, subtract, intersect, or exclude.'
             },
             {
                 headline: 'Put code on your slides.',
@@ -309,7 +309,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     es: {
-        heading: '¿Usas Canva, Keynote o PowerPoint?',
+        heading: '¿Creas presentaciones?',
         credit: 'por Johan Sanneblad',
         messages: [
             {
@@ -317,7 +317,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Arrastra textos e imágenes adonde quieras.'
             },
             {
-                headline: 'Una alternativa gratis a PowerPoint.',
+                headline: 'Crea presentaciones gratis.',
                 subtext: 'Compartir y colaborar también es gratis.'
             },
             {
@@ -338,10 +338,10 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Ve todo el texto en un solo lugar.',
-                subtext: 'Abre View > Outline y edítalo en Markdown.'
+                subtext: 'Abre el esquema y edita el texto en Markdown.'
             },
             {
-                headline: 'Encaja objetos como en Figma.',
+                headline: 'Ajusta los objetos a su sitio.',
                 subtext: 'Alinéalos por espaciado, tamaño y ángulo.'
             },
             {
@@ -373,7 +373,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Son archivos de texto Markdown y JSON.'
             },
             {
-                headline: 'Explora temas como en Obsidian.',
+                headline: 'Explora temas sin salir de la app.',
                 subtext: 'Instala un tema gratis con un clic.'
             },
             {
@@ -389,7 +389,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Se guardan en el mismo archivo que las diapos.'
             },
             {
-                headline: 'Combina formas como en Figma.',
+                headline: 'Combina formas para crear otras nuevas.',
                 subtext: 'Une, resta, interseca o excluye.'
             },
             {
@@ -403,7 +403,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     fa: {
-        heading: 'از Canva، Keynote یا PowerPoint استفاده می‌کنید؟',
+        heading: 'ارائه می‌سازید؟',
         credit: 'ساختهٔ Johan Sanneblad',
         messages: [
             {
@@ -411,8 +411,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'متن و تصاویر را به هر جا که می‌خواهید بکشید.'
             },
             {
-                headline: 'جایگزینی رایگان برای PowerPoint.',
-                subtext: 'اشتراک‌گذاری و همکاری هم رایگان است.'
+                headline: 'رایگان ارائه بسازید.',
+                subtext: 'اشتراک‌گذاری و ویرایش گروهی هم رایگان است.'
             },
             {
                 headline: 'هر ارائه یک پوشه روی رایانهٔ شماست.',
@@ -424,7 +424,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'مدل‌های سه‌بعدی را روی اسلایدها بگذارید.',
-                subtext: 'یک فایل GLB یا glTF باز کنید یا با Meshy یکی بسازید.'
+                subtext: 'یک فایل GLB یا glTF باز کنید یا با Meshy یکی تولید کنید.'
             },
             {
                 headline: 'مثل Google Slides همکاری کنید.',
@@ -435,12 +435,12 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'View > Outline را باز کنید و با Markdown ویرایش کنید.'
             },
             {
-                headline: 'اشیا را مثل Figma هم‌تراز کنید.',
-                subtext: 'بر اساس فاصله، اندازه و زاویه تراز می‌شوند.'
+                headline: 'اشیا را سر جایشان بچسبانید.',
+                subtext: 'آن‌ها را بر اساس فاصله، اندازه و زاویه تراز کنید.'
             },
             {
                 headline: 'از ارائه‌تان ویدیوی 4K خروجی بگیرید.',
-                subtext: 'برای متحرک‌سازی به After Effects نیاز ندارید.'
+                subtext: 'برای متحرک‌سازی اسلایدها به After Effects نیاز ندارید.'
             },
             {
                 headline: 'شخصیت‌های سه‌بعدی راه می‌روند و می‌دوند.',
@@ -455,7 +455,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'ستونی، میله‌ای، خطی، دایره‌ای یا شمارنده.'
             },
             {
-                headline: 'ارائه را با یک پیوند به اشتراک بگذارید.',
+                headline: 'ارائه را به‌صورت صفحهٔ وب به اشتراک بگذارید.',
                 subtext: 'با یک حساب رایگان آن را آنلاین منتشر کنید.'
             },
             {
@@ -467,7 +467,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'ارائه‌ها فایل‌های متنی Markdown و JSON هستند.'
             },
             {
-                headline: 'تم‌ها را مثل Obsidian مرور کنید.',
+                headline: 'تم‌ها را بدون خروج از برنامه مرور کنید.',
                 subtext: 'یک تم رایگان را با یک کلیک نصب کنید.'
             },
             {
@@ -483,7 +483,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'در همان فایل اسلایدها ذخیره می‌شوند.'
             },
             {
-                headline: 'شکل‌ها را مثل Figma ترکیب کنید.',
+                headline: 'شکل‌ها را ترکیب کنید و شکل تازه بسازید.',
                 subtext: 'ادغام، تفریق، اشتراک یا استثنا.'
             },
             {
@@ -497,7 +497,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     fr: {
-        heading: 'Vous utilisez Canva, Keynote ou PowerPoint ?',
+        heading: 'Vous créez des présentations ?',
         credit: 'par Johan Sanneblad',
         messages: [
             {
@@ -505,11 +505,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Glissez textes et images là où vous voulez.'
             },
             {
-                headline: 'Une alternative gratuite à PowerPoint.',
+                headline: 'Créez des présentations gratuitement.',
                 subtext: 'Partage et collaboration sont aussi gratuits.'
             },
             {
-                headline: 'Vos diapos sont sur votre ordinateur.',
+                headline: 'Chaque présentation est un dossier local.',
                 subtext: 'Créez des diapos sans aucun compte.'
             },
             {
@@ -526,14 +526,14 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Voyez tout le texte en un seul endroit.',
-                subtext: 'Ouvrez View > Outline et modifiez en Markdown.'
+                subtext: 'Ouvrez la structure et modifiez-la en Markdown.'
             },
             {
-                headline: 'Aimantez les objets comme dans Figma.',
+                headline: 'Aimantez les objets à leur place.',
                 subtext: 'Alignez par espacement, taille et angle.'
             },
             {
-                headline: 'Exportez vos diapos en vidéo 4K.',
+                headline: 'Exportez vos présentations en vidéo 4K.',
                 subtext: 'Pas besoin d’After Effects pour les animer.'
             },
             {
@@ -561,7 +561,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Ce sont des fichiers texte Markdown et JSON.'
             },
             {
-                headline: 'Parcourez des thèmes à la Obsidian.',
+                headline: 'Parcourez les thèmes sans quitter l’app.',
                 subtext: 'Installez un thème gratuit en un clic.'
             },
             {
@@ -577,7 +577,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Elles sont dans le même fichier que les diapos.'
             },
             {
-                headline: 'Combinez les formes comme Figma.',
+                headline: 'Combinez des formes en une seule.',
                 subtext: 'Union, soustraction, intersection ou exclusion.'
             },
             {
@@ -591,7 +591,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     id: {
-        heading: 'Apakah Anda memakai Canva, Keynote, atau PowerPoint?',
+        heading: 'Apakah Anda membuat presentasi?',
         credit: 'oleh Johan Sanneblad',
         messages: [
             {
@@ -599,8 +599,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Seret teks dan gambar ke posisi yang Anda mau.'
             },
             {
-                headline: 'Alternatif gratis untuk PowerPoint.',
-                subtext: 'Berbagi dan berkolaborasi juga gratis.'
+                headline: 'Buat presentasi secara gratis.',
+                subtext: 'Berbagi dan mengedit bersama juga gratis.'
             },
             {
                 headline: 'Presentasi tersimpan di komputer Anda.',
@@ -612,7 +612,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Taruh model 3D di slide Anda.',
-                subtext: 'Buka file GLB atau glTF, atau buat dengan Meshy.'
+                subtext: 'Buka file GLB atau glTF, atau hasilkan dengan Meshy.'
             },
             {
                 headline: 'Berkolaborasi ala Google Slides.',
@@ -623,7 +623,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Buka View > Outline dan edit sebagai Markdown.'
             },
             {
-                headline: 'Snap objek ala Figma.',
+                headline: 'Tempelkan objek tepat di tempatnya.',
                 subtext: 'Rapikan berdasarkan jarak, ukuran, dan sudut.'
             },
             {
@@ -643,7 +643,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Kolom, batang, garis, pai, atau penghitung.'
             },
             {
-                headline: 'Bagikan presentasi dengan tautan.',
+                headline: 'Bagikan presentasi sebagai halaman web.',
                 subtext: 'Terbitkan online dengan akun gratis.'
             },
             {
@@ -655,7 +655,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Presentasi berupa file teks Markdown dan JSON.'
             },
             {
-                headline: 'Jelajahi tema seperti di Obsidian.',
+                headline: 'Jelajahi tema di dalam aplikasi.',
                 subtext: 'Pasang tema gratis dengan sekali klik.'
             },
             {
@@ -671,7 +671,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Tersimpan di file yang sama dengan slide.'
             },
             {
-                headline: 'Gabungkan bentuk ala Figma.',
+                headline: 'Gabungkan bentuk menjadi bentuk baru.',
                 subtext: 'Satukan, kurangi, iris, atau kecualikan.'
             },
             {
@@ -685,7 +685,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     it: {
-        heading: 'Usi Canva, Keynote o PowerPoint?',
+        heading: 'Crei presentazioni?',
         credit: 'di Johan Sanneblad',
         messages: [
             {
@@ -693,8 +693,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Trascina testi e immagini dove vuoi.'
             },
             {
-                headline: 'Un’alternativa gratuita a PowerPoint.',
-                subtext: 'Anche condivisione e collaborazione sono gratis.'
+                headline: 'Crea presentazioni gratis.',
+                subtext: 'Anche condividere e modificare insieme è gratis.'
             },
             {
                 headline: 'Le tue slide sono cartelle sul computer.',
@@ -717,12 +717,12 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Apri View > Outline e modificalo in Markdown.'
             },
             {
-                headline: 'Aggancia gli oggetti come in Figma.',
-                subtext: 'Allinea per spaziatura, dimensione e angolo.'
+                headline: 'Aggancia gli oggetti al posto giusto.',
+                subtext: 'Allineali per spaziatura, dimensione e angolo.'
             },
             {
                 headline: 'Esporta la presentazione in video 4K.',
-                subtext: 'Per animarla non ti serve After Effects.'
+                subtext: 'Per animare le slide non ti serve After Effects.'
             },
             {
                 headline: 'Fai camminare o correre personaggi 3D.',
@@ -737,8 +737,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Colonne, barre, linee, una torta o un contatore.'
             },
             {
-                headline: 'Condividi le slide con un link.',
-                subtext: 'Pubblicale online con un account gratuito.'
+                headline: 'Condividi la presentazione sul web.',
+                subtext: 'Pubblicala online con un account gratuito.'
             },
             {
                 headline: 'Illuminazione 3D come in Blender.',
@@ -749,7 +749,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Sono file di testo Markdown e JSON.'
             },
             {
-                headline: 'Sfoglia i temi come in Obsidian.',
+                headline: 'Sfoglia i temi senza uscire dall’app.',
                 subtext: 'Installa un tema gratis con un clic.'
             },
             {
@@ -765,7 +765,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Stanno nello stesso file delle slide.'
             },
             {
-                headline: 'Combina forme come in Figma.',
+                headline: 'Combina forme per crearne di nuove.',
                 subtext: 'Unisci, sottrai, interseca o escludi.'
             },
             {
@@ -779,7 +779,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     ja: {
-        heading: 'Canva、Keynote、PowerPoint を使っていますか？',
+        heading: 'プレゼンを作っていますか？',
         credit: '作者：Johan Sanneblad',
         messages: [
             {
@@ -787,7 +787,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'テキストや画像はドラッグで動かせます。'
             },
             {
-                headline: 'PowerPoint に代わる無料アプリ。',
+                headline: 'プレゼンを無料で作れます。',
                 subtext: '共有も共同編集も無料です。'
             },
             {
@@ -808,10 +808,10 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '全スライドのテキストを一覧できます。',
-                subtext: 'View > Outline から Markdown で編集できます。'
+                subtext: '“表示 › アウトライン”では Markdown で書けます。'
             },
             {
-                headline: 'Figma のようにスナップします。',
+                headline: 'オブジェクトをスナップで配置できます。',
                 subtext: '間隔、サイズ、角度で揃います。'
             },
             {
@@ -843,7 +843,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Markdown と JSON のテキストファイルです。'
             },
             {
-                headline: 'Obsidian のようにテーマを選べます。',
+                headline: 'アプリを離れずにテーマを探せます。',
                 subtext: '無料のテーマをワンクリックでインストールできます。'
             },
             {
@@ -859,7 +859,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'スライドと同じファイルに保存されます。'
             },
             {
-                headline: 'Figma のようにシェイプを結合できます。',
+                headline: '図形を組み合わせて新しい形を作れます。',
                 subtext: '結合、型抜き、交差、中マドが使えます。'
             },
             {
@@ -873,7 +873,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     ko: {
-        heading: 'Canva, Keynote, PowerPoint를 쓰시나요?',
+        heading: '프레젠테이션을 만드시나요?',
         credit: '제작: Johan Sanneblad',
         messages: [
             {
@@ -881,11 +881,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '텍스트와 이미지는 원하는 곳으로 드래그하세요.'
             },
             {
-                headline: 'PowerPoint의 무료 대안입니다.',
+                headline: '프레젠테이션을 무료로 만드세요.',
                 subtext: '공유와 공동 작업도 무료입니다.'
             },
             {
-                headline: '발표 자료는 컴퓨터 속 폴더 하나입니다.',
+                headline: '프레젠테이션은 컴퓨터 속 폴더 하나입니다.',
                 subtext: '슬라이드를 만드는 데 계정이 필요 없습니다.'
             },
             {
@@ -902,14 +902,14 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '모든 슬라이드의 글을 한곳에서 보세요.',
-                subtext: 'View > Outline을 열고 Markdown으로 편집하세요.'
+                subtext: '‘보기 › 개요’를 선택하고 Markdown으로 편집하세요.'
             },
             {
-                headline: 'Figma처럼 개체를 스냅하세요.',
+                headline: '개체를 제자리에 스냅하세요.',
                 subtext: '간격, 크기, 각도에 맞춰 정렬됩니다.'
             },
             {
-                headline: '발표 자료를 4K 영상으로 내보내세요.',
+                headline: '프레젠테이션을 4K 동영상으로 내보내세요.',
                 subtext: '애니메이션에 After Effects가 필요 없습니다.'
             },
             {
@@ -925,7 +925,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '세로형 막대, 가로형 막대, 선, 원형 또는 카운터.'
             },
             {
-                headline: '링크로 발표 자료를 공유하세요.',
+                headline: '프레젠테이션을 웹 페이지로 공유하세요.',
                 subtext: '무료 계정으로 웹에 게시할 수 있습니다.'
             },
             {
@@ -933,15 +933,15 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '포인트, 디렉셔널, 스폿, 영역 조명과 그림자.'
             },
             {
-                headline: '발표 자료를 Git으로 관리하세요.',
-                subtext: '발표 자료는 Markdown과 JSON 텍스트 파일입니다.'
+                headline: '프레젠테이션을 Git으로 관리하세요.',
+                subtext: 'Markdown과 JSON 텍스트 파일입니다.'
             },
             {
-                headline: 'Obsidian처럼 테마를 둘러보세요.',
+                headline: '앱 안에서 테마를 둘러보세요.',
                 subtext: '무료 테마를 클릭 한 번으로 설치하세요.'
             },
             {
-                headline: '발표 자료를 동기화 폴더에 두세요.',
+                headline: '프레젠테이션을 동기화 폴더에 두세요.',
                 subtext: 'Dropbox, iCloud Drive, OneDrive 모두 됩니다.'
             },
             {
@@ -953,7 +953,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '슬라이드와 같은 파일에 저장됩니다.'
             },
             {
-                headline: 'Figma처럼 도형을 결합하세요.',
+                headline: '도형을 결합해 새 도형을 만드세요.',
                 subtext: '합집합, 빼기, 교집합, 제외를 쓸 수 있습니다.'
             },
             {
@@ -967,7 +967,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     nl: {
-        heading: 'Gebruik je Canva, Keynote of PowerPoint?',
+        heading: 'Maak je presentaties?',
         credit: 'door Johan Sanneblad',
         messages: [
             {
@@ -975,8 +975,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Sleep tekst en afbeeldingen waar je ze wilt.'
             },
             {
-                headline: 'Een gratis alternatief voor PowerPoint.',
-                subtext: 'Delen en samenwerken zijn ook gratis.'
+                headline: 'Maak gratis presentaties.',
+                subtext: 'Delen en samen bewerken zijn ook gratis.'
             },
             {
                 headline: 'Je slides zijn mappen op je computer.',
@@ -999,8 +999,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Open View > Outline en bewerk in Markdown.'
             },
             {
-                headline: 'Snap objecten zoals in Figma.',
-                subtext: 'Lijn uit op afstand, grootte en hoek.'
+                headline: 'Snap objecten op hun plek.',
+                subtext: 'Lijn ze uit op afstand, grootte en hoek.'
             },
             {
                 headline: 'Exporteer je presentatie als 4K-video.',
@@ -1019,7 +1019,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Kolommen, staven, lijnen, een cirkel of een teller.'
             },
             {
-                headline: 'Deel een presentatie met een link.',
+                headline: 'Deel een presentatie als webpagina.',
                 subtext: 'Zet hem online met een gratis account.'
             },
             {
@@ -1031,7 +1031,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Het zijn Markdown- en JSON-tekstbestanden.'
             },
             {
-                headline: 'Blader door thema’s zoals in Obsidian.',
+                headline: 'Blader door thema’s in de app.',
                 subtext: 'Installeer een gratis thema met één klik.'
             },
             {
@@ -1047,7 +1047,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Ze staan in hetzelfde bestand als de slides.'
             },
             {
-                headline: 'Combineer vormen zoals in Figma.',
+                headline: 'Combineer vormen tot nieuwe vormen.',
                 subtext: 'Verenigen, aftrekken, snijden of uitsluiten.'
             },
             {
@@ -1061,7 +1061,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     pl: {
-        heading: 'Korzystasz z Canva, Keynote albo PowerPoint?',
+        heading: 'Tworzysz prezentacje?',
         credit: 'od Johana Sanneblada',
         messages: [
             {
@@ -1069,8 +1069,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Przeciągaj tekst i obrazy tam, gdzie chcesz.'
             },
             {
-                headline: 'Darmowa alternatywa dla PowerPoint.',
-                subtext: 'Udostępnianie i współpraca też są darmowe.'
+                headline: 'Twórz prezentacje za darmo.',
+                subtext: 'Udostępnianie i wspólna edycja też są darmowe.'
             },
             {
                 headline: 'Prezentacja to folder na komputerze.',
@@ -1090,11 +1090,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Cały tekst slajdów w jednym miejscu.',
-                subtext: 'Otwórz View > Outline i edytuj w Markdown.'
+                subtext: 'Wybierz „View › Outline” i edytuj tekst w Markdown.'
             },
             {
-                headline: 'Przyciągaj obiekty jak w Figma.',
-                subtext: 'Wyrównuj według odstępów, rozmiaru i kąta.'
+                headline: 'Przyciągaj obiekty na miejsce.',
+                subtext: 'Wyrównuj je według odstępów, rozmiaru i kąta.'
             },
             {
                 headline: 'Eksportuj prezentację jako wideo 4K.',
@@ -1125,7 +1125,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Prezentacje to pliki tekstowe Markdown i JSON.'
             },
             {
-                headline: 'Przeglądaj motywy jak w Obsidian.',
+                headline: 'Przeglądaj motywy w aplikacji.',
                 subtext: 'Zainstaluj darmowy motyw jednym kliknięciem.'
             },
             {
@@ -1141,7 +1141,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Są zapisane w tym samym pliku co slajdy.'
             },
             {
-                headline: 'Łącz kształty jak w Figma.',
+                headline: 'Łącz kształty w nowe formy.',
                 subtext: 'Suma, różnica, część wspólna lub wykluczenie.'
             },
             {
@@ -1155,7 +1155,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     pt: {
-        heading: 'Usa o Canva, o Keynote ou o PowerPoint?',
+        heading: 'Faz apresentações?',
         credit: 'por Johan Sanneblad',
         messages: [
             {
@@ -1163,8 +1163,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Arraste texto e imagens para onde quiser.'
             },
             {
-                headline: 'Uma alternativa gratuita ao PowerPoint.',
-                subtext: 'A partilha e a colaboração também são gratuitas.'
+                headline: 'Crie apresentações gratuitamente.',
+                subtext: 'Partilhar e editar em conjunto também é gratuito.'
             },
             {
                 headline: 'Tudo fica guardado no seu computador.',
@@ -1187,8 +1187,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Abra View > Outline e edite em Markdown.'
             },
             {
-                headline: 'Encaixe objetos como no Figma.',
-                subtext: 'Alinhe por espaçamento, tamanho e ângulo.'
+                headline: 'Encaixe objetos no lugar certo.',
+                subtext: 'Alinhe-os por espaçamento, tamanho e ângulo.'
             },
             {
                 headline: 'Exporte a apresentação em vídeo 4K.',
@@ -1219,7 +1219,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'São ficheiros de texto Markdown e JSON.'
             },
             {
-                headline: 'Explore temas como no Obsidian.',
+                headline: 'Explore temas sem sair da aplicação.',
                 subtext: 'Instale um tema gratuito com um clique.'
             },
             {
@@ -1235,7 +1235,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Ficam no mesmo ficheiro que os diapositivos.'
             },
             {
-                headline: 'Combine formas como no Figma.',
+                headline: 'Combine formas para criar novas.',
                 subtext: 'Una, subtraia, intersete ou exclua.'
             },
             {
@@ -1249,7 +1249,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     'pt-BR': {
-        heading: 'Você usa Canva, Keynote ou PowerPoint?',
+        heading: 'Você cria apresentações?',
         credit: 'por Johan Sanneblad',
         messages: [
             {
@@ -1257,7 +1257,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Arraste textos e imagens para onde quiser.'
             },
             {
-                headline: 'Uma alternativa gratuita ao PowerPoint.',
+                headline: 'Crie apresentações grátis.',
                 subtext: 'Compartilhar e colaborar também é grátis.'
             },
             {
@@ -1278,10 +1278,10 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Veja todo o texto em um só lugar.',
-                subtext: 'Abra View > Outline e edite em Markdown.'
+                subtext: 'Abra o Esboço e edite o texto em Markdown.'
             },
             {
-                headline: 'Encaixe objetos como no Figma.',
+                headline: 'Encaixe os objetos no lugar.',
                 subtext: 'Alinhe por espaçamento, tamanho e ângulo.'
             },
             {
@@ -1313,7 +1313,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'São arquivos de texto Markdown e JSON.'
             },
             {
-                headline: 'Explore temas como no Obsidian.',
+                headline: 'Explore temas sem sair do app.',
                 subtext: 'Instale um tema grátis com um clique.'
             },
             {
@@ -1329,7 +1329,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Elas ficam salvas no mesmo arquivo dos slides.'
             },
             {
-                headline: 'Combine formas como no Figma.',
+                headline: 'Combine formas para criar novas.',
                 subtext: 'Una, subtraia, intersecte ou exclua.'
             },
             {
@@ -1343,7 +1343,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     ru: {
-        heading: 'Пользуетесь Canva, Keynote или PowerPoint?',
+        heading: 'Делаете презентации?',
         credit: 'от Johan Sanneblad',
         messages: [
             {
@@ -1351,7 +1351,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Перетаскивайте текст и картинки куда нужно.'
             },
             {
-                headline: 'Бесплатная альтернатива PowerPoint.',
+                headline: 'Делайте презентации бесплатно.',
                 subtext: 'Общий доступ и совместная работа бесплатны.'
             },
             {
@@ -1375,12 +1375,12 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Откройте View > Outline и правьте Markdown.'
             },
             {
-                headline: 'Привязывайте объекты как в Figma.',
-                subtext: 'Выравнивайте по отступам, размеру и углу.'
+                headline: 'Ставьте объекты точно на место.',
+                subtext: 'Выравнивайте их по отступам, размеру и углу.'
             },
             {
                 headline: 'Экспортируйте слайды в видео 4K.',
-                subtext: 'After Effects для анимации не нужен.'
+                subtext: 'After Effects для анимации слайдов не нужен.'
             },
             {
                 headline: 'Пусть 3D-персонажи ходят и бегают.',
@@ -1403,11 +1403,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Точечный, направленный, прожекторный и площадной свет с тенями.'
             },
             {
-                headline: 'Храните версии слайдов в Git.',
+                headline: 'Храните версии презентаций в Git.',
                 subtext: 'Это текстовые файлы Markdown и JSON.'
             },
             {
-                headline: 'Выбирайте темы как в Obsidian.',
+                headline: 'Выбирайте темы прямо в приложении.',
                 subtext: 'Установите бесплатную тему в один клик.'
             },
             {
@@ -1423,7 +1423,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Они хранятся в том же файле, что и слайды.'
             },
             {
-                headline: 'Комбинируйте фигуры как в Figma.',
+                headline: 'Комбинируйте фигуры в новые.',
                 subtext: 'Объедините, вычтите, пересеките, исключите.'
             },
             {
@@ -1437,7 +1437,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     th: {
-        heading: 'ใช้ Canva, Keynote หรือ PowerPoint อยู่หรือเปล่า',
+        heading: 'ทำงานนำเสนออยู่หรือเปล่า',
         credit: 'โดย Johan Sanneblad',
         messages: [
             {
@@ -1445,8 +1445,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'ลากข้อความและรูปภาพไปวางตรงที่คุณต้องการ'
             },
             {
-                headline: 'ทางเลือกฟรีแทน PowerPoint',
-                subtext: 'การแชร์และการทำงานร่วมกันก็ฟรีด้วย'
+                headline: 'สร้างงานนำเสนอได้ฟรี',
+                subtext: 'การแชร์และการแก้ไขร่วมกันก็ฟรีด้วย'
             },
             {
                 headline: 'งานนำเสนอคือโฟลเดอร์ในเครื่องของคุณ',
@@ -1458,7 +1458,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'ใส่โมเดล 3D ลงในสไลด์ของคุณ',
-                subtext: 'เปิดไฟล์ GLB หรือ glTF หรือสร้างด้วย Meshy'
+                subtext: 'เปิดไฟล์ GLB หรือ glTF หรือใช้ Meshy สร้างขึ้นมา'
             },
             {
                 headline: 'ทำงานร่วมกันแบบ Google Slides',
@@ -1469,12 +1469,12 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'เปิด View > Outline แล้วแก้ไขเป็น Markdown'
             },
             {
-                headline: 'สแนปวัตถุแบบ Figma',
-                subtext: 'จัดแนวตามระยะห่าง ขนาด และมุม'
+                headline: 'สแนปวัตถุเข้าที่',
+                subtext: 'จัดแนววัตถุตามระยะห่าง ขนาด และมุม'
             },
             {
                 headline: 'ส่งออกงานนำเสนอเป็นวิดีโอ 4K',
-                subtext: 'คุณไม่ต้องใช้ After Effects เพื่อทำแอนิเมชัน'
+                subtext: 'คุณไม่ต้องใช้ After Effects เพื่อทำแอนิเมชันให้สไลด์'
             },
             {
                 headline: 'ทำให้ตัวละคร 3D เดินหรือวิ่งได้',
@@ -1489,7 +1489,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'คอลัมน์ แท่ง เส้น วงกลม หรือตัวนับ'
             },
             {
-                headline: 'แชร์งานนำเสนอด้วยลิงก์',
+                headline: 'แชร์งานนำเสนอเป็นหน้าเว็บ',
                 subtext: 'เผยแพร่ออนไลน์ด้วยบัญชีฟรี'
             },
             {
@@ -1501,7 +1501,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'งานนำเสนอเป็นไฟล์ข้อความ Markdown และ JSON'
             },
             {
-                headline: 'เลือกธีมได้เหมือนใน Obsidian',
+                headline: 'เลือกดูธีมได้โดยไม่ต้องออกจากแอป',
                 subtext: 'ติดตั้งธีมฟรีได้ในคลิกเดียว'
             },
             {
@@ -1517,7 +1517,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'บันทึกไว้ในไฟล์เดียวกับสไลด์'
             },
             {
-                headline: 'รวมรูปทรงแบบ Figma',
+                headline: 'รวมรูปทรงเป็นรูปทรงใหม่',
                 subtext: 'รวม ลบ ตัดกัน หรือยกเว้น'
             },
             {
@@ -1531,7 +1531,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     tr: {
-        heading: 'Canva, Keynote veya PowerPoint mi kullanıyorsunuz?',
+        heading: 'Sunum mu hazırlıyorsunuz?',
         credit: "Johan Sanneblad'dan",
         messages: [
             {
@@ -1539,8 +1539,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Metinleri ve görselleri istediğiniz yere sürükleyin.'
             },
             {
-                headline: "PowerPoint'e ücretsiz bir alternatif.",
-                subtext: 'Paylaşım ve iş birliği de ücretsiz.'
+                headline: 'Ücretsiz sunum hazırlayın.',
+                subtext: 'Paylaşmak ve birlikte düzenlemek de ücretsiz.'
             },
             {
                 headline: 'Her sunum bilgisayarınızda bir klasördür.',
@@ -1563,8 +1563,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: "View > Outline'ı açıp Markdown olarak düzenleyin."
             },
             {
-                headline: 'Nesneleri Figma gibi hizalayın.',
-                subtext: 'Aralık, boyut ve açıya göre yerine otururlar.'
+                headline: 'Nesneleri yerine oturtun.',
+                subtext: 'Onları aralık, boyut ve açıya göre hizalayın.'
             },
             {
                 headline: 'Sunumu 4K video olarak dışa aktarın.',
@@ -1595,7 +1595,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Sunumlar Markdown ve JSON metin dosyalarıdır.'
             },
             {
-                headline: 'Temalara Obsidian’daki gibi göz atın.',
+                headline: 'Temalara uygulamada göz atın.',
                 subtext: 'Ücretsiz bir temayı tek tıkla kurun.'
             },
             {
@@ -1611,7 +1611,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Slaytlarla aynı dosyada kaydedilir.'
             },
             {
-                headline: 'Şekilleri Figma gibi birleştirin.',
+                headline: 'Şekilleri birleştirip yeni şekiller oluşturun.',
                 subtext: 'Birleşim, çıkarma, kesişim veya hariç tutma.'
             },
             {
@@ -1625,7 +1625,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     uk: {
-        heading: 'Користуєтеся Canva, Keynote чи PowerPoint?',
+        heading: 'Робите презентації?',
         credit: 'від Johan Sanneblad',
         messages: [
             {
@@ -1633,7 +1633,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Перетягуйте текст і зображення куди потрібно.'
             },
             {
-                headline: 'Безкоштовна заміна PowerPoint.',
+                headline: 'Створюйте презентації безкоштовно.',
                 subtext: 'Спільний доступ і співпраця теж безкоштовні.'
             },
             {
@@ -1657,12 +1657,12 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Відкрийте View > Outline і редагуйте Markdown.'
             },
             {
-                headline: 'Прив’язуйте об’єкти як у Figma.',
-                subtext: 'Вирівнюйте за відступами, розміром і кутом.'
+                headline: 'Ставте об’єкти точно на місце.',
+                subtext: 'Вирівнюйте їх за відступами, розміром і кутом.'
             },
             {
                 headline: 'Експортуйте презентацію у відео 4K.',
-                subtext: 'After Effects для анімації не потрібен.'
+                subtext: 'After Effects для анімації слайдів не потрібен.'
             },
             {
                 headline: 'Нехай 3D-персонажі ходять і бігають.',
@@ -1677,7 +1677,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Стовпці, смуги, лінії, кругова діаграма або лічильник.'
             },
             {
-                headline: 'Діліться презентацією за посиланням.',
+                headline: 'Діліться презентацією як вебсторінкою.',
                 subtext: 'Публікуйте її онлайн з безкоштовним акаунтом.'
             },
             {
@@ -1689,7 +1689,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Це текстові файли Markdown і JSON.'
             },
             {
-                headline: 'Обирайте теми як в Obsidian.',
+                headline: 'Обирайте теми просто в застосунку.',
                 subtext: 'Встановіть безкоштовну тему одним кліком.'
             },
             {
@@ -1705,7 +1705,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Вони зберігаються в тому ж файлі, що й слайди.'
             },
             {
-                headline: 'Комбінуйте фігури як у Figma.',
+                headline: 'Комбінуйте фігури в нові.',
                 subtext: 'Об’єднання, віднімання, перетин, виключення.'
             },
             {
@@ -1719,7 +1719,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     vi: {
-        heading: 'Bạn đang dùng Canva, Keynote hay PowerPoint?',
+        heading: 'Bạn có làm bài thuyết trình không?',
         credit: 'bởi Johan Sanneblad',
         messages: [
             {
@@ -1727,11 +1727,11 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Kéo chữ và hình ảnh đến nơi bạn muốn.'
             },
             {
-                headline: 'Lựa chọn miễn phí thay cho PowerPoint.',
-                subtext: 'Chia sẻ và cộng tác cũng miễn phí.'
+                headline: 'Làm bài thuyết trình miễn phí.',
+                subtext: 'Chia sẻ và cùng nhau chỉnh sửa cũng miễn phí.'
             },
             {
-                headline: 'Bộ slide là một thư mục trên máy tính.',
+                headline: 'Mỗi bài thuyết trình là một thư mục.',
                 subtext: 'Bạn không cần tài khoản để làm slide.'
             },
             {
@@ -1748,14 +1748,14 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Xem chữ của mọi slide ở một chỗ.',
-                subtext: 'Mở View > Outline và sửa bằng Markdown.'
+                subtext: 'Chọn “View › Outline” và sửa chữ bằng Markdown.'
             },
             {
-                headline: 'Bắt dính đối tượng như Figma.',
-                subtext: 'Căn theo khoảng cách, kích thước và góc.'
+                headline: 'Bắt dính đối tượng vào đúng chỗ.',
+                subtext: 'Căn chúng theo khoảng cách, kích thước và góc.'
             },
             {
-                headline: 'Xuất bộ slide thành video 4K.',
+                headline: 'Xuất bài thuyết trình thành video 4K.',
                 subtext: 'Bạn không cần After Effects để tạo chuyển động.'
             },
             {
@@ -1764,14 +1764,14 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: 'Tô sáng chữ bằng ==dấu bằng==.',
-                subtext: '**Đậm** và *nghiêng* dùng y như trong Obsidian.'
+                subtext: '**Đậm** và *nghiêng* dùng như trong Obsidian.'
             },
             {
                 headline: 'Vẽ biểu đồ từ một bảng số.',
                 subtext: 'Cột, thanh, đường, biểu đồ tròn hoặc bộ đếm.'
             },
             {
-                headline: 'Chia sẻ bộ slide bằng một liên kết.',
+                headline: 'Chia sẻ dưới dạng trang web.',
                 subtext: 'Đăng lên mạng với tài khoản miễn phí.'
             },
             {
@@ -1779,15 +1779,15 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Đèn điểm, định hướng, spot và vùng có đổ bóng.'
             },
             {
-                headline: 'Theo dõi bộ slide trong Git.',
-                subtext: 'Bộ slide là các tệp văn bản Markdown và JSON.'
+                headline: 'Theo dõi bài thuyết trình trong Git.',
+                subtext: 'Chúng là các tệp văn bản Markdown và JSON.'
             },
             {
-                headline: 'Duyệt chủ đề như trong Obsidian.',
+                headline: 'Duyệt chủ đề ngay trong ứng dụng.',
                 subtext: 'Cài một chủ đề miễn phí chỉ bằng một cú nhấp.'
             },
             {
-                headline: 'Lưu bộ slide trong thư mục đồng bộ.',
+                headline: 'Lưu vào thư mục đồng bộ.',
                 subtext: 'Dùng được với Dropbox, iCloud Drive và OneDrive.'
             },
             {
@@ -1799,7 +1799,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: 'Chúng được lưu chung tệp với các slide.'
             },
             {
-                headline: 'Kết hợp hình như Figma.',
+                headline: 'Kết hợp các hình thành hình mới.',
                 subtext: 'Hợp, trừ, giao hoặc loại trừ.'
             },
             {
@@ -1813,7 +1813,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     zh: {
-        heading: '您在用 Canva、Keynote 或 PowerPoint 吗？',
+        heading: '你做演示文稿吗？',
         credit: '作者：Johan Sanneblad',
         messages: [
             {
@@ -1821,7 +1821,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '把文字和图片拖到你想要的位置。'
             },
             {
-                headline: 'PowerPoint 的免费替代品。',
+                headline: '免费制作演示文稿。',
                 subtext: '分享和协作也都免费。'
             },
             {
@@ -1842,10 +1842,10 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '在一处查看每页幻灯片的文字。',
-                subtext: '打开 View > Outline，用 Markdown 编辑。'
+                subtext: '打开“大纲”，用 Markdown 编辑。'
             },
             {
-                headline: '像 Figma 一样吸附对象。',
+                headline: '把对象吸附到位。',
                 subtext: '按间距、尺寸和角度对齐。'
             },
             {
@@ -1877,7 +1877,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '演示文稿就是 Markdown 和 JSON 文本文件。'
             },
             {
-                headline: '像 Obsidian 一样挑选主题。',
+                headline: '不用离开应用就能浏览主题。',
                 subtext: '一键安装免费主题。'
             },
             {
@@ -1893,7 +1893,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '它们和幻灯片保存在同一个文件里。'
             },
             {
-                headline: '像 Figma 一样组合形状。',
+                headline: '把形状组合成新形状。',
                 subtext: '并集、减去、交集或排除。'
             },
             {
@@ -1907,7 +1907,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
         ]
     },
     'zh-TW': {
-        heading: '您在用 Canva、Keynote 或 PowerPoint 嗎？',
+        heading: '您在做簡報嗎？',
         credit: '作者：Johan Sanneblad',
         messages: [
             {
@@ -1915,8 +1915,8 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '把文字和圖片拖曳到你要的位置。'
             },
             {
-                headline: 'PowerPoint 的免費替代方案。',
-                subtext: '分享和協作也都免費。'
+                headline: '免費製作簡報。',
+                subtext: '分享和共同編輯也都免費。'
             },
             {
                 headline: '每份簡報都是電腦裡的一個資料夾。',
@@ -1936,15 +1936,15 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
             },
             {
                 headline: '在同一處檢視每張投影片的文字。',
-                subtext: '開啟 View > Outline，用 Markdown 編輯。'
+                subtext: '選擇「View › Outline」，用 Markdown 編輯文字。'
             },
             {
-                headline: '像 Figma 一樣貼齊物件。',
+                headline: '讓物件精準貼齊到位。',
                 subtext: '依間距、尺寸和角度對齊。'
             },
             {
                 headline: '把簡報匯出成 4K 影片。',
-                subtext: '做動畫不需要 After Effects。'
+                subtext: '幫投影片做動畫，不需要 After Effects。'
             },
             {
                 headline: '讓 3D 角色走路或跑步。',
@@ -1959,7 +1959,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '直條圖、橫條圖、折線圖、圓形圖或計數器。'
             },
             {
-                headline: '用連結分享簡報。',
+                headline: '把簡報分享成網頁。',
                 subtext: '用免費帳號發布到網路上。'
             },
             {
@@ -1971,7 +1971,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '簡報就是 Markdown 和 JSON 純文字檔。'
             },
             {
-                headline: '像 Obsidian 一樣挑選主題。',
+                headline: '不必離開應用程式就能瀏覽主題。',
                 subtext: '一鍵安裝免費主題。'
             },
             {
@@ -1987,7 +1987,7 @@ export const markdownPointBannerText: Readonly<Record<string, MarkdownPointBanne
                 subtext: '它們和投影片存在同一個檔案裡。'
             },
             {
-                headline: '像 Figma 一樣組合形狀。',
+                headline: '把形狀組合成新形狀。',
                 subtext: '聯集、減去、交集或排除。'
             },
             {

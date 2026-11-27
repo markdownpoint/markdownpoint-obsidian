@@ -173,15 +173,7 @@ export class PresentationClipboard extends Component {
                 let inserted = false;
                 try {
                     if (!samePresentation)
-                        transferred = await transferSlideFiles(
-                            this.app,
-                            packet,
-                            context.file,
-                            theme,
-                            context.window,
-                            current,
-                            controller.signal
-                        );
+                        transferred = await transferSlideFiles(this.app, packet, context.file, theme, current, controller.signal);
                     const incoming = transferred ? { ...packet, captured: transferred.captured } : packet;
                     const digest = samePresentation ? await clipboardDigest(result.source!) : null;
                     const prepared = prepareClipboardPaste(

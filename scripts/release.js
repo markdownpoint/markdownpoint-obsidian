@@ -30,18 +30,37 @@ import { hasNotes, readReleaseNotes, releaseDatePattern, releaseNotesPath } from
 // working directory every git command needs, is the repository root
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 // "current" publishes the version already in the files when it has never been tagged, such as the first release.
-// "nightly" publishes the newest release notes as the next patch when they are untagged, and otherwise does nothing
+// "nightly" publishes the newest release notes as the next patch when they are untagged, finishes a release that
+// GitHub's public repository is missing, and otherwise does nothing
 const releaseTypes = new Set(['current', 'patch', 'minor', 'major', 'nightly']);
 const versionFiles = ['manifest.json', 'package.json', 'package-lock.json', 'versions.json'];
 // version-bump.mjs writes the release day into the released entry, so a release commit carries this file unless the entry had that day
 const releaseNotesFile = 'src/release-notes.ts';
+// origin is the working repository, which every session pushes to. GitHub's public repository takes each release
+// as one commit on its main, holding the release tag's files, with a tag of its own on that commit, so the working
+// repository's history never reaches it. It is reached by its URL rather than as a remote, and its main is fetched
+// without its tags, whose names are the working repository's tags' names on other commits
+const workingRepository = 'markdownpoint/markdownpoint-obsidian-dev';
+const publicRepository = 'markdownpoint/markdownpoint-obsidian';
+const publicUrl = `https://github.com/${publicRepository}.git`;
 
 function git(args, options = {}) {
     return execFileSync('git', args, {
         cwd: projectRoot,
         encoding: 'utf8',
-        stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit'
+        input: options.input,
+        stdio: options.capture ? [options.input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] : 'inherit'
     })?.trim();
+}
+
+// A question git answers with its exit, such as merge-base --is-ancestor
+function gitSucceeds(args) {
+    try {
+        git(args, { capture: true });
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 // npm is a .cmd script on Windows, which only a shell starts. The arguments are fixed words, so joining them is safe
@@ -123,9 +142,74 @@ function assertCleanMain() {
     if (local !== remote) throw new Error('Local main must match origin/main before releasing');
 }
 
+function remoteTag(remote, version) {
+    return Boolean(git(['ls-remote', '--tags', remote, `refs/tags/${version}`], { capture: true }));
+}
+
 function isTagged(version) {
     if (git(['tag', '--list', version], { capture: true })) return true;
-    return Boolean(git(['ls-remote', '--tags', 'origin', `refs/tags/${version}`, `refs/tags/${version}^{}`], { capture: true }));
+    return remoteTag('origin', version);
+}
+
+// Whether every URL the remote `remote` fetches from and pushes to, as git rewrites them, is the GitHub repository
+// `repository`, over https or ssh: a push URL of its own, or one on another host, would take the release elsewhere
+function names(remote, repository) {
+    const repositoryUrl = new RegExp(`(^|[/@])github\\.com[/:]${repository}(\\.git)?/?$`);
+    const urls = direction => {
+        try {
+            return git(['remote', 'get-url', ...direction, '--all', remote], { capture: true }).split('\n');
+        } catch {
+            return [];
+        }
+    };
+    const all = [...urls([]), ...urls(['--push'])];
+    return all.length > 0 && all.every(url => repositoryUrl.test(url.trim()));
+}
+
+// origin is the working repository, which a session's push reaches. Checked before anything reads it
+function assertOrigin() {
+    if (!names('origin', workingRepository)) {
+        throw new Error(
+            `Releases run from the working repository, which origin fetches from and pushes to. Point origin at it: git remote set-url origin https://github.com/${workingRepository}.git, and git config --unset-all remote.origin.pushurl when origin pushes elsewhere`
+        );
+    }
+}
+
+// The commit on GitHub's public main, fetched with no ref of its own and none of the public repository's tags
+function fetchPublicMain() {
+    git(['fetch', '--quiet', '--no-tags', publicUrl, 'main'], { capture: true });
+    return git(['rev-parse', 'FETCH_HEAD'], { capture: true });
+}
+
+// GitHub's public main, the commit `main`, when the commit `release` holds it, and otherwise null. The release replaces
+// that main's files with its own, on that main as their parent, so a push after the main moved is refused. The release
+// holds it when its history does, as it holds the public repository's main from before its first release of one
+// commit, or when that main is a release's commit there, whose files every later release builds on: the commit a
+// public tag of a version names, holding the files of origin's tag of that version
+function publicBase(release, main) {
+    if (gitSucceeds(['merge-base', '--is-ancestor', main, release])) return main;
+    // An annotated tag's line names its commit as refs/tags/<version>^{}
+    const version = git(['ls-remote', '--tags', publicUrl], { capture: true })
+        .split('\n')
+        .map(line => line.split('\t'))
+        .find(([commit, ref]) => commit === main && ref?.endsWith('^{}'))?.[1]
+        .slice('refs/tags/'.length, -'^{}'.length);
+    const tree = ref => (gitSucceeds(['rev-parse', '--verify', '--quiet', ref]) ? git(['rev-parse', ref], { capture: true }) : null);
+    return version && tree(`refs/tags/${version}^{tree}`) === tree(`${main}^{tree}`) ? main : null;
+}
+
+const unreleasedPublicMain = `GitHub's public main has commits no release made, which publishing would undo. Merge them into main and push it to origin, and the next release publishes them: git pull --no-rebase --no-tags ${publicUrl} main`;
+
+// Publishes the version `version`, released as the commit `release`, to GitHub's public repository: one commit on its
+// main `base` with the files of `release`, titled with the version as the release commit is, and an annotated tag of
+// the version on it. Neither gets a ref here, where the version's name is the working repository's tag. With dryRun,
+// git checks the push and sends nothing
+function publishPublic(version, release, base, { dryRun = false } = {}) {
+    const commit = git(['commit-tree', `${release}^{tree}`, '-p', base, '-m', version], { capture: true });
+    const tagger = git(['var', 'GIT_COMMITTER_IDENT'], { capture: true });
+    const tag = git(['mktag'], { capture: true, input: `object ${commit}\ntype commit\ntag ${version}\ntagger ${tagger}\n\n${version}\n` });
+    git(['push', ...(dryRun ? ['--dry-run'] : []), '--atomic', publicUrl, `${commit}:refs/heads/main`, `${tag}:refs/tags/${version}`]);
+    return commit;
 }
 
 function assertTag(version) {
@@ -202,15 +286,24 @@ Examples:
   node scripts/release current
   CI=1 node scripts/release nightly
 
-The script requires a clean main branch that matches origin/main. It runs the full
-quality gate, then either uses npm version to create the version commit and annotated
-bare tag, or, for "current", tags the untagged version already in the files. It pushes
-the new tag (with main, after a version commit) and GitHub Actions publishes the release.
+The script requires a clean main branch that matches origin/main, the working
+repository. It runs the full quality gate, then either uses npm version to create the
+version commit and annotated bare tag, or, for "current", tags the untagged version
+already in the files. It pushes the new tag (with main, after a version commit) to
+origin. GitHub's public repository, ${publicUrl},
+then takes the release as one commit on its main, titled with the version and holding
+the tag's files, with its own tag of the version, and GitHub Actions publishes the
+release there.
 
 "nightly" releases the newest entry in src/release-notes.ts as the next patch, without
-asking, when that entry holds notes and is not tagged yet. Otherwise, or when the entry
-is the next minor or major, it prints "Nothing to release" and changes nothing. npm
-version writes the release day into the entry.`);
+asking, when that entry holds notes and is not tagged yet. When origin has the current
+version tagged and the public repository doesn't, as after a failed public push, it
+publishes that release there instead. Otherwise, or when the entry is the next minor or
+major, it prints "Nothing to release" and changes nothing. npm version writes the
+release day into the entry. A release by hand waits for that publishing. A release
+refuses while the public main holds commits no release made; merge them into main and
+push it to origin first:
+  git pull --no-rebase --no-tags ${publicUrl} main`);
 }
 
 async function main() {
@@ -229,6 +322,7 @@ async function main() {
     }
 
     const dryRun = args.includes('--dry-run');
+    assertOrigin();
     const currentVersion = readJson('package.json').version;
 
     assertVersionFields(currentVersion);
@@ -243,11 +337,39 @@ async function main() {
     releaseType ??= await selectReleaseType(currentVersion, currentReleased);
     // After the menu, which can stay open while main moves on, and before the nightly reads the notes main holds
     assertCleanMain();
+    const publicMain = fetchPublicMain();
+
+    // The last release, which origin has and GitHub's public repository may lack, as after a failed public push. The
+    // nightly run publishes it there; a release by hand waits for that, unless its tag can't take the public main's
+    // commits, merged into main since, which the next release then publishes with it
+    const pending = remoteTag('origin', currentVersion) && !remoteTag(publicUrl, currentVersion);
+    const pendingBase = pending ? publicBase(`refs/tags/${currentVersion}`, publicMain) : null;
+    if (pendingBase && !nightly) {
+        throw new Error(
+            `${currentVersion} is released on origin but not yet on GitHub's public repository. Publish it there first: node scripts/release nightly`
+        );
+    }
 
     if (nightly) {
+        if (pendingBase) {
+            const commit = publishPublic(currentVersion, `refs/tags/${currentVersion}`, pendingBase, { dryRun });
+            console.log(
+                dryRun
+                    ? `Dry run complete: GitHub's public repository can take ${currentVersion}, and nothing was pushed.`
+                    : `Published ${currentVersion} on GitHub's public main as ${commit.slice(0, 7)}. GitHub Actions will build and publish the release assets.`
+            );
+            return;
+        }
+        if (pending && !publicBase('HEAD', publicMain)) throw new Error(unreleasedPublicMain);
+
         const newest = readReleaseNotes()[0];
         if (!hasNotes(newest) || isTagged(newest.version)) {
-            console.log('Nothing to release');
+            // A pending release left here waits, as its tag lacks the public main's commits merged into main since
+            console.log(
+                pending
+                    ? `Nothing to release: ${currentVersion} reaches GitHub's public repository with the next release, which holds the public main's commits`
+                    : 'Nothing to release'
+            );
             return;
         }
 
@@ -269,12 +391,18 @@ async function main() {
     if (releaseType === 'current') assertCompatibility(targetVersion);
     else assertReleaseDate(targetVersion);
     if (isTagged(targetVersion)) throw new Error(`Tag ${targetVersion} already exists`);
+    if (remoteTag(publicUrl, targetVersion)) throw new Error(`GitHub's public repository already has the tag ${targetVersion}`);
+    // The release commit holds the public main when main here does
+    const base = publicBase('HEAD', publicMain);
+    if (!base) throw new Error(unreleasedPublicMain);
 
     console.log(releaseType === 'current' ? `Release ${targetVersion}` : `Release ${currentVersion} -> ${targetVersion}`);
-    console.log('Release notes, versions, clean main, origin/main and tag availability are valid.');
+    console.log('Release notes, versions, clean main, origin/main, the public main and tag availability are valid.');
 
     if (dryRun) {
-        console.log('Dry run complete. No version commit or tag was created.');
+        // The public push checked with main's files, which the release commit's differ from only in its version
+        publishPublic(targetVersion, 'HEAD', base, { dryRun });
+        console.log(`Dry run complete: ${targetVersion} can be released. No version commit or tag was created, and nothing was pushed.`);
         return;
     }
 
@@ -308,7 +436,18 @@ async function main() {
             throw error;
         }
     }
-    console.log(`Released ${targetVersion}. GitHub Actions will build and publish the release assets.`);
+
+    let commit;
+    try {
+        commit = publishPublic(targetVersion, `refs/tags/${targetVersion}`, base);
+    } catch (error) {
+        throw new Error(
+            `${targetVersion} is released on origin, but GitHub's public repository did not take it (${error instanceof Error ? error.message : String(error)}). Run node scripts/release nightly to publish it there`
+        );
+    }
+    console.log(
+        `Released ${targetVersion}, on GitHub's public main as ${commit.slice(0, 7)}. GitHub Actions will build and publish the release assets.`
+    );
 }
 
 main().catch(error => {

@@ -35,6 +35,9 @@ concurrency:
 jobs:
   quality:
     name: Build, lint, and test (${{ matrix.os }})
+    # The working repository's checks run on its developers' computers, so it spends no Actions minutes on them. The
+    # public repository's run on its releases and pull requests
+    if: github.repository == 'markdownpoint/markdownpoint-obsidian'
     strategy:
       fail-fast: false
       matrix:

@@ -23,11 +23,13 @@ import { embeddedThemePaths, themeDocument } from '../format/embedded-theme.ts';
 import type { EmbeddedTheme } from '../format/embedded-theme.ts';
 import { readPresentationTheme } from '../readers/markdownpoint-readers.js';
 
-/** Whether two reads of a file gave the same bytes. */
-function sameBytes(first: ArrayBuffer, second: ArrayBuffer): boolean {
+/** Whether two reads, of one file or of two, gave the same bytes. */
+export function sameBytes(first: ArrayBuffer, second: ArrayBuffer): boolean {
     if (first.byteLength !== second.byteLength) return false;
     const [left, right] = [new Uint8Array(first), new Uint8Array(second)];
-    return left.every((byte, at) => byte === right[at]);
+    // A loop, since a callback per byte takes seconds over a video's bytes.
+    for (let at = 0; at < left.length; at++) if (left[at] !== right[at]) return false;
+    return true;
 }
 
 /** A theme file's text as Obsidian reads it, a byte order mark kept. */

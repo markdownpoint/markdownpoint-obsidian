@@ -22,7 +22,7 @@ export const nl: Translations = {
     name: 'MarkdownPoint',
     outline: 'Overzicht',
     sidebar: 'Zijbalk',
-    sidebarDescription: 'Toon het overzicht in de linker- of rechterzijbalk. Houd het rechts als je Notebook Navigator gebruikt.',
+    sidebarDescription: 'De zijbalk waarin het overzicht staat. Zet het overzicht rechts als je Notebook Navigator gebruikt.',
     left: 'Links',
     right: 'Rechts',
     emptySlide: 'Dia zonder titel',
@@ -63,67 +63,69 @@ export const nl: Translations = {
         creating: 'Aanmaken…',
         cancel: 'Annuleren',
         invalidName: 'Voer een naam in zonder schuine strepen of gereserveerde tekens.',
-        exists: 'Er bestaat al een bestand of map met deze naam.',
+        exists: 'Er bestaat al een bestand of map met deze naam. Voer een andere naam in.',
         insidePresentation: ({ presentation }: { presentation: string }) =>
             `MarkdownPoint kan geen presentatie aanmaken in “${presentation}”. Kies een map buiten “${presentation}”.`,
         nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
             `MarkdownPoint kan de presentatie “${presentation}” niet openen zolang deze in “${outer}” staat. Verplaats de map “${presentation}” uit “${outer}” en open deze daarna.`,
-        failed: 'Kon de presentatie niet aanmaken. Controleer de map en probeer het opnieuw.',
-        openFailed: 'De presentatie is aangemaakt, maar kon niet worden geopend. Open slides.md in de map van de presentatie.',
-        openChanged: 'De presentatie is gewijzigd of kon niet worden gelezen. Probeer het opnieuw.',
+        failed: 'Kon de presentatie niet aanmaken. Probeer het opnieuw.',
+        openFailed:
+            'MarkdownPoint heeft de presentatie aangemaakt, maar kon deze niet openen. Open slides.md in de map van de presentatie.',
+        openChanged: 'De presentatie is gewijzigd voordat MarkdownPoint deze kon openen. Probeer het opnieuw.',
         handoffFailed: 'Kon de presentatie niet opslaan en openen.',
-        themeChanged: 'Het thema is gewijzigd of niet beschikbaar. Open dit venster opnieuw en kies het thema nogmaals.',
+        themeChanged: 'Kon geen presentatie aanmaken op basis van het gekozen thema. Open dit venster opnieuw en kies het thema nogmaals.',
         newerFormat: ({ version }: { version: string }) =>
-            `Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling (${version}). Werk de MarkdownPoint-plug-in bij om deze als presentatie te openen.`,
+            `Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling, versie ${version}. Werk de MarkdownPoint-plug-in bij om deze als presentatie te openen.`,
         unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
             `MarkdownPoint kan “${file}” in “${presentation}” niet lezen. Open de presentatie in de MarkdownPoint-app om te zien wat er hersteld moet worden.`,
         unreadable: ({ presentation }: { presentation: string }) =>
             `MarkdownPoint kan de presentatie in “${presentation}” niet lezen. Open deze in de MarkdownPoint-app om te zien wat er hersteld moet worden.`
     },
     slides: {
-        new: 'Nieuwe dia',
+        new: 'Dia toevoegen',
         shortcut: 'Sneltoets',
         noShortcut: 'Geen',
         shortcutHint:
-            'Druk op het nummer van een lay-out om die te gebruiken. Klik met de rechtermuisknop op een lay-out om een sneltoets toe te wijzen.',
+            'Druk op de sneltoets van een lay-out om die te kiezen. Klik met de rechtermuisknop op een lay-out om een sneltoets toe te wijzen.',
         shortcutFailed: 'Kon de sneltoets niet opslaan.',
         layoutShortcutLabel: ({ name, digit }: { name: string; digit: string | null }) => (digit ? `${name}, sneltoets ${digit}` : name),
         layoutsUnavailable: 'Er zijn geen lay-outs beschikbaar in deze presentatie.',
-        layoutChanged: 'De lay-out is gewijzigd. Kies de lay-out opnieuw.',
-        newFailed: 'De presentatie is gewijzigd voordat de dia kon worden toegevoegd. Probeer het opnieuw.',
+        layoutChanged: 'De lay-out is gewijzigd voordat MarkdownPoint de dia kon toevoegen. Probeer het opnieuw.',
+        newFailed: 'De presentatie is gewijzigd voordat MarkdownPoint de dia kon toevoegen. Probeer het opnieuw.',
         actions: 'Dia-acties',
-        copy: ({ count }: { count: number }) => (count === 1 ? 'Dia kopiëren' : 'Dia’s kopiëren'),
-        cut: ({ count }: { count: number }) => (count === 1 ? 'Dia knippen' : 'Dia’s knippen'),
-        cutChanged: 'De presentatie is gewijzigd voordat de dia’s konden worden geknipt. Ze zijn alleen gekopieerd.',
-        cutFailed: 'Kon de dia’s niet knippen. Ze zijn alleen gekopieerd.',
-        paste: 'Dia’s plakken',
+        copy: 'Dia kopiëren',
+        cut: 'Dia knippen',
+        cutChanged:
+            'De presentatie is gewijzigd voordat MarkdownPoint de dia’s kon knippen. Ze staan op het klembord en nog in de presentatie.',
+        cutFailed: 'Kon de dia’s niet knippen. Ze staan op het klembord en nog in de presentatie.',
+        paste: 'Dia plakken',
         pasteEmpty: 'Kopieer eerst een dia in Obsidian.',
         pasteDestination: 'Het thema van deze presentatie past niet bij deze dia’s. Kopieer en plak ze in de MarkdownPoint-app.',
         pasteVault: 'Deze dia’s komen uit een andere kluis. Kopieer en plak ze in de MarkdownPoint-app.',
         pasteArtwork:
-            'De afbeeldingen van het thema verschillen tussen deze presentaties. Kopieer en plak de dia’s in de MarkdownPoint-app.',
-        pasteChanged: 'De presentatie is gewijzigd voordat de dia’s konden worden geplakt. Probeer het opnieuw.',
+            'De thema’s van de twee presentaties hebben verschillende afbeeldingen. Kopieer en plak de dia’s in de MarkdownPoint-app.',
+        pasteChanged: 'De presentatie is gewijzigd voordat MarkdownPoint de dia’s kon plakken. Probeer het opnieuw.',
         pasteFailed: 'Kon de dia’s niet plakken.',
         copyFailed: 'Kon de dia’s niet kopiëren.',
         copyUnavailable: 'Kon de presentatie of de themabestanden niet lezen.',
-        copyChanged: 'De presentatie is gewijzigd voordat de dia’s konden worden gekopieerd. Probeer het opnieuw.',
+        copyChanged: 'De presentatie is gewijzigd voordat MarkdownPoint de dia’s kon kopiëren. Probeer het opnieuw.',
         copyNewer:
             'Deze presentatie gebruikt een nieuwere MarkdownPoint-indeling. Werk de MarkdownPoint-plug-in bij om de dia’s te kopiëren of te knippen.',
-        delete: ({ count }: { count: number }) => (count === 1 ? 'Dia verwijderen' : 'Dia’s verwijderen'),
+        delete: 'Dia verwijderen',
         deleteFailed: 'Kon de dia’s niet verwijderen.',
         recoveryUnavailable: 'Kon de herstelkopieën op dit apparaat niet lezen.',
-        saveFailed: 'Kon de presentatiegegevens niet opslaan. Er blijft een herstelkopie op dit apparaat bewaard.',
+        saveFailed: 'Kon de presentatiegegevens niet opslaan.',
         retry: 'Opnieuw proberen',
         empty: 'Geen dia’s'
     },
     commands: {
         newPresentation: 'Nieuwe presentatie',
         openInMarkdownPoint: 'Openen in MarkdownPoint',
-        newSlide: 'Nieuwe dia',
+        newSlide: 'Dia toevoegen',
         focusOutline: 'Focus op het overzicht',
         focusEditor: 'Focus op de editor',
-        moveSlidesUp: 'Dia’s omhoog verplaatsen',
-        moveSlidesDown: 'Dia’s omlaag verplaatsen'
+        moveSlidesUp: 'Dia omhoog verplaatsen',
+        moveSlidesDown: 'Dia omlaag verplaatsen'
     },
     whatsNew: {
         title: 'Nieuw in MarkdownPoint',
@@ -136,8 +138,7 @@ export const nl: Translations = {
         section: 'Releasenotes',
         setting: ({ version }: { version: string }) => `Nieuw in MarkdownPoint ${version}`,
         settingDescription: 'Bekijk wat er in recente versies is veranderd.',
-        view: 'Bekijk recente updates',
-        showOnUpdate: 'Releasenotes tonen na een update',
-        showOnUpdateDescription: 'Open na elke update één keer het venster met wat er nieuw is.'
+        view: 'Releasenotes bekijken',
+        showOnUpdate: 'Releasenotes tonen na een update'
     }
 };

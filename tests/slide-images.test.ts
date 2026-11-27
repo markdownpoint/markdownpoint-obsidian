@@ -263,7 +263,8 @@ test('only five existing vault resources are loaded, with the Vault API owning U
     const references = Array.from({ length: 8 }, (_, index) => ({ path: `media/${index}.png`, name: null, category: 'image' as const }));
     const vault = {
         getFileByPath: (path: string) => (path === 'media/0.png' ? null : { path, stat: { size: 10 } }),
-        getResourcePath: (file: { path: string; stat: { size: number } }) => `app://owned/${file.path}?mtime=10`
+        getResourcePath: (file: { path: string; stat: { size: number } }) => `app://owned/${file.path}?mtime=10`,
+        readBinary: () => Promise.resolve(new ArrayBuffer(0))
     };
     const images = readSlideImages(vault, references);
     assert.equal(images.length, 5);

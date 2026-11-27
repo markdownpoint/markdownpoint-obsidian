@@ -28,8 +28,7 @@ import { presentationIdentity } from '../format/recognition.ts';
 import { clipboardDigest } from '../settings/clipboard.ts';
 import { sameClipboardTheme } from '../format/paste.ts';
 import { presentationFiles } from './presentation-files.ts';
-import { readEmbeddedTheme } from './theme-reader.ts';
-import { equalByteStreams } from './byte-streams.ts';
+import { readEmbeddedTheme, sameBytes } from './theme-reader.ts';
 
 export interface TransferredSlides {
     readonly captured: readonly CapturedPart[];
@@ -38,13 +37,18 @@ export interface TransferredSlides {
 }
 export class ThemeArtworkMismatch extends Error {}
 
+/**
+ * The largest file the Vault API reads whole on the desktop: its adapter reads through Node's `readFile`, which refuses a
+ * file past 2 GiB.
+ */
+const LARGEST_READ = 2 ** 31 - 1;
+
 /** Copy files before a slide edit. Successful imports remain available for native undo/redo. */
 export async function transferSlideFiles(
     app: App,
     packet: SlideClipboard,
     destination: TFile,
     theme: EmbeddedTheme,
-    ownerWindow: Window,
     current: () => boolean,
     signal: AbortSignal
 ): Promise<TransferredSlides> {
@@ -146,17 +150,11 @@ export async function transferSlideFiles(
         check();
         if (first === second) return true;
         if (first.stat.size !== second.stat.size) return false;
-        // Vault resource URLs provide local response streams in the editor's own window.
-        const reads = await Promise.allSettled([first, second].map(file => ownerWindow.fetch(app.vault.getResourcePath(file), { signal })));
-        const a = reads[0]?.status === 'fulfilled' ? reads[0].value : null;
-        const b = reads[1]?.status === 'fulfilled' ? reads[1].value : null;
-        if (!a?.ok || !b?.ok || !a.body || !b.body) {
-            await Promise.allSettled([a?.body?.cancel(), b?.body?.cancel()]);
-            throw new Error('A media file could not be read');
-        }
-        const same = await equalByteStreams(a.body, b.body, () => !signal.aborted);
+        // A file too large to read is never taken for equal, so a paste copies its media again rather than fail.
+        if (first.stat.size > LARGEST_READ) return false;
+        const [a, b] = await Promise.all([app.vault.readBinary(first), app.vault.readBinary(second)]);
         check();
-        return same;
+        return sameBytes(a, b);
     };
     try {
         check();

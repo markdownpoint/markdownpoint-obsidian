@@ -47,10 +47,12 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '1.0.4',
-        date: '2026-11-26',
+        date: '2026-11-27',
         changed: [
-            'The outline is empty while you edit a presentation the MarkdownPoint app can’t read. For example, the app can’t read a slide before the first section.'
-        ]
+            'The outline now stays empty while you edit a presentation that the MarkdownPoint app can’t read, such as one with a slide before its first section.',
+            'The plugin now reads your files only through Obsidian’s vault and makes no network calls, local or remote.'
+        ],
+        fixed: ['The cursor no longer disappears below the last slide’s closed presenter notes. Typing into closed notes now opens them.']
     },
     {
         version: '1.0.3',

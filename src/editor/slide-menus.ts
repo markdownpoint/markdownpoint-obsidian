@@ -345,7 +345,7 @@ export class SlideMenus extends Component {
             menu.addItem(item =>
                 item
                     .setSection('markdownpoint-slides')
-                    .setTitle(uiText.slides.cut({ count: 1 }))
+                    .setTitle(uiText.slides.cut)
                     .setIcon('scissors')
                     .onClick(() => {
                         if (this.current(target)) this.actions.cut(target);
@@ -355,7 +355,7 @@ export class SlideMenus extends Component {
             menu.addItem(item =>
                 item
                     .setSection('markdownpoint-slides')
-                    .setTitle(uiText.slides.copy({ count: 1 }))
+                    .setTitle(uiText.slides.copy)
                     .setIcon('copy')
                     .onClick(() => {
                         if (this.current(target)) this.actions.copy(target);
@@ -374,7 +374,7 @@ export class SlideMenus extends Component {
             menu.addItem(item =>
                 item
                     .setSection('markdownpoint-slides')
-                    .setTitle(uiText.slides.delete({ count: 1 }))
+                    .setTitle(uiText.slides.delete)
                     .setIcon('trash-2')
                     .onClick(() => {
                         if (this.current(target)) this.actions.delete(target);

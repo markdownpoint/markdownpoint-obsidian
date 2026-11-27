@@ -95,13 +95,6 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
             }
         }
     } as unknown as App;
-    const ownerWindow = {
-        fetch: (input: RequestInfo | URL) => {
-            const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-            const file = vault.getFileByPath(decodeURIComponent(url.slice(6)));
-            return Promise.resolve(file ? new Response(file.bytes.slice().buffer) : new Response(null, { status: 404 }));
-        }
-    } as unknown as Window;
     // MarkdownPoint's Basic master under its own id, with a picture of its own when asked
     const basic = JSON.parse(readFileSync(new URL('../src/themes/basic/master.json', import.meta.url), 'utf8')) as { objects: unknown[] };
     const master = JSON.stringify({
@@ -150,10 +143,9 @@ async function fixture(media = ['media/photo.png'], artwork = false) {
         state,
         packet,
         theme,
-        ownerWindow,
         target,
         transfer: (current = () => true, signal = new AbortController().signal) =>
-            transferSlideFiles(app, packet, target as unknown as ObsidianFile, theme, ownerWindow, current, signal)
+            transferSlideFiles(app, packet, target as unknown as ObsidianFile, theme, current, signal)
     };
 }
 
@@ -169,6 +161,21 @@ test('transfer copies media independently and repeated paste reuses its unchange
     const copied = f.nodes.get(f.copies[0]!);
     assert.ok(copied instanceof TFile);
     assert.deepEqual(copied.bytes, new Uint8Array([4, 5, 6]));
+});
+
+test('media too large to read whole is copied again by a repeat paste, never read', async () => {
+    const f = await fixture();
+    const largest = 2 ** 31 - 1;
+    f.vault.getFileByPath('source/media/photo.png')!.stat.size = largest + 1;
+    await f.transfer();
+    const copied = f.nodes.get(f.copies[0]!);
+    assert.ok(copied instanceof TFile);
+    copied.stat.size = largest + 1;
+    const read = f.vault.readBinary;
+    f.vault.readBinary = (file: TFile) =>
+        file.stat.size > largest ? Promise.reject(new Error('File size is greater than 2 GiB')) : read(file);
+    await f.transfer();
+    assert.equal(f.copies.length, 2, 'the second paste copies the media again');
 });
 
 test('an edited destination image is preserved and a new copy is reused on later pastes', async () => {

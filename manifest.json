@@ -1,9 +1,9 @@
 {
   "id": "markdownpoint",
   "name": "MarkdownPoint",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "minAppVersion": "1.13.0",
-  "description": "Write and organize presentations in a continuous draft, then finish them in MarkdownPoint.",
+  "description": "Write the slides of a presentation in one note and reorder them in an outline. Open the presentation in the MarkdownPoint app to design and present it.",
   "author": "Johan Sanneblad",
   "isDesktopOnly": true,
   "authorUrl": "https://markdownpoint.com"

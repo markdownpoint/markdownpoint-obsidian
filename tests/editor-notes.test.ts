@@ -18,8 +18,10 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { EditorState } from '@codemirror/state';
+import { EditorSelection, EditorState, StateEffect } from '@codemirror/state';
+import type { TransactionSpec } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+import { codeFolding, foldEffect } from '@codemirror/language';
 import { editorInfoField, editorLivePreviewField } from './support/obsidian.ts';
 import { indexPresentation } from '../src/format/document.ts';
 import { isRecord } from '../src/format/recognition.ts';
@@ -63,8 +65,8 @@ function notesRows(state: EditorState): number {
     return rows;
 }
 
-test('slides without notes keep their notes row while an unclosed fence stops parsing', () => {
-    const source = '<!-- slide: first -->\n<!-- text: body -->\nWords.\n\n<!-- slide: second -->\n<!-- text: body -->\nMore.\n';
+/** The editor over `source` in Live Preview, reading it as MarkdownPoint does. */
+function presentationState(source: string, notes: NotesUi): EditorState {
     const reader = {
         snapshot(_file: unknown, markdown: string) {
             const document = indexPresentation(markdown, 0);
@@ -81,11 +83,76 @@ test('slides without notes keep their notes row while an unclosed fence stops pa
         },
         matchesIdentity: () => true
     } as unknown as PresentationReader;
-    const notes = new NotesUi({ loadLocalStorage: () => null, saveLocalStorage: () => undefined });
     const owner = new PresentationEditor(reader, notes, () => undefined);
-    let state = EditorState.create({ doc: source, extensions: [editorInfoField, editorLivePreviewField, owner.extension] });
+    return EditorState.create({ doc: source, extensions: [editorInfoField, editorLivePreviewField, owner.extension] });
+}
+
+const closedNotesUi = () => new NotesUi({ loadLocalStorage: () => null, saveLocalStorage: () => undefined });
+
+test('slides without notes keep their notes row while an unclosed fence stops parsing', () => {
+    const source = '<!-- slide: first -->\n<!-- text: body -->\nWords.\n\n<!-- slide: second -->\n<!-- text: body -->\nMore.\n';
+    let state = presentationState(source, closedNotesUi());
     assert.equal(notesRows(state), 2);
     state = state.update({ changes: { from: source.indexOf('Words.'), insert: '~~~js\n' } }).state;
     assert.equal(indexPresentation(state.doc.toString(), 0), null);
     assert.equal(notesRows(state), 2);
+});
+
+test("the author's keys and pointer stop on the last line shown, not at the file's end inside closed notes", () => {
+    const first = '<!-- slide: first -->\n<!-- text: title -->\nIdea.\n\n';
+    const source = `${first}<!-- slide: last -->\n<!-- text: body -->\nLast words.\n\n<!-- notes -->\nPause.\n`;
+    const end = source.indexOf('Last words.') + 'Last words.'.length;
+    const notes = closedNotesUi();
+    let state = presentationState(source, notes);
+    const at = (spec: TransactionSpec) => state.update(spec).state.selection.main;
+    for (const userEvent of ['select', 'select.pointer']) assert.equal(at({ selection: { anchor: source.length }, userEvent }).head, end);
+    // Right past the words: the folded blank line and the notes' row are no stops either
+    for (const anchor of [end + 1, source.indexOf('<!-- notes -->')])
+        assert.equal(at({ selection: { anchor }, userEvent: 'select' }).head, end);
+    // Up from there goes back to the column Down left
+    const down = at({ selection: EditorSelection.create([EditorSelection.cursor(source.length, 0, undefined, 37)]), userEvent: 'select' });
+    assert.deepEqual([down.head, down.goalColumn], [end, 37]);
+    // A selection that runs through the notes, as Select All's, keeps them; the editor's own caret goes where it is put
+    assert.equal(at({ selection: { anchor: 0, head: source.length }, userEvent: 'select' }).head, source.length);
+    assert.equal(at({ selection: { anchor: source.length } }).head, source.length);
+    notes.setOpen('presentation', 'last', true);
+    state = state.update({ selection: { anchor: 0 } }).state;
+    assert.equal(at({ selection: { anchor: source.length }, userEvent: 'select' }).head, source.length);
+    // The last line shown: an empty field's ghost line; a compact field's ghost, which the keys enter by giving it its
+    // line; the blank line a field shows, not the one it folds; the blank line under a section's heading, above a slide
+    // of notes alone
+    const title = `${first}<!-- slide: last -->\n<!-- text: title -->\nLast words.\n\n`;
+    const part = `<!-- section: one -->\n# One\n\n${first}<!-- section: part -->\n# Part\n\n`;
+    for (const [above, landing] of [
+        [`${title}<!-- text: body -->\n\n`, `${title}<!-- text: body -->\n`.length],
+        [`${title}<!-- text: body -->\n`, `${title}<!-- text: body -->\n`.length],
+        [`${title}\n`, title.length - '\n'.length],
+        [`${part}<!-- slide: last -->\n\n`, `${part.trimEnd()}\n`.length]
+    ] as const) {
+        const markdown = `${above}<!-- notes -->\nPause.\n`;
+        state = presentationState(markdown, closedNotesUi());
+        assert.equal(at({ selection: { anchor: markdown.length }, userEvent: 'select' }).head, landing, above);
+    }
+    // Right from the title's words reaches the compact field past the hidden stops between, and gives it its line
+    const compact = `${title}<!-- text: body -->\n<!-- notes -->\nPause.\n`;
+    state = presentationState(compact, closedNotesUi());
+    assert.equal(at({ selection: { anchor: title.length - 1 }, userEvent: 'select' }).head, title.length - 1);
+    const entered = state.update({ selection: { anchor: compact.indexOf('<!-- notes -->') }, userEvent: 'select' }).state;
+    assert.equal(entered.doc.toString(), compact.replace('-->\n<!-- notes', '-->\n\n<!-- notes'));
+    // A click, which gives no compact field its line, stops on the title's words
+    assert.equal(at({ selection: { anchor: compact.length }, userEvent: 'select.pointer' }).head, title.length - '\n\n'.length);
+    // A compact field a fold hides is passed: the keys stop on the folded heading's line
+    const hidden = `${first}<!-- slide: last -->\n<!-- text: title -->\n## Steps\nOne.\n\n<!-- text: body -->\n<!-- notes -->\nPause.\n`;
+    const steps = hidden.indexOf('## Steps') + '## Steps'.length;
+    state = presentationState(hidden, closedNotesUi());
+    state = state.update({ effects: StateEffect.appendConfig.of(codeFolding()) }).state;
+    state = state.update({ effects: foldEffect.of({ from: steps, to: hidden.length }) }).state;
+    assert.equal(at({ selection: { anchor: hidden.length }, userEvent: 'select' }).head, steps);
+    // A heading folded to the end of the file keeps its fold: the keys stop on its line
+    const folded = `${first}<!-- slide: last -->\n<!-- text: body -->\n## Steps\nOne.\nTwo.\n\n<!-- notes -->\nPause.\n`;
+    const heading = folded.indexOf('## Steps') + '## Steps'.length;
+    state = presentationState(folded, closedNotesUi());
+    state = state.update({ effects: StateEffect.appendConfig.of(codeFolding()) }).state;
+    state = state.update({ effects: foldEffect.of({ from: heading, to: folded.length }) }).state;
+    assert.equal(at({ selection: { anchor: folded.length }, userEvent: 'select' }).head, heading);
 });

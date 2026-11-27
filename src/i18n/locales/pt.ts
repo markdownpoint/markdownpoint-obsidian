@@ -22,7 +22,7 @@ export const pt: Translations = {
     name: 'MarkdownPoint',
     outline: 'Índice',
     sidebar: 'Barra lateral',
-    sidebarDescription: 'Mostrar o índice na barra lateral esquerda ou direita. Se utilizar o Notebook Navigator, mantenha-o à direita.',
+    sidebarDescription: 'A barra lateral que mostra o índice. Se utilizar o Notebook Navigator, coloque o índice à direita.',
     left: 'Esquerda',
     right: 'Direita',
     emptySlide: 'Diapositivo sem título',
@@ -63,66 +63,68 @@ export const pt: Translations = {
         creating: 'A criar…',
         cancel: 'Cancelar',
         invalidName: 'Introduza um nome sem barras nem caracteres reservados.',
-        exists: 'Já existe um ficheiro ou uma pasta com este nome.',
+        exists: 'Já existe um ficheiro ou uma pasta com este nome. Introduza outro nome.',
         insidePresentation: ({ presentation }: { presentation: string }) =>
             `O MarkdownPoint não pode criar uma apresentação dentro de “${presentation}”. Escolha uma pasta fora de “${presentation}”.`,
         nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
             `O MarkdownPoint não pode abrir a apresentação “${presentation}” enquanto estiver dentro de “${outer}”. Mova a pasta “${presentation}” para fora de “${outer}” e depois abra-a.`,
-        failed: 'Não foi possível criar a apresentação. Verifique a pasta e tente novamente.',
-        openFailed: 'A apresentação foi criada, mas não foi possível abri-la. Abra o slides.md na pasta da apresentação.',
-        openChanged: 'A apresentação foi alterada ou não foi possível lê-la. Tente novamente.',
+        failed: 'Não foi possível criar a apresentação. Tente novamente.',
+        openFailed: 'O MarkdownPoint criou a apresentação, mas não conseguiu abri-la. Abra o slides.md na pasta da apresentação.',
+        openChanged: 'A apresentação foi alterada antes de o MarkdownPoint conseguir abri-la. Tente novamente.',
         handoffFailed: 'Não foi possível guardar e abrir a apresentação.',
-        themeChanged: 'O tema foi alterado ou não está disponível. Volte a abrir esta caixa de diálogo e escolha-o novamente.',
+        themeChanged:
+            'Não foi possível criar uma apresentação a partir do tema escolhido. Volte a abrir esta caixa de diálogo e escolha o tema novamente.',
         newerFormat: ({ version }: { version: string }) =>
-            `Esta apresentação usa um formato MarkdownPoint mais recente (${version}). Atualize o plugin MarkdownPoint para a abrir como apresentação.`,
+            `Esta apresentação usa um formato MarkdownPoint mais recente, a versão ${version}. Atualize o plugin MarkdownPoint para a abrir como apresentação.`,
         unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
             `O MarkdownPoint não consegue ler “${file}” em “${presentation}”. Abra a apresentação na aplicação MarkdownPoint para ver o que corrigir.`,
         unreadable: ({ presentation }: { presentation: string }) =>
             `O MarkdownPoint não consegue ler a apresentação em “${presentation}”. Abra-a na aplicação MarkdownPoint para ver o que corrigir.`
     },
     slides: {
-        new: 'Novo diapositivo',
+        new: 'Adicionar diapositivo',
         shortcut: 'Atalho',
         noShortcut: 'Nenhum',
         shortcutHint:
-            'Prima o número de uma disposição para a usar. Clique com o botão direito numa disposição para lhe atribuir um atalho.',
+            'Prima o atalho de uma disposição para a escolher. Clique com o botão direito numa disposição para lhe atribuir um atalho.',
         shortcutFailed: 'Não foi possível guardar o atalho.',
         layoutShortcutLabel: ({ name, digit }: { name: string; digit: string | null }) => (digit ? `${name}, atalho ${digit}` : name),
         layoutsUnavailable: 'Não há disposições disponíveis nesta apresentação.',
-        layoutChanged: 'A disposição foi alterada. Escolha-a novamente.',
-        newFailed: 'A apresentação foi alterada antes de o diapositivo ser adicionado. Tente novamente.',
+        layoutChanged: 'A disposição foi alterada antes de o MarkdownPoint conseguir adicionar o diapositivo. Tente novamente.',
+        newFailed: 'A apresentação foi alterada antes de o MarkdownPoint conseguir adicionar o diapositivo. Tente novamente.',
         actions: 'Ações do diapositivo',
-        copy: ({ count }: { count: number }) => (count === 1 ? 'Copiar diapositivo' : 'Copiar diapositivos'),
-        cut: ({ count }: { count: number }) => (count === 1 ? 'Cortar diapositivo' : 'Cortar diapositivos'),
-        cutChanged: 'A apresentação foi alterada antes de os diapositivos serem cortados. Foram apenas copiados.',
-        cutFailed: 'Não foi possível cortar os diapositivos. Foram apenas copiados.',
-        paste: 'Colar diapositivos',
+        copy: 'Copiar diapositivo',
+        cut: 'Cortar diapositivo',
+        cutChanged:
+            'A apresentação foi alterada antes de o MarkdownPoint conseguir cortar os diapositivos. Estão na área de transferência e continuam na apresentação.',
+        cutFailed: 'Não foi possível cortar os diapositivos. Estão na área de transferência e continuam na apresentação.',
+        paste: 'Colar diapositivo',
         pasteEmpty: 'Copie primeiro um diapositivo no Obsidian.',
         pasteDestination: 'O tema desta apresentação não corresponde a estes diapositivos. Copie-os e cole-os na aplicação MarkdownPoint.',
         pasteVault: 'Estes diapositivos são de outro cofre. Copie-os e cole-os na aplicação MarkdownPoint.',
-        pasteArtwork: 'O grafismo do tema difere entre estas apresentações. Copie e cole os diapositivos na aplicação MarkdownPoint.',
-        pasteChanged: 'A apresentação foi alterada antes de os diapositivos serem colados. Tente novamente.',
+        pasteArtwork: 'Os temas das duas apresentações têm grafismos diferentes. Copie e cole os diapositivos na aplicação MarkdownPoint.',
+        pasteChanged: 'A apresentação foi alterada antes de o MarkdownPoint conseguir colar os diapositivos. Tente novamente.',
         pasteFailed: 'Não foi possível colar os diapositivos.',
         copyFailed: 'Não foi possível copiar os diapositivos.',
         copyUnavailable: 'Não foi possível ler a apresentação ou os ficheiros do tema.',
-        copyChanged: 'A apresentação foi alterada antes de os diapositivos serem copiados. Tente novamente.',
+        copyChanged: 'A apresentação foi alterada antes de o MarkdownPoint conseguir copiar os diapositivos. Tente novamente.',
         copyNewer:
             'Esta apresentação usa um formato MarkdownPoint mais recente. Atualize o plugin MarkdownPoint para copiar ou cortar os diapositivos.',
-        delete: ({ count }: { count: number }) => (count === 1 ? 'Eliminar diapositivo' : 'Eliminar diapositivos'),
+        delete: 'Eliminar diapositivo',
         deleteFailed: 'Não foi possível eliminar os diapositivos.',
         recoveryUnavailable: 'Não foi possível ler as cópias de recuperação neste dispositivo.',
-        saveFailed: 'Não foi possível guardar os dados da apresentação. Fica guardada uma cópia de recuperação neste dispositivo.',
+        saveFailed: 'Não foi possível guardar os dados da apresentação.',
         retry: 'Tentar novamente',
         empty: 'Sem diapositivos'
     },
     commands: {
         newPresentation: 'Nova apresentação',
         openInMarkdownPoint: 'Abrir no MarkdownPoint',
-        newSlide: 'Novo diapositivo',
+        newSlide: 'Adicionar diapositivo',
         focusOutline: 'Focar no índice',
         focusEditor: 'Focar no editor',
-        moveSlidesUp: 'Mover diapositivos para cima',
-        moveSlidesDown: 'Mover diapositivos para baixo'
+        moveSlidesUp: 'Mover diapositivo para cima',
+        moveSlidesDown: 'Mover diapositivo para baixo'
     },
     whatsNew: {
         title: 'Novidades do MarkdownPoint',
@@ -135,8 +137,7 @@ export const pt: Translations = {
         section: 'Notas da versão',
         setting: ({ version }: { version: string }) => `Novidades do MarkdownPoint ${version}`,
         settingDescription: 'Veja o que mudou nas versões recentes.',
-        view: 'Ver atualizações recentes',
-        showOnUpdate: 'Mostrar as novidades após uma atualização',
-        showOnUpdateDescription: 'Abrir a caixa de diálogo de novidades uma vez após cada atualização.'
+        view: 'Ver notas da versão',
+        showOnUpdate: 'Mostrar as notas da versão após uma atualização'
     }
 };

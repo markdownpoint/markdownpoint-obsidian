@@ -79,7 +79,6 @@ export class MarkdownPointSettingTab extends PluginSettingTab {
                     },
                     {
                         name: uiText.whatsNew.showOnUpdate,
-                        desc: uiText.whatsNew.showOnUpdateDescription,
                         control: { type: 'toggle', key: 'showReleaseNotes', defaultValue: true }
                     }
                 ]

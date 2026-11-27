@@ -24,10 +24,13 @@ export interface SlideImagePreview {
     readonly name: string | null;
     /** The file's size, which its orientation is read within. */
     readonly size: number;
+    /** The file's bytes, read through the vault. */
+    readonly read: () => Promise<ArrayBuffer>;
 }
 interface ImageVault<File extends { readonly stat: { readonly size: number } }> {
     getFileByPath(path: string): File | null;
     getResourcePath(file: File): string;
+    readBinary(file: File): Promise<ArrayBuffer>;
 }
 
 /** Resolve only existing vault files, then cap the visible column at five images. */
@@ -39,7 +42,13 @@ export function readSlideImages<File extends { readonly stat: { readonly size: n
     for (const reference of references) {
         const file = vault.getFileByPath(reference.path);
         if (!file) continue;
-        images.push({ path: reference.path, src: vault.getResourcePath(file), name: reference.name, size: file.stat.size });
+        images.push({
+            path: reference.path,
+            src: vault.getResourcePath(file),
+            name: reference.name,
+            size: file.stat.size,
+            read: () => vault.readBinary(file)
+        });
         if (images.length === 5) break;
     }
     return images;

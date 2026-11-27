@@ -68,7 +68,7 @@ The **Outline** has its own sidebar tab, marked with the MarkdownPoint icon, and
 
 ### Copy, cut and delete slides
 
-Right-click a slide in the outline or the editor for **Cut slide**, **Copy slide**, **Paste slides** and **Delete slide**. A slide’s thumbnail in the editor margin opens the same menu. In the outline, the menu acts on every selected slide, and **Cmd/Ctrl+C**, **X** and **V** copy, cut and paste whole slides. In the editor they stay ordinary text shortcuts. Pasted slides land below the slide whose menu you opened.
+Right-click a slide in the outline or the editor for **Cut slide**, **Copy slide**, **Paste slide** and **Delete slide**. A slide’s thumbnail in the editor margin opens the same menu. In the outline, the menu acts on every selected slide, and **Cmd/Ctrl+C**, **X** and **V** copy, cut and paste whole slides. In the editor they stay ordinary text shortcuts. Pasted slides land below the slide whose menu you opened.
 
 A copied slide brings its text, notes and presentation data with it. Paste it into another presentation in the same vault that uses the same theme, and its media comes along too. Between different themes or vaults, copy and paste the slides in the MarkdownPoint desktop app.
 
@@ -80,7 +80,7 @@ Obsidian’s **Undo** and **Redo** cover slide actions too, also while the outli
 
 ![The layout picker with number shortcuts](https://raw.githubusercontent.com/markdownpoint/markdownpoint-obsidian/main/images/layout-picker-light.png)
 
-Click **+** above the outline or run **MarkdownPoint: New slide**, then choose a layout. The new slide goes below the current one.
+Click **+** above the outline or run **MarkdownPoint: Add slide**, then choose a layout. The new slide goes below the current one.
 
 Give your favorite layouts a number: right-click a layout in the picker and choose **Shortcut**, then a number from 1 to 9. Next time, open the picker and press that number. The number shows next to the layout’s name, and giving it to another layout moves it there. **None** removes it.
 
@@ -103,16 +103,16 @@ The plugin sets no hotkeys, so assign your own under **Settings → Hotkeys**:
 | Command               | What it does                                       |
 | --------------------- | -------------------------------------------------- |
 | New presentation      | Create a presentation in the vault.                |
-| New slide             | Open the layout picker.                            |
+| Add slide             | Open the layout picker.                            |
 | Focus outline         | Reveal and focus the slide outline.                |
 | Focus editor          | Return to the writing area.                        |
-| Move slides up        | Move the outline selection up.                     |
-| Move slides down      | Move the outline selection down.                   |
+| Move slide up         | Move the outline selection up.                     |
+| Move slide down       | Move the outline selection down.                   |
 | Open in MarkdownPoint | Save and open the presentation in the desktop app. |
 
 The move commands work while the outline has focus.
 
-After an update, MarkdownPoint shows its release notes once. Turn this off with **Show release notes after updating**, or read them any time with **View recent updates**.
+After an update, MarkdownPoint shows its release notes once. Turn this off with **Show release notes after updating**, or read them any time with **View release notes**.
 
 Sidebar placement and open notes are stored on each device. Layout shortcuts, **Show images** and **Show release notes after updating** are plugin settings, and they sync when your vault syncs plugin settings.
 
@@ -128,7 +128,15 @@ Any other language shows the plugin in English. The words in your presentation n
 
 <br/>
 
-## 9 Questions
+## 9 Network use
+
+MarkdownPoint for Obsidian makes no network requests. It only reads and writes files in your vault.
+
+Your browser opens only when you click a link in a slide, a version’s heading in the release notes, or the MarkdownPoint banner in **Settings → MarkdownPoint**. A version’s heading opens its release on GitHub, and the banner opens markdownpoint.com.
+
+<br/>
+
+## 10 Questions
 
 **Can I use Obsidian links and embeds?** They stay in the Markdown as you wrote them, but wikilinks, note embeds and other plugins’ output don’t become slide content. Use standard Markdown links for links that work outside Obsidian, and add slide images in MarkdownPoint.
 

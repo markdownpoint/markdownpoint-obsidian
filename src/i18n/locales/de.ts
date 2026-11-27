@@ -22,8 +22,7 @@ export const de: Translations = {
     name: 'MarkdownPoint',
     outline: 'Gliederung',
     sidebar: 'Seitenleiste',
-    sidebarDescription:
-        'Die Gliederung in der linken oder rechten Seitenleiste anzeigen. Wenn du Notebook Navigator verwendest, behalte sie rechts.',
+    sidebarDescription: 'Die Seitenleiste mit der Gliederung. Wenn du Notebook Navigator verwendest, zeige die Gliederung rechts an.',
     left: 'Links',
     right: 'Rechts',
     emptySlide: 'Folie ohne Titel',
@@ -64,68 +63,70 @@ export const de: Translations = {
         creating: 'Wird erstellt …',
         cancel: 'Abbrechen',
         invalidName: 'Gib einen Namen ohne Schrägstriche oder reservierte Zeichen ein.',
-        exists: 'Eine Datei oder ein Ordner mit diesem Namen existiert bereits.',
+        exists: 'Eine Datei oder ein Ordner mit diesem Namen existiert bereits. Gib einen anderen Namen ein.',
         insidePresentation: ({ presentation }: { presentation: string }) =>
             `MarkdownPoint kann in „${presentation}“ keine Präsentation erstellen. Wähle einen Ordner außerhalb davon.`,
         nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
             `MarkdownPoint kann die Präsentation „${presentation}“ nicht öffnen, solange sie in „${outer}“ liegt. Verschiebe den Ordner „${presentation}“ aus „${outer}“ und öffne dann „${presentation}“.`,
-        failed: 'Die Präsentation konnte nicht erstellt werden. Prüfe den Ordner und versuche es erneut.',
-        openFailed: 'Die Präsentation wurde erstellt, konnte aber nicht geöffnet werden. Öffne slides.md in ihrem Ordner.',
-        openChanged: 'Die Präsentation hat sich geändert oder konnte nicht gelesen werden. Versuche es erneut.',
+        failed: 'Die Präsentation konnte nicht erstellt werden. Versuche es erneut.',
+        openFailed: 'MarkdownPoint hat die Präsentation erstellt, konnte sie aber nicht öffnen. Öffne slides.md in ihrem Ordner.',
+        openChanged: 'Die Präsentation hat sich geändert, bevor MarkdownPoint sie öffnen konnte. Versuche es erneut.',
         handoffFailed: 'Die Präsentation konnte nicht gespeichert und geöffnet werden.',
-        themeChanged: 'Das Thema hat sich geändert oder ist nicht verfügbar. Öffne diesen Dialog erneut und wähle es noch einmal.',
+        themeChanged:
+            'Aus dem gewählten Thema konnte keine Präsentation erstellt werden. Öffne diesen Dialog erneut und wähle das Thema noch einmal.',
         newerFormat: ({ version }: { version: string }) =>
-            `Diese Präsentation verwendet ein neueres MarkdownPoint-Format (${version}). Aktualisiere die MarkdownPoint-Erweiterung, um sie als Präsentation zu öffnen.`,
+            `Diese Präsentation verwendet ein neueres MarkdownPoint-Format, Version ${version}. Aktualisiere die MarkdownPoint-Erweiterung, um sie als Präsentation zu öffnen.`,
         unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
             `MarkdownPoint kann „${file}“ in „${presentation}“ nicht lesen. Öffne die Präsentation in der MarkdownPoint-App, um zu sehen, was zu korrigieren ist.`,
         unreadable: ({ presentation }: { presentation: string }) =>
             `MarkdownPoint kann die Präsentation in „${presentation}“ nicht lesen. Öffne sie in der MarkdownPoint-App, um zu sehen, was zu korrigieren ist.`
     },
     slides: {
-        new: 'Neue Folie',
+        new: 'Folie hinzufügen',
         shortcut: 'Kurzbefehl',
         noShortcut: 'Keiner',
-        shortcutHint: 'Drücke die Nummer eines Layouts, um es zu verwenden. Rechtsklicke auf ein Layout, um einen Kurzbefehl festzulegen.',
+        shortcutHint:
+            'Drücke den Kurzbefehl eines Layouts, um es auszuwählen. Rechtsklicke auf ein Layout, um einen Kurzbefehl festzulegen.',
         shortcutFailed: 'Der Kurzbefehl konnte nicht gespeichert werden.',
         layoutShortcutLabel: ({ name, digit }: { name: string; digit: string | null }) => (digit ? `${name}, Kurzbefehl ${digit}` : name),
         layoutsUnavailable: 'In dieser Präsentation sind keine Layouts verfügbar.',
-        layoutChanged: 'Das Layout hat sich geändert. Wähle es erneut.',
-        newFailed: 'Die Präsentation hat sich geändert, bevor die Folie hinzugefügt werden konnte. Versuche es erneut.',
+        layoutChanged: 'Das Layout hat sich geändert, bevor MarkdownPoint die Folie hinzufügen konnte. Versuche es erneut.',
+        newFailed: 'Die Präsentation hat sich geändert, bevor MarkdownPoint die Folie hinzufügen konnte. Versuche es erneut.',
         actions: 'Folienaktionen',
-        copy: ({ count }: { count: number }) => (count === 1 ? 'Folie kopieren' : 'Folien kopieren'),
-        cut: ({ count }: { count: number }) => (count === 1 ? 'Folie ausschneiden' : 'Folien ausschneiden'),
-        cutChanged: 'Die Präsentation hat sich geändert, bevor die Folien ausgeschnitten werden konnten. Sie wurden nur kopiert.',
-        cutFailed: 'Die Folien konnten nicht ausgeschnitten werden. Sie wurden nur kopiert.',
-        paste: 'Folien einfügen',
+        copy: 'Folie kopieren',
+        cut: 'Folie ausschneiden',
+        cutChanged:
+            'Die Präsentation hat sich geändert, bevor MarkdownPoint die Folien ausschneiden konnte. Sie sind in der Zwischenablage und weiterhin in der Präsentation.',
+        cutFailed: 'Die Folien konnten nicht ausgeschnitten werden. Sie sind in der Zwischenablage und weiterhin in der Präsentation.',
+        paste: 'Folie einfügen',
         pasteEmpty: 'Kopiere zuerst eine Folie in Obsidian.',
         pasteDestination:
             'Das Thema dieser Präsentation passt nicht zu diesen Folien. Kopiere sie in der MarkdownPoint-App und füge sie dort ein.',
         pasteVault: 'Diese Folien stammen aus einem anderen Vault. Kopiere sie in der MarkdownPoint-App und füge sie dort ein.',
         pasteArtwork:
-            'Die Grafiken des Themas unterscheiden sich zwischen diesen Präsentationen. Kopiere die Folien in der MarkdownPoint-App und füge sie dort ein.',
-        pasteChanged: 'Die Präsentation hat sich geändert, bevor die Folien eingefügt werden konnten. Versuche es erneut.',
+            'Die Themen der beiden Präsentationen haben unterschiedliche Grafiken. Kopiere die Folien in der MarkdownPoint-App und füge sie dort ein.',
+        pasteChanged: 'Die Präsentation hat sich geändert, bevor MarkdownPoint die Folien einfügen konnte. Versuche es erneut.',
         pasteFailed: 'Die Folien konnten nicht eingefügt werden.',
         copyFailed: 'Die Folien konnten nicht kopiert werden.',
         copyUnavailable: 'Die Präsentation oder die Dateien ihres Themas konnten nicht gelesen werden.',
-        copyChanged: 'Die Präsentation hat sich geändert, bevor die Folien kopiert werden konnten. Versuche es erneut.',
+        copyChanged: 'Die Präsentation hat sich geändert, bevor MarkdownPoint die Folien kopieren konnte. Versuche es erneut.',
         copyNewer:
             'Diese Präsentation verwendet ein neueres MarkdownPoint-Format. Aktualisiere die MarkdownPoint-Erweiterung, um ihre Folien zu kopieren oder auszuschneiden.',
-        delete: ({ count }: { count: number }) => (count === 1 ? 'Folie löschen' : 'Folien löschen'),
+        delete: 'Folie löschen',
         deleteFailed: 'Die Folien konnten nicht gelöscht werden.',
         recoveryUnavailable: 'Die Wiederherstellungskopien auf diesem Gerät konnten nicht gelesen werden.',
-        saveFailed:
-            'Die Präsentationsdaten konnten nicht gespeichert werden. Eine Wiederherstellungskopie bleibt auf diesem Gerät erhalten.',
+        saveFailed: 'Die Präsentationsdaten konnten nicht gespeichert werden.',
         retry: 'Wiederholen',
         empty: 'Keine Folien'
     },
     commands: {
         newPresentation: 'Neue Präsentation',
         openInMarkdownPoint: 'In MarkdownPoint öffnen',
-        newSlide: 'Neue Folie',
+        newSlide: 'Folie hinzufügen',
         focusOutline: 'Gliederung fokussieren',
         focusEditor: 'Editor fokussieren',
-        moveSlidesUp: 'Folien nach oben verschieben',
-        moveSlidesDown: 'Folien nach unten verschieben'
+        moveSlidesUp: 'Folie nach oben verschieben',
+        moveSlidesDown: 'Folie nach unten verschieben'
     },
     whatsNew: {
         title: 'Neu in MarkdownPoint',
@@ -138,8 +139,7 @@ export const de: Translations = {
         section: 'Versionshinweise',
         setting: ({ version }: { version: string }) => `Neu in MarkdownPoint ${version}`,
         settingDescription: 'Was sich in den letzten Versionen geändert hat.',
-        view: 'Neuerungen ansehen',
-        showOnUpdate: 'Versionshinweise nach Updates anzeigen',
-        showOnUpdateDescription: 'Den Dialog mit den Neuerungen einmal nach jedem Update öffnen.'
+        view: 'Versionshinweise ansehen',
+        showOnUpdate: 'Versionshinweise nach Updates anzeigen'
     }
 };

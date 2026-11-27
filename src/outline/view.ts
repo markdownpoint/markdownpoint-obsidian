@@ -223,7 +223,7 @@ export class MarkdownPointOutlineView extends ItemView {
         if (id !== null)
             menu.addItem(entry =>
                 entry
-                    .setTitle(uiText.slides.cut({ count: selection.selected.size }))
+                    .setTitle(uiText.slides.cut)
                     .setIcon('scissors')
                     .onClick(() => {
                         if (current()) this.delegate.cutSlides(selection, this.contentEl.ownerDocument.defaultView!);
@@ -232,7 +232,7 @@ export class MarkdownPointOutlineView extends ItemView {
         if (id !== null)
             menu.addItem(entry =>
                 entry
-                    .setTitle(uiText.slides.copy({ count: selection.selected.size }))
+                    .setTitle(uiText.slides.copy)
                     .setIcon('copy')
                     .onClick(() => {
                         if (current()) this.delegate.copySlides(selection, this.contentEl.ownerDocument.defaultView!);
@@ -249,7 +249,7 @@ export class MarkdownPointOutlineView extends ItemView {
         if (id !== null)
             menu.addItem(entry =>
                 entry
-                    .setTitle(uiText.slides.delete({ count: selection.selected.size }))
+                    .setTitle(uiText.slides.delete)
                     .setIcon('trash-2')
                     .onClick(() => {
                         if (current()) this.delegate.deleteSlides(selection);

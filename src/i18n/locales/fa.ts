@@ -23,7 +23,7 @@ export const fa: Translations = {
     outline: 'نمای کلی',
     sidebar: 'نوار کناری',
     sidebarDescription:
-        'نمای کلی را در نوار کناری چپ یا راست نمایش دهید. اگر از Notebook Navigator استفاده می‌کنید، نمای کلی را در سمت راست نگه دارید.',
+        'نوار کناری‌ای که نمای کلی در آن نمایش داده می‌شود. اگر از Notebook Navigator استفاده می‌کنید، نمای کلی را در سمت راست بگذارید.',
     left: 'چپ',
     right: 'راست',
     emptySlide: 'اسلاید بی‌عنوان',
@@ -64,65 +64,66 @@ export const fa: Translations = {
         creating: 'در حال ساختن…',
         cancel: 'لغو',
         invalidName: 'نامی بدون خط مورب یا نویسه‌های غیرمجاز وارد کنید.',
-        exists: 'پرونده یا پوشه‌ای به همین نام از قبل وجود دارد.',
+        exists: 'پرونده یا پوشه‌ای به همین نام از قبل وجود دارد. نام دیگری وارد کنید.',
         insidePresentation: ({ presentation }: { presentation: string }) =>
             `ساختن ارائه داخل «${presentation}» با MarkdownPoint ممکن نیست. پوشه‌ای بیرون از «${presentation}» انتخاب کنید.`,
         nested: ({ presentation, outer }: { presentation: string; outer: string }) =>
             `باز کردن «${presentation}» با MarkdownPoint تا وقتی داخل «${outer}» است ممکن نیست. پوشهٔ «${presentation}» را به بیرون از «${outer}» منتقل کنید، سپس آن را باز کنید.`,
-        failed: 'ارائه ساخته نشد. پوشه را بررسی کنید و دوباره تلاش کنید.',
-        openFailed: 'ارائه ساخته شد اما باز نشد. پروندهٔ slides.md را در پوشهٔ آن باز کنید.',
-        openChanged: 'ارائه تغییر کرده یا خوانده نشد. دوباره تلاش کنید.',
+        failed: 'ارائه ساخته نشد. دوباره تلاش کنید.',
+        openFailed: 'MarkdownPoint ارائه را ساخت اما نتوانست آن را باز کند. پروندهٔ slides.md را در پوشهٔ آن باز کنید.',
+        openChanged: 'ارائه پیش از آنکه MarkdownPoint بتواند آن را باز کند تغییر کرد. دوباره تلاش کنید.',
         handoffFailed: 'ذخیره و باز کردن ارائه انجام نشد.',
-        themeChanged: 'طرح زمینه تغییر کرده یا در دسترس نیست. این پنجره را دوباره باز کنید و آن را از نو انتخاب کنید.',
+        themeChanged: 'ارائه از طرح زمینهٔ انتخاب‌شده ساخته نشد. این پنجره را دوباره باز کنید و طرح زمینه را از نو انتخاب کنید.',
         newerFormat: ({ version }: { version: string }) =>
-            `این ارائه از قالب جدیدتری از MarkdownPoint (نسخهٔ ${version}) استفاده می‌کند. برای باز کردن آن به‌صورت ارائه، افزونهٔ MarkdownPoint را به‌روز کنید.`,
+            `این ارائه از قالب جدیدتری از MarkdownPoint، نسخهٔ ${version}، استفاده می‌کند. برای باز کردن آن به‌صورت ارائه، افزونهٔ MarkdownPoint را به‌روز کنید.`,
         unreadableFile: ({ file, presentation }: { file: string; presentation: string }) =>
             `خواندن «${file}» در «${presentation}» با MarkdownPoint ممکن نیست. ارائه را در برنامهٔ MarkdownPoint باز کنید تا ببینید چه چیزی را باید اصلاح کنید.`,
         unreadable: ({ presentation }: { presentation: string }) =>
             `خواندن ارائهٔ داخل «${presentation}» با MarkdownPoint ممکن نیست. آن را در برنامهٔ MarkdownPoint باز کنید تا ببینید چه چیزی را باید اصلاح کنید.`
     },
     slides: {
-        new: 'اسلاید جدید',
+        new: 'افزودن اسلاید',
         shortcut: 'میانبر',
         noShortcut: 'هیچ‌کدام',
-        shortcutHint: 'برای استفاده از یک طرح‌بندی، شمارهٔ آن را بزنید. برای تعیین میانبر، روی طرح‌بندی راست‌کلیک کنید.',
+        shortcutHint: 'برای انتخاب یک طرح‌بندی، میانبر آن را بزنید. برای تعیین میانبر، روی طرح‌بندی راست‌کلیک کنید.',
         shortcutFailed: 'میانبر ذخیره نشد.',
         layoutShortcutLabel: ({ name, digit }: { name: string; digit: string | null }) => (digit ? `${name}، میانبر ${digit}` : name),
         layoutsUnavailable: 'این ارائه هیچ طرح‌بندی‌ای ندارد.',
-        layoutChanged: 'طرح‌بندی تغییر کرده است. آن را دوباره انتخاب کنید.',
-        newFailed: 'ارائه پیش از افزوده شدن اسلاید تغییر کرد. دوباره تلاش کنید.',
+        layoutChanged: 'طرح‌بندی پیش از آنکه MarkdownPoint بتواند اسلاید را اضافه کند تغییر کرد. دوباره تلاش کنید.',
+        newFailed: 'ارائه پیش از آنکه MarkdownPoint بتواند اسلاید را اضافه کند تغییر کرد. دوباره تلاش کنید.',
         actions: 'عملیات اسلاید',
-        copy: ({ count }: { count: number }) => (count === 1 ? 'کپی اسلاید' : 'کپی اسلایدها'),
-        cut: ({ count }: { count: number }) => (count === 1 ? 'برش اسلاید' : 'برش اسلایدها'),
-        cutChanged: 'ارائه پیش از برش اسلایدها تغییر کرد. اسلایدها فقط کپی شدند.',
-        cutFailed: 'برش اسلایدها انجام نشد. اسلایدها فقط کپی شدند.',
-        paste: 'جاگذاری اسلایدها',
+        copy: 'کپی اسلاید',
+        cut: 'برش اسلاید',
+        cutChanged:
+            'ارائه پیش از آنکه MarkdownPoint بتواند اسلایدها را برش بزند تغییر کرد. اسلایدها در کلیپ‌بورد هستند و هنوز در ارائه باقی‌اند.',
+        cutFailed: 'برش اسلایدها انجام نشد. اسلایدها در کلیپ‌بورد هستند و هنوز در ارائه باقی‌اند.',
+        paste: 'جاگذاری اسلاید',
         pasteEmpty: 'ابتدا یک اسلاید را در Obsidian کپی کنید.',
         pasteDestination: 'طرح زمینهٔ این ارائه با این اسلایدها مطابقت ندارد. آن‌ها را در برنامهٔ MarkdownPoint کپی و جاگذاری کنید.',
         pasteVault: 'این اسلایدها از خزانهٔ دیگری هستند. آن‌ها را در برنامهٔ MarkdownPoint کپی و جاگذاری کنید.',
-        pasteArtwork: 'گرافیک طرح زمینه در این ارائه‌ها یکسان نیست. اسلایدها را در برنامهٔ MarkdownPoint کپی و جاگذاری کنید.',
-        pasteChanged: 'ارائه پیش از جاگذاری اسلایدها تغییر کرد. دوباره تلاش کنید.',
+        pasteArtwork: 'طرح‌های زمینهٔ این دو ارائه گرافیک متفاوتی دارند. اسلایدها را در برنامهٔ MarkdownPoint کپی و جاگذاری کنید.',
+        pasteChanged: 'ارائه پیش از آنکه MarkdownPoint بتواند اسلایدها را جاگذاری کند تغییر کرد. دوباره تلاش کنید.',
         pasteFailed: 'اسلایدها جاگذاری نشدند.',
         copyFailed: 'اسلایدها کپی نشدند.',
         copyUnavailable: 'ارائه یا پرونده‌های طرح زمینهٔ آن خوانده نشد.',
-        copyChanged: 'ارائه پیش از کپی اسلایدها تغییر کرد. دوباره تلاش کنید.',
+        copyChanged: 'ارائه پیش از آنکه MarkdownPoint بتواند اسلایدها را کپی کند تغییر کرد. دوباره تلاش کنید.',
         copyNewer:
             'این ارائه از قالب جدیدتری از MarkdownPoint استفاده می‌کند. برای کپی یا برش اسلایدهای آن، افزونهٔ MarkdownPoint را به‌روز کنید.',
-        delete: ({ count }: { count: number }) => (count === 1 ? 'حذف اسلاید' : 'حذف اسلایدها'),
+        delete: 'حذف اسلاید',
         deleteFailed: 'اسلایدها حذف نشدند.',
         recoveryUnavailable: 'نسخه‌های بازیابی در این دستگاه خوانده نشدند.',
-        saveFailed: 'داده‌های ارائه ذخیره نشد. یک نسخهٔ بازیابی در این دستگاه نگه داشته می‌شود.',
+        saveFailed: 'داده‌های ارائه ذخیره نشد.',
         retry: 'تلاش مجدد',
         empty: 'اسلایدی وجود ندارد'
     },
     commands: {
         newPresentation: 'ارائهٔ جدید',
         openInMarkdownPoint: 'باز کردن در MarkdownPoint',
-        newSlide: 'اسلاید جدید',
+        newSlide: 'افزودن اسلاید',
         focusOutline: 'تمرکز بر نمای کلی',
         focusEditor: 'تمرکز بر ویرایشگر',
-        moveSlidesUp: 'بالا بردن اسلایدها',
-        moveSlidesDown: 'پایین آوردن اسلایدها'
+        moveSlidesUp: 'بالا بردن اسلاید',
+        moveSlidesDown: 'پایین آوردن اسلاید'
     },
     whatsNew: {
         title: 'تازه‌های MarkdownPoint',
@@ -135,8 +136,7 @@ export const fa: Translations = {
         section: 'یادداشت‌های انتشار',
         setting: ({ version }: { version: string }) => `تازه‌های MarkdownPoint ${version}`,
         settingDescription: 'تغییرات نسخه‌های اخیر را ببینید.',
-        view: 'دیدن تازه‌ها',
-        showOnUpdate: 'نمایش تازه‌ها پس از به‌روزرسانی',
-        showOnUpdateDescription: 'پس از هر به‌روزرسانی، پنجرهٔ تازه‌ها را یک بار باز می‌کند.'
+        view: 'دیدن یادداشت‌های انتشار',
+        showOnUpdate: 'نمایش یادداشت‌های انتشار پس از به‌روزرسانی'
     }
 };

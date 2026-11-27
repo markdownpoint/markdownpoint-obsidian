@@ -69,9 +69,5 @@ test('every translation writes each message and keeps the values it is given', (
         assert.ok(text.slides.layoutShortcutLabel({ name: '⟨name⟩', digit: null }).includes('⟨name⟩'), language);
         for (const message of [text.presentations.newerFormat, text.whatsNew.version, text.whatsNew.setting])
             assert.ok(message({ version: '⟨9.8⟩' }).includes('⟨9.8⟩'), language);
-        for (const count of [1, 2]) {
-            for (const action of [text.slides.copy, text.slides.cut, text.slides.delete])
-                assert.notEqual(action({ count }).trim(), '', language);
-        }
     }
 });

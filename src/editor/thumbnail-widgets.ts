@@ -165,7 +165,7 @@ export function slideThumbnails(readState: (view: EditorView) => SlideThumbnailS
                                     image.addEventListener(
                                         'load',
                                         () =>
-                                            void readPictureOrientation(image.win, preview.src, preview.path, preview.size).then(
+                                            void readPictureOrientation(preview.read, preview.src, preview.path, preview.size).then(
                                                 orientation => turn(orientation ?? 1)
                                             ),
                                         { once: true }
